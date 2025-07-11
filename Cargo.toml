@@ -1,0 +1,15 @@
+[package]
+name = "rv"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.5.41", features = ["derive", "env"] }
+clap_derive = "4.5.41"
+indicatif = "0.18.0"
+miette = "7.6.0"
+rayon = "1.10.0"
+rsfs = "0.4.1"
+tokio = { version = "1.46.1", features = ["tracing", "macros"] }
+tracing = "0.1.41"
+xdg = "3.0.0"
