@@ -26,35 +26,34 @@ rvx rails new my-app
 
 ### Ruby versions
 
-- rv ruby list
-- rv ruby install
-- rv ruby uninstall
-- rv ruby pin
+- `rv ruby list`
+- `rv ruby install`
+- `rv ruby uninstall`
+- `rv ruby pin`
 
 ### Gem CLI tools
 
-- rv tool install
-- rv tool uninstall
-- rv tool run / rvx
+- `rvx` / `rv tool run`
+- `rv tool install`
+- `rv tool uninstall`
 
 ### Ruby scripts
 
-- rv run my-script.rb
-- rv add --script
-- rv remove --script
+- `rv run`
+- `rv add --script`
+- `rv remove --script`
 
-### Gem development
+### Applications
 
-- rv gem
-- rv build
-- rv publish
+- `rv init`
+- `rv install`
+- `rv add`
+- `rv remove`
+- `rv upgrade`
+- `rv tree`
 
-### Project dependencies
+### Gems
 
-- rv init
-- rv install
-- rv add
-- rv remove
-- rv upgrade
-- rv list
-- rv tree
+- `rv gem`
+- `rv build`
+- `rv publish`
