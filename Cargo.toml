@@ -8,6 +8,7 @@ clap = { version = "4.5.41", features = ["derive", "env"] }
 clap_derive = "4.5.41"
 indicatif = "0.18.0"
 miette = "7.6.0"
+owo-colors = "4.1.0"
 rayon = "1.10.0"
 rsfs = "0.4.1"
 serde = { version = "1.0", features = ["derive"] }

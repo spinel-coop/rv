@@ -621,6 +621,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "owo-colors"
+version = "4.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "48dd4f4a2c8405440fd0462561f0e5806bd0f77e86f51c761481bdd4018b545e"
+
+[[package]]
 name = "parking_lot"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -804,6 +810,7 @@ dependencies = [
  "clap_derive",
  "indicatif",
  "miette",
+ "owo-colors",
  "rayon",
  "rsfs",
  "serde",

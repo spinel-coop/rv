@@ -15,6 +15,7 @@ pub struct Ruby {
     pub version: String,
     
     /// Parsed version components
+    #[serde(skip)]
     pub version_parts: VersionParts,
     
     /// VFS path to the Ruby installation directory

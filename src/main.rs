@@ -1,12 +1,14 @@
 use std::{fs, path::PathBuf};
 
-use clap::{Args, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use miette::{IntoDiagnostic, Result};
 
+pub mod commands;
 pub mod config;
 pub mod ruby;
 
 use config::Config;
+use commands::ruby::{list_rubies, RubyArgs, RubyCommand};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -60,32 +62,7 @@ enum Commands {
     Ruby(RubyArgs),
 }
 
-#[derive(Args)]
-struct RubyArgs {
-    #[command(subcommand)]
-    command: RubyCommand,
-}
 
-#[derive(Subcommand)]
-enum RubyCommand {
-    #[command(about = "List the available Ruby installations")]
-    List {
-        /// Output format for the Ruby list
-        #[arg(long, value_enum, default_value = "text")]
-        format: OutputFormat,
-        
-        /// Show only installed Ruby versions
-        #[arg(long)]
-        installed_only: bool,
-    },
-    Pin {},
-}
-
-#[derive(clap::ValueEnum, Clone, Debug)]
-enum OutputFormat {
-    Text,
-    Json,
-}
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -105,30 +82,6 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn list_rubies(config: &Config, format: OutputFormat, _installed_only: bool) -> Result<()> {
-    let rubies = config.rubies()?;
-    
-    if rubies.is_empty() {
-        println!("No Ruby installations found.");
-        println!("Try installing Ruby with 'rv ruby install' or check your configuration.");
-        return Ok(());
-    }
-    
-    match format {
-        OutputFormat::Text => {
-            for ruby in rubies {
-                let marker = if is_active_ruby(&ruby)? { "*" } else { " " };
-                println!("{} {} {}", marker, ruby.display_name(), ruby.executable_path().display());
-            }
-        }
-        OutputFormat::Json => {
-            let json = serde_json::to_string_pretty(&rubies).into_diagnostic()?;
-            println!("{}", json);
-        }
-    }
-    
-    Ok(())
-}
 
 fn is_active_ruby(_ruby: &ruby::Ruby) -> Result<bool> {
     // TODO: Implement active Ruby detection
