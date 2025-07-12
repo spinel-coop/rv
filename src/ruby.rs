@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 use std::fmt::{self, Display};
 use std::str::FromStr;
+use std::env;
+use std::process::Command;
+use regex::Regex;
 use serde::{Deserialize, Serialize, Serializer};
 use serde_with::{serde_as, DisplayFromStr};
 use vfs::VfsPath;
@@ -202,6 +205,52 @@ impl Ruby {
     /// Get the path to the Ruby executable for display purposes
     pub fn executable_path(&self) -> PathBuf {
         PathBuf::from(self.path.join("bin").unwrap().join("ruby").unwrap().as_str())
+    }
+
+    /// Check if this Ruby matches the active version pattern
+    /// This implements chrb's pattern matching logic
+    pub fn is_active(&self, active_version: &str) -> bool {
+        let ruby_name = self.display_name();
+        
+        // Exact match: "ruby-3.1.4" == "ruby-3.1.4"
+        if ruby_name == active_version {
+            return true;
+        }
+        
+        // Check if active_version is just a version (no engine prefix)
+        // e.g., "3.1.4" should match "ruby-3.1.4"
+        if !active_version.contains('-') {
+            // Split ruby_name into engine and version
+            if let Some((engine, version)) = ruby_name.split_once('-') {
+                // Version-only matching should only work for "ruby" engine by default
+                if engine == "ruby" {
+                    if version == active_version {
+                        return true;
+                    }
+                    
+                    // Also check for prefix matching: "3.1" matches "3.1.4"
+                    if version.starts_with(active_version) && version.chars().nth(active_version.len()) == Some('.') {
+                        return true;
+                    }
+                }
+            }
+        } else {
+            // Engine-version format, check for prefix matching
+            // e.g., "ruby-3.1" should match "ruby-3.1.4"
+            if ruby_name.starts_with(active_version) && ruby_name.chars().nth(active_version.len()) == Some('.') {
+                return true;
+            }
+            
+            // Check engine-only matching: "ruby-" matches "ruby-3.1.4"
+            if active_version.ends_with('-') {
+                let engine = &active_version[..active_version.len()-1];
+                if self.implementation.name() == engine {
+                    return true;
+                }
+            }
+        }
+        
+        false
     }
 }
 
@@ -425,6 +474,295 @@ mod tests {
         assert_eq!(RubyImplementation::JRuby.name(), "jruby");
         assert_eq!(RubyImplementation::Unknown("custom-ruby".to_string()).name(), "custom-ruby");
     }
+
+    #[test]
+    fn test_is_active_exact_match() {
+        let ruby = create_test_ruby("ruby", "3.1.4");
+        
+        // Exact match
+        assert!(ruby.is_active("ruby-3.1.4"));
+        assert!(!ruby.is_active("ruby-3.1.5"));
+        assert!(!ruby.is_active("jruby-3.1.4"));
+    }
+
+    #[test]
+    fn test_is_active_version_only() {
+        let ruby = create_test_ruby("ruby", "3.1.4");
+        
+        // Version-only matching (should match ruby engine by default)
+        assert!(ruby.is_active("3.1.4"));
+        assert!(!ruby.is_active("3.1.5"));
+        
+        // Prefix matching for versions
+        assert!(ruby.is_active("3.1"));
+        assert!(ruby.is_active("3"));
+        assert!(!ruby.is_active("3.2"));
+    }
+
+    #[test]
+    fn test_is_active_prefix_matching() {
+        let ruby = create_test_ruby("ruby", "3.1.4");
+        
+        // Engine-version prefix matching
+        assert!(ruby.is_active("ruby-3.1"));
+        assert!(ruby.is_active("ruby-3"));
+        assert!(!ruby.is_active("ruby-3.2"));
+    }
+
+    #[test]
+    fn test_is_active_engine_only() {
+        let ruby = create_test_ruby("jruby", "9.4.0.0");
+        
+        // Engine-only matching (should match any version of that engine)
+        assert!(ruby.is_active("jruby-"));
+        assert!(!ruby.is_active("ruby-"));
+    }
+
+    #[test]
+    fn test_is_active_jruby() {
+        let jruby = create_test_ruby("jruby", "9.4.0.0");
+        
+        // JRuby-specific tests
+        assert!(jruby.is_active("jruby-9.4.0.0"));
+        assert!(jruby.is_active("jruby-9.4"));
+        assert!(jruby.is_active("jruby-9"));
+        assert!(!jruby.is_active("9.4.0.0")); // Version-only shouldn't match JRuby
+        assert!(!jruby.is_active("ruby-9.4.0.0"));
+    }
+
+    #[test]
+    fn test_find_active_ruby_version_with_env_vars() {
+        // Mock environment provider for testing
+        struct MockEnv {
+            vars: std::collections::HashMap<String, String>,
+        }
+        
+        impl EnvProvider for MockEnv {
+            fn get_var(&self, key: &str) -> Option<String> {
+                self.vars.get(key).cloned()
+            }
+        }
+        
+        // Test RUBY_ROOT environment variable
+        let env = MockEnv {
+            vars: [("RUBY_ROOT".to_string(), "/path/to/ruby-3.2.1".to_string())]
+                .iter().cloned().collect()
+        };
+        let result = find_active_ruby_version_with_env(&env);
+        assert_eq!(result, Some("ruby-3.2.1".to_string()));
+
+        // Test DEFAULT_RUBY_VERSION environment variable (when RUBY_ROOT not set)
+        // Note: This test might pick up .ruby-version file if present, so we test in a clean temp dir
+        let temp_dir = std::env::temp_dir().join(format!("rv_test_env_{}", std::process::id()));
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&temp_dir).unwrap();
+
+        let env = MockEnv {
+            vars: [("DEFAULT_RUBY_VERSION".to_string(), "3.1.4".to_string())]
+                .iter().cloned().collect()
+        };
+        let result = find_active_ruby_version_with_env(&env);
+        
+        std::env::set_current_dir(original_dir).unwrap();
+        std::fs::remove_dir_all(&temp_dir).unwrap();
+        
+        assert_eq!(result, Some("3.1.4".to_string()));
+
+        // Test precedence: RUBY_ROOT should override DEFAULT_RUBY_VERSION
+        let env = MockEnv {
+            vars: [
+                ("RUBY_ROOT".to_string(), "/path/to/jruby-9.4.0.0".to_string()),
+                ("DEFAULT_RUBY_VERSION".to_string(), "3.1.4".to_string())
+            ].iter().cloned().collect()
+        };
+        let result = find_active_ruby_version_with_env(&env);
+        assert_eq!(result, Some("jruby-9.4.0.0".to_string()));
+        
+        // Test no environment variables set in clean directory
+        let temp_dir = std::env::temp_dir().join(format!("rv_test_empty_{}", std::process::id()));
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&temp_dir).unwrap();
+
+        let env = MockEnv {
+            vars: std::collections::HashMap::new()
+        };
+        let result = find_active_ruby_version_with_env(&env);
+        
+        std::env::set_current_dir(original_dir).unwrap();
+        std::fs::remove_dir_all(&temp_dir).unwrap();
+        
+        // Should be None since no environment variables and no .ruby-version file
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_find_ruby_version_file_with_temp_dir() {
+        use std::fs;
+        use std::io::Write;
+
+        // Create a temporary directory for testing
+        let temp_dir = std::env::temp_dir().join(format!("rv_test_{}", std::process::id()));
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        // Create a .ruby-version file
+        let ruby_version_file = temp_dir.join(".ruby-version");
+        let mut file = fs::File::create(&ruby_version_file).unwrap();
+        writeln!(file, "  3.1.4  ").unwrap(); // Test trimming whitespace
+
+        // Change to the test directory
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&temp_dir).unwrap();
+
+        // Test finding the .ruby-version file
+        let result = find_ruby_version_file();
+        
+        // Restore original directory
+        std::env::set_current_dir(original_dir).unwrap();
+        
+        // Clean up
+        fs::remove_dir_all(&temp_dir).unwrap();
+
+        assert_eq!(result, Some("3.1.4".to_string()));
+    }
+
+    #[test]
+    fn test_find_ruby_version_file_parent_directory() {
+        use std::fs;
+        use std::io::Write;
+
+        // Create a temporary directory structure: parent/.ruby-version, parent/child/
+        let temp_parent = std::env::temp_dir().join(format!("rv_test_parent_{}", std::process::id()));
+        let temp_child = temp_parent.join("child");
+        fs::create_dir_all(&temp_child).unwrap();
+
+        // Create .ruby-version in parent directory
+        let ruby_version_file = temp_parent.join(".ruby-version");
+        let mut file = fs::File::create(&ruby_version_file).unwrap();
+        writeln!(file, "2.7.6").unwrap();
+
+        // Change to the child directory
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&temp_child).unwrap();
+
+        // Test finding the .ruby-version file in parent directory
+        let result = find_ruby_version_file();
+        
+        // Restore original directory
+        std::env::set_current_dir(original_dir).unwrap();
+        
+        // Clean up
+        fs::remove_dir_all(&temp_parent).unwrap();
+
+        assert_eq!(result, Some("2.7.6".to_string()));
+    }
+
+    #[test]
+    fn test_extract_ruby_info_from_path() {
+        // Test standard Ruby path
+        let ruby_path = PathBuf::from("/Users/user/.rubies/ruby-3.1.4/bin/ruby");
+        let result = extract_ruby_info_from_path(&ruby_path);
+        assert_eq!(result, Some("ruby-3.1.4".to_string()));
+
+        // Test JRuby path
+        let jruby_path = PathBuf::from("/opt/rubies/jruby-9.4.0.0/bin/ruby");
+        let result = extract_ruby_info_from_path(&jruby_path);
+        assert_eq!(result, Some("jruby-9.4.0.0".to_string()));
+
+        // Test TruffleRuby path
+        let truffle_path = PathBuf::from("/home/user/.rubies/truffleruby-23.1.1/bin/ruby");
+        let result = extract_ruby_info_from_path(&truffle_path);
+        assert_eq!(result, Some("truffleruby-23.1.1".to_string()));
+
+        // Test system Ruby (no version pattern)
+        let system_path = PathBuf::from("/usr/bin/ruby");
+        let result = extract_ruby_info_from_path(&system_path);
+        assert_eq!(result, Some("ruby".to_string()));
+    }
+
+    #[test]
+    fn test_find_executable_in_path() {
+        // This test is simplified to avoid unsafe env::set_var operations
+        // Instead, we test the PATH parsing logic with a known system path
+        
+        // Test with current PATH - if ruby exists, it should be found
+        let found = find_executable_in_path("ruby");
+        
+        // This test will pass if either:
+        // 1. Ruby is found in PATH (returns Some)
+        // 2. Ruby is not in PATH (returns None)
+        // Both are valid outcomes depending on the system
+        match found {
+            Some(path) => {
+                // If found, verify it's a valid path
+                assert!(path.exists());
+                assert!(path.is_file());
+            }
+            None => {
+                // If not found, that's also valid - system may not have Ruby in PATH
+            }
+        }
+    }
+
+    #[test]
+    fn test_path_fallback_integration() {
+        // Test the full PATH fallback integration with mock environment
+        struct MockEnvWithPath {
+            vars: std::collections::HashMap<String, String>,
+        }
+        
+        impl EnvProvider for MockEnvWithPath {
+            fn get_var(&self, key: &str) -> Option<String> {
+                self.vars.get(key).cloned()
+            }
+        }
+
+        // Test in clean directory with no environment variables
+        let temp_dir = std::env::temp_dir().join(format!("rv_test_integration_{}", std::process::id()));
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&temp_dir).unwrap();
+
+        let env = MockEnvWithPath {
+            vars: std::collections::HashMap::new()
+        };
+        
+        // Since we can't easily mock PATH in a test, this will likely return None
+        // unless there's a system Ruby in PATH, which is acceptable
+        let result = find_active_ruby_version_with_env(&env);
+        
+        std::env::set_current_dir(original_dir).unwrap();
+        std::fs::remove_dir_all(&temp_dir).unwrap();
+
+        // The result depends on system state, so we just verify it doesn't panic
+        // and returns either None or Some valid Ruby version string
+        if let Some(version) = result {
+            assert!(!version.is_empty());
+        }
+    }
+
+    fn create_test_ruby(implementation: &str, version: &str) -> Ruby {
+        use vfs::{PhysicalFS, VfsPath};
+        
+        let fs = PhysicalFS::new("/");
+        let vfs_root = VfsPath::new(fs);
+        let dummy_vfs_path = vfs_root.join("tmp").unwrap();
+        
+        let implementation_enum = RubyImplementation::from_str(implementation).unwrap();
+        let version_parts = parse_version(version).unwrap();
+        
+        Ruby {
+            key: format!("{}-{}-test-arch64", implementation, version),
+            version: version.to_string(),
+            version_parts,
+            path: dummy_vfs_path,
+            symlink: None,
+            implementation: implementation_enum,
+            arch: "aarch64".to_string(),
+            os: "test".to_string(),
+        }
+    }
 }
 
 /// Custom serializer for VfsPath that serializes as the display string
@@ -471,4 +809,197 @@ fn find_symlink_target(vfs_path: &VfsPath) -> Option<VfsPath> {
     } else {
         None
     }
+}
+
+/// Trait for environment variable access (allows mocking in tests)
+pub trait EnvProvider {
+    fn get_var(&self, key: &str) -> Option<String>;
+}
+
+/// Production environment provider
+pub struct SystemEnv;
+
+impl EnvProvider for SystemEnv {
+    fn get_var(&self, key: &str) -> Option<String> {
+        env::var(key).ok()
+    }
+}
+
+/// Find the currently active Ruby version using chrb's precedence order
+/// 1. RUBY_ROOT environment variable (if set, indicates active Ruby)
+/// 2. .ruby-version file in current directory or parent directories
+/// 3. DEFAULT_RUBY_VERSION environment variable
+pub fn find_active_ruby_version() -> Option<String> {
+    find_active_ruby_version_with_env(&SystemEnv)
+}
+
+/// Find active Ruby version with injectable environment provider (for testing)
+pub fn find_active_ruby_version_with_env(env_provider: &dyn EnvProvider) -> Option<String> {
+    // 1. Check RUBY_ROOT environment variable
+    if let Some(ruby_root) = env_provider.get_var("RUBY_ROOT") {
+        // Extract version from RUBY_ROOT path (e.g., "/path/to/ruby-3.1.4" -> "ruby-3.1.4")
+        if let Some(dirname) = PathBuf::from(&ruby_root).file_name() {
+            if let Some(dirname_str) = dirname.to_str() {
+                return Some(dirname_str.to_string());
+            }
+        }
+    }
+
+    // 2. Look for .ruby-version file in current directory and parents
+    if let Some(version) = find_ruby_version_file() {
+        return Some(version);
+    }
+
+    // 3. Check DEFAULT_RUBY_VERSION environment variable
+    if let Some(default_version) = env_provider.get_var("DEFAULT_RUBY_VERSION") {
+        return Some(default_version);
+    }
+
+    // 4. Fallback to PATH analysis - find Ruby executable and extract version
+    if let Some(path_ruby) = find_ruby_in_path() {
+        return Some(path_ruby);
+    }
+
+    None
+}
+
+/// Search for .ruby-version file in current directory and parent directories
+/// Following chrb's approach of walking up the directory tree
+fn find_ruby_version_file() -> Option<String> {
+    let mut current_dir = env::current_dir().ok()?;
+    
+    loop {
+        let ruby_version_file = current_dir.join(".ruby-version");
+        
+        if ruby_version_file.exists() {
+            if let Ok(content) = std::fs::read_to_string(&ruby_version_file) {
+                let version = content.trim();
+                if !version.is_empty() {
+                    return Some(version.to_string());
+                }
+            }
+        }
+        
+        // Move to parent directory
+        let parent = current_dir.parent()?;
+        if parent == current_dir {
+            // Reached filesystem root
+            break;
+        }
+        current_dir = parent.to_path_buf();
+    }
+    
+    None
+}
+
+
+/// Find Ruby executable in PATH and extract version information
+/// This is the fallback method when no .ruby-version file or env vars are set
+fn find_ruby_in_path() -> Option<String> {
+    // First, try to find 'ruby' executable in PATH
+    let ruby_path = find_executable_in_path("ruby")?;
+    
+    // Extract version and engine information from the Ruby executable
+    extract_ruby_info_from_executable(&ruby_path)
+}
+
+/// Find an executable in PATH
+fn find_executable_in_path(executable: &str) -> Option<PathBuf> {
+    if let Ok(path_var) = env::var("PATH") {
+        for path_dir in env::split_paths(&path_var) {
+            let executable_path = path_dir.join(executable);
+            
+            // Check for executable with and without .exe extension (Windows support)
+            if executable_path.is_file() && is_executable(&executable_path) {
+                return Some(executable_path);
+            }
+            
+            // Windows support - check for .exe extension
+            #[cfg(windows)]
+            {
+                let exe_path = path_dir.join(format!("{}.exe", executable));
+                if exe_path.is_file() && is_executable(&exe_path) {
+                    return Some(exe_path);
+                }
+            }
+        }
+    }
+    
+    None
+}
+
+/// Check if a file is executable
+fn is_executable(path: &PathBuf) -> bool {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if let Ok(metadata) = path.metadata() {
+            let permissions = metadata.permissions();
+            return permissions.mode() & 0o111 != 0;
+        }
+        false
+    }
+    
+    #[cfg(windows)]
+    {
+        // On Windows, if the file exists and has .exe extension, consider it executable
+        path.extension().map_or(false, |ext| ext == "exe")
+    }
+    
+    #[cfg(not(any(unix, windows)))]
+    {
+        // For other platforms, just check if file exists
+        true
+    }
+}
+
+/// Extract Ruby engine and version information from an executable
+/// Uses the same approach as chrb - execute Ruby to get accurate information
+fn extract_ruby_info_from_executable(ruby_path: &PathBuf) -> Option<String> {
+    // Execute Ruby to get engine and version information
+    // This mirrors chrb's ExecFindEnv function
+    let output = Command::new(ruby_path)
+        .args(["-e", "puts \"#{defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'ruby'}-#{RUBY_VERSION}\""])
+        .output()
+        .ok()?;
+    
+    if output.status.success() {
+        let stdout = String::from_utf8(output.stdout).ok()?;
+        let version_info = stdout.trim();
+        
+        if !version_info.is_empty() {
+            return Some(version_info.to_string());
+        }
+    }
+    
+    // Fallback: try to extract from path if execution failed
+    extract_ruby_info_from_path(ruby_path)
+}
+
+/// Fallback method to extract Ruby information from the executable path
+/// This looks for patterns in the path like /path/to/ruby-3.1.4/bin/ruby
+fn extract_ruby_info_from_path(ruby_path: &PathBuf) -> Option<String> {
+    // Look for Ruby installation directory in path
+    // e.g., /Users/user/.rubies/ruby-3.1.4/bin/ruby -> ruby-3.1.4
+    let path_str = ruby_path.to_string_lossy();
+    
+    // Common Ruby installation patterns
+    let patterns = [
+        r"/(ruby-[\d.]+[^/]*)/bin/ruby",      // /path/ruby-3.1.4/bin/ruby
+        r"/(jruby-[\d.]+[^/]*)/bin/ruby",     // /path/jruby-9.4.0.0/bin/ruby
+        r"/(truffleruby-[\d.]+[^/]*)/bin/ruby", // /path/truffleruby-23.1.1/bin/ruby
+    ];
+    
+    for pattern in &patterns {
+        if let Ok(re) = Regex::new(pattern) {
+            if let Some(captures) = re.captures(&path_str) {
+                if let Some(matched) = captures.get(1) {
+                    return Some(matched.as_str().to_string());
+                }
+            }
+        }
+    }
+    
+    // If no pattern matches, default to "ruby" (we know it's some Ruby)
+    Some("ruby".to_string())
 }

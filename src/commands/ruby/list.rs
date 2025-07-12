@@ -2,6 +2,7 @@ use miette::{IntoDiagnostic, Result};
 use owo_colors::OwoColorize;
 
 use crate::config::Config;
+use crate::ruby::find_active_ruby_version;
 
 #[derive(clap::ValueEnum, Clone, Debug)]
 pub enum OutputFormat {
@@ -20,6 +21,9 @@ pub fn list_rubies(config: &Config, format: OutputFormat, _installed_only: bool)
     
     match format {
         OutputFormat::Text => {
+            // Find the active Ruby version for marking
+            let active_version = find_active_ruby_version();
+            
             // Calculate the maximum width for the name column to align output
             // Using the same approach as uv with fold()
             let width = rubies.iter()
@@ -29,17 +33,24 @@ pub fn list_rubies(config: &Config, format: OutputFormat, _installed_only: bool)
                 let key = ruby.display_name();
                 let path = ruby.executable_path();
                 
+                // Check if this Ruby is active and add marker
+                let marker = if let Some(ref active) = active_version {
+                    if ruby.is_active(active) { "*" } else { " " }
+                } else {
+                    " "
+                };
+                
                 // Check if the path is a symlink and format accordingly
-                // Following uv's exact pattern
+                // Following uv's exact pattern with active marker
                 if let Some(ref symlink_target) = ruby.symlink {
                     println!(
-                        "{key:width$}    {} -> {}",
+                        "{marker} {key:width$}    {} -> {}",
                         path.display().to_string().cyan(),
                         symlink_target.as_str().cyan()
                     );
                 } else {
                     println!(
-                        "{key:width$}    {}",
+                        "{marker} {key:width$}    {}",
                         path.display().to_string().cyan()
                     );
                 }

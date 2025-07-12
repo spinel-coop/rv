@@ -83,13 +83,6 @@ fn main() -> Result<()> {
 }
 
 
-fn is_active_ruby(_ruby: &ruby::Ruby) -> Result<bool> {
-    // TODO: Implement active Ruby detection
-    // 1. Check .ruby-version file in current directory
-    // 2. Check global configuration
-    // 3. Check PATH for currently active Ruby
-    Ok(false)
-}
 
 fn pin_ruby() -> Result<()> {
     let ruby_version: String = fs::read_to_string(".ruby-version").into_diagnostic()?;

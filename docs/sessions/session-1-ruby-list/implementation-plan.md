@@ -14,17 +14,21 @@
 - [x] **2.1d** Add version parsing from directory names (ruby-3.1.4, jruby-9.4.0.0)
 - [x] **2.1e** Add engine detection (ruby, jruby, truffleruby, etc.)
 
-### Phase 3: Active Ruby Detection
-- [ ] **3.1a** Implement `find_active_ruby() -> Option<String>` function
-- [ ] **3.1b** Check for `.ruby-version` file in current directory
-- [ ] **3.1c** Check global Ruby configuration
-- [ ] **3.1d** Add PATH analysis for fallback detection
+### Phase 3: Active Ruby Detection ✅
+- [x] **3.1a** Implement `find_active_ruby_version() -> Option<String>` function
+- [x] **3.1b** Check for `.ruby-version` file in current directory and parent directories
+- [x] **3.1c** Check environment variables (RUBY_ROOT, DEFAULT_RUBY_VERSION)
+- [x] **3.1d** Add PATH analysis for fallback detection with Ruby execution
+- [x] **3.1e** Refactor `is_active_ruby` to be a method on `Ruby` struct
 
 ### Phase 4: Output Formatting ✅
 - [x] **4.1a** Implement text output format with active marker (*)
 - [x] **4.1b** Implement JSON output format using serde_json
 - [x] **4.1c** Add Ruby sorting logic (engine first, then version)
 - [x] **4.1d** Handle empty Ruby list with helpful message
+- [x] **4.1e** Add uv-style formatting with owo-colors and column alignment
+- [x] **4.1f** Extract command structure to commands/ruby/ module
+- [x] **4.1g** Skip version_parts serialization in JSON output
 
 ### Phase 5: Error Handling & Polish ✅
 - [x] **5.1a** Add proper error handling for directory access issues
@@ -79,9 +83,12 @@
 - File system traversal capabilities
 
 ## Success Criteria
-- [ ] `rv ruby list` shows all installed Ruby versions
-- [ ] Active Ruby is clearly marked with `*`
-- [ ] `rv ruby list --json` outputs valid JSON
-- [ ] Graceful handling of missing or inaccessible directories
-- [ ] Sorted output (engine, then version)
-- [ ] Helpful messages when no Rubies found
+- [x] `rv ruby list` shows all installed Ruby versions
+- [x] Active Ruby is clearly marked with `*`
+- [x] `rv ruby list --json` outputs valid JSON
+- [x] Graceful handling of missing or inaccessible directories
+- [x] Sorted output (engine, then version)
+- [x] Helpful messages when no Rubies found
+- [x] uv-style output formatting with colors and alignment
+- [x] Command structure organized in commands/ruby/ module
+- [x] Comprehensive unit tests for active Ruby detection
