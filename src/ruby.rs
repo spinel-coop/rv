@@ -210,12 +210,12 @@ impl Ord for Ruby {
         // Sort by implementation first
         match self.implementation.cmp(&other.implementation) {
             std::cmp::Ordering::Equal => {
-                // Same implementation, compare versions: major.minor.patch
-                match self.version_parts.major.cmp(&other.version_parts.major) {
+                // Same implementation, compare versions: major.minor.patch (descending order)
+                match other.version_parts.major.cmp(&self.version_parts.major) {
                     std::cmp::Ordering::Equal => {
-                        match self.version_parts.minor.cmp(&other.version_parts.minor) {
+                        match other.version_parts.minor.cmp(&self.version_parts.minor) {
                             std::cmp::Ordering::Equal => {
-                                self.version_parts.patch.cmp(&other.version_parts.patch)
+                                other.version_parts.patch.cmp(&self.version_parts.patch)
                             }
                             other => other,
                         }
@@ -366,8 +366,8 @@ mod tests {
             os: "macos".to_string(),
         };
         
-        // Test version ordering within same implementation
-        assert!(ruby1 < ruby2);
+        // Test version ordering within same implementation (higher versions first)
+        assert!(ruby2 < ruby1); // 3.2.0 comes before 3.1.4
         
         // Test implementation priority: ruby comes before jruby
         assert!(ruby1 < jruby);
