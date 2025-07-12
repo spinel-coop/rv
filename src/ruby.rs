@@ -1,6 +1,10 @@
 use std::path::{Path, PathBuf};
+use std::fmt::{self, Display};
+use std::str::FromStr;
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr};
 
+#[serde_as]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Ruby {
     /// Unique identifier for this Ruby installation
@@ -18,14 +22,113 @@ pub struct Ruby {
     /// Symlink target if this Ruby is a symlink
     pub symlink: Option<PathBuf>,
     
-    /// Ruby implementation (ruby, jruby, truffleruby, etc.)
-    pub implementation: String,
+    /// Ruby implementation
+    #[serde_as(as = "DisplayFromStr")]
+    pub implementation: RubyImplementation,
     
     /// System architecture (aarch64, x86_64, etc.)
     pub arch: String,
     
     /// Operating system (macos, linux, windows, etc.)
     pub os: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum RubyImplementation {
+    /// Standard Ruby (MRI/CRuby)
+    Ruby,
+    /// JRuby (Java implementation)
+    #[serde(rename = "jruby")]
+    JRuby,
+    /// TruffleRuby (GraalVM implementation)
+    #[serde(rename = "truffleruby")]
+    TruffleRuby,
+    /// mruby (minimal Ruby)
+    #[serde(rename = "mruby")]
+    MRuby,
+    /// Artichoke Ruby (Rust implementation)
+    #[serde(rename = "artichoke")]
+    Artichoke,
+    /// Unknown implementation with the original name
+    #[serde(untagged)]
+    Unknown(String),
+}
+
+impl RubyImplementation {
+    /// Get the display name for this implementation
+    pub fn name(&self) -> &str {
+        match self {
+            Self::Ruby => "ruby",
+            Self::JRuby => "jruby",
+            Self::TruffleRuby => "truffleruby",
+            Self::MRuby => "mruby",
+            Self::Artichoke => "artichoke",
+            Self::Unknown(name) => name,
+        }
+    }
+}
+
+impl Display for RubyImplementation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name())
+    }
+}
+
+impl FromStr for RubyImplementation {
+    type Err = std::convert::Infallible;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let implementation = match s {
+            "ruby" => Self::Ruby,
+            "jruby" => Self::JRuby,
+            "truffleruby" => Self::TruffleRuby,
+            "mruby" => Self::MRuby,
+            "artichoke" => Self::Artichoke,
+            _ => Self::Unknown(s.to_string()),
+        };
+        Ok(implementation)
+    }
+}
+
+impl PartialOrd for RubyImplementation {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for RubyImplementation {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        use std::cmp::Ordering;
+        
+        // Get priority for each implementation
+        let self_priority = match self {
+            Self::Ruby => 0,           // Ruby always comes first
+            Self::JRuby |
+            Self::TruffleRuby |
+            Self::MRuby |
+            Self::Artichoke => 1,      // Known implementations second
+            Self::Unknown(_) => 2,     // Unknown implementations last
+        };
+        
+        let other_priority = match other {
+            Self::Ruby => 0,
+            Self::JRuby |
+            Self::TruffleRuby |
+            Self::MRuby |
+            Self::Artichoke => 1,
+            Self::Unknown(_) => 2,
+        };
+        
+        // First compare by priority
+        match self_priority.cmp(&other_priority) {
+            Ordering::Equal => {
+                // Same priority, sort alphabetically by name
+                self.name().cmp(other.name())
+            }
+            other => other,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -45,7 +148,8 @@ impl Ruby {
             .ok_or(RubyError::InvalidPath)?;
         
         // Parse directory name (e.g., "ruby-3.1.4", "jruby-9.4.0.0")
-        let (implementation, version) = parse_ruby_dir_name(dir_name)?;
+        let (implementation_name, version) = parse_ruby_dir_name(dir_name)?;
+        let implementation = RubyImplementation::from_str(&implementation_name).unwrap();
         let version_parts = parse_version(&version)?;
         
         // Check for Ruby executable
@@ -70,7 +174,7 @@ impl Ruby {
             other => other,
         };
         
-        let key = format!("{}-{}-{}-{}", implementation, version, os, arch);
+        let key = format!("{}-{}-{}-{}", implementation.name(), version, os, arch);
         
         Ok(Ruby {
             key,
@@ -91,7 +195,7 @@ impl Ruby {
     
     /// Get display name for this Ruby
     pub fn display_name(&self) -> String {
-        format!("{}-{}", self.implementation, self.version)
+        format!("{}-{}", self.implementation.name(), self.version)
     }
 }
 
@@ -103,11 +207,8 @@ impl PartialOrd for Ruby {
 
 impl Ord for Ruby {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // Sort "ruby" first, then other implementations alphabetically
-        let self_priority = implementation_priority(&self.implementation);
-        let other_priority = implementation_priority(&other.implementation);
-        
-        match self_priority.cmp(&other_priority) {
+        // Sort by implementation first
+        match self.implementation.cmp(&other.implementation) {
             std::cmp::Ordering::Equal => {
                 // Same implementation, compare versions: major.minor.patch
                 match self.version_parts.major.cmp(&other.version_parts.major) {
@@ -127,15 +228,6 @@ impl Ord for Ruby {
     }
 }
 
-/// Get sorting priority for Ruby implementations
-/// Returns (priority, name) where lower priority sorts first
-fn implementation_priority(implementation: &str) -> (u8, &str) {
-    match implementation {
-        "ruby" => (0, implementation),  // Ruby always comes first
-        _ => (1, implementation),       // Others sorted alphabetically
-    }
-}
-
 #[derive(Debug, thiserror::Error)]
 pub enum RubyError {
     #[error("Invalid path")]
@@ -151,6 +243,7 @@ pub enum RubyError {
 /// Parse Ruby directory name into implementation and version
 /// Examples: "ruby-3.1.4" -> ("ruby", "3.1.4")
 ///          "jruby-9.4.0.0" -> ("jruby", "9.4.0.0")
+///          "unknown-ruby-1.0.0" -> ("unknown-ruby", "1.0.0")
 fn parse_ruby_dir_name(dir_name: &str) -> Result<(String, String), RubyError> {
     let parts: Vec<&str> = dir_name.splitn(2, '-').collect();
     if parts.len() != 2 {
@@ -160,12 +253,7 @@ fn parse_ruby_dir_name(dir_name: &str) -> Result<(String, String), RubyError> {
     let implementation = parts[0].to_string();
     let version = parts[1].to_string();
     
-    // Validate known Ruby implementations
-    match implementation.as_str() {
-        "ruby" | "jruby" | "truffleruby" | "mruby" | "artichoke" => {},
-        _ => return Err(RubyError::InvalidDirectoryName(format!("Unknown Ruby implementation: {}", implementation))),
-    }
-    
+    // Accept any implementation name - the enum will handle unknown ones
     Ok((implementation, version))
 }
 
@@ -217,7 +305,12 @@ mod tests {
         );
         
         assert!(parse_ruby_dir_name("invalid").is_err());
-        assert!(parse_ruby_dir_name("unknown-1.0.0").is_err());
+        
+        // Unknown implementations should be accepted now
+        assert_eq!(
+            parse_ruby_dir_name("unknown-1.0.0").unwrap(),
+            ("unknown".to_string(), "1.0.0".to_string())
+        );
     }
     
     #[test]
@@ -246,7 +339,7 @@ mod tests {
             version_parts: VersionParts { major: 3, minor: 1, patch: 4, pre: None },
             path: PathBuf::from("/opt/rubies/ruby-3.1.4/bin/ruby"),
             symlink: None,
-            implementation: "ruby".to_string(),
+            implementation: RubyImplementation::Ruby,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
         };
@@ -257,7 +350,7 @@ mod tests {
             version_parts: VersionParts { major: 3, minor: 2, patch: 0, pre: None },
             path: PathBuf::from("/opt/rubies/ruby-3.2.0/bin/ruby"),
             symlink: None,
-            implementation: "ruby".to_string(),
+            implementation: RubyImplementation::Ruby,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
         };
@@ -268,7 +361,7 @@ mod tests {
             version_parts: VersionParts { major: 9, minor: 4, patch: 0, pre: Some("0".to_string()) },
             path: PathBuf::from("/opt/rubies/jruby-9.4.0.0/bin/ruby"),
             symlink: None,
-            implementation: "jruby".to_string(),
+            implementation: RubyImplementation::JRuby,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
         };
@@ -282,9 +375,39 @@ mod tests {
     }
     
     #[test]
-    fn test_implementation_priority() {
-        assert_eq!(implementation_priority("ruby"), (0, "ruby"));
-        assert_eq!(implementation_priority("jruby"), (1, "jruby"));
-        assert_eq!(implementation_priority("truffleruby"), (1, "truffleruby"));
+    fn test_implementation_ordering() {
+        let ruby = RubyImplementation::Ruby;
+        let jruby = RubyImplementation::JRuby;
+        let truffleruby = RubyImplementation::TruffleRuby;
+        let unknown = RubyImplementation::Unknown("custom-ruby".to_string());
+        
+        // Ruby comes first
+        assert!(ruby < jruby);
+        assert!(ruby < truffleruby);
+        assert!(ruby < unknown);
+        
+        // Known implementations come before unknown
+        assert!(jruby < unknown);
+        assert!(truffleruby < unknown);
+        
+        // Known implementations are sorted alphabetically
+        assert!(jruby < truffleruby); // "jruby" < "truffleruby"
+    }
+    
+    #[test]
+    fn test_ruby_implementation_from_str() {
+        assert_eq!(RubyImplementation::from_str("ruby").unwrap(), RubyImplementation::Ruby);
+        assert_eq!(RubyImplementation::from_str("jruby").unwrap(), RubyImplementation::JRuby);
+        assert_eq!(RubyImplementation::from_str("truffleruby").unwrap(), RubyImplementation::TruffleRuby);
+        assert_eq!(RubyImplementation::from_str("mruby").unwrap(), RubyImplementation::MRuby);
+        assert_eq!(RubyImplementation::from_str("artichoke").unwrap(), RubyImplementation::Artichoke);
+        assert_eq!(RubyImplementation::from_str("custom-ruby").unwrap(), RubyImplementation::Unknown("custom-ruby".to_string()));
+    }
+    
+    #[test]
+    fn test_ruby_implementation_name() {
+        assert_eq!(RubyImplementation::Ruby.name(), "ruby");
+        assert_eq!(RubyImplementation::JRuby.name(), "jruby");
+        assert_eq!(RubyImplementation::Unknown("custom-ruby".to_string()).name(), "custom-ruby");
     }
 }
