@@ -30,11 +30,18 @@ struct Cli {
 
 impl Cli {
     fn config(&self) -> Config {
+        use vfs::{PhysicalFS, VfsPath};
+        use std::sync::Arc;
+        
         Config {
             ruby_dirs: if self.ruby_dir.is_empty() { 
                 config::default_ruby_dirs() 
             } else { 
-                self.ruby_dir.clone() 
+                let fs = PhysicalFS::new("/");
+                let root = VfsPath::new(fs);
+                self.ruby_dir.iter()
+                    .filter_map(|path| root.join(path.to_string_lossy().as_ref()).ok())
+                    .collect()
             },
             gemfile: self.gemfile.clone(),
             cache_dir: xdg::BaseDirectories::with_prefix("rv")
@@ -43,6 +50,7 @@ impl Cli {
             local_dir: xdg::BaseDirectories::with_prefix("rv")
                 .data_home
                 .unwrap_or_else(|| std::env::temp_dir().join("rv")),
+            fs: Arc::new(PhysicalFS::new("/")),
         }
     }
 }
@@ -111,7 +119,7 @@ fn list_rubies(config: &Config, format: OutputFormat, _installed_only: bool) -> 
         OutputFormat::Text => {
             for ruby in rubies {
                 let marker = if is_active_ruby(&ruby)? { "*" } else { " " };
-                println!("{} {} {}", marker, ruby.display_name(), ruby.path.display());
+                println!("{} {} {}", marker, ruby.display_name(), ruby.executable_path().display());
             }
         }
         OutputFormat::Json => {

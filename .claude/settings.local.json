@@ -11,7 +11,8 @@
       "Bash(cargo:*)",
       "Bash(jj status:*)",
       "Bash(jj log:*)",
-      "Bash(jj commit:*)"
+      "Bash(jj commit:*)",
+      "Bash(jj diff:*)"
     ],
     "deny": []
   }

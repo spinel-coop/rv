@@ -1,11 +1,12 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::fmt::{self, Display};
 use std::str::FromStr;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use serde_with::{serde_as, DisplayFromStr};
+use vfs::VfsPath;
 
 #[serde_as]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Ruby {
     /// Unique identifier for this Ruby installation
     pub key: String,
@@ -16,11 +17,13 @@ pub struct Ruby {
     /// Parsed version components
     pub version_parts: VersionParts,
     
-    /// Full path to the Ruby executable
-    pub path: PathBuf,
+    /// VFS path to the Ruby installation directory
+    #[serde(serialize_with = "serialize_vfs_path")]
+    pub path: VfsPath,
     
     /// Symlink target if this Ruby is a symlink
-    pub symlink: Option<PathBuf>,
+    #[serde(skip_serializing_if = "Option::is_none", serialize_with = "serialize_optional_vfs_path")]
+    pub symlink: Option<VfsPath>,
     
     /// Ruby implementation
     #[serde_as(as = "DisplayFromStr")]
@@ -140,30 +143,27 @@ pub struct VersionParts {
 }
 
 impl Ruby {
-    /// Create a new Ruby instance from a directory path
-    pub fn from_dir<P: AsRef<Path>>(dir_path: P) -> Result<Self, RubyError> {
-        let dir_path = dir_path.as_ref();
-        let dir_name = dir_path.file_name()
-            .and_then(|n| n.to_str())
-            .ok_or(RubyError::InvalidPath)?;
+    /// Create a new Ruby instance from a VFS directory path
+    pub fn from_dir(vfs_dir: VfsPath) -> Result<Self, RubyError> {
+        let dir_name = vfs_dir.filename();
+        if dir_name.is_empty() {
+            return Err(RubyError::InvalidPath { 
+                path: vfs_dir.as_str().to_string() 
+            });
+        }
         
         // Parse directory name (e.g., "ruby-3.1.4", "jruby-9.4.0.0")
-        let (implementation_name, version) = parse_ruby_dir_name(dir_name)?;
+        let (implementation_name, version) = parse_ruby_dir_name(&dir_name)?;
         let implementation = RubyImplementation::from_str(&implementation_name).unwrap();
         let version_parts = parse_version(&version)?;
         
         // Check for Ruby executable
-        let ruby_bin = dir_path.join("bin").join("ruby");
-        if !ruby_bin.exists() {
+        let ruby_bin = vfs_dir.join("bin")?.join("ruby")?;
+        if !ruby_bin.exists()? {
             return Err(RubyError::NoRubyExecutable);
         }
         
-        // Check if it's a symlink
-        let symlink = if ruby_bin.is_symlink() {
-            std::fs::read_link(&ruby_bin).ok()
-        } else {
-            None
-        };
+        let symlink = find_symlink_target(&ruby_bin);
         
         // Generate unique key
         let arch = std::env::consts::ARCH;
@@ -180,7 +180,7 @@ impl Ruby {
             key,
             version,
             version_parts,
-            path: ruby_bin,
+            path: vfs_dir,
             symlink,
             implementation,
             arch: arch.to_string(),
@@ -190,12 +190,22 @@ impl Ruby {
     
     /// Check if this Ruby installation is valid
     pub fn is_valid(&self) -> bool {
-        self.path.exists() && self.path.is_file()
+        // Use VFS to check validity
+        let ruby_bin = self.path.join("bin").and_then(|bin| bin.join("ruby"));
+        match ruby_bin {
+            Ok(bin_path) => bin_path.exists().unwrap_or(false),
+            Err(_) => false,
+        }
     }
     
     /// Get display name for this Ruby
     pub fn display_name(&self) -> String {
         format!("{}-{}", self.implementation.name(), self.version)
+    }
+    
+    /// Get the path to the Ruby executable for display purposes
+    pub fn executable_path(&self) -> PathBuf {
+        PathBuf::from(self.path.join("bin").unwrap().join("ruby").unwrap().as_str())
     }
 }
 
@@ -230,14 +240,16 @@ impl Ord for Ruby {
 
 #[derive(Debug, thiserror::Error)]
 pub enum RubyError {
-    #[error("Invalid path")]
-    InvalidPath,
+    #[error("Invalid path: {path}")]
+    InvalidPath { path: String },
     #[error("No ruby executable found in bin/ directory")]
     NoRubyExecutable,
     #[error("Failed to parse Ruby directory name: {0}")]
     InvalidDirectoryName(String),
     #[error("Failed to parse version: {0}")]
     InvalidVersion(String),
+    #[error("VFS error: {0}")]
+    VfsError(#[from] vfs::VfsError),
 }
 
 /// Parse Ruby directory name into implementation and version
@@ -333,11 +345,18 @@ mod tests {
     
     #[test]
     fn test_ruby_ordering() {
+        use vfs::{PhysicalFS, VfsPath};
+        
+        // Create a dummy VFS path for testing
+        let fs = PhysicalFS::new("/");
+        let vfs_root = VfsPath::new(fs);
+        let dummy_vfs_path = vfs_root.join("tmp").unwrap();
+        
         let ruby1 = Ruby {
             key: "ruby-3.1.4-macos-aarch64".to_string(),
             version: "3.1.4".to_string(),
             version_parts: VersionParts { major: 3, minor: 1, patch: 4, pre: None },
-            path: PathBuf::from("/opt/rubies/ruby-3.1.4/bin/ruby"),
+            path: dummy_vfs_path.clone(),
             symlink: None,
             implementation: RubyImplementation::Ruby,
             arch: "aarch64".to_string(),
@@ -348,7 +367,7 @@ mod tests {
             key: "ruby-3.2.0-macos-aarch64".to_string(),
             version: "3.2.0".to_string(),
             version_parts: VersionParts { major: 3, minor: 2, patch: 0, pre: None },
-            path: PathBuf::from("/opt/rubies/ruby-3.2.0/bin/ruby"),
+            path: dummy_vfs_path.clone(),
             symlink: None,
             implementation: RubyImplementation::Ruby,
             arch: "aarch64".to_string(),
@@ -359,7 +378,7 @@ mod tests {
             key: "jruby-9.4.0.0-macos-aarch64".to_string(),
             version: "9.4.0.0".to_string(),
             version_parts: VersionParts { major: 9, minor: 4, patch: 0, pre: Some("0".to_string()) },
-            path: PathBuf::from("/opt/rubies/jruby-9.4.0.0/bin/ruby"),
+            path: dummy_vfs_path,
             symlink: None,
             implementation: RubyImplementation::JRuby,
             arch: "aarch64".to_string(),
@@ -409,5 +428,51 @@ mod tests {
         assert_eq!(RubyImplementation::Ruby.name(), "ruby");
         assert_eq!(RubyImplementation::JRuby.name(), "jruby");
         assert_eq!(RubyImplementation::Unknown("custom-ruby".to_string()).name(), "custom-ruby");
+    }
+}
+
+/// Custom serializer for VfsPath that serializes as the display string
+fn serialize_vfs_path<S>(path: &VfsPath, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&path.as_str())
+}
+
+/// Custom serializer for Option<VfsPath> that serializes as the display string
+fn serialize_optional_vfs_path<S>(path: &Option<VfsPath>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match path {
+        Some(p) => serializer.serialize_str(&p.as_str()),
+        None => serializer.serialize_none(),
+    }
+}
+
+/// Find symlink target for a VFS path, if it exists
+fn find_symlink_target(vfs_path: &VfsPath) -> Option<VfsPath> {
+    if let Ok(metadata) = vfs_path.metadata() {
+        if metadata.file_type == vfs::VfsFileType::File {
+            // For VFS, we need to check if it's a symlink using the underlying filesystem
+            // Since VFS doesn't expose symlink info directly, we'll convert to PathBuf for this check
+            let pathbuf = PathBuf::from(vfs_path.as_str());
+            if pathbuf.is_symlink() {
+                if let Ok(target) = std::fs::read_link(&pathbuf) {
+                    // Convert the symlink target back to VFS path
+                    let fs = vfs::PhysicalFS::new("/");
+                    let root = VfsPath::new(fs);
+                    root.join(target.to_string_lossy().as_ref()).ok()
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    } else {
+        None
     }
 }
