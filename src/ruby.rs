@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::fmt::{self, Display};
 use std::str::FromStr;
 use std::env;
@@ -242,8 +242,7 @@ impl Ruby {
             }
             
             // Check engine-only matching: "ruby-" matches "ruby-3.1.4"
-            if active_version.ends_with('-') {
-                let engine = &active_version[..active_version.len()-1];
+            if let Some(engine) = active_version.strip_suffix('-') {
                 if self.implementation.name() == engine {
                     return true;
                 }
@@ -929,7 +928,7 @@ fn find_executable_in_path(executable: &str) -> Option<PathBuf> {
 }
 
 /// Check if a file is executable
-fn is_executable(path: &PathBuf) -> bool {
+fn is_executable(path: &Path) -> bool {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -978,7 +977,7 @@ fn extract_ruby_info_from_executable(ruby_path: &PathBuf) -> Option<String> {
 
 /// Fallback method to extract Ruby information from the executable path
 /// This looks for patterns in the path like /path/to/ruby-3.1.4/bin/ruby
-fn extract_ruby_info_from_path(ruby_path: &PathBuf) -> Option<String> {
+fn extract_ruby_info_from_path(ruby_path: &Path) -> Option<String> {
     // Look for Ruby installation directory in path
     // e.g., /Users/user/.rubies/ruby-3.1.4/bin/ruby -> ruby-3.1.4
     let path_str = ruby_path.to_string_lossy();

@@ -34,7 +34,7 @@
 - [x] **5.1a** Add proper error handling for directory access issues
 - [x] **5.1b** Add informative messages when no Rubies found
 - [x] **5.1c** Handle permission denied errors gracefully
-- [ ] **5.1d** Add integration tests for various scenarios
+- [x] **5.1d** Add comprehensive integration tests in tests/ directory
 
 ### Phase 6: Integration ✅
 - [x] **6.1a** Update `list_rubies()` function in main.rs with full implementation
