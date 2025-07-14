@@ -1,12 +1,20 @@
 use std::{fs, path::PathBuf};
 
-use clap::{Args, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use miette::{IntoDiagnostic, Result};
 
+pub mod commands;
 pub mod config;
 pub mod env;
 pub mod ruby;
 
+use commands::{
+    app::{AppArgs, AppCommand},
+    gem::{GemArgs, GemCommand}, 
+    ruby::{RubyArgs, RubyCommand},
+    script::{ScriptArgs, ScriptCommand},
+    tool::{ToolArgs, ToolCommand},
+};
 use config::Config;
 
 #[derive(Parser)]
@@ -51,33 +59,18 @@ impl Cli {
 enum Commands {
     #[command(about = "Manage Ruby versions and installations")]
     Ruby(RubyArgs),
-}
-
-#[derive(Args)]
-struct RubyArgs {
-    #[command(subcommand)]
-    command: RubyCommand,
-}
-
-#[derive(Subcommand)]
-enum RubyCommand {
-    #[command(about = "List the available Ruby installations")]
-    List {
-        /// Output format for the Ruby list
-        #[arg(long, value_enum, default_value = "text")]
-        format: OutputFormat,
-        
-        /// Show only installed Ruby versions
-        #[arg(long)]
-        installed_only: bool,
-    },
-    Pin {},
-}
-
-#[derive(clap::ValueEnum, Clone, Debug)]
-enum OutputFormat {
-    Text,
-    Json,
+    
+    #[command(about = "Manage gem CLI tools")]
+    Tool(ToolArgs),
+    
+    #[command(about = "Run Ruby scripts with dependency resolution")]
+    Script(ScriptArgs),
+    
+    #[command(about = "Manage Ruby applications")]
+    App(AppArgs),
+    
+    #[command(about = "Create and publish gems")]
+    Gem(GemArgs),
 }
 
 fn main() -> Result<()> {
@@ -86,53 +79,110 @@ fn main() -> Result<()> {
     let config = cli.config();
     
     match cli.command {
-        None => {}
+        None => {
+            println!("rv - Ruby swiss army knife");
+            println!("Run 'rv --help' for usage information");
+        }
         Some(cmd) => match cmd {
-            Commands::Ruby(ruby) => match ruby.command {
-                RubyCommand::List { format, installed_only } => list_rubies(&config, format, installed_only)?,
-                RubyCommand::Pin {} => pin_ruby()?,
-            },
+            Commands::Ruby(ruby) => handle_ruby_command(&config, ruby.command)?,
+            Commands::Tool(tool) => handle_tool_command(tool.command)?,
+            Commands::Script(script) => handle_script_command(script.command)?,
+            Commands::App(app) => handle_app_command(app.command)?,
+            Commands::Gem(gem) => handle_gem_command(gem.command)?,
         },
     }
 
     Ok(())
 }
 
-fn list_rubies(config: &Config, format: OutputFormat, _installed_only: bool) -> Result<()> {
-    let rubies = config.rubies()?;
+fn handle_ruby_command(config: &Config, command: RubyCommand) -> Result<()> {
+    use commands::ruby::*;
     
-    if rubies.is_empty() {
-        println!("No Ruby installations found.");
-        println!("Try installing Ruby with 'rv ruby install' or check your configuration.");
-        return Ok(());
-    }
-    
-    match format {
-        OutputFormat::Text => {
-            for ruby in rubies {
-                let marker = if is_active_ruby(&ruby)? { "*" } else { " " };
-                println!("{} {} {}", marker, ruby.display_name(), ruby.path.display());
-            }
+    match command {
+        RubyCommand::List { format, installed_only } => {
+            list_rubies(config, format, installed_only)
         }
-        OutputFormat::Json => {
-            let json = serde_json::to_string_pretty(&rubies).into_diagnostic()?;
-            println!("{}", json);
+        RubyCommand::Install { version, force } => {
+            install_ruby(version.as_deref(), force)
+        }
+        RubyCommand::Uninstall { version } => {
+            uninstall_ruby(&version)
+        }
+        RubyCommand::Pin { version } => {
+            pin_ruby(version.as_deref())
         }
     }
+}
+
+fn handle_tool_command(command: ToolCommand) -> Result<()> {
+    use commands::tool::*;
     
-    Ok(())
+    match command {
+        ToolCommand::Run { tool, args } => {
+            run_tool(RunToolArgs { tool, args })
+        }
+        ToolCommand::Install { tool, version } => {
+            install_tool(InstallToolArgs { tool, version })
+        }
+        ToolCommand::Uninstall { tool } => {
+            uninstall_tool(UninstallToolArgs { tool })
+        }
+    }
 }
 
-fn is_active_ruby(_ruby: &ruby::Ruby) -> Result<bool> {
-    // TODO: Implement active Ruby detection
-    // 1. Check .ruby-version file in current directory
-    // 2. Check global configuration
-    // 3. Check PATH for currently active Ruby
-    Ok(false)
+fn handle_script_command(command: ScriptCommand) -> Result<()> {
+    use commands::script::*;
+    
+    match command {
+        ScriptCommand::Run { script, args } => {
+            run_script(RunScriptArgs { script, args })
+        }
+        ScriptCommand::Add { gem, version, script } => {
+            add_script_dependency(AddScriptDependencyArgs { gem, version, script })
+        }
+        ScriptCommand::Remove { gem, script } => {
+            remove_script_dependency(RemoveScriptDependencyArgs { gem, script })
+        }
+    }
 }
 
-fn pin_ruby() -> Result<()> {
-    let ruby_version: String = fs::read_to_string(".ruby-version").into_diagnostic()?;
-    println!("{}", ruby_version);
-    Ok(())
+fn handle_app_command(command: AppCommand) -> Result<()> {
+    use commands::app::*;
+    
+    match command {
+        AppCommand::Init { name, ruby, template } => {
+            init_app(name.as_deref(), ruby.as_deref(), template.as_deref())
+        }
+        AppCommand::Install { skip_bundle } => {
+            install_app(skip_bundle)
+        }
+        AppCommand::Add { gem, version, dev, test } => {
+            add_gem(&gem, version.as_deref(), dev, test)
+        }
+        AppCommand::Remove { gem } => {
+            remove_gem(&gem)
+        }
+        AppCommand::Upgrade { gem } => {
+            upgrade_gems(gem.as_deref())
+        }
+        AppCommand::Tree { direct } => {
+            show_tree(direct)
+        }
+    }
+}
+
+fn handle_gem_command(command: GemCommand) -> Result<()> {
+    use commands::gem::*;
+    
+    match command {
+        GemCommand::New { name, template, skip_git } => {
+            new_gem(&name, template.as_deref(), skip_git)
+        }
+        GemCommand::Build { output } => {
+            build_gem(output.as_deref())
+        }
+        GemCommand::Publish { registry, dry_run } => {
+            publish_gem(registry.as_deref(), dry_run)
+        }
+    }
 }
