@@ -10,7 +10,8 @@
       "Bash(uv python list:*)",
       "Bash(cargo:*)",
       "Bash(jj status:*)",
-      "Bash(jj log:*)"
+      "Bash(jj log:*)",
+      "Bash(jj commit:*)"
     ],
     "deny": []
   }

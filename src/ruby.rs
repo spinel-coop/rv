@@ -103,10 +103,13 @@ impl PartialOrd for Ruby {
 
 impl Ord for Ruby {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // Sort by implementation first, then by version
-        match self.implementation.cmp(&other.implementation) {
+        // Sort "ruby" first, then other implementations alphabetically
+        let self_priority = implementation_priority(&self.implementation);
+        let other_priority = implementation_priority(&other.implementation);
+        
+        match self_priority.cmp(&other_priority) {
             std::cmp::Ordering::Equal => {
-                // Compare versions: major.minor.patch
+                // Same implementation, compare versions: major.minor.patch
                 match self.version_parts.major.cmp(&other.version_parts.major) {
                     std::cmp::Ordering::Equal => {
                         match self.version_parts.minor.cmp(&other.version_parts.minor) {
@@ -121,6 +124,15 @@ impl Ord for Ruby {
             }
             other => other,
         }
+    }
+}
+
+/// Get sorting priority for Ruby implementations
+/// Returns (priority, name) where lower priority sorts first
+fn implementation_priority(implementation: &str) -> (u8, &str) {
+    match implementation {
+        "ruby" => (0, implementation),  // Ruby always comes first
+        _ => (1, implementation),       // Others sorted alphabetically
     }
 }
 
@@ -250,6 +262,29 @@ mod tests {
             os: "macos".to_string(),
         };
         
+        let jruby = Ruby {
+            key: "jruby-9.4.0.0-macos-aarch64".to_string(),
+            version: "9.4.0.0".to_string(),
+            version_parts: VersionParts { major: 9, minor: 4, patch: 0, pre: Some("0".to_string()) },
+            path: PathBuf::from("/opt/rubies/jruby-9.4.0.0/bin/ruby"),
+            symlink: None,
+            implementation: "jruby".to_string(),
+            arch: "aarch64".to_string(),
+            os: "macos".to_string(),
+        };
+        
+        // Test version ordering within same implementation
         assert!(ruby1 < ruby2);
+        
+        // Test implementation priority: ruby comes before jruby
+        assert!(ruby1 < jruby);
+        assert!(ruby2 < jruby);
+    }
+    
+    #[test]
+    fn test_implementation_priority() {
+        assert_eq!(implementation_priority("ruby"), (0, "ruby"));
+        assert_eq!(implementation_priority("jruby"), (1, "jruby"));
+        assert_eq!(implementation_priority("truffleruby"), (1, "truffleruby"));
     }
 }
