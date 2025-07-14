@@ -1,22 +1,23 @@
-use std::{fs, io::Read, path::PathBuf, pin};
+use std::{fs, path::PathBuf};
 
 use clap::{Args, Parser, Subcommand};
 use miette::{IntoDiagnostic, Result};
 
 pub mod config;
 pub mod env;
+pub mod ruby;
 
 use config::Config;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
-    /// Optional name to operate on
-    name: Option<String>,
-
+    /// Ruby directories to search for installations
+    #[arg(long = "ruby-dir")]
     ruby_dir: Vec<PathBuf>,
 
-    #[arg(env = "BUNDLE_GEMFILE")]
+    /// Path to Gemfile
+    #[arg(long, env = "BUNDLE_GEMFILE")]
     gemfile: Option<PathBuf>,
 
     /// Turn debugging information on
@@ -30,10 +31,18 @@ struct Cli {
 impl Cli {
     fn config(&self) -> Config {
         Config {
-            ruby_dirs: self.ruby_dir,
-            gemfile: self.gemfile,
-            cache_dir: todo!(),
-            local_dir: todo!(),
+            ruby_dirs: if self.ruby_dir.is_empty() { 
+                config::default_ruby_dirs() 
+            } else { 
+                self.ruby_dir.clone() 
+            },
+            gemfile: self.gemfile.clone(),
+            cache_dir: xdg::BaseDirectories::with_prefix("rv")
+                .cache_home
+                .unwrap_or_else(|| std::env::temp_dir().join("rv")),
+            local_dir: xdg::BaseDirectories::with_prefix("rv")
+                .data_home
+                .unwrap_or_else(|| std::env::temp_dir().join("rv")),
         }
     }
 }
@@ -53,18 +62,34 @@ struct RubyArgs {
 #[derive(Subcommand)]
 enum RubyCommand {
     #[command(about = "List the available Ruby installations")]
-    List {},
+    List {
+        /// Output format for the Ruby list
+        #[arg(long, value_enum, default_value = "text")]
+        format: OutputFormat,
+        
+        /// Show only installed Ruby versions
+        #[arg(long)]
+        installed_only: bool,
+    },
     Pin {},
+}
+
+#[derive(clap::ValueEnum, Clone, Debug)]
+enum OutputFormat {
+    Text,
+    Json,
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
+    let config = cli.config();
+    
     match cli.command {
         None => {}
         Some(cmd) => match cmd {
             Commands::Ruby(ruby) => match ruby.command {
-                RubyCommand::List {} => list_rubies()?,
+                RubyCommand::List { format, installed_only } => list_rubies(&config, format, installed_only)?,
                 RubyCommand::Pin {} => pin_ruby()?,
             },
         },
@@ -73,8 +98,37 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn list_rubies() -> Result<()> {
+fn list_rubies(config: &Config, format: OutputFormat, _installed_only: bool) -> Result<()> {
+    let rubies = config.rubies()?;
+    
+    if rubies.is_empty() {
+        println!("No Ruby installations found.");
+        println!("Try installing Ruby with 'rv ruby install' or check your configuration.");
+        return Ok(());
+    }
+    
+    match format {
+        OutputFormat::Text => {
+            for ruby in rubies {
+                let marker = if is_active_ruby(&ruby)? { "*" } else { " " };
+                println!("{} {} {}", marker, ruby.display_name(), ruby.path.display());
+            }
+        }
+        OutputFormat::Json => {
+            let json = serde_json::to_string_pretty(&rubies).into_diagnostic()?;
+            println!("{}", json);
+        }
+    }
+    
     Ok(())
+}
+
+fn is_active_ruby(_ruby: &ruby::Ruby) -> Result<bool> {
+    // TODO: Implement active Ruby detection
+    // 1. Check .ruby-version file in current directory
+    // 2. Check global configuration
+    // 3. Check PATH for currently active Ruby
+    Ok(false)
 }
 
 fn pin_ruby() -> Result<()> {
