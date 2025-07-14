@@ -2,7 +2,7 @@ use clap::{Args, Subcommand};
 
 pub mod list;
 
-pub use list::{list_rubies, OutputFormat};
+pub use list::{OutputFormat, list_rubies};
 
 #[derive(Args)]
 pub struct RubyArgs {
@@ -17,7 +17,7 @@ pub enum RubyCommand {
         /// Output format for the Ruby list
         #[arg(long, value_enum, default_value = "text")]
         format: OutputFormat,
-        
+
         /// Show only installed Ruby versions
         #[arg(long)]
         installed_only: bool,

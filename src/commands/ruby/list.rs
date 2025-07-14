@@ -12,34 +12,35 @@ pub enum OutputFormat {
 
 pub fn list_rubies(config: &Config, format: OutputFormat, _installed_only: bool) -> Result<()> {
     let rubies = config.rubies()?;
-    
+
     if rubies.is_empty() {
         println!("No Ruby installations found.");
         println!("Try installing Ruby with 'rv ruby install' or check your configuration.");
         return Ok(());
     }
-    
+
     match format {
         OutputFormat::Text => {
             // Find the active Ruby version for marking
             let active_version = find_active_ruby_version();
-            
+
             // Calculate the maximum width for the name column to align output
             // Using the same approach as uv with fold()
-            let width = rubies.iter()
+            let width = rubies
+                .iter()
                 .fold(0usize, |acc, ruby| acc.max(ruby.display_name().len()));
-            
+
             for ruby in &rubies {
                 let key = ruby.display_name();
                 let path = ruby.executable_path();
-                
+
                 // Check if this Ruby is active and add marker
                 let marker = if let Some(ref active) = active_version {
                     if ruby.is_active(active) { "*" } else { " " }
                 } else {
                     " "
                 };
-                
+
                 // Check if the path is a symlink and format accordingly
                 // Following uv's exact pattern with active marker
                 if let Some(ref symlink_target) = ruby.symlink {
@@ -61,6 +62,6 @@ pub fn list_rubies(config: &Config, format: OutputFormat, _installed_only: bool)
             println!("{}", json);
         }
     }
-    
+
     Ok(())
 }

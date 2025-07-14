@@ -7,8 +7,8 @@ pub mod commands;
 pub mod config;
 pub mod ruby;
 
+use commands::ruby::{RubyArgs, RubyCommand, list_rubies};
 use config::Config;
-use commands::ruby::{list_rubies, RubyArgs, RubyCommand};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -31,16 +31,17 @@ struct Cli {
 
 impl Cli {
     fn config(&self) -> Config {
-        use vfs::{PhysicalFS, VfsPath};
         use std::sync::Arc;
-        
+        use vfs::{PhysicalFS, VfsPath};
+
         Config {
-            ruby_dirs: if self.ruby_dir.is_empty() { 
-                config::default_ruby_dirs() 
-            } else { 
+            ruby_dirs: if self.ruby_dir.is_empty() {
+                config::default_ruby_dirs()
+            } else {
                 let fs = PhysicalFS::new("/");
                 let root = VfsPath::new(fs);
-                self.ruby_dir.iter()
+                self.ruby_dir
+                    .iter()
                     .filter_map(|path| root.join(path.to_string_lossy().as_ref()).ok())
                     .collect()
             },
@@ -62,18 +63,19 @@ enum Commands {
     Ruby(RubyArgs),
 }
 
-
-
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
     let config = cli.config();
-    
+
     match cli.command {
         None => {}
         Some(cmd) => match cmd {
             Commands::Ruby(ruby) => match ruby.command {
-                RubyCommand::List { format, installed_only } => list_rubies(&config, format, installed_only)?,
+                RubyCommand::List {
+                    format,
+                    installed_only,
+                } => list_rubies(&config, format, installed_only)?,
                 RubyCommand::Pin {} => pin_ruby()?,
             },
         },
@@ -81,8 +83,6 @@ fn main() -> Result<()> {
 
     Ok(())
 }
-
-
 
 fn pin_ruby() -> Result<()> {
     let ruby_version: String = fs::read_to_string(".ruby-version").into_diagnostic()?;
