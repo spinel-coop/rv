@@ -4,7 +4,6 @@ use clap::{Args, Parser, Subcommand};
 use miette::{IntoDiagnostic, Result};
 
 pub mod config;
-pub mod env;
 pub mod ruby;
 
 use config::Config;

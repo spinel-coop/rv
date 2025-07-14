@@ -167,12 +167,7 @@ impl Ruby {
         
         // Generate unique key
         let arch = std::env::consts::ARCH;
-        let os = match std::env::consts::OS {
-            "macos" => "macos",
-            "linux" => "linux", 
-            "windows" => "windows",
-            other => other,
-        };
+        let os = std::env::consts::OS;
         
         let key = format!("{}-{}-{}-{}", implementation.name(), version, os, arch);
         
@@ -436,7 +431,7 @@ fn serialize_vfs_path<S>(path: &VfsPath, serializer: S) -> Result<S::Ok, S::Erro
 where
     S: Serializer,
 {
-    serializer.serialize_str(&path.as_str())
+    serializer.serialize_str(path.as_str())
 }
 
 /// Custom serializer for Option<VfsPath> that serializes as the display string
@@ -445,7 +440,7 @@ where
     S: Serializer,
 {
     match path {
-        Some(p) => serializer.serialize_str(&p.as_str()),
+        Some(p) => serializer.serialize_str(p.as_str()),
         None => serializer.serialize_none(),
     }
 }

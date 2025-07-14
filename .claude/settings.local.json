@@ -12,7 +12,8 @@
       "Bash(jj status:*)",
       "Bash(jj log:*)",
       "Bash(jj commit:*)",
-      "Bash(jj diff:*)"
+      "Bash(jj diff:*)",
+      "Bash(rg:*)"
     ],
     "deny": []
   }
