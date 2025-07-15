@@ -81,4 +81,3 @@ pub fn default_ruby_dirs() -> Vec<VfsPath> {
     .filter_map(|path| root.join(path).ok())
     .collect()
 }
-

@@ -879,28 +879,28 @@ mod tests {
 fn extract_ruby_platform_info(ruby_bin: &VfsPath) -> Result<(String, String), RubyError> {
     // For VFS compatibility, we need to handle the case where we can't execute the binary
     // In such cases, fall back to the current system's platform info
-    
+
     // Try to get the actual file path for execution
     let ruby_path = ruby_bin.as_str();
-    
+
     // Run ruby -e "puts [RUBY_PLATFORM, RbConfig::CONFIG['host_cpu'], RbConfig::CONFIG['host_os']].join('|')"
     let output = Command::new(ruby_path)
         .args(["-e", "puts [RUBY_PLATFORM, RbConfig::CONFIG['host_cpu'], RbConfig::CONFIG['host_os']].join('|')"])
         .output();
-    
+
     match output {
         Ok(output) if output.status.success() => {
             let platform_info = String::from_utf8_lossy(&output.stdout);
             let parts: Vec<&str> = platform_info.trim().split('|').collect();
-            
+
             if parts.len() >= 3 {
                 let host_cpu = parts[1].to_string();
                 let host_os = parts[2].to_string();
-                
+
                 // Normalize architecture names to match common conventions
                 let arch = normalize_arch(&host_cpu);
                 let os = normalize_os(&host_os);
-                
+
                 return Ok((arch, os));
             }
         }
@@ -909,9 +909,12 @@ fn extract_ruby_platform_info(ruby_bin: &VfsPath) -> Result<(String, String), Ru
             // This happens in test environments or when Ruby is not functional
         }
     }
-    
+
     // Fallback to current system's platform info
-    Ok((std::env::consts::ARCH.to_string(), std::env::consts::OS.to_string()))
+    Ok((
+        std::env::consts::ARCH.to_string(),
+        std::env::consts::OS.to_string(),
+    ))
 }
 
 /// Normalize architecture names to match common conventions
@@ -929,7 +932,9 @@ fn normalize_os(os: &str) -> String {
     match os {
         s if s.contains("darwin") => "macos".to_string(),
         s if s.contains("linux") => "linux".to_string(),
-        s if s.contains("mingw") || s.contains("mswin") || s.contains("windows") => "windows".to_string(),
+        s if s.contains("mingw") || s.contains("mswin") || s.contains("windows") => {
+            "windows".to_string()
+        }
         s if s.contains("freebsd") => "freebsd".to_string(),
         s if s.contains("openbsd") => "openbsd".to_string(),
         s if s.contains("netbsd") => "netbsd".to_string(),

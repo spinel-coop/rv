@@ -1,7 +1,7 @@
+use insta::assert_snapshot;
 use std::fs;
 use std::io::Write;
 use std::process::Command;
-use insta::assert_snapshot;
 
 /// Helper function to run rv ruby list command
 fn run_rv_ruby_list(args: &[&str]) -> std::process::Output {
