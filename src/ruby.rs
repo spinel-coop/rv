@@ -7,6 +7,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
 use std::time::SystemTime;
+// Note: We considered using strum::Display, but the Unknown(String) variant
+// makes manual implementation more straightforward
 use vfs::VfsPath;
 
 #[serde_as]
