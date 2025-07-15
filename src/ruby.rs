@@ -6,6 +6,7 @@ use std::fmt::{self, Display};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
+use std::time::SystemTime;
 use vfs::VfsPath;
 
 #[serde_as]
@@ -41,6 +42,10 @@ pub struct Ruby {
 
     /// Operating system (macos, linux, windows, etc.)
     pub os: String,
+
+    /// Modification time of the ruby executable (for cache invalidation)
+    #[serde(skip)]
+    pub mtime: Option<SystemTime>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -166,6 +171,9 @@ impl Ruby {
 
         let symlink = find_symlink_target(&ruby_bin);
 
+        // Get modification time of the ruby executable for cache invalidation
+        let mtime = ruby_bin.metadata().ok().and_then(|meta| meta.modified);
+
         // Generate unique key
         let arch = std::env::consts::ARCH;
         let os = std::env::consts::OS;
@@ -181,6 +189,7 @@ impl Ruby {
             implementation,
             arch: arch.to_string(),
             os: os.to_string(),
+            mtime,
         })
     }
 
@@ -421,6 +430,7 @@ mod tests {
             implementation: RubyImplementation::Ruby,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
+            mtime: None,
         };
 
         let ruby2 = Ruby {
@@ -437,6 +447,7 @@ mod tests {
             implementation: RubyImplementation::Ruby,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
+            mtime: None,
         };
 
         let jruby = Ruby {
@@ -453,6 +464,7 @@ mod tests {
             implementation: RubyImplementation::JRuby,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
+            mtime: None,
         };
 
         // Test version ordering within same implementation (higher versions first)
@@ -857,6 +869,7 @@ mod tests {
             implementation: implementation_enum,
             arch: "aarch64".to_string(),
             os: "test".to_string(),
+            mtime: None,
         }
     }
 }

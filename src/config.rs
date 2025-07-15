@@ -1,7 +1,7 @@
 use miette::Result;
 use std::path::PathBuf;
 use std::sync::Arc;
-use vfs::{PhysicalFS, VfsPath};
+use vfs::{FileSystem, PhysicalFS, VfsPath};
 
 use crate::ruby::Ruby;
 

@@ -49,7 +49,7 @@ fn print_ruby_entry(ruby: &crate::ruby::Ruby, active_version: &Option<String>, w
     let path = ruby.executable_path();
 
     // Check if this Ruby is active and add marker
-    let marker = if let Some(ref active) = active_version {
+    let marker = if let Some(active) = active_version {
         if ruby.is_active(active) { "*" } else { " " }
     } else {
         " "
