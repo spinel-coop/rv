@@ -1,6 +1,7 @@
 use std::fs;
 use std::io::Write;
 use std::process::Command;
+use insta::assert_snapshot;
 
 /// Helper function to run rv ruby list command
 fn run_rv_ruby_list(args: &[&str]) -> std::process::Output {
@@ -65,8 +66,8 @@ fn test_ruby_list_text_output() {
     let stdout = String::from_utf8(output.stdout).unwrap();
     assert!(!stdout.is_empty(), "Should produce some output");
 
-    // Should not produce JSON (no curly braces)
-    assert!(!stdout.contains("{"), "Text output should not contain JSON");
+    // Use insta to snapshot test the command output format
+    assert_snapshot!(stdout);
 }
 
 #[test]
@@ -90,33 +91,8 @@ fn test_ruby_list_json_output() {
     // Should be an array
     assert!(parsed.is_array(), "JSON output should be an array");
 
-    // If there are Ruby installations, verify the structure
-    if let Some(array) = parsed.as_array() {
-        if !array.is_empty() {
-            let first_ruby = &array[0];
-            assert!(
-                first_ruby.get("key").is_some(),
-                "Ruby should have 'key' field"
-            );
-            assert!(
-                first_ruby.get("version").is_some(),
-                "Ruby should have 'version' field"
-            );
-            assert!(
-                first_ruby.get("implementation").is_some(),
-                "Ruby should have 'implementation' field"
-            );
-            assert!(
-                first_ruby.get("path").is_some(),
-                "Ruby should have 'path' field"
-            );
-            // version_parts should be skipped due to #[serde(skip)]
-            assert!(
-                first_ruby.get("version_parts").is_none(),
-                "Ruby should NOT have 'version_parts' field"
-            );
-        }
-    }
+    // Use insta to snapshot test the JSON structure
+    assert_snapshot!(stdout);
 }
 
 #[test]
