@@ -84,7 +84,7 @@ fn main() -> Result<()> {
         }
         Some(cmd) => match cmd {
             Commands::Ruby(ruby) => handle_ruby_command(&config, ruby.command)?,
-            Commands::Tool(tool) => handle_tool_command(tool.command)?,
+            Commands::Tool(tool) => handle_tool_command(&config, tool.command)?,
             Commands::Script(script) => handle_script_command(script.command)?,
             Commands::App(app) => handle_app_command(app.command)?,
             Commands::Gem(gem) => handle_gem_command(gem.command)?,
@@ -108,13 +108,13 @@ fn handle_ruby_command(config: &Config, command: RubyCommand) -> Result<()> {
     }
 }
 
-fn handle_tool_command(command: ToolCommand) -> Result<()> {
+fn handle_tool_command(config: &Config, command: ToolCommand) -> Result<()> {
     use commands::tool::*;
 
     match command {
-        ToolCommand::Run { tool, args } => run_tool(RunToolArgs { tool, args }),
-        ToolCommand::Install { tool, version } => install_tool(InstallToolArgs { tool, version }),
-        ToolCommand::Uninstall { tool } => uninstall_tool(UninstallToolArgs { tool }),
+        ToolCommand::Run { tool, args } => run_tool(config, RunToolArgs { tool, args }),
+        ToolCommand::Install { tool, version } => install_tool(config, InstallToolArgs { tool, version }),
+        ToolCommand::Uninstall { tool } => uninstall_tool(config, UninstallToolArgs { tool }),
     }
 }
 
