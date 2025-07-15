@@ -176,9 +176,8 @@ impl Ruby {
         // Get modification time of the ruby executable for cache invalidation
         let mtime = ruby_bin.metadata().ok().and_then(|meta| meta.modified);
 
-        // Generate unique key
-        let arch = std::env::consts::ARCH;
-        let os = std::env::consts::OS;
+        // Extract arch/os from the Ruby executable itself
+        let (arch, os) = extract_ruby_platform_info(&ruby_bin)?;
 
         let key = format!("{}-{}-{}-{}", implementation.name(), version, os, arch);
 
@@ -189,8 +188,8 @@ impl Ruby {
             path: vfs_dir,
             symlink,
             implementation,
-            arch: arch.to_string(),
-            os: os.to_string(),
+            arch,
+            os,
             mtime,
         })
     }
@@ -873,6 +872,68 @@ mod tests {
             os: "test".to_string(),
             mtime: None,
         }
+    }
+}
+
+/// Extract arch and OS information from a Ruby executable
+fn extract_ruby_platform_info(ruby_bin: &VfsPath) -> Result<(String, String), RubyError> {
+    // For VFS compatibility, we need to handle the case where we can't execute the binary
+    // In such cases, fall back to the current system's platform info
+    
+    // Try to get the actual file path for execution
+    let ruby_path = ruby_bin.as_str();
+    
+    // Run ruby -e "puts [RUBY_PLATFORM, RbConfig::CONFIG['host_cpu'], RbConfig::CONFIG['host_os']].join('|')"
+    let output = Command::new(ruby_path)
+        .args(["-e", "puts [RUBY_PLATFORM, RbConfig::CONFIG['host_cpu'], RbConfig::CONFIG['host_os']].join('|')"])
+        .output();
+    
+    match output {
+        Ok(output) if output.status.success() => {
+            let platform_info = String::from_utf8_lossy(&output.stdout);
+            let parts: Vec<&str> = platform_info.trim().split('|').collect();
+            
+            if parts.len() >= 3 {
+                let host_cpu = parts[1].to_string();
+                let host_os = parts[2].to_string();
+                
+                // Normalize architecture names to match common conventions
+                let arch = normalize_arch(&host_cpu);
+                let os = normalize_os(&host_os);
+                
+                return Ok((arch, os));
+            }
+        }
+        _ => {
+            // Fall back to system platform info if we can't execute Ruby
+            // This happens in test environments or when Ruby is not functional
+        }
+    }
+    
+    // Fallback to current system's platform info
+    Ok((std::env::consts::ARCH.to_string(), std::env::consts::OS.to_string()))
+}
+
+/// Normalize architecture names to match common conventions
+fn normalize_arch(arch: &str) -> String {
+    match arch {
+        "aarch64" | "arm64" => "aarch64".to_string(),
+        "x86_64" | "amd64" => "x86_64".to_string(),
+        "i386" | "i686" => "x86".to_string(),
+        other => other.to_string(),
+    }
+}
+
+/// Normalize OS names to match common conventions
+fn normalize_os(os: &str) -> String {
+    match os {
+        s if s.contains("darwin") => "macos".to_string(),
+        s if s.contains("linux") => "linux".to_string(),
+        s if s.contains("mingw") || s.contains("mswin") || s.contains("windows") => "windows".to_string(),
+        s if s.contains("freebsd") => "freebsd".to_string(),
+        s if s.contains("openbsd") => "openbsd".to_string(),
+        s if s.contains("netbsd") => "netbsd".to_string(),
+        other => other.to_string(),
     }
 }
 
