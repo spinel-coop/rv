@@ -12,7 +12,9 @@
       "Bash(jj status:*)",
       "Bash(jj log:*)",
       "Bash(gh issue:*)",
-      "Bash(gh repo view:*)"
+      "Bash(gh repo view:*)",
+      "Bash(gh pr:*)",
+      "Bash(jj bookmark:*)"
     ],
     "deny": []
   }
