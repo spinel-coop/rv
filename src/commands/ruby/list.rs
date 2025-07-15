@@ -31,30 +31,7 @@ pub fn list_rubies(config: &Config, format: OutputFormat, _installed_only: bool)
                 .fold(0usize, |acc, ruby| acc.max(ruby.display_name().len()));
 
             for ruby in &rubies {
-                let key = ruby.display_name();
-                let path = ruby.executable_path();
-
-                // Check if this Ruby is active and add marker
-                let marker = if let Some(ref active) = active_version {
-                    if ruby.is_active(active) { "*" } else { " " }
-                } else {
-                    " "
-                };
-
-                // Check if the path is a symlink and format accordingly
-                // Following uv's exact pattern with active marker
-                if let Some(ref symlink_target) = ruby.symlink {
-                    println!(
-                        "{marker} {key:width$}    {} -> {}",
-                        path.display().to_string().cyan(),
-                        symlink_target.as_str().cyan()
-                    );
-                } else {
-                    println!(
-                        "{marker} {key:width$}    {}",
-                        path.display().to_string().cyan()
-                    );
-                }
+                print_ruby_entry(ruby, &active_version, width);
             }
         }
         OutputFormat::Json => {
@@ -64,4 +41,32 @@ pub fn list_rubies(config: &Config, format: OutputFormat, _installed_only: bool)
     }
 
     Ok(())
+}
+
+/// Print a single Ruby entry in the text format
+fn print_ruby_entry(ruby: &crate::ruby::Ruby, active_version: &Option<String>, width: usize) {
+    let key = ruby.display_name();
+    let path = ruby.executable_path();
+
+    // Check if this Ruby is active and add marker
+    let marker = if let Some(ref active) = active_version {
+        if ruby.is_active(active) { "*" } else { " " }
+    } else {
+        " "
+    };
+
+    // Check if the path is a symlink and format accordingly
+    // Following uv's exact pattern with active marker
+    if let Some(ref symlink_target) = ruby.symlink {
+        println!(
+            "{marker} {key:width$}    {} -> {}",
+            path.display().to_string().cyan(),
+            symlink_target.as_str().cyan()
+        );
+    } else {
+        println!(
+            "{marker} {key:width$}    {}",
+            path.display().to_string().cyan()
+        );
+    }
 }
