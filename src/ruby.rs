@@ -1,29 +1,29 @@
-use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Ruby {
     /// Unique identifier for this Ruby installation
     pub key: String,
-    
+
     /// Ruby version (e.g., "3.1.4", "9.4.0.0")
     pub version: String,
-    
+
     /// Parsed version components
     pub version_parts: VersionParts,
-    
+
     /// Full path to the Ruby executable
     pub path: PathBuf,
-    
+
     /// Symlink target if this Ruby is a symlink
     pub symlink: Option<PathBuf>,
-    
+
     /// Ruby implementation (ruby, jruby, truffleruby, etc.)
     pub implementation: String,
-    
+
     /// System architecture (aarch64, x86_64, etc.)
     pub arch: String,
-    
+
     /// Operating system (macos, linux, windows, etc.)
     pub os: String,
 }
@@ -40,38 +40,34 @@ impl Ruby {
     /// Create a new Ruby instance from a directory path
     pub fn from_dir<P: AsRef<Path>>(dir_path: P) -> Result<Self, RubyError> {
         let dir_path = dir_path.as_ref();
-        let dir_name = dir_path.file_name()
+        let dir_name = dir_path
+            .file_name()
             .and_then(|n| n.to_str())
             .ok_or(RubyError::InvalidPath)?;
-        
+
         // Parse directory name (e.g., "ruby-3.1.4", "jruby-9.4.0.0")
         let (implementation, version) = parse_ruby_dir_name(dir_name)?;
         let version_parts = parse_version(&version)?;
-        
+
         // Check for Ruby executable
         let ruby_bin = dir_path.join("bin").join("ruby");
         if !ruby_bin.exists() {
             return Err(RubyError::NoRubyExecutable);
         }
-        
+
         // Check if it's a symlink
         let symlink = if ruby_bin.is_symlink() {
             std::fs::read_link(&ruby_bin).ok()
         } else {
             None
         };
-        
+
         // Generate unique key
         let arch = std::env::consts::ARCH;
-        let os = match std::env::consts::OS {
-            "macos" => "macos",
-            "linux" => "linux", 
-            "windows" => "windows",
-            other => other,
-        };
-        
+        let os = std::env::consts::OS;
+
         let key = format!("{}-{}-{}-{}", implementation, version, os, arch);
-        
+
         Ok(Ruby {
             key,
             version,
@@ -83,12 +79,12 @@ impl Ruby {
             os: os.to_string(),
         })
     }
-    
+
     /// Check if this Ruby installation is valid
     pub fn is_valid(&self) -> bool {
         self.path.exists() && self.path.is_file()
     }
-    
+
     /// Get display name for this Ruby
     pub fn display_name(&self) -> String {
         format!("{}-{}", self.implementation, self.version)
@@ -144,16 +140,21 @@ fn parse_ruby_dir_name(dir_name: &str) -> Result<(String, String), RubyError> {
     if parts.len() != 2 {
         return Err(RubyError::InvalidDirectoryName(dir_name.to_string()));
     }
-    
+
     let implementation = parts[0].to_string();
     let version = parts[1].to_string();
-    
+
     // Validate known Ruby implementations
     match implementation.as_str() {
-        "ruby" | "jruby" | "truffleruby" | "mruby" | "artichoke" => {},
-        _ => return Err(RubyError::InvalidDirectoryName(format!("Unknown Ruby implementation: {}", implementation))),
+        "ruby" | "jruby" | "truffleruby" | "mruby" | "artichoke" => {}
+        _ => {
+            return Err(RubyError::InvalidDirectoryName(format!(
+                "Unknown Ruby implementation: {}",
+                implementation
+            )));
+        }
     }
-    
+
     Ok((implementation, version))
 }
 
@@ -165,21 +166,24 @@ fn parse_version(version: &str) -> Result<VersionParts, RubyError> {
     if parts.len() < 3 {
         return Err(RubyError::InvalidVersion(version.to_string()));
     }
-    
-    let major = parts[0].parse()
+
+    let major = parts[0]
+        .parse()
         .map_err(|_| RubyError::InvalidVersion(version.to_string()))?;
-    let minor = parts[1].parse()
+    let minor = parts[1]
+        .parse()
         .map_err(|_| RubyError::InvalidVersion(version.to_string()))?;
-    let patch = parts[2].parse()
+    let patch = parts[2]
+        .parse()
         .map_err(|_| RubyError::InvalidVersion(version.to_string()))?;
-    
+
     // Handle additional version parts (like JRuby's 4th component)
     let pre = if parts.len() > 3 {
         Some(parts[3..].join("."))
     } else {
         None
     };
-    
+
     Ok(VersionParts {
         major,
         minor,
@@ -191,23 +195,23 @@ fn parse_version(version: &str) -> Result<VersionParts, RubyError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_parse_ruby_dir_name() {
         assert_eq!(
             parse_ruby_dir_name("ruby-3.1.4").unwrap(),
             ("ruby".to_string(), "3.1.4".to_string())
         );
-        
+
         assert_eq!(
             parse_ruby_dir_name("jruby-9.4.0.0").unwrap(),
             ("jruby".to_string(), "9.4.0.0".to_string())
         );
-        
+
         assert!(parse_ruby_dir_name("invalid").is_err());
         assert!(parse_ruby_dir_name("unknown-1.0.0").is_err());
     }
-    
+
     #[test]
     fn test_parse_version() {
         let version = parse_version("3.1.4").unwrap();
@@ -215,41 +219,51 @@ mod tests {
         assert_eq!(version.minor, 1);
         assert_eq!(version.patch, 4);
         assert_eq!(version.pre, None);
-        
+
         let version = parse_version("9.4.0.0").unwrap();
         assert_eq!(version.major, 9);
         assert_eq!(version.minor, 4);
         assert_eq!(version.patch, 0);
         assert_eq!(version.pre, Some("0".to_string()));
-        
+
         assert!(parse_version("1.2").is_err());
         assert!(parse_version("invalid").is_err());
     }
-    
+
     #[test]
     fn test_ruby_ordering() {
         let ruby1 = Ruby {
             key: "ruby-3.1.4-macos-aarch64".to_string(),
             version: "3.1.4".to_string(),
-            version_parts: VersionParts { major: 3, minor: 1, patch: 4, pre: None },
+            version_parts: VersionParts {
+                major: 3,
+                minor: 1,
+                patch: 4,
+                pre: None,
+            },
             path: PathBuf::from("/opt/rubies/ruby-3.1.4/bin/ruby"),
             symlink: None,
             implementation: "ruby".to_string(),
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
         };
-        
+
         let ruby2 = Ruby {
             key: "ruby-3.2.0-macos-aarch64".to_string(),
             version: "3.2.0".to_string(),
-            version_parts: VersionParts { major: 3, minor: 2, patch: 0, pre: None },
+            version_parts: VersionParts {
+                major: 3,
+                minor: 2,
+                patch: 0,
+                pre: None,
+            },
             path: PathBuf::from("/opt/rubies/ruby-3.2.0/bin/ruby"),
             symlink: None,
             implementation: "ruby".to_string(),
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
         };
-        
+
         assert!(ruby1 < ruby2);
     }
 }

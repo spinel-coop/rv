@@ -3,7 +3,7 @@ use miette::Result;
 /// Uninstall a Ruby version
 pub fn uninstall_ruby(version: &str) -> Result<()> {
     println!("Uninstalling Ruby version '{}'", version);
-    
+
     println!("This command is not yet implemented.");
     println!("It will:");
     println!("  1. Find the specified Ruby installation");

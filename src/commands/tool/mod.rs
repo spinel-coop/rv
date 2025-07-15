@@ -1,12 +1,12 @@
 use clap::{Args, Subcommand};
 
-pub mod run;
 pub mod install;
+pub mod run;
 pub mod uninstall;
 
-pub use run::{run_tool, RunToolArgs};
-pub use install::{install_tool, InstallToolArgs};
-pub use uninstall::{uninstall_tool, UninstallToolArgs};
+pub use install::{InstallToolArgs, install_tool};
+pub use run::{RunToolArgs, run_tool};
+pub use uninstall::{UninstallToolArgs, uninstall_tool};
 
 #[derive(Args)]
 pub struct ToolArgs {
@@ -20,22 +20,22 @@ pub enum ToolCommand {
     Run {
         /// Tool name to run
         tool: String,
-        
+
         /// Arguments to pass to the tool
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
-    
+
     #[command(about = "Install a tool globally")]
     Install {
         /// Tool name to install
         tool: String,
-        
+
         /// Specific version to install
         #[arg(long)]
         version: Option<String>,
     },
-    
+
     #[command(about = "Uninstall a global tool")]
     Uninstall {
         /// Tool name to uninstall

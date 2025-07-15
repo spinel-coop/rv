@@ -7,11 +7,11 @@ pub fn install_ruby(version: Option<&str>, force: bool) -> Result<()> {
     } else {
         println!("Installing latest stable Ruby version");
     }
-    
+
     if force {
         println!("Force reinstall enabled");
     }
-    
+
     println!("This command is not yet implemented.");
     println!("It will:");
     println!("  1. Download Ruby binary or source for the specified version");

@@ -6,7 +6,7 @@ pub fn pin_ruby(version: Option<&str>) -> Result<()> {
     match version {
         Some(v) => {
             println!("Pinning Ruby version '{}' for current project", v);
-            
+
             // Write .ruby-version file
             fs::write(".ruby-version", format!("{}\n", v)).into_diagnostic()?;
             println!("Created .ruby-version file with version '{}'", v);
@@ -29,6 +29,6 @@ pub fn pin_ruby(version: Option<&str>) -> Result<()> {
             }
         }
     }
-    
+
     Ok(())
 }

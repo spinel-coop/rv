@@ -7,7 +7,7 @@ pub fn upgrade_gems(gem: Option<&str>) -> Result<()> {
     } else {
         println!("Upgrading all application dependencies");
     }
-    
+
     println!("This command is not yet implemented.");
     println!("It will:");
     println!("  1. Update gem versions in Gemfile or lockfile");

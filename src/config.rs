@@ -24,7 +24,7 @@ impl Config {
                 .unwrap_or_else(|| std::env::temp_dir().join("rv")),
         }
     }
-    
+
     pub fn rubies(&self) -> Result<Vec<Ruby>> {
         discover_rubies(self)
     }
@@ -48,12 +48,12 @@ pub fn default_ruby_dirs() -> Vec<PathBuf> {
 /// Discover Ruby installations from configured directories
 pub fn discover_rubies(config: &Config) -> Result<Vec<Ruby>> {
     let mut rubies = Vec::new();
-    
+
     for ruby_dir in &config.ruby_dirs {
         if !ruby_dir.exists() {
             continue;
         }
-        
+
         if let Ok(entries) = std::fs::read_dir(ruby_dir) {
             for entry in entries.flatten() {
                 if entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
@@ -66,9 +66,9 @@ pub fn discover_rubies(config: &Config) -> Result<Vec<Ruby>> {
             }
         }
     }
-    
+
     // Sort rubies by implementation and version
     rubies.sort();
-    
+
     Ok(rubies)
 }

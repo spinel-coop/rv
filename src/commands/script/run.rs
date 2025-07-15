@@ -8,7 +8,11 @@ pub struct RunScriptArgs {
 
 /// Run a Ruby script with automatic dependency resolution
 pub fn run_script(args: RunScriptArgs) -> Result<()> {
-    println!("Running script '{}' with args: {:?}", args.script.display(), args.args);
+    println!(
+        "Running script '{}' with args: {:?}",
+        args.script.display(),
+        args.args
+    );
     println!("This command is not yet implemented.");
     println!("It will:");
     println!("  1. Parse script for dependency comments or inline gemfile");
