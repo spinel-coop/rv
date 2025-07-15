@@ -1,7 +1,9 @@
 use miette::Result;
+use crate::config::Config;
 
 /// Create a new gem
-pub fn new_gem(name: &str, template: Option<&str>, skip_git: bool) -> Result<()> {
+pub fn new_gem(config: &Config, name: &str, template: Option<&str>, skip_git: bool) -> Result<()> {
+    println!("ruby_dirs configured: {}", config.ruby_dirs.len());
     println!("Creating new gem '{}'", name);
 
     if let Some(template_name) = template {
@@ -20,4 +22,31 @@ pub fn new_gem(name: &str, template: Option<&str>, skip_git: bool) -> Result<()>
     println!("  4. Initialize git repository (unless skipped)");
     println!("  5. Generate basic README and documentation");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+
+    #[test]
+    fn test_new_gem() {
+        let config = Config::new();
+        let result = new_gem(&config, "test_gem", None, false);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_new_gem_with_template() {
+        let config = Config::new();
+        let result = new_gem(&config, "test_gem", Some("minimal"), false);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_new_gem_skip_git() {
+        let config = Config::new();
+        let result = new_gem(&config, "test_gem", None, true);
+        assert!(result.is_ok());
+    }
 }

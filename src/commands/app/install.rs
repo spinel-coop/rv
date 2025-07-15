@@ -1,8 +1,10 @@
 use miette::Result;
+use crate::config::Config;
 
 /// Install application dependencies
-pub fn install_app(skip_bundle: bool) -> Result<()> {
+pub fn install_app(config: &Config, skip_bundle: bool) -> Result<()> {
     println!("Installing application dependencies...");
+    println!("Using config with {} ruby directories", config.ruby_dirs.len());
 
     if skip_bundle {
         println!("Skipping bundle install as requested");
@@ -15,4 +17,24 @@ pub fn install_app(skip_bundle: bool) -> Result<()> {
     println!("  3. Set up any additional project dependencies");
     println!("  4. Prepare development environment");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+
+    #[test]
+    fn test_install_app_basic() {
+        let config = Config::new();
+        let result = install_app(&config, false);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_install_app_skip_bundle() {
+        let config = Config::new();
+        let result = install_app(&config, true);
+        assert!(result.is_ok());
+    }
 }

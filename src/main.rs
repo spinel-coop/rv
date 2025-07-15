@@ -85,9 +85,9 @@ fn main() -> Result<()> {
         Some(cmd) => match cmd {
             Commands::Ruby(ruby) => handle_ruby_command(&config, ruby.command)?,
             Commands::Tool(tool) => handle_tool_command(&config, tool.command)?,
-            Commands::Script(script) => handle_script_command(script.command)?,
-            Commands::App(app) => handle_app_command(app.command)?,
-            Commands::Gem(gem) => handle_gem_command(gem.command)?,
+            Commands::Script(script) => handle_script_command(&config, script.command)?,
+            Commands::App(app) => handle_app_command(&config, app.command)?,
+            Commands::Gem(gem) => handle_gem_command(&config, gem.command)?,
         },
     }
 
@@ -102,9 +102,9 @@ fn handle_ruby_command(config: &Config, command: RubyCommand) -> Result<()> {
             format,
             installed_only,
         } => list_rubies(config, format, installed_only),
-        RubyCommand::Install { version, force } => install_ruby(version.as_deref(), force),
-        RubyCommand::Uninstall { version } => uninstall_ruby(&version),
-        RubyCommand::Pin { version } => pin_ruby(version.as_deref()),
+        RubyCommand::Install { version, force } => install_ruby(config, version.as_deref(), force),
+        RubyCommand::Uninstall { version } => uninstall_ruby(config, &version),
+        RubyCommand::Pin { version } => pin_ruby(config, version.as_deref()),
     }
 }
 
@@ -118,27 +118,27 @@ fn handle_tool_command(config: &Config, command: ToolCommand) -> Result<()> {
     }
 }
 
-fn handle_script_command(command: ScriptCommand) -> Result<()> {
+fn handle_script_command(config: &Config, command: ScriptCommand) -> Result<()> {
     use commands::script::*;
 
     match command {
-        ScriptCommand::Run { script, args } => run_script(RunScriptArgs { script, args }),
+        ScriptCommand::Run { script, args } => run_script(config, RunScriptArgs { script, args }),
         ScriptCommand::Add {
             gem,
             version,
             script,
-        } => add_script_dependency(AddScriptDependencyArgs {
+        } => add_script_dependency(config, AddScriptDependencyArgs {
             gem,
             version,
             script,
         }),
         ScriptCommand::Remove { gem, script } => {
-            remove_script_dependency(RemoveScriptDependencyArgs { gem, script })
+            remove_script_dependency(config, RemoveScriptDependencyArgs { gem, script })
         }
     }
 }
 
-fn handle_app_command(command: AppCommand) -> Result<()> {
+fn handle_app_command(config: &Config, command: AppCommand) -> Result<()> {
     use commands::app::*;
 
     match command {
@@ -146,21 +146,21 @@ fn handle_app_command(command: AppCommand) -> Result<()> {
             name,
             ruby,
             template,
-        } => init_app(name.as_deref(), ruby.as_deref(), template.as_deref()),
-        AppCommand::Install { skip_bundle } => install_app(skip_bundle),
+        } => init_app(config, name.as_deref(), ruby.as_deref(), template.as_deref()),
+        AppCommand::Install { skip_bundle } => install_app(config, skip_bundle),
         AppCommand::Add {
             gem,
             version,
             dev,
             test,
-        } => add_gem(&gem, version.as_deref(), dev, test),
-        AppCommand::Remove { gem } => remove_gem(&gem),
-        AppCommand::Upgrade { gem } => upgrade_gems(gem.as_deref()),
-        AppCommand::Tree { direct } => show_tree(direct),
+        } => add_gem(config, &gem, version.as_deref(), dev, test),
+        AppCommand::Remove { gem } => remove_gem(config, &gem),
+        AppCommand::Upgrade { gem } => upgrade_gems(config, gem.as_deref()),
+        AppCommand::Tree { direct } => show_tree(config, direct),
     }
 }
 
-fn handle_gem_command(command: GemCommand) -> Result<()> {
+fn handle_gem_command(config: &Config, command: GemCommand) -> Result<()> {
     use commands::gem::*;
 
     match command {
@@ -168,8 +168,8 @@ fn handle_gem_command(command: GemCommand) -> Result<()> {
             name,
             template,
             skip_git,
-        } => new_gem(&name, template.as_deref(), skip_git),
-        GemCommand::Build { output } => build_gem(output.as_deref()),
-        GemCommand::Publish { registry, dry_run } => publish_gem(registry.as_deref(), dry_run),
+        } => new_gem(config, &name, template.as_deref(), skip_git),
+        GemCommand::Build { output } => build_gem(config, output.as_deref()),
+        GemCommand::Publish { registry, dry_run } => publish_gem(config, registry.as_deref(), dry_run),
     }
 }
