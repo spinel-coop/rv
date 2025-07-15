@@ -5,6 +5,8 @@ use vfs::{PhysicalFS, VfsPath};
 
 use crate::ruby::Ruby;
 
+const APP_PREFIX: &str = "rv";
+
 #[derive(Debug)]
 pub struct Config {
     pub ruby_dirs: Vec<VfsPath>,
@@ -19,12 +21,12 @@ impl Config {
         Self {
             ruby_dirs: default_ruby_dirs(),
             gemfile: None,
-            cache_dir: xdg::BaseDirectories::with_prefix("rv")
+            cache_dir: xdg::BaseDirectories::with_prefix(APP_PREFIX)
                 .cache_home
-                .unwrap_or_else(|| std::env::temp_dir().join("rv")),
-            local_dir: xdg::BaseDirectories::with_prefix("rv")
+                .unwrap_or_else(|| std::env::temp_dir().join(APP_PREFIX)),
+            local_dir: xdg::BaseDirectories::with_prefix(APP_PREFIX)
                 .data_home
-                .unwrap_or_else(|| std::env::temp_dir().join("rv")),
+                .unwrap_or_else(|| std::env::temp_dir().join(APP_PREFIX)),
             fs: Arc::new(PhysicalFS::new("/")),
         }
     }

@@ -10,6 +10,8 @@ pub mod ruby;
 use commands::ruby::{RubyArgs, RubyCommand, list_rubies};
 use config::Config;
 
+const APP_PREFIX: &str = "rv";
+
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
@@ -46,12 +48,12 @@ impl Cli {
                     .collect()
             },
             gemfile: self.gemfile.clone(),
-            cache_dir: xdg::BaseDirectories::with_prefix("rv")
+            cache_dir: xdg::BaseDirectories::with_prefix(APP_PREFIX)
                 .cache_home
-                .unwrap_or_else(|| std::env::temp_dir().join("rv")),
-            local_dir: xdg::BaseDirectories::with_prefix("rv")
+                .unwrap_or_else(|| std::env::temp_dir().join(APP_PREFIX)),
+            local_dir: xdg::BaseDirectories::with_prefix(APP_PREFIX)
                 .data_home
-                .unwrap_or_else(|| std::env::temp_dir().join("rv")),
+                .unwrap_or_else(|| std::env::temp_dir().join(APP_PREFIX)),
             fs: Arc::new(PhysicalFS::new("/")),
         }
     }
