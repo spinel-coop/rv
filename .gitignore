@@ -1,1 +1,3 @@
 /target
+*.local.json
+crates/*/target

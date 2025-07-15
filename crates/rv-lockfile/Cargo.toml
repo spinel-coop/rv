@@ -1,0 +1,27 @@
+[package]
+name = "rv-lockfile"
+version = "0.1.0"
+edition = "2021"
+description = "Bundler lockfile parser for rv"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+thiserror = "2.0"
+regex = "1.11.1"
+miette = { version = "7.6.0", features = ["fancy"] }
+
+[dependencies.semver]
+version = "1.0"
+features = ["serde"]
+
+[dependencies.serde]
+version = "1.0"
+features = ["derive"]
+optional = true
+
+[features]
+default = []
+serde = ["dep:serde"]
+
+[dev-dependencies]
+insta = "1.40"
