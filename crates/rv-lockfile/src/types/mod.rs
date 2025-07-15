@@ -5,5 +5,5 @@ pub mod spec;
 
 pub use dependency::Dependency;
 pub use platform::Platform;
-pub use source::{Source, GitSource, GemSource, PathSource, PluginSource};
+pub use source::{GemSource, GitSource, PathSource, PluginSource, Source};
 pub use spec::LazySpecification;

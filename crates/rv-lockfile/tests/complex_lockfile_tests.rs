@@ -1,5 +1,5 @@
-use rv_lockfile::{parse_lockfile, parse_lockfile_strict, ParseError};
 use insta::assert_debug_snapshot;
+use rv_lockfile::{parse_lockfile, parse_lockfile_strict, ParseError};
 
 #[test]
 fn test_git_source_lockfile() {
@@ -22,7 +22,7 @@ DEPENDENCIES
 BUNDLED WITH
    2.3.0
 "#;
-    
+
     let parser = parse_lockfile(git_content).unwrap();
     assert_debug_snapshot!(parser);
 }
@@ -57,7 +57,7 @@ RUBY VERSION
 BUNDLED WITH
    2.3.0
 "#;
-    
+
     let parser = parse_lockfile(gem_content).unwrap();
     assert_debug_snapshot!(parser);
 }
@@ -86,7 +86,7 @@ DEPENDENCIES
 BUNDLED WITH
    2.3.0
 "#;
-    
+
     let parser = parse_lockfile(path_content).unwrap();
     assert_debug_snapshot!(parser);
 }
@@ -112,7 +112,7 @@ DEPENDENCIES
 BUNDLED WITH
    2.3.0
 "#;
-    
+
     let parser = parse_lockfile(platforms_content).unwrap();
     assert_debug_snapshot!(parser);
 }
@@ -137,7 +137,7 @@ CHECKSUMS
 BUNDLED WITH
    2.5.0
 "#;
-    
+
     let parser = parse_lockfile(checksum_content).unwrap();
     assert_debug_snapshot!(parser);
 }
@@ -157,11 +157,11 @@ GEM
 PLATFORMS
   ruby
 "#;
-    
+
     let result = parse_lockfile(conflict_content);
     assert!(result.is_err());
-    
-    if let Err(ParseError::MergeConflict { line }) = result {
+
+    if let Err(ParseError::MergeConflict { line, .. }) = result {
         assert_eq!(line, 5); // Line with <<<<<<< HEAD
     } else {
         panic!("Expected MergeConflict error");
@@ -179,7 +179,7 @@ GEM
 PLATFORMS
   ruby
 "#;
-    
+
     let result = parse_lockfile_strict(malformed_content);
     assert!(result.is_err());
     assert_debug_snapshot!(result.unwrap_err());
@@ -196,7 +196,7 @@ GEM
 PLATFORMS
   ruby
 "#;
-    
+
     let result = parse_lockfile_strict(bad_indent_content);
     assert!(result.is_err());
     assert_debug_snapshot!(result.unwrap_err());
@@ -220,7 +220,7 @@ DEPENDENCIES
 BUNDLED WITH
    2.3.0
 "#;
-    
+
     let parser = parse_lockfile(plugin_content).unwrap();
     assert_debug_snapshot!(parser);
 }

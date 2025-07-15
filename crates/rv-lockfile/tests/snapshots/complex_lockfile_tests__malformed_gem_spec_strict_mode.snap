@@ -5,4 +5,11 @@ expression: result.unwrap_err()
 InvalidSpecification {
     line: 5,
     spec: "invalid-gem-spec without version",
+    source_code: "",
+    span: SourceSpan {
+        offset: SourceOffset(
+            0,
+        ),
+        length: 0,
+    },
 }

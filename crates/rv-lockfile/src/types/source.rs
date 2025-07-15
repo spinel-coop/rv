@@ -63,7 +63,7 @@ impl GemSource {
             specs: Vec::new(),
         }
     }
-    
+
     pub fn add_remote(&mut self, remote: String) {
         if !self.remotes.contains(&remote) {
             self.remotes.push(remote);
@@ -105,7 +105,7 @@ impl PluginSource {
             specs: Vec::new(),
         }
     }
-    
+
     pub fn add_option(&mut self, key: String, value: String) {
         self.options.insert(key, value);
     }
@@ -121,30 +121,35 @@ mod tests {
             "https://github.com/example/repo.git".to_string(),
             "abc123".to_string(),
         );
-        
+
         assert_eq!(git.remote, "https://github.com/example/repo.git");
         assert_eq!(git.revision, "abc123");
         assert_eq!(git.ref_, None);
     }
-    
+
     #[test]
     fn test_gem_source() {
         let mut gem = GemSource::new("https://rubygems.org/".to_string());
         gem.add_remote("https://gems.example.com/".to_string());
-        
+
         assert_eq!(gem.remotes.len(), 2);
         assert!(gem.remotes.contains(&"https://rubygems.org/".to_string()));
-        assert!(gem.remotes.contains(&"https://gems.example.com/".to_string()));
+        assert!(gem
+            .remotes
+            .contains(&"https://gems.example.com/".to_string()));
     }
-    
+
     #[test]
     fn test_plugin_source() {
         let mut plugin = PluginSource::new("custom".to_string());
         plugin.add_option("url".to_string(), "https://example.com".to_string());
         plugin.add_option("token".to_string(), "secret".to_string());
-        
+
         assert_eq!(plugin.source_type, "custom");
-        assert_eq!(plugin.options.get("url"), Some(&"https://example.com".to_string()));
+        assert_eq!(
+            plugin.options.get("url"),
+            Some(&"https://example.com".to_string())
+        );
         assert_eq!(plugin.options.get("token"), Some(&"secret".to_string()));
     }
 }

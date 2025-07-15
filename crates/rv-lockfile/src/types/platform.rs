@@ -25,27 +25,12 @@ impl Platform {
             version: version.map(|v| v.to_string()),
         }
     }
-    
-    /// Get the platform string representation
-    pub fn to_string(&self) -> String {
-        match self {
-            Platform::Ruby => "ruby".to_string(),
-            Platform::Specific { cpu, os, version } => {
-                if let Some(v) = version {
-                    format!("{}-{}-{}", cpu, os, v)
-                } else {
-                    format!("{}-{}", cpu, os)
-                }
-            }
-            Platform::Unknown(s) => s.clone(),
-        }
-    }
-    
+
     /// Check if this platform is Ruby (generic)
     pub fn is_ruby(&self) -> bool {
         matches!(self, Platform::Ruby)
     }
-    
+
     /// Get the CPU architecture if this is a specific platform
     pub fn cpu(&self) -> Option<&str> {
         match self {
@@ -53,7 +38,7 @@ impl Platform {
             _ => None,
         }
     }
-    
+
     /// Get the OS if this is a specific platform
     pub fn os(&self) -> Option<&str> {
         match self {
@@ -61,11 +46,13 @@ impl Platform {
             _ => None,
         }
     }
-    
+
     /// Get the version if this is a specific platform with version
     pub fn version(&self) -> Option<&str> {
         match self {
-            Platform::Specific { version: Some(v), .. } => Some(v),
+            Platform::Specific {
+                version: Some(v), ..
+            } => Some(v),
             _ => None,
         }
     }
@@ -73,17 +60,17 @@ impl Platform {
 
 impl FromStr for Platform {
     type Err = ();
-    
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.trim();
-        
+
         if s == "ruby" {
             return Ok(Platform::Ruby);
         }
-        
+
         // Parse platform string like "x86_64-linux" or "x86_64-linux-gnu"
         let parts: Vec<&str> = s.split('-').collect();
-        
+
         match parts.len() {
             2 => Ok(Platform::Specific {
                 cpu: parts[0].to_string(),
@@ -102,7 +89,17 @@ impl FromStr for Platform {
 
 impl fmt::Display for Platform {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_string())
+        match self {
+            Platform::Ruby => write!(f, "ruby"),
+            Platform::Specific { cpu, os, version } => {
+                if let Some(v) = version {
+                    write!(f, "{}-{}-{}", cpu, os, v)
+                } else {
+                    write!(f, "{}-{}", cpu, os)
+                }
+            }
+            Platform::Unknown(s) => write!(f, "{}", s),
+        }
     }
 }
 
@@ -131,24 +128,24 @@ mod tests {
     #[test]
     fn test_platform_parsing() {
         assert_eq!("ruby".parse::<Platform>().unwrap(), Platform::Ruby);
-        
+
         let x86_linux = "x86_64-linux".parse::<Platform>().unwrap();
         assert_eq!(x86_linux.cpu(), Some("x86_64"));
         assert_eq!(x86_linux.os(), Some("linux"));
         assert_eq!(x86_linux.version(), None);
-        
+
         let x86_linux_gnu = "x86_64-linux-gnu".parse::<Platform>().unwrap();
         assert_eq!(x86_linux_gnu.cpu(), Some("x86_64"));
         assert_eq!(x86_linux_gnu.os(), Some("linux"));
         assert_eq!(x86_linux_gnu.version(), Some("gnu"));
     }
-    
+
     #[test]
     fn test_platform_ordering() {
         let ruby = Platform::Ruby;
         let linux = "x86_64-linux".parse::<Platform>().unwrap();
         let darwin = "x86_64-darwin".parse::<Platform>().unwrap();
-        
+
         assert!(ruby < linux);
         assert!(ruby < darwin);
         assert!(darwin < linux); // alphabetical ordering

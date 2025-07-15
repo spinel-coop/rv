@@ -1,11 +1,11 @@
-use rv_lockfile::{parse_lockfile, parse_lockfile_strict};
 use insta::assert_debug_snapshot;
+use rv_lockfile::{parse_lockfile, parse_lockfile_strict};
 
 #[test]
 fn test_empty_lockfile() {
     let empty_content = "";
     let parser = parse_lockfile(empty_content).unwrap();
-    
+
     assert_debug_snapshot!(parser, @r###"
     LockfileParser {
         sources: [],
@@ -24,7 +24,7 @@ fn test_empty_lockfile() {
 fn test_whitespace_only_lockfile() {
     let whitespace_content = "   \n\n  \t  \n   ";
     let parser = parse_lockfile(whitespace_content).unwrap();
-    
+
     assert_debug_snapshot!(parser, @r###"
     LockfileParser {
         sources: [],
@@ -43,7 +43,7 @@ fn test_whitespace_only_lockfile() {
 fn test_empty_lockfile_strict_mode() {
     let empty_content = "";
     let parser = parse_lockfile_strict(empty_content).unwrap();
-    
+
     assert_debug_snapshot!(parser, @r###"
     LockfileParser {
         sources: [],
@@ -66,7 +66,7 @@ fn test_comments_only_lockfile() {
 # Another comment
 "#;
     let parser = parse_lockfile(comment_content).unwrap();
-    
+
     assert_debug_snapshot!(parser, @r###"
     LockfileParser {
         sources: [],
@@ -91,7 +91,7 @@ BUNDLED WITH
    2.3.0
 "#;
     let parser = parse_lockfile(minimal_content).unwrap();
-    
+
     assert_debug_snapshot!(parser, @r"
     LockfileParser {
         sources: [],

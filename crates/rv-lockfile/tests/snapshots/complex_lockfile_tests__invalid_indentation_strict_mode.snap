@@ -6,4 +6,11 @@ InvalidIndentation {
     line: 5,
     expected: 2,
     found: 1,
+    source_code: "",
+    span: SourceSpan {
+        offset: SourceOffset(
+            0,
+        ),
+        length: 0,
+    },
 }

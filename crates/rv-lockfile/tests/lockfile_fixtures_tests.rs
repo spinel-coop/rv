@@ -1,5 +1,5 @@
-use rv_lockfile::{parse_lockfile, parse_lockfile_strict, ParseError};
 use insta::assert_debug_snapshot;
+use rv_lockfile::{parse_lockfile, parse_lockfile_strict, ParseError};
 use std::fs;
 use std::path::PathBuf;
 
@@ -8,7 +8,7 @@ fn load_fixture(name: &str) -> String {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.push("tests/fixtures");
     path.push(format!("{}.gemfile.lock", name));
-    
+
     fs::read_to_string(&path)
         .unwrap_or_else(|_| panic!("Failed to read fixture: {}", path.display()))
 }
@@ -107,11 +107,11 @@ GEM
 PLATFORMS
   ruby
 "#;
-    
+
     let result = parse_lockfile(conflict_content);
     assert!(result.is_err());
-    
-    if let Err(ParseError::MergeConflict { line }) = result {
+
+    if let Err(ParseError::MergeConflict { line, .. }) = result {
         assert_eq!(line, 5); // Line with <<<<<<< HEAD
     } else {
         panic!("Expected MergeConflict error, got: {:?}", result);
