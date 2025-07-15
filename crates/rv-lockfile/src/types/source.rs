@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 /// Represents different types of gem sources in a lockfile
 #[derive(Debug, Clone, PartialEq)]
@@ -93,7 +93,7 @@ impl PathSource {
 #[derive(Debug, Clone, PartialEq)]
 pub struct PluginSource {
     pub source_type: String,
-    pub options: HashMap<String, String>,
+    pub options: IndexMap<String, String>,
     pub specs: Vec<String>, // Gem names in this source
 }
 
@@ -101,7 +101,7 @@ impl PluginSource {
     pub fn new(source_type: String) -> Self {
         PluginSource {
             source_type,
-            options: HashMap::new(),
+            options: IndexMap::new(),
             specs: Vec::new(),
         }
     }

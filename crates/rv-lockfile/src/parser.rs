@@ -1,15 +1,15 @@
 use crate::error::ParseError;
 use crate::types::*;
+use indexmap::IndexMap;
 use regex::Regex;
 use semver::Version;
-use std::collections::HashMap;
 
 /// Main lockfile parser
 #[derive(Debug)]
 pub struct LockfileParser {
     sources: Vec<Source>,
-    specs: HashMap<String, LazySpecification>,
-    dependencies: HashMap<String, Dependency>,
+    specs: IndexMap<String, LazySpecification>,
+    dependencies: IndexMap<String, Dependency>,
     platforms: Vec<Platform>,
     bundler_version: Option<Version>,
     ruby_version: Option<String>,
@@ -22,8 +22,8 @@ impl LockfileParser {
     pub fn new(content: &str, strict: bool) -> Result<Self, ParseError> {
         let mut parser = LockfileParser {
             sources: Vec::new(),
-            specs: HashMap::new(),
-            dependencies: HashMap::new(),
+            specs: IndexMap::new(),
+            dependencies: IndexMap::new(),
             platforms: Vec::new(),
             bundler_version: None,
             ruby_version: None,
@@ -231,7 +231,8 @@ impl LockfileParser {
     /// Parse gem specification lines
     fn parse_gem_spec(&mut self, source: &mut Source, content: &str, line_num: usize) -> Result<(), ParseError> {
         // Parse gem name and version using regex similar to bundler
-        let re = Regex::new(r"^([^\s]+)\s+\(([^-\)]+)(?:-([^-\)]+))?\)(?:\s+(.+))?$").unwrap();
+        // Handles formats like: gem-name (1.0.0), gem-name (1.0.0-platform)
+        let re = Regex::new(r"^([^\s]+)\s+\(([^-\)]+)(?:-(.+))?\)(?:\s+(.+))?$").unwrap();
         
         if let Some(captures) = re.captures(content) {
             let name = captures.get(1).unwrap().as_str().to_string();
@@ -393,12 +394,12 @@ impl LockfileParser {
     }
     
     /// Get all specifications
-    pub fn specs(&self) -> &HashMap<String, LazySpecification> {
+    pub fn specs(&self) -> &IndexMap<String, LazySpecification> {
         &self.specs
     }
     
     /// Get all dependencies
-    pub fn dependencies(&self) -> &HashMap<String, Dependency> {
+    pub fn dependencies(&self) -> &IndexMap<String, Dependency> {
         &self.dependencies
     }
     

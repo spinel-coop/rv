@@ -1,0 +1,8 @@
+---
+source: crates/rv-lockfile/tests/complex_lockfile_tests.rs
+expression: result.unwrap_err()
+---
+InvalidSpecification {
+    line: 5,
+    spec: "invalid-gem-spec without version",
+}

@@ -944,6 +944,7 @@ dependencies = [
 name = "rv-lockfile"
 version = "0.1.0"
 dependencies = [
+ "indexmap 2.10.0",
  "insta",
  "miette",
  "regex",

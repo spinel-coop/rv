@@ -1,0 +1,14 @@
+---
+source: crates/rv-lockfile/tests/lockfile_fixtures_tests.rs
+expression: parser
+---
+LockfileParser {
+    sources: [],
+    specs: {},
+    dependencies: {},
+    platforms: [],
+    bundler_version: None,
+    ruby_version: None,
+    checksums_enabled: false,
+    strict: true,
+}

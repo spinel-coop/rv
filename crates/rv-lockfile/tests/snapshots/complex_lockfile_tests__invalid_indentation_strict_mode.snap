@@ -1,0 +1,9 @@
+---
+source: crates/rv-lockfile/tests/complex_lockfile_tests.rs
+expression: result.unwrap_err()
+---
+InvalidIndentation {
+    line: 5,
+    expected: 2,
+    found: 1,
+}

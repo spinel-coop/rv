@@ -1,0 +1,62 @@
+---
+source: crates/rv-lockfile/tests/lockfile_fixtures_tests.rs
+expression: parser
+---
+LockfileParser {
+    sources: [
+        Git(
+            GitSource {
+                remote: "https://github.com/rails/rails.git",
+                revision: "1234567890abcdef1234567890abcdef12345678",
+                ref_: Some(
+                    "v7.0.0",
+                ),
+                branch: None,
+                tag: None,
+                submodules: None,
+                glob: None,
+                specs: [
+                    "rails",
+                ],
+            },
+        ),
+    ],
+    specs: {
+        "rails (7.0.0)": LazySpecification {
+            name: "rails",
+            version: Version {
+                major: 7,
+                minor: 0,
+                patch: 0,
+            },
+            platform: Ruby,
+            source: None,
+            dependencies: [],
+            checksum: None,
+            required_ruby_version: None,
+            required_rubygems_version: None,
+        },
+    },
+    dependencies: {
+        "rails": Dependency {
+            name: "rails",
+            requirements: [],
+            platforms: [],
+            source: None,
+            pinned: true,
+        },
+    },
+    platforms: [
+        Ruby,
+    ],
+    bundler_version: Some(
+        Version {
+            major: 2,
+            minor: 3,
+            patch: 0,
+        },
+    ),
+    ruby_version: None,
+    checksums_enabled: false,
+    strict: false,
+}

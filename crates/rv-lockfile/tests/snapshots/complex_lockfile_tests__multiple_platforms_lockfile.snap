@@ -1,0 +1,104 @@
+---
+source: crates/rv-lockfile/tests/complex_lockfile_tests.rs
+expression: parser
+---
+LockfileParser {
+    sources: [
+        Gem(
+            GemSource {
+                remotes: [
+                    "https://rubygems.org/",
+                ],
+                specs: [
+                    "ffi",
+                    "ffi",
+                    "ffi",
+                ],
+            },
+        ),
+    ],
+    specs: {
+        "ffi (1.15.5)": LazySpecification {
+            name: "ffi",
+            version: Version {
+                major: 1,
+                minor: 15,
+                patch: 5,
+            },
+            platform: Ruby,
+            source: None,
+            dependencies: [],
+            checksum: None,
+            required_ruby_version: None,
+            required_rubygems_version: None,
+        },
+        "ffi (1.15.5-x64-mingw32)": LazySpecification {
+            name: "ffi",
+            version: Version {
+                major: 1,
+                minor: 15,
+                patch: 5,
+            },
+            platform: Specific {
+                cpu: "x64",
+                os: "mingw32",
+                version: None,
+            },
+            source: None,
+            dependencies: [],
+            checksum: None,
+            required_ruby_version: None,
+            required_rubygems_version: None,
+        },
+        "ffi (1.15.5-x86_64-linux)": LazySpecification {
+            name: "ffi",
+            version: Version {
+                major: 1,
+                minor: 15,
+                patch: 5,
+            },
+            platform: Specific {
+                cpu: "x86_64",
+                os: "linux",
+                version: None,
+            },
+            source: None,
+            dependencies: [],
+            checksum: None,
+            required_ruby_version: None,
+            required_rubygems_version: None,
+        },
+    },
+    dependencies: {
+        "ffi": Dependency {
+            name: "ffi",
+            requirements: [],
+            platforms: [],
+            source: None,
+            pinned: false,
+        },
+    },
+    platforms: [
+        Ruby,
+        Specific {
+            cpu: "x64",
+            os: "mingw32",
+            version: None,
+        },
+        Specific {
+            cpu: "x86_64",
+            os: "linux",
+            version: None,
+        },
+    ],
+    bundler_version: Some(
+        Version {
+            major: 2,
+            minor: 3,
+            patch: 0,
+        },
+    ),
+    ruby_version: None,
+    checksums_enabled: false,
+    strict: false,
+}

@@ -1,6 +1,6 @@
 use crate::types::{Dependency, Platform};
+use indexmap::IndexMap;
 use semver::Version;
-use std::collections::HashMap;
 
 /// Represents a lazy specification, similar to Bundler's LazySpecification
 #[derive(Debug, Clone, PartialEq)]
@@ -119,14 +119,14 @@ impl Eq for LazySpecification {}
 /// Collection of specifications organized by full name
 #[derive(Debug, Clone)]
 pub struct SpecificationSet {
-    specs: HashMap<String, LazySpecification>,
+    specs: IndexMap<String, LazySpecification>,
 }
 
 impl SpecificationSet {
     /// Create a new empty specification set
     pub fn new() -> Self {
         SpecificationSet {
-            specs: HashMap::new(),
+            specs: IndexMap::new(),
         }
     }
     

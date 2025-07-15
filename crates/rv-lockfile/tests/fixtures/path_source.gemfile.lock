@@ -1,0 +1,20 @@
+PATH
+  remote: ../local-gem
+  specs:
+    local-gem (1.0.0)
+      some-dependency (~> 2.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    some-dependency (2.1.0)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  local-gem!
+  some-dependency
+
+BUNDLED WITH
+   2.3.0

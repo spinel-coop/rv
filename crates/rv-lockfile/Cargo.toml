@@ -9,6 +9,7 @@ license = "MIT OR Apache-2.0"
 thiserror = "2.0"
 regex = "1.11.1"
 miette = { version = "7.6.0", features = ["fancy"] }
+indexmap = "2.0"
 
 [dependencies.semver]
 version = "1.0"

@@ -1,0 +1,58 @@
+---
+source: crates/rv-lockfile/tests/complex_lockfile_tests.rs
+expression: parser
+---
+LockfileParser {
+    sources: [
+        Plugin(
+            PluginSource {
+                source_type: "",
+                options: {
+                    "custom_option": "value",
+                    "another_option": "another_value",
+                },
+                specs: [
+                    "custom-gem",
+                ],
+            },
+        ),
+    ],
+    specs: {
+        "custom-gem (1.0.0)": LazySpecification {
+            name: "custom-gem",
+            version: Version {
+                major: 1,
+                minor: 0,
+                patch: 0,
+            },
+            platform: Ruby,
+            source: None,
+            dependencies: [],
+            checksum: None,
+            required_ruby_version: None,
+            required_rubygems_version: None,
+        },
+    },
+    dependencies: {
+        "custom-gem": Dependency {
+            name: "custom-gem",
+            requirements: [],
+            platforms: [],
+            source: None,
+            pinned: false,
+        },
+    },
+    platforms: [
+        Ruby,
+    ],
+    bundler_version: Some(
+        Version {
+            major: 2,
+            minor: 3,
+            patch: 0,
+        },
+    ),
+    ruby_version: None,
+    checksums_enabled: false,
+    strict: false,
+}

@@ -1,0 +1,86 @@
+---
+source: crates/rv-lockfile/tests/complex_lockfile_tests.rs
+expression: parser
+---
+LockfileParser {
+    sources: [
+        Path(
+            PathSource {
+                remote: "../local-gem",
+                glob: None,
+                specs: [
+                    "local-gem",
+                ],
+            },
+        ),
+        Gem(
+            GemSource {
+                remotes: [
+                    "https://rubygems.org/",
+                ],
+                specs: [
+                    "some-dependency",
+                ],
+            },
+        ),
+    ],
+    specs: {
+        "local-gem (1.0.0)": LazySpecification {
+            name: "local-gem",
+            version: Version {
+                major: 1,
+                minor: 0,
+                patch: 0,
+            },
+            platform: Ruby,
+            source: None,
+            dependencies: [],
+            checksum: None,
+            required_ruby_version: None,
+            required_rubygems_version: None,
+        },
+        "some-dependency (2.1.0)": LazySpecification {
+            name: "some-dependency",
+            version: Version {
+                major: 2,
+                minor: 1,
+                patch: 0,
+            },
+            platform: Ruby,
+            source: None,
+            dependencies: [],
+            checksum: None,
+            required_ruby_version: None,
+            required_rubygems_version: None,
+        },
+    },
+    dependencies: {
+        "local-gem": Dependency {
+            name: "local-gem",
+            requirements: [],
+            platforms: [],
+            source: None,
+            pinned: true,
+        },
+        "some-dependency": Dependency {
+            name: "some-dependency",
+            requirements: [],
+            platforms: [],
+            source: None,
+            pinned: false,
+        },
+    },
+    platforms: [
+        Ruby,
+    ],
+    bundler_version: Some(
+        Version {
+            major: 2,
+            minor: 3,
+            patch: 0,
+        },
+    ),
+    ruby_version: None,
+    checksums_enabled: false,
+    strict: false,
+}

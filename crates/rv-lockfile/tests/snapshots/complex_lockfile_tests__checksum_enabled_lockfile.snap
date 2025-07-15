@@ -1,0 +1,56 @@
+---
+source: crates/rv-lockfile/tests/complex_lockfile_tests.rs
+expression: parser
+---
+LockfileParser {
+    sources: [
+        Gem(
+            GemSource {
+                remotes: [
+                    "https://rubygems.org/",
+                ],
+                specs: [
+                    "minitest",
+                ],
+            },
+        ),
+    ],
+    specs: {
+        "minitest (5.16.3)": LazySpecification {
+            name: "minitest",
+            version: Version {
+                major: 5,
+                minor: 16,
+                patch: 3,
+            },
+            platform: Ruby,
+            source: None,
+            dependencies: [],
+            checksum: None,
+            required_ruby_version: None,
+            required_rubygems_version: None,
+        },
+    },
+    dependencies: {
+        "minitest": Dependency {
+            name: "minitest",
+            requirements: [],
+            platforms: [],
+            source: None,
+            pinned: false,
+        },
+    },
+    platforms: [
+        Ruby,
+    ],
+    bundler_version: Some(
+        Version {
+            major: 2,
+            minor: 5,
+            patch: 0,
+        },
+    ),
+    ruby_version: None,
+    checksums_enabled: true,
+    strict: false,
+}

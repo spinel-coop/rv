@@ -1,0 +1,152 @@
+---
+source: crates/rv-lockfile/tests/lockfile_fixtures_tests.rs
+expression: parser
+---
+LockfileParser {
+    sources: [
+        Gem(
+            GemSource {
+                remotes: [
+                    "https://rubygems.org/",
+                ],
+                specs: [
+                    "actioncable",
+                    "actionmailbox",
+                    "actionmailer",
+                    "rails",
+                    "bootsnap",
+                    "puma",
+                ],
+            },
+        ),
+    ],
+    specs: {
+        "actioncable (7.0.4)": LazySpecification {
+            name: "actioncable",
+            version: Version {
+                major: 7,
+                minor: 0,
+                patch: 4,
+            },
+            platform: Ruby,
+            source: None,
+            dependencies: [],
+            checksum: None,
+            required_ruby_version: None,
+            required_rubygems_version: None,
+        },
+        "actionmailbox (7.0.4)": LazySpecification {
+            name: "actionmailbox",
+            version: Version {
+                major: 7,
+                minor: 0,
+                patch: 4,
+            },
+            platform: Ruby,
+            source: None,
+            dependencies: [],
+            checksum: None,
+            required_ruby_version: None,
+            required_rubygems_version: None,
+        },
+        "actionmailer (7.0.4)": LazySpecification {
+            name: "actionmailer",
+            version: Version {
+                major: 7,
+                minor: 0,
+                patch: 4,
+            },
+            platform: Ruby,
+            source: None,
+            dependencies: [],
+            checksum: None,
+            required_ruby_version: None,
+            required_rubygems_version: None,
+        },
+        "rails (7.0.4)": LazySpecification {
+            name: "rails",
+            version: Version {
+                major: 7,
+                minor: 0,
+                patch: 4,
+            },
+            platform: Ruby,
+            source: None,
+            dependencies: [],
+            checksum: None,
+            required_ruby_version: None,
+            required_rubygems_version: None,
+        },
+        "bootsnap (1.13.0)": LazySpecification {
+            name: "bootsnap",
+            version: Version {
+                major: 1,
+                minor: 13,
+                patch: 0,
+            },
+            platform: Ruby,
+            source: None,
+            dependencies: [],
+            checksum: None,
+            required_ruby_version: None,
+            required_rubygems_version: None,
+        },
+        "puma (5.6.5)": LazySpecification {
+            name: "puma",
+            version: Version {
+                major: 5,
+                minor: 6,
+                patch: 5,
+            },
+            platform: Ruby,
+            source: None,
+            dependencies: [],
+            checksum: None,
+            required_ruby_version: None,
+            required_rubygems_version: None,
+        },
+    },
+    dependencies: {
+        "bootsnap": Dependency {
+            name: "bootsnap",
+            requirements: [],
+            platforms: [],
+            source: None,
+            pinned: false,
+        },
+        "puma": Dependency {
+            name: "puma",
+            requirements: [],
+            platforms: [],
+            source: None,
+            pinned: false,
+        },
+        "rails": Dependency {
+            name: "rails",
+            requirements: [],
+            platforms: [],
+            source: None,
+            pinned: false,
+        },
+    },
+    platforms: [
+        Ruby,
+        Specific {
+            cpu: "x86_64",
+            os: "linux",
+            version: None,
+        },
+    ],
+    bundler_version: Some(
+        Version {
+            major: 2,
+            minor: 3,
+            patch: 22,
+        },
+    ),
+    ruby_version: Some(
+        "3.1.2p20",
+    ),
+    checksums_enabled: false,
+    strict: false,
+}

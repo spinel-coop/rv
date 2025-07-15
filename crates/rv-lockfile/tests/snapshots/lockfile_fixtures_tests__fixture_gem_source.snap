@@ -1,0 +1,115 @@
+---
+source: crates/rv-lockfile/tests/lockfile_fixtures_tests.rs
+expression: parser
+---
+LockfileParser {
+    sources: [
+        Gem(
+            GemSource {
+                remotes: [
+                    "https://rubygems.org/",
+                ],
+                specs: [
+                    "activerecord",
+                    "activesupport",
+                    "concurrent-ruby",
+                    "i18n",
+                ],
+            },
+        ),
+    ],
+    specs: {
+        "activerecord (7.0.4)": LazySpecification {
+            name: "activerecord",
+            version: Version {
+                major: 7,
+                minor: 0,
+                patch: 4,
+            },
+            platform: Ruby,
+            source: None,
+            dependencies: [],
+            checksum: None,
+            required_ruby_version: None,
+            required_rubygems_version: None,
+        },
+        "activesupport (7.0.4)": LazySpecification {
+            name: "activesupport",
+            version: Version {
+                major: 7,
+                minor: 0,
+                patch: 4,
+            },
+            platform: Ruby,
+            source: None,
+            dependencies: [],
+            checksum: None,
+            required_ruby_version: None,
+            required_rubygems_version: None,
+        },
+        "concurrent-ruby (1.1.10)": LazySpecification {
+            name: "concurrent-ruby",
+            version: Version {
+                major: 1,
+                minor: 1,
+                patch: 10,
+            },
+            platform: Ruby,
+            source: None,
+            dependencies: [],
+            checksum: None,
+            required_ruby_version: None,
+            required_rubygems_version: None,
+        },
+        "i18n (1.12.0)": LazySpecification {
+            name: "i18n",
+            version: Version {
+                major: 1,
+                minor: 12,
+                patch: 0,
+            },
+            platform: Ruby,
+            source: None,
+            dependencies: [],
+            checksum: None,
+            required_ruby_version: None,
+            required_rubygems_version: None,
+        },
+    },
+    dependencies: {
+        "activerecord": Dependency {
+            name: "activerecord",
+            requirements: [],
+            platforms: [],
+            source: None,
+            pinned: false,
+        },
+        "concurrent-ruby": Dependency {
+            name: "concurrent-ruby",
+            requirements: [],
+            platforms: [],
+            source: None,
+            pinned: false,
+        },
+    },
+    platforms: [
+        Ruby,
+        Specific {
+            cpu: "x86_64",
+            os: "linux",
+            version: None,
+        },
+    ],
+    bundler_version: Some(
+        Version {
+            major: 2,
+            minor: 3,
+            patch: 0,
+        },
+    ),
+    ruby_version: Some(
+        "3.1.0p0",
+    ),
+    checksums_enabled: false,
+    strict: false,
+}

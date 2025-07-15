@@ -1,0 +1,17 @@
+GIT
+  remote: https://github.com/rails/rails.git
+  revision: 1234567890abcdef1234567890abcdef12345678
+  ref: v7.0.0
+  specs:
+    rails (7.0.0)
+      actioncable (= 7.0.0)
+      actionmailbox (= 7.0.0)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  rails!
+
+BUNDLED WITH
+   2.3.0

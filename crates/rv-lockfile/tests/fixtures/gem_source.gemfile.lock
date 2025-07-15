@@ -1,0 +1,26 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    activerecord (7.0.4)
+      activemodel (= 7.0.4)
+      activesupport (= 7.0.4)
+    activesupport (7.0.4)
+      concurrent-ruby (~> 1.0, >= 1.0.2)
+      i18n (>= 1.6, < 2)
+    concurrent-ruby (1.1.10)
+    i18n (1.12.0)
+      concurrent-ruby (~> 1.0)
+
+PLATFORMS
+  ruby
+  x86_64-linux
+
+DEPENDENCIES
+  activerecord (~> 7.0)
+  concurrent-ruby
+
+RUBY VERSION
+   ruby 3.1.0p0
+
+BUNDLED WITH
+   2.3.0

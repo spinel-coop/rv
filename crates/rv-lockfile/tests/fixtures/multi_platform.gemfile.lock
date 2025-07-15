@@ -1,0 +1,17 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    ffi (1.15.5)
+    ffi (1.15.5-x64-mingw32)
+    ffi (1.15.5-x86_64-linux)
+
+PLATFORMS
+  ruby
+  x64-mingw32
+  x86_64-linux
+
+DEPENDENCIES
+  ffi
+
+BUNDLED WITH
+   2.3.0

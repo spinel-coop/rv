@@ -1,0 +1,51 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    actioncable (7.0.4)
+      actionpack (= 7.0.4)
+      activesupport (= 7.0.4)
+      nio4r (~> 2.0)
+      websocket-driver (>= 0.6.1)
+    actionmailbox (7.0.4)
+      actionpack (= 7.0.4)
+      activejob (= 7.0.4)
+      activerecord (= 7.0.4)
+      activestorage (= 7.0.4)
+      activesupport (= 7.0.4)
+    actionmailer (7.0.4)
+      actionpack (= 7.0.4)
+      actionview (= 7.0.4)
+      activejob (= 7.0.4)
+      activesupport (= 7.0.4)
+    rails (7.0.4)
+      actioncable (= 7.0.4)
+      actionmailbox (= 7.0.4)
+      actionmailer (= 7.0.4)
+      actionpack (= 7.0.4)
+      actiontext (= 7.0.4)
+      actionview (= 7.0.4)
+      activejob (= 7.0.4)
+      activemodel (= 7.0.4)
+      activerecord (= 7.0.4)
+      activestorage (= 7.0.4)
+      activesupport (= 7.0.4)
+      railties (= 7.0.4)
+    bootsnap (1.13.0)
+      msgpack (~> 1.2)
+    puma (5.6.5)
+      nio4r (~> 2.0)
+
+PLATFORMS
+  ruby
+  x86_64-linux
+
+DEPENDENCIES
+  bootsnap (>= 1.4.4)
+  puma (~> 5.0)
+  rails (~> 7.0.0)
+
+RUBY VERSION
+   ruby 3.1.2p20
+
+BUNDLED WITH
+   2.3.22
