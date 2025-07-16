@@ -5,12 +5,12 @@ use crate::env::Ruby;
 
 #[derive(Debug, Clone)]
 pub struct Config {
-    ruby_dirs: Vec<PathBuf>,
+    pub ruby_dirs: Vec<PathBuf>,
 
-    gemfile: Option<PathBuf>,
+    pub gemfile: Option<PathBuf>,
 
-    cache_dir: PathBuf,
-    local_dir: PathBuf,
+    pub cache_dir: PathBuf,
+    pub local_dir: PathBuf,
 }
 
 impl Config {
@@ -18,7 +18,7 @@ impl Config {
         Ok(self
             .ruby_dirs
             .iter()
-            .flat_map(|dir| vec![Ruby {}])
+            .flat_map(|_dir| vec![Ruby {}])
             .collect())
     }
 }

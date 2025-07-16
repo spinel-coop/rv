@@ -1,12 +1,10 @@
-use std::{fs, io::Read, path::PathBuf, pin};
+use std::{fs, path::PathBuf};
 
 use clap::{Args, Parser, Subcommand};
 use miette::{IntoDiagnostic, Result};
 
 pub mod config;
 pub mod env;
-
-use config::Config;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -25,17 +23,6 @@ struct Cli {
 
     #[command(subcommand)]
     command: Option<Commands>,
-}
-
-impl Cli {
-    fn config(&self) -> Config {
-        Config {
-            ruby_dirs: self.ruby_dir,
-            gemfile: self.gemfile,
-            cache_dir: todo!(),
-            local_dir: todo!(),
-        }
-    }
 }
 
 #[derive(Subcommand)]
