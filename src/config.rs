@@ -1,12 +1,11 @@
 use miette::Result;
 use std::path::PathBuf;
-use std::sync::Arc;
-use vfs::{FileSystem, PhysicalFS, VfsPath};
+use tracing::instrument;
+use vfs::VfsPath;
 
 use crate::ruby::Ruby;
 
-const APP_PREFIX: &str = "rv";
-
+#[derive(Debug)]
 pub struct Config {
     pub ruby_dirs: Vec<VfsPath>,
     pub gemfile: Option<PathBuf>,
@@ -16,6 +15,7 @@ pub struct Config {
 }
 
 impl Config {
+    #[instrument(skip_all)]
     pub fn rubies(&self) -> Result<Vec<Ruby>> {
         let mut rubies = Vec::new();
 
@@ -26,14 +26,12 @@ impl Config {
 
             if let Ok(entries) = ruby_dir.read_dir() {
                 for entry in entries {
-                    if let Ok(metadata) = entry.metadata() {
-                        if metadata.file_type == vfs::VfsFileType::Directory {
-                            if let Ok(ruby) = Ruby::from_dir(entry) {
-                                if ruby.is_valid() {
-                                    rubies.push(ruby);
-                                }
-                            }
-                        }
+                    if let Ok(metadata) = entry.metadata()
+                        && metadata.file_type == vfs::VfsFileType::Directory
+                        && let Ok(ruby) = Ruby::from_dir(entry)
+                        && ruby.is_valid()
+                    {
+                        rubies.push(ruby);
                     }
                 }
             }

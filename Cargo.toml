@@ -17,9 +17,13 @@ serde_with = "3.11"
 shellexpand = "3.1"
 thiserror = "2.0"
 vfs = "0.12"
-tokio = { version = "1.46.1", features = ["tracing", "macros"] }
+tokio = { version = "1.46.1", features = ["tracing", "macros", "rt-multi-thread", "io-std", "process"] }
 tracing = "0.1.41"
 xdg = "3.0.0"
+tracing-indicatif = "0.3.11"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+anstream = "0.6.19"
+clap-verbosity-flag = { version = "3.0.3", features = ["tracing"] }
 
 [dev-dependencies]
 insta = "1.40"

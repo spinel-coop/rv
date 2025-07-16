@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
 use std::time::SystemTime;
+use tracing::instrument;
 // Note: We considered using strum::Display, but the Unknown(String) variant
 // makes manual implementation more straightforward
 use vfs::VfsPath;
@@ -152,6 +153,7 @@ pub struct VersionParts {
 
 impl Ruby {
     /// Create a new Ruby instance from a VFS directory path
+    #[instrument(skip(vfs_dir), fields(dir = %vfs_dir.as_str()))]
     pub fn from_dir(vfs_dir: VfsPath) -> Result<Self, RubyError> {
         let dir_name = vfs_dir.filename();
         if dir_name.is_empty() {
@@ -260,10 +262,10 @@ impl Ruby {
             }
 
             // Check engine-only matching: "ruby-" matches "ruby-3.1.4"
-            if let Some(engine) = active_version.strip_suffix('-') {
-                if self.implementation.name() == engine {
-                    return true;
-                }
+            if let Some(engine) = active_version.strip_suffix('-')
+                && self.implementation.name() == engine
+            {
+                return true;
             }
         }
 
@@ -363,6 +365,324 @@ fn parse_version(version: &str) -> Result<VersionParts, RubyError> {
         patch,
         pre,
     })
+}
+
+/// Extract arch and OS information from a Ruby executable
+#[instrument(skip_all)]
+fn extract_ruby_platform_info(ruby_bin: &VfsPath) -> Result<(String, String), RubyError> {
+    // For VFS compatibility, we need to handle the case where we can't execute the binary
+    // In such cases, fall back to the current system's platform info
+
+    // Try to get the actual file path for execution
+    let ruby_path = ruby_bin.as_str();
+
+    // Run ruby -e "puts [RUBY_PLATFORM, RbConfig::CONFIG['host_cpu'], RbConfig::CONFIG['host_os']].join('|')"
+    let output = Command::new(ruby_path)
+        .args(["-e", "puts [RUBY_PLATFORM, RbConfig::CONFIG['host_cpu'], RbConfig::CONFIG['host_os']].join('|')"])
+        .output();
+
+    match output {
+        Ok(output) if output.status.success() => {
+            let platform_info = String::from_utf8_lossy(&output.stdout);
+            let parts: Vec<&str> = platform_info.trim().split('|').collect();
+
+            if parts.len() >= 3 {
+                let host_cpu = parts[1].to_string();
+                let host_os = parts[2].to_string();
+
+                // Normalize architecture names to match common conventions
+                let arch = normalize_arch(&host_cpu);
+                let os = normalize_os(&host_os);
+
+                return Ok((arch, os));
+            }
+        }
+        _ => {
+            // Fall back to system platform info if we can't execute Ruby
+            // This happens in test environments or when Ruby is not functional
+        }
+    }
+
+    // Fallback to current system's platform info
+    Ok((
+        std::env::consts::ARCH.to_string(),
+        std::env::consts::OS.to_string(),
+    ))
+}
+
+/// Normalize architecture names to match common conventions
+fn normalize_arch(arch: &str) -> String {
+    match arch {
+        "aarch64" | "arm64" => "aarch64".to_string(),
+        "x86_64" | "amd64" => "x86_64".to_string(),
+        "i386" | "i686" => "x86".to_string(),
+        other => other.to_string(),
+    }
+}
+
+/// Normalize OS names to match common conventions
+fn normalize_os(os: &str) -> String {
+    match os {
+        s if s.contains("darwin") => "macos".to_string(),
+        s if s.contains("linux") => "linux".to_string(),
+        s if s.contains("mingw") || s.contains("mswin") || s.contains("windows") => {
+            "windows".to_string()
+        }
+        s if s.contains("freebsd") => "freebsd".to_string(),
+        s if s.contains("openbsd") => "openbsd".to_string(),
+        s if s.contains("netbsd") => "netbsd".to_string(),
+        other => other.to_string(),
+    }
+}
+
+/// Custom serializer for VfsPath that serializes as the display string
+fn serialize_vfs_path<S>(path: &VfsPath, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(path.as_str())
+}
+
+/// Custom serializer for Option<VfsPath> that serializes as the display string
+fn serialize_optional_vfs_path<S>(path: &Option<VfsPath>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match path {
+        Some(p) => serializer.serialize_str(p.as_str()),
+        None => serializer.serialize_none(),
+    }
+}
+
+/// Find symlink target for a VFS path, if it exists
+fn find_symlink_target(vfs_path: &VfsPath) -> Option<VfsPath> {
+    if let Ok(metadata) = vfs_path.metadata() {
+        if metadata.file_type == vfs::VfsFileType::File {
+            // For VFS, we need to check if it's a symlink using the underlying filesystem
+            // Since VFS doesn't expose symlink info directly, we'll convert to PathBuf for this check
+            let pathbuf = PathBuf::from(vfs_path.as_str());
+            if pathbuf.is_symlink() {
+                if let Ok(target) = std::fs::read_link(&pathbuf) {
+                    // Convert the symlink target back to VFS path
+                    let fs = vfs::PhysicalFS::new("/");
+                    let root = VfsPath::new(fs);
+                    root.join(target.to_string_lossy().as_ref()).ok()
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}
+
+/// Trait for environment variable access (allows mocking in tests)
+pub trait EnvProvider {
+    fn get_var(&self, key: &str) -> Option<String>;
+}
+
+/// Production environment provider
+pub struct SystemEnv;
+
+impl EnvProvider for SystemEnv {
+    fn get_var(&self, key: &str) -> Option<String> {
+        env::var(key).ok()
+    }
+}
+
+/// Find the currently active Ruby version using chrb's precedence order
+/// 1. RUBY_ROOT environment variable (if set, indicates active Ruby)
+/// 2. .ruby-version file in current directory or parent directories
+/// 3. DEFAULT_RUBY_VERSION environment variable
+pub fn find_active_ruby_version() -> Option<String> {
+    find_active_ruby_version_with_env(&SystemEnv)
+}
+
+/// Find active Ruby version with injectable environment provider (for testing)
+pub fn find_active_ruby_version_with_env(env_provider: &dyn EnvProvider) -> Option<String> {
+    find_active_ruby_version_with_env_and_fs(env_provider, &VfsPath::new(vfs::PhysicalFS::new("/")))
+}
+
+/// Find active Ruby version with injectable environment provider and VFS (for testing)
+pub fn find_active_ruby_version_with_env_and_fs(
+    env_provider: &dyn EnvProvider,
+    vfs_root: &VfsPath,
+) -> Option<String> {
+    // 1. Check RUBY_ROOT environment variable
+    if let Some(ruby_root) = env_provider.get_var("RUBY_ROOT") {
+        // Extract version from RUBY_ROOT path (e.g., "/path/to/ruby-3.1.4" -> "ruby-3.1.4")
+        if let Some(dirname) = PathBuf::from(&ruby_root).file_name()
+            && let Some(dirname_str) = dirname.to_str()
+        {
+            return Some(dirname_str.to_string());
+        }
+    }
+
+    // 2. Look for .ruby-version file in current directory and parents
+    if let Some(version) = find_ruby_version_file_vfs(vfs_root) {
+        return Some(version);
+    }
+
+    // 3. Check DEFAULT_RUBY_VERSION environment variable
+    if let Some(default_version) = env_provider.get_var("DEFAULT_RUBY_VERSION") {
+        return Some(default_version);
+    }
+
+    // 4. Fallback to PATH analysis - find Ruby executable and extract version
+    if let Some(path_ruby) = find_ruby_in_path() {
+        return Some(path_ruby);
+    }
+
+    None
+}
+
+/// Search for .ruby-version file using VFS (for testing)
+fn find_ruby_version_file_vfs(vfs_root: &VfsPath) -> Option<String> {
+    let mut current_dir = if let Ok(cwd) = env::current_dir() {
+        vfs_root.join(cwd.to_string_lossy().as_ref()).ok()?
+    } else {
+        return None;
+    };
+
+    loop {
+        let ruby_version_file = current_dir.join(".ruby-version").ok()?;
+
+        if ruby_version_file.exists().unwrap_or(false)
+            && let Ok(content) = ruby_version_file.read_to_string()
+        {
+            let version = content.trim();
+            if !version.is_empty() {
+                return Some(version.to_string());
+            }
+        }
+
+        // Move to parent directory
+        let parent = current_dir.parent();
+        if parent.as_str() == current_dir.as_str() {
+            break; // Reached VFS root
+        }
+        current_dir = parent;
+    }
+
+    None
+}
+
+/// Find Ruby executable in PATH and extract version information
+/// This is the fallback method when no .ruby-version file or env vars are set
+fn find_ruby_in_path() -> Option<String> {
+    // First, try to find 'ruby' executable in PATH
+    let ruby_path = find_executable_in_path("ruby")?;
+
+    // Extract version and engine information from the Ruby executable
+    extract_ruby_info_from_executable(&ruby_path)
+}
+
+/// Find an executable in PATH
+fn find_executable_in_path(executable: &str) -> Option<PathBuf> {
+    if let Ok(path_var) = env::var("PATH") {
+        for path_dir in env::split_paths(&path_var) {
+            let executable_path = path_dir.join(executable);
+
+            // Check for executable with and without .exe extension (Windows support)
+            if executable_path.is_file() && is_executable(&executable_path) {
+                return Some(executable_path);
+            }
+
+            // Windows support - check for .exe extension
+            #[cfg(windows)]
+            {
+                let exe_path = path_dir.join(format!("{}.exe", executable));
+                if exe_path.is_file() && is_executable(&exe_path) {
+                    return Some(exe_path);
+                }
+            }
+        }
+    }
+
+    None
+}
+
+/// Check if a file is executable
+fn is_executable(path: &Path) -> bool {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if let Ok(metadata) = path.metadata() {
+            let permissions = metadata.permissions();
+            return permissions.mode() & 0o111 != 0;
+        }
+        false
+    }
+
+    #[cfg(windows)]
+    {
+        // On Windows, if the file exists and has .exe extension, consider it executable
+        path.extension().map_or(false, |ext| ext == "exe")
+    }
+
+    #[cfg(not(any(unix, windows)))]
+    {
+        // For other platforms, just check if file exists
+        true
+    }
+}
+
+/// Extract Ruby engine and version information from an executable
+/// Uses the same approach as chrb - execute Ruby to get accurate information
+fn extract_ruby_info_from_executable(ruby_path: &PathBuf) -> Option<String> {
+    // Execute Ruby to get engine and version information
+    // This mirrors chrb's ExecFindEnv function
+    let output = Command::new(ruby_path)
+        .args([
+            "-e",
+            "puts \"#{defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'ruby'}-#{RUBY_VERSION}\"",
+        ])
+        .output()
+        .ok()?;
+
+    if output.status.success() {
+        let stdout = String::from_utf8(output.stdout).ok()?;
+        let version_info = stdout.trim();
+
+        if !version_info.is_empty() {
+            return Some(version_info.to_string());
+        }
+    }
+
+    // Fallback: try to extract from path if execution failed
+    extract_ruby_info_from_path(ruby_path)
+}
+
+/// Fallback method to extract Ruby information from the executable path
+/// This looks for patterns in the path like /path/to/ruby-3.1.4/bin/ruby
+fn extract_ruby_info_from_path(ruby_path: &Path) -> Option<String> {
+    // Look for Ruby installation directory in path
+    // e.g., /Users/user/.rubies/ruby-3.1.4/bin/ruby -> ruby-3.1.4
+    let path_str = ruby_path.to_string_lossy();
+
+    // Common Ruby installation patterns
+    let patterns = [
+        r"/(ruby-[\d.]+[^/]*)/bin/ruby",        // /path/ruby-3.1.4/bin/ruby
+        r"/(jruby-[\d.]+[^/]*)/bin/ruby",       // /path/jruby-9.4.0.0/bin/ruby
+        r"/(truffleruby-[\d.]+[^/]*)/bin/ruby", // /path/truffleruby-23.1.1/bin/ruby
+    ];
+
+    for pattern in &patterns {
+        if let Ok(re) = Regex::new(pattern)
+            && let Some(captures) = re.captures(&path_str)
+            && let Some(matched) = captures.get(1)
+        {
+            return Some(matched.as_str().to_string());
+        }
+    }
+
+    // If no pattern matches, default to "ruby" (we know it's some Ruby)
+    Some("ruby".to_string())
 }
 
 #[cfg(test)]
@@ -753,13 +1073,12 @@ mod tests {
 
         loop {
             let version_file = current.join(".ruby-version").ok();
-            if let Some(file) = version_file {
-                if file.exists().unwrap_or(false) {
-                    if let Ok(content) = file.read_to_string() {
-                        found_version = Some(content.trim().to_string());
-                        break;
-                    }
-                }
+            if let Some(file) = version_file
+                && file.exists().unwrap_or(false)
+                && let Ok(content) = file.read_to_string()
+            {
+                found_version = Some(content.trim().to_string());
+                break;
             }
 
             let parent = current.parent();
@@ -862,7 +1181,7 @@ mod tests {
         let version_parts = parse_version(version).unwrap();
 
         Ruby {
-            key: format!("{}-{}-test-arch64", implementation, version),
+            key: format!("{implementation}-{version}-test-arch64"),
             version: version.to_string(),
             version_parts,
             path: dummy_vfs_path,
@@ -873,322 +1192,4 @@ mod tests {
             mtime: None,
         }
     }
-}
-
-/// Extract arch and OS information from a Ruby executable
-fn extract_ruby_platform_info(ruby_bin: &VfsPath) -> Result<(String, String), RubyError> {
-    // For VFS compatibility, we need to handle the case where we can't execute the binary
-    // In such cases, fall back to the current system's platform info
-
-    // Try to get the actual file path for execution
-    let ruby_path = ruby_bin.as_str();
-
-    // Run ruby -e "puts [RUBY_PLATFORM, RbConfig::CONFIG['host_cpu'], RbConfig::CONFIG['host_os']].join('|')"
-    let output = Command::new(ruby_path)
-        .args(["-e", "puts [RUBY_PLATFORM, RbConfig::CONFIG['host_cpu'], RbConfig::CONFIG['host_os']].join('|')"])
-        .output();
-
-    match output {
-        Ok(output) if output.status.success() => {
-            let platform_info = String::from_utf8_lossy(&output.stdout);
-            let parts: Vec<&str> = platform_info.trim().split('|').collect();
-
-            if parts.len() >= 3 {
-                let host_cpu = parts[1].to_string();
-                let host_os = parts[2].to_string();
-
-                // Normalize architecture names to match common conventions
-                let arch = normalize_arch(&host_cpu);
-                let os = normalize_os(&host_os);
-
-                return Ok((arch, os));
-            }
-        }
-        _ => {
-            // Fall back to system platform info if we can't execute Ruby
-            // This happens in test environments or when Ruby is not functional
-        }
-    }
-
-    // Fallback to current system's platform info
-    Ok((
-        std::env::consts::ARCH.to_string(),
-        std::env::consts::OS.to_string(),
-    ))
-}
-
-/// Normalize architecture names to match common conventions
-fn normalize_arch(arch: &str) -> String {
-    match arch {
-        "aarch64" | "arm64" => "aarch64".to_string(),
-        "x86_64" | "amd64" => "x86_64".to_string(),
-        "i386" | "i686" => "x86".to_string(),
-        other => other.to_string(),
-    }
-}
-
-/// Normalize OS names to match common conventions
-fn normalize_os(os: &str) -> String {
-    match os {
-        s if s.contains("darwin") => "macos".to_string(),
-        s if s.contains("linux") => "linux".to_string(),
-        s if s.contains("mingw") || s.contains("mswin") || s.contains("windows") => {
-            "windows".to_string()
-        }
-        s if s.contains("freebsd") => "freebsd".to_string(),
-        s if s.contains("openbsd") => "openbsd".to_string(),
-        s if s.contains("netbsd") => "netbsd".to_string(),
-        other => other.to_string(),
-    }
-}
-
-/// Custom serializer for VfsPath that serializes as the display string
-fn serialize_vfs_path<S>(path: &VfsPath, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    serializer.serialize_str(path.as_str())
-}
-
-/// Custom serializer for Option<VfsPath> that serializes as the display string
-fn serialize_optional_vfs_path<S>(path: &Option<VfsPath>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    match path {
-        Some(p) => serializer.serialize_str(p.as_str()),
-        None => serializer.serialize_none(),
-    }
-}
-
-/// Find symlink target for a VFS path, if it exists
-fn find_symlink_target(vfs_path: &VfsPath) -> Option<VfsPath> {
-    if let Ok(metadata) = vfs_path.metadata() {
-        if metadata.file_type == vfs::VfsFileType::File {
-            // For VFS, we need to check if it's a symlink using the underlying filesystem
-            // Since VFS doesn't expose symlink info directly, we'll convert to PathBuf for this check
-            let pathbuf = PathBuf::from(vfs_path.as_str());
-            if pathbuf.is_symlink() {
-                if let Ok(target) = std::fs::read_link(&pathbuf) {
-                    // Convert the symlink target back to VFS path
-                    let fs = vfs::PhysicalFS::new("/");
-                    let root = VfsPath::new(fs);
-                    root.join(target.to_string_lossy().as_ref()).ok()
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    } else {
-        None
-    }
-}
-
-/// Trait for environment variable access (allows mocking in tests)
-pub trait EnvProvider {
-    fn get_var(&self, key: &str) -> Option<String>;
-}
-
-/// Production environment provider
-pub struct SystemEnv;
-
-impl EnvProvider for SystemEnv {
-    fn get_var(&self, key: &str) -> Option<String> {
-        env::var(key).ok()
-    }
-}
-
-/// Find the currently active Ruby version using chrb's precedence order
-/// 1. RUBY_ROOT environment variable (if set, indicates active Ruby)
-/// 2. .ruby-version file in current directory or parent directories
-/// 3. DEFAULT_RUBY_VERSION environment variable
-pub fn find_active_ruby_version() -> Option<String> {
-    find_active_ruby_version_with_env(&SystemEnv)
-}
-
-/// Find active Ruby version with injectable environment provider (for testing)
-pub fn find_active_ruby_version_with_env(env_provider: &dyn EnvProvider) -> Option<String> {
-    find_active_ruby_version_with_env_and_fs(env_provider, &VfsPath::new(vfs::PhysicalFS::new("/")))
-}
-
-/// Find active Ruby version with injectable environment provider and VFS (for testing)
-pub fn find_active_ruby_version_with_env_and_fs(
-    env_provider: &dyn EnvProvider,
-    vfs_root: &VfsPath,
-) -> Option<String> {
-    // 1. Check RUBY_ROOT environment variable
-    if let Some(ruby_root) = env_provider.get_var("RUBY_ROOT") {
-        // Extract version from RUBY_ROOT path (e.g., "/path/to/ruby-3.1.4" -> "ruby-3.1.4")
-        if let Some(dirname) = PathBuf::from(&ruby_root).file_name() {
-            if let Some(dirname_str) = dirname.to_str() {
-                return Some(dirname_str.to_string());
-            }
-        }
-    }
-
-    // 2. Look for .ruby-version file in current directory and parents
-    if let Some(version) = find_ruby_version_file_vfs(vfs_root) {
-        return Some(version);
-    }
-
-    // 3. Check DEFAULT_RUBY_VERSION environment variable
-    if let Some(default_version) = env_provider.get_var("DEFAULT_RUBY_VERSION") {
-        return Some(default_version);
-    }
-
-    // 4. Fallback to PATH analysis - find Ruby executable and extract version
-    if let Some(path_ruby) = find_ruby_in_path() {
-        return Some(path_ruby);
-    }
-
-    None
-}
-
-/// Search for .ruby-version file using VFS (for testing)
-fn find_ruby_version_file_vfs(vfs_root: &VfsPath) -> Option<String> {
-    let mut current_dir = if let Ok(cwd) = env::current_dir() {
-        vfs_root.join(cwd.to_string_lossy().as_ref()).ok()?
-    } else {
-        return None;
-    };
-
-    loop {
-        let ruby_version_file = current_dir.join(".ruby-version").ok()?;
-
-        if ruby_version_file.exists().unwrap_or(false) {
-            if let Ok(content) = ruby_version_file.read_to_string() {
-                let version = content.trim();
-                if !version.is_empty() {
-                    return Some(version.to_string());
-                }
-            }
-        }
-
-        // Move to parent directory
-        let parent = current_dir.parent();
-        if parent.as_str() == current_dir.as_str() {
-            break; // Reached VFS root
-        }
-        current_dir = parent;
-    }
-
-    None
-}
-
-/// Find Ruby executable in PATH and extract version information
-/// This is the fallback method when no .ruby-version file or env vars are set
-fn find_ruby_in_path() -> Option<String> {
-    // First, try to find 'ruby' executable in PATH
-    let ruby_path = find_executable_in_path("ruby")?;
-
-    // Extract version and engine information from the Ruby executable
-    extract_ruby_info_from_executable(&ruby_path)
-}
-
-/// Find an executable in PATH
-fn find_executable_in_path(executable: &str) -> Option<PathBuf> {
-    if let Ok(path_var) = env::var("PATH") {
-        for path_dir in env::split_paths(&path_var) {
-            let executable_path = path_dir.join(executable);
-
-            // Check for executable with and without .exe extension (Windows support)
-            if executable_path.is_file() && is_executable(&executable_path) {
-                return Some(executable_path);
-            }
-
-            // Windows support - check for .exe extension
-            #[cfg(windows)]
-            {
-                let exe_path = path_dir.join(format!("{}.exe", executable));
-                if exe_path.is_file() && is_executable(&exe_path) {
-                    return Some(exe_path);
-                }
-            }
-        }
-    }
-
-    None
-}
-
-/// Check if a file is executable
-fn is_executable(path: &Path) -> bool {
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        if let Ok(metadata) = path.metadata() {
-            let permissions = metadata.permissions();
-            return permissions.mode() & 0o111 != 0;
-        }
-        false
-    }
-
-    #[cfg(windows)]
-    {
-        // On Windows, if the file exists and has .exe extension, consider it executable
-        path.extension().map_or(false, |ext| ext == "exe")
-    }
-
-    #[cfg(not(any(unix, windows)))]
-    {
-        // For other platforms, just check if file exists
-        true
-    }
-}
-
-/// Extract Ruby engine and version information from an executable
-/// Uses the same approach as chrb - execute Ruby to get accurate information
-fn extract_ruby_info_from_executable(ruby_path: &PathBuf) -> Option<String> {
-    // Execute Ruby to get engine and version information
-    // This mirrors chrb's ExecFindEnv function
-    let output = Command::new(ruby_path)
-        .args([
-            "-e",
-            "puts \"#{defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'ruby'}-#{RUBY_VERSION}\"",
-        ])
-        .output()
-        .ok()?;
-
-    if output.status.success() {
-        let stdout = String::from_utf8(output.stdout).ok()?;
-        let version_info = stdout.trim();
-
-        if !version_info.is_empty() {
-            return Some(version_info.to_string());
-        }
-    }
-
-    // Fallback: try to extract from path if execution failed
-    extract_ruby_info_from_path(ruby_path)
-}
-
-/// Fallback method to extract Ruby information from the executable path
-/// This looks for patterns in the path like /path/to/ruby-3.1.4/bin/ruby
-fn extract_ruby_info_from_path(ruby_path: &Path) -> Option<String> {
-    // Look for Ruby installation directory in path
-    // e.g., /Users/user/.rubies/ruby-3.1.4/bin/ruby -> ruby-3.1.4
-    let path_str = ruby_path.to_string_lossy();
-
-    // Common Ruby installation patterns
-    let patterns = [
-        r"/(ruby-[\d.]+[^/]*)/bin/ruby",        // /path/ruby-3.1.4/bin/ruby
-        r"/(jruby-[\d.]+[^/]*)/bin/ruby",       // /path/jruby-9.4.0.0/bin/ruby
-        r"/(truffleruby-[\d.]+[^/]*)/bin/ruby", // /path/truffleruby-23.1.1/bin/ruby
-    ];
-
-    for pattern in &patterns {
-        if let Ok(re) = Regex::new(pattern) {
-            if let Some(captures) = re.captures(&path_str) {
-                if let Some(matched) = captures.get(1) {
-                    return Some(matched.as_str().to_string());
-                }
-            }
-        }
-    }
-
-    // If no pattern matches, default to "ruby" (we know it's some Ruby)
-    Some("ruby".to_string())
 }

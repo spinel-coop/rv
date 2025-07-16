@@ -1,0 +1,22 @@
+---
+source: tests/integration/mod.rs
+expression: output.normalized_stdout()
+---
+[
+  {
+    "key": "ruby-3.2.0-macos-aarch64",
+    "version": "3.2.0",
+    "path": "/opt/rubies/ruby-3.2.0",
+    "implementation": "ruby",
+    "arch": "aarch64",
+    "os": "macos"
+  },
+  {
+    "key": "ruby-3.1.4-macos-aarch64",
+    "version": "3.1.4",
+    "path": "/opt/rubies/ruby-3.1.4",
+    "implementation": "ruby",
+    "arch": "aarch64",
+    "os": "macos"
+  }
+]
