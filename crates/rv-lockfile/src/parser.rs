@@ -15,7 +15,6 @@ pub struct LockfileParser {
     checksums: IndexMap<String, Checksum>,
     /// The key of the current gem spec being parsed (for associating dependencies)
     current_gem_spec: Option<String>,
-    strict: bool,
 }
 
 impl std::fmt::Debug for LockfileParser {
@@ -28,14 +27,13 @@ impl std::fmt::Debug for LockfileParser {
             .field("bundler_version", &self.bundler_version)
             .field("ruby_version", &self.ruby_version)
             .field("checksums", &self.checksums)
-            .field("strict", &self.strict)
             .finish()
     }
 }
 
 impl LockfileParser {
     /// Create a new parser with the given content
-    pub fn new(content: &str, strict: bool) -> Result<Self, ParseError> {
+    pub fn new(content: &str) -> Result<Self, ParseError> {
         let mut parser = LockfileParser {
             sources: Vec::new(),
             specs: IndexMap::new(),
@@ -45,7 +43,6 @@ impl LockfileParser {
             ruby_version: None,
             checksums: IndexMap::new(),
             current_gem_spec: None,
-            strict,
         };
 
         parser.parse(content)?;
@@ -199,9 +196,6 @@ impl LockfileParser {
                 self.parse_gem_dependency(content, line_num)?;
             }
             _ => {
-                if self.strict {
-                    return Err(ParseError::invalid_indentation(line_num, 2, indent));
-                }
             }
         }
 
@@ -343,9 +337,6 @@ impl LockfileParser {
     /// Parse dependency lines
     fn parse_dependency_line(&mut self, line: &str, line_num: usize) -> Result<(), ParseError> {
         let indent = self.count_leading_spaces(line);
-        if indent != 2 && self.strict {
-            return Err(ParseError::invalid_indentation(line_num, 2, indent));
-        }
 
         let content = line.trim();
         let pinned = content.ends_with('!');
@@ -382,9 +373,6 @@ impl LockfileParser {
     /// Parse platform lines
     fn parse_platform_line(&mut self, line: &str, line_num: usize) -> Result<(), ParseError> {
         let indent = self.count_leading_spaces(line);
-        if indent != 2 && self.strict {
-            return Err(ParseError::invalid_indentation(line_num, 2, indent));
-        }
 
         let platform_str = line.trim();
         let platform = platform_str
@@ -419,9 +407,6 @@ impl LockfileParser {
     /// Parse checksum lines
     fn parse_checksum_line(&mut self, line: &str, line_num: usize) -> Result<(), ParseError> {
         let indent = self.count_leading_spaces(line);
-        if indent != 2 && self.strict {
-            return Err(ParseError::invalid_indentation(line_num, 2, indent));
-        }
 
         let content = line.trim();
 
@@ -532,7 +517,7 @@ BUNDLED WITH
    2.3.0
 "#;
 
-        let parser = LockfileParser::new(content, false).unwrap();
+        let parser = LockfileParser::new(content).unwrap();
         assert_eq!(parser.platforms().len(), 1);
         assert_eq!(parser.dependencies().len(), 1);
         assert!(parser.bundler_version().is_some());
@@ -550,7 +535,7 @@ GEM
 >>>>>>> branch
 "#;
 
-        let result = LockfileParser::new(content, false);
+        let result = LockfileParser::new(content);
         assert!(matches!(result, Err(ParseError::MergeConflict { .. })));
     }
 }

@@ -1,5 +1,5 @@
 use insta::assert_debug_snapshot;
-use rv_lockfile::{parse_lockfile, parse_lockfile_strict, ParseError};
+use rv_lockfile::{parse_lockfile, ParseError};
 
 #[test]
 fn test_git_source_lockfile() {
@@ -180,27 +180,11 @@ PLATFORMS
   ruby
 "#;
 
-    let result = parse_lockfile_strict(malformed_content);
+    let result = parse_lockfile(malformed_content);
     assert!(result.is_err());
     assert_debug_snapshot!(result.unwrap_err());
 }
 
-#[test]
-fn test_invalid_indentation_strict_mode() {
-    let bad_indent_content = r#"
-GEM
-  remote: https://rubygems.org/
-  specs:
- wrong-indent (1.0.0)
-
-PLATFORMS
-  ruby
-"#;
-
-    let result = parse_lockfile_strict(bad_indent_content);
-    assert!(result.is_err());
-    assert_debug_snapshot!(result.unwrap_err());
-}
 
 #[test]
 fn test_plugin_source_lockfile() {

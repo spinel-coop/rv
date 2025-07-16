@@ -1,5 +1,5 @@
 use insta::assert_debug_snapshot;
-use rv_lockfile::{parse_lockfile, parse_lockfile_strict};
+use rv_lockfile::parse_lockfile;
 
 #[test]
 fn test_empty_lockfile() {
@@ -15,7 +15,6 @@ fn test_empty_lockfile() {
         bundler_version: None,
         ruby_version: None,
         checksums: {},
-        strict: false,
     }
     ");
 }
@@ -34,7 +33,6 @@ fn test_whitespace_only_lockfile() {
         bundler_version: None,
         ruby_version: None,
         checksums: {},
-        strict: false,
     }
     ");
 }
@@ -42,7 +40,7 @@ fn test_whitespace_only_lockfile() {
 #[test]
 fn test_empty_lockfile_strict_mode() {
     let empty_content = "";
-    let parser = parse_lockfile_strict(empty_content).unwrap();
+    let parser = parse_lockfile(empty_content).unwrap();
 
     assert_debug_snapshot!(parser, @r"
     LockfileParser {
@@ -53,7 +51,6 @@ fn test_empty_lockfile_strict_mode() {
         bundler_version: None,
         ruby_version: None,
         checksums: {},
-        strict: true,
     }
     ");
 }
@@ -76,7 +73,6 @@ fn test_comments_only_lockfile() {
         bundler_version: None,
         ruby_version: None,
         checksums: {},
-        strict: false,
     }
     ");
 }
@@ -109,7 +105,6 @@ BUNDLED WITH
         ),
         ruby_version: None,
         checksums: {},
-        strict: false,
     }
     ");
 }

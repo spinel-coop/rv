@@ -241,5 +241,4 @@ LockfileParser {
         "3.1.0p0",
     ),
     checksums: {},
-    strict: false,
 }

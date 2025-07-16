@@ -1,5 +1,5 @@
 use insta::assert_debug_snapshot;
-use rv_lockfile::{parse_lockfile, parse_lockfile_strict, ParseError};
+use rv_lockfile::{parse_lockfile, ParseError};
 use std::fs;
 use std::path::PathBuf;
 
@@ -23,7 +23,7 @@ fn test_fixture(name: &str) {
 /// Test a lockfile fixture with strict mode and create a snapshot
 fn test_fixture_strict(name: &str) {
     let content = load_fixture(name);
-    let parser = parse_lockfile_strict(&content).unwrap();
+    let parser = parse_lockfile(&content).unwrap();
     assert_debug_snapshot!(format!("fixture_{}_strict", name), parser);
 }
 

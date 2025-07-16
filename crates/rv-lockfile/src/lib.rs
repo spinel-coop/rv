@@ -13,12 +13,7 @@ pub use types::{Dependency, LazySpecification, Platform, Source};
 
 /// Parse a lockfile from string content
 pub fn parse_lockfile(content: &str) -> Result<LockfileParser, ParseError> {
-    LockfileParser::new(content, false)
-}
-
-/// Parse a lockfile from string content with strict validation
-pub fn parse_lockfile_strict(content: &str) -> Result<LockfileParser, ParseError> {
-    LockfileParser::new(content, true)
+    LockfileParser::new(content)
 }
 
 /// Load a lockfile from a file path
