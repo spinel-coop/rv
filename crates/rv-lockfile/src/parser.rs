@@ -14,6 +14,7 @@ pub struct LockfileParser {
     bundler_version: Option<Version>,
     ruby_version: Option<String>,
     checksums_enabled: bool,
+    checksums: IndexMap<String, Checksum>,
     strict: bool,
 }
 
@@ -28,6 +29,7 @@ impl LockfileParser {
             bundler_version: None,
             ruby_version: None,
             checksums_enabled: false,
+            checksums: IndexMap::new(),
             strict,
         };
 
@@ -384,7 +386,39 @@ impl LockfileParser {
 
     /// Parse checksum lines
     fn parse_checksum_line(&mut self, line: &str, line_num: usize) -> Result<(), ParseError> {
-        // TODO: Implement checksum parsing
+        let indent = self.count_leading_spaces(line);
+        if indent != 2 && self.strict {
+            return Err(ParseError::invalid_indentation(line_num, 2, indent));
+        }
+
+        let content = line.trim();
+        
+        // Parse checksum format: "gem-name (version) algorithm=hash" or "gem-name (version-platform) algorithm=hash"
+        let re = Regex::new(r"^([^\s]+)\s+\(([^-\)]+)(?:-(.+))?\)\s+([^=]+)=(.+)$").unwrap();
+        
+        if let Some(captures) = re.captures(content) {
+            let name = captures.get(1).unwrap().as_str().to_string();
+            let version_str = captures.get(2).unwrap().as_str();
+            let platform_str = captures.get(3).map(|m| m.as_str());
+            let algorithm = captures.get(4).unwrap().as_str().to_string();
+            let value = captures.get(5).unwrap().as_str().to_string();
+
+            let version = Version::parse(version_str)
+                .map_err(|_| ParseError::invalid_version(line_num, version_str.to_string()))?;
+
+            let platform = if let Some(platform_str) = platform_str {
+                Some(platform_str.parse()
+                    .map_err(|_| ParseError::invalid_platform(line_num, platform_str.to_string()))?)
+            } else {
+                None
+            };
+
+            let checksum = Checksum::new(name.clone(), version, platform, algorithm, value);
+            self.checksums.insert(checksum.full_name(), checksum);
+        } else {
+            return Err(ParseError::invalid_checksum(line_num, content.to_string()));
+        }
+
         Ok(())
     }
 
@@ -428,6 +462,11 @@ impl LockfileParser {
     /// Check if checksums are enabled
     pub fn checksums_enabled(&self) -> bool {
         self.checksums_enabled
+    }
+
+    /// Get all checksums
+    pub fn checksums(&self) -> &IndexMap<String, Checksum> {
+        &self.checksums
     }
 }
 

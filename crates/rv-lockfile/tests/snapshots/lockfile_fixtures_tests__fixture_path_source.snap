@@ -82,5 +82,6 @@ LockfileParser {
     ),
     ruby_version: None,
     checksums_enabled: false,
+    checksums: {},
     strict: false,
 }

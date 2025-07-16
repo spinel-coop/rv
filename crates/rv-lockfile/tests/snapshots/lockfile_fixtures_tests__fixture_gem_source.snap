@@ -111,5 +111,6 @@ LockfileParser {
         "3.1.0p0",
     ),
     checksums_enabled: false,
+    checksums: {},
     strict: false,
 }

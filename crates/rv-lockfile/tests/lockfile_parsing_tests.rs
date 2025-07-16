@@ -6,7 +6,7 @@ fn test_empty_lockfile() {
     let empty_content = "";
     let parser = parse_lockfile(empty_content).unwrap();
 
-    assert_debug_snapshot!(parser, @r###"
+    assert_debug_snapshot!(parser, @r"
     LockfileParser {
         sources: [],
         specs: {},
@@ -15,9 +15,10 @@ fn test_empty_lockfile() {
         bundler_version: None,
         ruby_version: None,
         checksums_enabled: false,
+        checksums: {},
         strict: false,
     }
-    "###);
+    ");
 }
 
 #[test]
@@ -25,7 +26,7 @@ fn test_whitespace_only_lockfile() {
     let whitespace_content = "   \n\n  \t  \n   ";
     let parser = parse_lockfile(whitespace_content).unwrap();
 
-    assert_debug_snapshot!(parser, @r###"
+    assert_debug_snapshot!(parser, @r"
     LockfileParser {
         sources: [],
         specs: {},
@@ -34,9 +35,10 @@ fn test_whitespace_only_lockfile() {
         bundler_version: None,
         ruby_version: None,
         checksums_enabled: false,
+        checksums: {},
         strict: false,
     }
-    "###);
+    ");
 }
 
 #[test]
@@ -44,7 +46,7 @@ fn test_empty_lockfile_strict_mode() {
     let empty_content = "";
     let parser = parse_lockfile_strict(empty_content).unwrap();
 
-    assert_debug_snapshot!(parser, @r###"
+    assert_debug_snapshot!(parser, @r"
     LockfileParser {
         sources: [],
         specs: {},
@@ -53,9 +55,10 @@ fn test_empty_lockfile_strict_mode() {
         bundler_version: None,
         ruby_version: None,
         checksums_enabled: false,
+        checksums: {},
         strict: true,
     }
-    "###);
+    ");
 }
 
 #[test]
@@ -67,7 +70,7 @@ fn test_comments_only_lockfile() {
 "#;
     let parser = parse_lockfile(comment_content).unwrap();
 
-    assert_debug_snapshot!(parser, @r###"
+    assert_debug_snapshot!(parser, @r"
     LockfileParser {
         sources: [],
         specs: {},
@@ -76,9 +79,10 @@ fn test_comments_only_lockfile() {
         bundler_version: None,
         ruby_version: None,
         checksums_enabled: false,
+        checksums: {},
         strict: false,
     }
-    "###);
+    ");
 }
 
 #[test]
@@ -109,6 +113,7 @@ BUNDLED WITH
         ),
         ruby_version: None,
         checksums_enabled: false,
+        checksums: {},
         strict: false,
     }
     ");
