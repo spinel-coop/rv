@@ -185,7 +185,6 @@ PLATFORMS
     assert_debug_snapshot!(result.unwrap_err());
 }
 
-
 #[test]
 fn test_plugin_source_lockfile() {
     let plugin_content = r#"

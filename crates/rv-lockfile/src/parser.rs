@@ -101,7 +101,7 @@ impl LockfileParser {
                 ParseState::None => {
                     // Ignore lines outside of sections
                 }
-                ParseState::Source(source_type) => {
+                ParseState::Source(_) => {
                     if let Some(ref mut source) = current_source {
                         self.parse_source_line(source, line, line_num)?;
                     }
@@ -139,7 +139,7 @@ impl LockfileParser {
     fn detect_section(
         &mut self,
         line: &str,
-        line_num: usize,
+        _line_num: usize,
     ) -> Result<Option<ParseState>, ParseError> {
         let trimmed = line.trim();
 
@@ -195,8 +195,7 @@ impl LockfileParser {
                 // Gem dependency - associate with the last parsed gem spec
                 self.parse_gem_dependency(content, line_num)?;
             }
-            _ => {
-            }
+            _ => {}
         }
 
         Ok(())
@@ -207,7 +206,7 @@ impl LockfileParser {
         &mut self,
         source: &mut Source,
         content: &str,
-        line_num: usize,
+        _line_num: usize,
     ) -> Result<(), ParseError> {
         if let Some((key, value)) = content.split_once(": ") {
             match source {
@@ -297,7 +296,7 @@ impl LockfileParser {
     }
 
     /// Parse gem dependency lines (6-space indented)
-    fn parse_gem_dependency(&mut self, content: &str, line_num: usize) -> Result<(), ParseError> {
+    fn parse_gem_dependency(&mut self, content: &str, _line_num: usize) -> Result<(), ParseError> {
         // Parse dependency format: "gem-name (>= 1.0, < 2.0)"
         let re = Regex::new(r"^([^\s]+)(?:\s+\(([^)]+)\))?$").unwrap();
 
@@ -336,7 +335,6 @@ impl LockfileParser {
 
     /// Parse dependency lines
     fn parse_dependency_line(&mut self, line: &str, line_num: usize) -> Result<(), ParseError> {
-        let indent = self.count_leading_spaces(line);
 
         let content = line.trim();
         let pinned = content.ends_with('!');
@@ -354,8 +352,7 @@ impl LockfileParser {
             let mut dependency = Dependency::new(name.clone());
             dependency.set_pinned(pinned);
 
-            if let Some(req_match) = captures.get(2) {
-                let req_str = req_match.as_str();
+            if let Some(_req_match) = captures.get(2) {
                 // TODO: Implement proper requirement parsing
             }
 
@@ -372,7 +369,6 @@ impl LockfileParser {
 
     /// Parse platform lines
     fn parse_platform_line(&mut self, line: &str, line_num: usize) -> Result<(), ParseError> {
-        let indent = self.count_leading_spaces(line);
 
         let platform_str = line.trim();
         let platform = platform_str
@@ -387,7 +383,7 @@ impl LockfileParser {
     }
 
     /// Parse ruby version lines
-    fn parse_ruby_line(&mut self, line: &str, line_num: usize) -> Result<(), ParseError> {
+    fn parse_ruby_line(&mut self, line: &str, _line_num: usize) -> Result<(), ParseError> {
         let content = line.trim();
         if let Some(stripped) = content.strip_prefix("ruby ") {
             self.ruby_version = Some(stripped.to_string());
@@ -396,7 +392,7 @@ impl LockfileParser {
     }
 
     /// Parse bundled with lines
-    fn parse_bundled_line(&mut self, line: &str, line_num: usize) -> Result<(), ParseError> {
+    fn parse_bundled_line(&mut self, line: &str, _line_num: usize) -> Result<(), ParseError> {
         let version_str = line.trim();
         if let Ok(version) = Version::parse(version_str) {
             self.bundler_version = Some(version);
@@ -406,7 +402,6 @@ impl LockfileParser {
 
     /// Parse checksum lines
     fn parse_checksum_line(&mut self, line: &str, line_num: usize) -> Result<(), ParseError> {
-        let indent = self.count_leading_spaces(line);
 
         let content = line.trim();
 
