@@ -5,7 +5,6 @@ use regex::Regex;
 use semver::Version;
 
 /// Main lockfile parser
-#[derive(Debug)]
 pub struct LockfileParser {
     sources: Vec<Source>,
     specs: IndexMap<String, LazySpecification>,
@@ -13,9 +12,25 @@ pub struct LockfileParser {
     platforms: Vec<Platform>,
     bundler_version: Option<Version>,
     ruby_version: Option<String>,
-    checksums_enabled: bool,
     checksums: IndexMap<String, Checksum>,
+    /// The key of the current gem spec being parsed (for associating dependencies)
+    current_gem_spec: Option<String>,
     strict: bool,
+}
+
+impl std::fmt::Debug for LockfileParser {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LockfileParser")
+            .field("sources", &self.sources)
+            .field("specs", &self.specs)
+            .field("dependencies", &self.dependencies)
+            .field("platforms", &self.platforms)
+            .field("bundler_version", &self.bundler_version)
+            .field("ruby_version", &self.ruby_version)
+            .field("checksums", &self.checksums)
+            .field("strict", &self.strict)
+            .finish()
+    }
 }
 
 impl LockfileParser {
@@ -28,8 +43,8 @@ impl LockfileParser {
             platforms: Vec::new(),
             bundler_version: None,
             ruby_version: None,
-            checksums_enabled: false,
             checksums: IndexMap::new(),
+            current_gem_spec: None,
             strict,
         };
 
@@ -70,6 +85,8 @@ impl LockfileParser {
                     if let Some(source) = current_source.take() {
                         self.sources.push(source);
                     }
+                    // Clear current gem spec when leaving source section
+                    self.current_gem_spec = None;
                 }
 
                 current_section = new_section;
@@ -138,10 +155,7 @@ impl LockfileParser {
             "PLATFORMS" => Ok(Some(ParseState::Platforms)),
             "RUBY VERSION" => Ok(Some(ParseState::RubyVersion)),
             "BUNDLED WITH" => Ok(Some(ParseState::BundledWith)),
-            "CHECKSUMS" => {
-                self.checksums_enabled = true;
-                Ok(Some(ParseState::Checksums))
-            }
+            "CHECKSUMS" => Ok(Some(ParseState::Checksums)),
             _ => Ok(None),
         }
     }
@@ -181,7 +195,7 @@ impl LockfileParser {
                 }
             }
             6 => {
-                // Gem dependency
+                // Gem dependency - associate with the last parsed gem spec
                 self.parse_gem_dependency(content, line_num)?;
             }
             _ => {
@@ -264,7 +278,12 @@ impl LockfileParser {
                 .map_err(|_| ParseError::invalid_platform(line_num, platform_str.to_string()))?;
 
             let spec = LazySpecification::new(name.clone(), version, platform);
-            self.specs.insert(spec.full_name(), spec);
+            let spec_key = spec.full_name();
+
+            // Set as current gem for dependency association
+            self.current_gem_spec = Some(spec_key.clone());
+
+            self.specs.insert(spec_key, spec);
 
             // Add to source
             match source {
@@ -294,15 +313,28 @@ impl LockfileParser {
 
             if let Some(req_match) = captures.get(2) {
                 let req_str = req_match.as_str();
-                // Parse version requirements (simplified for now)
-                // TODO: Implement full requirement parsing
-                dependency.requirements.push(
-                    semver::VersionReq::parse(&req_str.replace("~>", "~")).unwrap_or_default(),
-                );
+                // Parse version requirements - convert Ruby-style to semver
+                let semver_req = req_str
+                    .replace("~>", "~") // Convert pessimistic operator
+                    .replace(" ", ""); // Remove spaces
+
+                if let Ok(req) = semver::VersionReq::parse(&semver_req) {
+                    dependency.requirements.push(req);
+                } else {
+                    // If semver parsing fails, try to handle common Ruby patterns
+                    if req_str.contains(">=") || req_str.contains("<=") || req_str.contains("=") {
+                        // For now, store as a default requirement
+                        dependency.requirements.push(semver::VersionReq::default());
+                    }
+                }
             }
 
-            // Note: This is a dependency of the current gem being parsed
-            // We would need to track current gem context to properly associate
+            // Associate with current gem spec
+            if let Some(ref current_spec_key) = self.current_gem_spec.clone() {
+                if let Some(spec) = self.specs.get_mut(current_spec_key) {
+                    spec.dependencies.push(dependency);
+                }
+            }
         }
 
         Ok(())
@@ -392,10 +424,10 @@ impl LockfileParser {
         }
 
         let content = line.trim();
-        
+
         // Parse checksum format: "gem-name (version) algorithm=hash" or "gem-name (version-platform) algorithm=hash"
         let re = Regex::new(r"^([^\s]+)\s+\(([^-\)]+)(?:-(.+))?\)\s+([^=]+)=(.+)$").unwrap();
-        
+
         if let Some(captures) = re.captures(content) {
             let name = captures.get(1).unwrap().as_str().to_string();
             let version_str = captures.get(2).unwrap().as_str();
@@ -407,8 +439,9 @@ impl LockfileParser {
                 .map_err(|_| ParseError::invalid_version(line_num, version_str.to_string()))?;
 
             let platform = if let Some(platform_str) = platform_str {
-                Some(platform_str.parse()
-                    .map_err(|_| ParseError::invalid_platform(line_num, platform_str.to_string()))?)
+                Some(platform_str.parse().map_err(|_| {
+                    ParseError::invalid_platform(line_num, platform_str.to_string())
+                })?)
             } else {
                 None
             };
@@ -457,11 +490,6 @@ impl LockfileParser {
     /// Get ruby version
     pub fn ruby_version(&self) -> Option<&str> {
         self.ruby_version.as_deref()
-    }
-
-    /// Check if checksums are enabled
-    pub fn checksums_enabled(&self) -> bool {
-        self.checksums_enabled
     }
 
     /// Get all checksums

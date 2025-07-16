@@ -34,7 +34,29 @@ LockfileParser {
             },
             platform: Ruby,
             source: None,
-            dependencies: [],
+            dependencies: [
+                Dependency {
+                    name: "some-dependency",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Tilde,
+                                    major: 2,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: None,
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+            ],
             checksum: None,
             required_ruby_version: None,
             required_rubygems_version: None,
@@ -81,7 +103,6 @@ LockfileParser {
         },
     ),
     ruby_version: None,
-    checksums_enabled: false,
     checksums: {},
     strict: false,
 }

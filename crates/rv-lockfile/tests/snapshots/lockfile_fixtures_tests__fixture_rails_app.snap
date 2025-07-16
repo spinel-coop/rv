@@ -30,7 +30,98 @@ LockfileParser {
             },
             platform: Ruby,
             source: None,
-            dependencies: [],
+            dependencies: [
+                Dependency {
+                    name: "actionpack",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "activesupport",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "nio4r",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Tilde,
+                                    major: 2,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: None,
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "websocket-driver",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: GreaterEq,
+                                    major: 0,
+                                    minor: Some(
+                                        6,
+                                    ),
+                                    patch: Some(
+                                        1,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+            ],
             checksum: None,
             required_ruby_version: None,
             required_rubygems_version: None,
@@ -44,7 +135,123 @@ LockfileParser {
             },
             platform: Ruby,
             source: None,
-            dependencies: [],
+            dependencies: [
+                Dependency {
+                    name: "actionpack",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "activejob",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "activerecord",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "activestorage",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "activesupport",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+            ],
             checksum: None,
             required_ruby_version: None,
             required_rubygems_version: None,
@@ -58,7 +265,100 @@ LockfileParser {
             },
             platform: Ruby,
             source: None,
-            dependencies: [],
+            dependencies: [
+                Dependency {
+                    name: "actionpack",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "actionview",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "activejob",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "activesupport",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+            ],
             checksum: None,
             required_ruby_version: None,
             required_rubygems_version: None,
@@ -72,7 +372,284 @@ LockfileParser {
             },
             platform: Ruby,
             source: None,
-            dependencies: [],
+            dependencies: [
+                Dependency {
+                    name: "actioncable",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "actionmailbox",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "actionmailer",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "actionpack",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "actiontext",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "actionview",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "activejob",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "activemodel",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "activerecord",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "activestorage",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "activesupport",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+                Dependency {
+                    name: "railties",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Exact,
+                                    major: 7,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: Some(
+                                        4,
+                                    ),
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+            ],
             checksum: None,
             required_ruby_version: None,
             required_rubygems_version: None,
@@ -86,7 +663,29 @@ LockfileParser {
             },
             platform: Ruby,
             source: None,
-            dependencies: [],
+            dependencies: [
+                Dependency {
+                    name: "msgpack",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Tilde,
+                                    major: 1,
+                                    minor: Some(
+                                        2,
+                                    ),
+                                    patch: None,
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+            ],
             checksum: None,
             required_ruby_version: None,
             required_rubygems_version: None,
@@ -100,7 +699,29 @@ LockfileParser {
             },
             platform: Ruby,
             source: None,
-            dependencies: [],
+            dependencies: [
+                Dependency {
+                    name: "nio4r",
+                    requirements: [
+                        VersionReq {
+                            comparators: [
+                                Comparator {
+                                    op: Tilde,
+                                    major: 2,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: None,
+                                    pre: Prerelease(""),
+                                },
+                            ],
+                        },
+                    ],
+                    platforms: [],
+                    source: None,
+                    pinned: false,
+                },
+            ],
             checksum: None,
             required_ruby_version: None,
             required_rubygems_version: None,
@@ -147,7 +768,6 @@ LockfileParser {
     ruby_version: Some(
         "3.1.2p20",
     ),
-    checksums_enabled: false,
     checksums: {},
     strict: false,
 }

@@ -51,7 +51,6 @@ LockfileParser {
         },
     ),
     ruby_version: None,
-    checksums_enabled: true,
     checksums: {
         "minitest-5.16.3": Checksum {
             name: "minitest",

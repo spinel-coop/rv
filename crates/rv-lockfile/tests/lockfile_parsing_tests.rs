@@ -14,7 +14,6 @@ fn test_empty_lockfile() {
         platforms: [],
         bundler_version: None,
         ruby_version: None,
-        checksums_enabled: false,
         checksums: {},
         strict: false,
     }
@@ -34,7 +33,6 @@ fn test_whitespace_only_lockfile() {
         platforms: [],
         bundler_version: None,
         ruby_version: None,
-        checksums_enabled: false,
         checksums: {},
         strict: false,
     }
@@ -54,7 +52,6 @@ fn test_empty_lockfile_strict_mode() {
         platforms: [],
         bundler_version: None,
         ruby_version: None,
-        checksums_enabled: false,
         checksums: {},
         strict: true,
     }
@@ -78,7 +75,6 @@ fn test_comments_only_lockfile() {
         platforms: [],
         bundler_version: None,
         ruby_version: None,
-        checksums_enabled: false,
         checksums: {},
         strict: false,
     }
@@ -112,7 +108,6 @@ BUNDLED WITH
             },
         ),
         ruby_version: None,
-        checksums_enabled: false,
         checksums: {},
         strict: false,
     }

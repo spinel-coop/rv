@@ -9,7 +9,6 @@ LockfileParser {
     platforms: [],
     bundler_version: None,
     ruby_version: None,
-    checksums_enabled: false,
     checksums: {},
     strict: true,
 }
