@@ -7,7 +7,7 @@ edition = "2024"
 clap = { version = "4.5.41", features = ["derive", "env"] }
 clap_derive = "4.5.41"
 indicatif = "0.18.0"
-miette = "7.6.0"
+miette = { version = "7.6.0", features = ["fancy"] }
 owo-colors = "4.1.0"
 rayon = "1.10.0"
 regex = "1.11.1"
@@ -17,7 +17,13 @@ serde_with = "3.11"
 shellexpand = "3.1"
 thiserror = "2.0"
 vfs = "0.12"
-tokio = { version = "1.46.1", features = ["tracing", "macros", "rt-multi-thread", "io-std", "process"] }
+tokio = { version = "1.46.1", features = [
+  "tracing",
+  "macros",
+  "rt-multi-thread",
+  "io-std",
+  "process",
+] }
 tracing = "0.1.41"
 xdg = "3.0.0"
 tracing-indicatif = "0.3.11"
