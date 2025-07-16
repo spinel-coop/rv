@@ -9,6 +9,7 @@ pub mod ruby;
 
 use commands::ruby::{RubyArgs, RubyCommand, list_rubies};
 use config::Config;
+use vfs::{AltrootFS, FileSystem};
 
 const APP_PREFIX: &str = "rv";
 
@@ -27,21 +28,34 @@ struct Cli {
     #[arg(short, long, action = clap::ArgAction::Count)]
     debug: u8,
 
+    /// Root directory for testing (hidden)
+    #[arg(long, hide = true)]
+    test_root: Option<PathBuf>,
+
     #[command(subcommand)]
     command: Option<Commands>,
 }
 
 impl Cli {
     fn config(&self) -> Config {
-        use std::sync::Arc;
         use vfs::{PhysicalFS, VfsPath};
+
+        let root: VfsPath = if let Some(ref root) = self.test_root {
+            AltrootFS::new(
+                VfsPath::new(PhysicalFS::new("/"))
+                    .join(root.as_os_str().to_str().unwrap())
+                    .unwrap(),
+            )
+            .into()
+        } else {
+            PhysicalFS::new("/").into()
+        };
 
         Config {
             ruby_dirs: if self.ruby_dir.is_empty() {
-                config::default_ruby_dirs()
+                config::default_ruby_dirs(&root)
             } else {
-                let fs = PhysicalFS::new("/");
-                let root = VfsPath::new(fs);
+                let root = VfsPath::new(PhysicalFS::new("/"));
                 self.ruby_dir
                     .iter()
                     .filter_map(|path| root.join(path.to_string_lossy().as_ref()).ok())
@@ -54,7 +68,7 @@ impl Cli {
             local_dir: xdg::BaseDirectories::with_prefix(APP_PREFIX)
                 .data_home
                 .unwrap_or_else(|| std::env::temp_dir().join(APP_PREFIX)),
-            fs: Arc::new(PhysicalFS::new("/")),
+            root,
         }
     }
 }

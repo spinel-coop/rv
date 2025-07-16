@@ -11,7 +11,6 @@ miette = "7.6.0"
 owo-colors = "4.1.0"
 rayon = "1.10.0"
 regex = "1.11.1"
-rsfs = "0.4.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_with = "3.11"
@@ -24,3 +23,5 @@ xdg = "3.0.0"
 
 [dev-dependencies]
 insta = "1.40"
+tracing-test = "0.2"
+tempfile = "3.0"
