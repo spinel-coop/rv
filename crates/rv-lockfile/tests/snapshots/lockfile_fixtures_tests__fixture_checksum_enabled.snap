@@ -64,4 +64,5 @@ LockfileParser {
             value: "3c8fb073e5353d086d12af3a8822ef7e4dc1df3a5de1a1b1b48c6ed59d1de7fc",
         },
     },
+    ..
 }

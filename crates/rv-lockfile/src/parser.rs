@@ -15,6 +15,11 @@ pub struct LockfileParser {
     checksums: IndexMap<String, Checksum>,
     /// The key of the current gem spec being parsed (for associating dependencies)
     current_gem_spec: Option<String>,
+
+    // Pre-compiled regex patterns for performance
+    gem_spec_regex: Regex,
+    dependency_regex: Regex,
+    checksum_regex: Regex,
 }
 
 impl std::fmt::Debug for LockfileParser {
@@ -27,7 +32,7 @@ impl std::fmt::Debug for LockfileParser {
             .field("bundler_version", &self.bundler_version)
             .field("ruby_version", &self.ruby_version)
             .field("checksums", &self.checksums)
-            .finish()
+            .finish_non_exhaustive() // Hides regex fields from debug output
     }
 }
 
@@ -43,6 +48,13 @@ impl LockfileParser {
             ruby_version: None,
             checksums: IndexMap::new(),
             current_gem_spec: None,
+
+            // Pre-compile regex patterns once for better performance
+            gem_spec_regex: Regex::new(r"^([^\s]+)\s+\(([^-\)]+)(?:-(.+))?\)(?:\s+(.+))?$")
+                .unwrap(),
+            dependency_regex: Regex::new(r"^([^\s]+)(?:\s+\(([^)]+)\))?$").unwrap(),
+            checksum_regex: Regex::new(r"^([^\s]+)\s+\(([^-\)]+)(?:-(.+))?\)\s+([^=]+)=(.+)$")
+                .unwrap(),
         };
 
         parser.parse(content)?;
@@ -254,11 +266,9 @@ impl LockfileParser {
         content: &str,
         line_num: usize,
     ) -> Result<(), ParseError> {
-        // Parse gem name and version using regex similar to bundler
+        // Parse gem name and version using pre-compiled regex
         // Handles formats like: gem-name (1.0.0), gem-name (1.0.0-platform)
-        let re = Regex::new(r"^([^\s]+)\s+\(([^-\)]+)(?:-(.+))?\)(?:\s+(.+))?$").unwrap();
-
-        if let Some(captures) = re.captures(content) {
+        if let Some(captures) = self.gem_spec_regex.captures(content) {
             let name = captures.get(1).unwrap().as_str().to_string();
             let version_str = captures.get(2).unwrap().as_str();
             let platform_str = captures.get(3).map(|m| m.as_str()).unwrap_or("ruby");
@@ -297,10 +307,8 @@ impl LockfileParser {
 
     /// Parse gem dependency lines (6-space indented)
     fn parse_gem_dependency(&mut self, content: &str, _line_num: usize) -> Result<(), ParseError> {
-        // Parse dependency format: "gem-name (>= 1.0, < 2.0)"
-        let re = Regex::new(r"^([^\s]+)(?:\s+\(([^)]+)\))?$").unwrap();
-
-        if let Some(captures) = re.captures(content) {
+        // Parse dependency format: "gem-name (>= 1.0, < 2.0)" using pre-compiled regex
+        if let Some(captures) = self.dependency_regex.captures(content) {
             let name = captures.get(1).unwrap().as_str().to_string();
             let mut dependency = Dependency::new(name);
 
@@ -335,7 +343,6 @@ impl LockfileParser {
 
     /// Parse dependency lines
     fn parse_dependency_line(&mut self, line: &str, line_num: usize) -> Result<(), ParseError> {
-
         let content = line.trim();
         let pinned = content.ends_with('!');
         let content = if pinned {
@@ -344,10 +351,8 @@ impl LockfileParser {
             content
         };
 
-        // Parse dependency format: "gem-name (>= 1.0, < 2.0)"
-        let re = Regex::new(r"^([^\s]+)(?:\s+\(([^)]+)\))?$").unwrap();
-
-        if let Some(captures) = re.captures(content) {
+        // Parse dependency format: "gem-name (>= 1.0, < 2.0)" using pre-compiled regex
+        if let Some(captures) = self.dependency_regex.captures(content) {
             let name = captures.get(1).unwrap().as_str().to_string();
             let mut dependency = Dependency::new(name.clone());
             dependency.set_pinned(pinned);
@@ -369,7 +374,6 @@ impl LockfileParser {
 
     /// Parse platform lines
     fn parse_platform_line(&mut self, line: &str, line_num: usize) -> Result<(), ParseError> {
-
         let platform_str = line.trim();
         let platform = platform_str
             .parse()
@@ -402,13 +406,11 @@ impl LockfileParser {
 
     /// Parse checksum lines
     fn parse_checksum_line(&mut self, line: &str, line_num: usize) -> Result<(), ParseError> {
-
         let content = line.trim();
 
         // Parse checksum format: "gem-name (version) algorithm=hash" or "gem-name (version-platform) algorithm=hash"
-        let re = Regex::new(r"^([^\s]+)\s+\(([^-\)]+)(?:-(.+))?\)\s+([^=]+)=(.+)$").unwrap();
-
-        if let Some(captures) = re.captures(content) {
+        // using pre-compiled regex
+        if let Some(captures) = self.checksum_regex.captures(content) {
             let name = captures.get(1).unwrap().as_str().to_string();
             let version_str = captures.get(2).unwrap().as_str();
             let platform_str = captures.get(3).map(|m| m.as_str());

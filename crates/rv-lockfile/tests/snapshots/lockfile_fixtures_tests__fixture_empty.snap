@@ -10,4 +10,5 @@ LockfileParser {
     bundler_version: None,
     ruby_version: None,
     checksums: {},
+    ..
 }

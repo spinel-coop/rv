@@ -15,6 +15,7 @@ fn test_empty_lockfile() {
         bundler_version: None,
         ruby_version: None,
         checksums: {},
+        ..
     }
     ");
 }
@@ -33,6 +34,7 @@ fn test_whitespace_only_lockfile() {
         bundler_version: None,
         ruby_version: None,
         checksums: {},
+        ..
     }
     ");
 }
@@ -51,6 +53,7 @@ fn test_empty_lockfile_strict_mode() {
         bundler_version: None,
         ruby_version: None,
         checksums: {},
+        ..
     }
     ");
 }
@@ -73,6 +76,7 @@ fn test_comments_only_lockfile() {
         bundler_version: None,
         ruby_version: None,
         checksums: {},
+        ..
     }
     ");
 }
@@ -105,6 +109,7 @@ BUNDLED WITH
         ),
         ruby_version: None,
         checksums: {},
+        ..
     }
     ");
 }
