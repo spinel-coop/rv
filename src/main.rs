@@ -88,6 +88,6 @@ fn main() -> Result<()> {
 
 fn pin_ruby() -> Result<()> {
     let ruby_version: String = fs::read_to_string(".ruby-version").into_diagnostic()?;
-    println!("{}", ruby_version);
+    println!("{ruby_version}");
     Ok(())
 }
