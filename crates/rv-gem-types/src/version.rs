@@ -19,8 +19,8 @@ impl VersionSegment {
 impl std::fmt::Display for VersionSegment {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            VersionSegment::Number(n) => write!(f, "{}", n),
-            VersionSegment::String(s) => write!(f, "{}", s),
+            VersionSegment::Number(n) => write!(f, "{n}"),
+            VersionSegment::String(s) => write!(f, "{s}"),
         }
     }
 }
@@ -69,9 +69,9 @@ impl Version {
     fn parse_segments(version: &str) -> Result<Vec<VersionSegment>> {
         let mut segments = Vec::new();
         let mut current_segment = String::new();
-        let mut chars = version.chars().peekable();
+        let chars = version.chars().peekable();
 
-        while let Some(ch) = chars.next() {
+        for ch in chars {
             match ch {
                 '.' => {
                     if !current_segment.is_empty() {
@@ -157,7 +157,7 @@ impl Version {
         let mut segments = self.segments.clone();
 
         // Remove all trailing string segments (prerelease parts)
-        while segments.last().map_or(false, |s| s.is_string()) {
+        while segments.last().is_some_and(|s| s.is_string()) {
             segments.pop();
         }
 

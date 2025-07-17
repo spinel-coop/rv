@@ -31,7 +31,7 @@ impl std::fmt::Display for Platform {
             Platform::Current => write!(f, "current"),
             Platform::Specific { cpu, os, version } => {
                 // TODO: Implement proper platform string formatting
-                write!(f, "{}", os)
+                write!(f, "{os}")
             }
         }
     }
