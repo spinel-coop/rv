@@ -1,6 +1,6 @@
 use miette::{miette, Result};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum VersionSegment {
     Number(u32),
     String(String),
@@ -215,6 +215,12 @@ impl Version {
 impl PartialEq for Version {
     fn eq(&self, other: &Self) -> bool {
         self.canonical_segments() == other.canonical_segments()
+    }
+}
+
+impl std::hash::Hash for Version {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.canonical_segments().hash(state);
     }
 }
 
