@@ -9,8 +9,6 @@ use crate::ruby::Ruby;
 pub struct Config {
     pub ruby_dirs: Vec<VfsPath>,
     pub gemfile: Option<PathBuf>,
-    pub cache_dir: PathBuf,
-    pub local_dir: PathBuf,
     pub root: VfsPath,
 }
 

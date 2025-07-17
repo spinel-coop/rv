@@ -6,6 +6,7 @@ use miette::{IntoDiagnostic, Result};
 
 pub mod commands;
 pub mod config;
+pub mod dirs;
 pub mod ruby;
 
 use commands::ruby::{RubyArgs, RubyCommand, list_rubies};
@@ -68,12 +69,6 @@ impl Cli {
                     .collect()
             },
             gemfile: self.gemfile.clone(),
-            cache_dir: xdg::BaseDirectories::with_prefix(APP_PREFIX)
-                .cache_home
-                .unwrap_or_else(|| std::env::temp_dir().join(APP_PREFIX)),
-            local_dir: xdg::BaseDirectories::with_prefix(APP_PREFIX)
-                .data_home
-                .unwrap_or_else(|| std::env::temp_dir().join(APP_PREFIX)),
             root,
         }
     }

@@ -95,8 +95,6 @@ mod tests {
         Config {
             ruby_dirs: vec![vfs_root.join("rubies").unwrap()],
             gemfile: None,
-            cache_dir: temp_dir.path().join("cache"),
-            local_dir: temp_dir.path().join("local"),
             root,
         }
     }
