@@ -1092,6 +1092,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "rv-gem-types"
+version = "0.1.0"
+dependencies = [
+ "either",
+ "miette",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
