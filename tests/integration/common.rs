@@ -20,6 +20,9 @@ impl RvTest {
     pub fn rv_command(&self) -> Command {
         let mut cmd = Command::new(env!("CARGO_BIN_EXE_rv"));
         cmd.env("RV_ROOT_DIR", &self.test_root);
+        // Set consistent arch/os for cross-platform testing
+        cmd.env("RV_TEST_ARCH", "aarch64");
+        cmd.env("RV_TEST_OS", "macos");
         cmd
     }
 

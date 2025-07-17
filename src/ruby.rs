@@ -404,10 +404,11 @@ fn extract_ruby_platform_info(ruby_bin: &VfsPath) -> Result<(String, String), Ru
     }
 
     // Fallback to current system's platform info
-    Ok((
-        std::env::consts::ARCH.to_string(),
-        std::env::consts::OS.to_string(),
-    ))
+    // In tests, allow overriding via environment variables
+    let arch = std::env::var("RV_TEST_ARCH").unwrap_or_else(|_| std::env::consts::ARCH.to_string());
+    let os = std::env::var("RV_TEST_OS").unwrap_or_else(|_| std::env::consts::OS.to_string());
+
+    Ok((arch, os))
 }
 
 /// Normalize architecture names to match common conventions
