@@ -142,6 +142,13 @@ impl Requirement {
     pub fn matches(&self, version: &Version) -> bool {
         self.satisfied_by(version)
     }
+    
+    pub fn is_latest_version(&self) -> bool {
+        // Check if the requirement is just ">= 0"
+        self.constraints.len() == 1 && 
+        matches!(self.constraints[0].operator, ComparisonOperator::GreaterEqual) &&
+        self.constraints[0].version.to_string() == "0"
+    }
 }
 
 impl VersionConstraint {
