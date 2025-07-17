@@ -1,5 +1,6 @@
 use miette::{IntoDiagnostic, Result};
 use owo_colors::OwoColorize;
+use tracing::{info, warn};
 
 use crate::config::Config;
 use crate::ruby::find_active_ruby_version;
@@ -14,9 +15,8 @@ pub fn list_rubies(config: &Config, format: OutputFormat, _installed_only: bool)
     let rubies = config.rubies()?;
 
     if rubies.is_empty() {
-        println!("No Ruby installations found.");
-        println!("Try installing Ruby with 'rv ruby install' or check your configuration.");
-        return Ok(());
+        warn!("No Ruby installations found.");
+        info!("Try installing Ruby with 'rv ruby install' or check your configuration.");
     }
 
     match format {
@@ -31,20 +31,25 @@ pub fn list_rubies(config: &Config, format: OutputFormat, _installed_only: bool)
                 .fold(0usize, |acc, ruby| acc.max(ruby.display_name().len()));
 
             for ruby in &rubies {
-                print_ruby_entry(ruby, &active_version, width);
+                let entry = format_ruby_entry(ruby, &active_version, width);
+                println!("{entry}");
             }
         }
         OutputFormat::Json => {
             let json = serde_json::to_string_pretty(&rubies).into_diagnostic()?;
-            println!("{}", json);
+            println!("{json}");
         }
     }
 
     Ok(())
 }
 
-/// Print a single Ruby entry in the text format
-fn print_ruby_entry(ruby: &crate::ruby::Ruby, active_version: &Option<String>, width: usize) {
+/// Format a single Ruby entry for text output
+fn format_ruby_entry(
+    ruby: &crate::ruby::Ruby,
+    active_version: &Option<String>,
+    width: usize,
+) -> String {
     let key = ruby.display_name();
     let path = ruby.executable_path();
 
@@ -58,15 +63,53 @@ fn print_ruby_entry(ruby: &crate::ruby::Ruby, active_version: &Option<String>, w
     // Check if the path is a symlink and format accordingly
     // Following uv's exact pattern with active marker
     if let Some(ref symlink_target) = ruby.symlink {
-        println!(
+        format!(
             "{marker} {key:width$}    {} -> {}",
             path.display().to_string().cyan(),
             symlink_target.as_str().cyan()
-        );
+        )
     } else {
-        println!(
+        format!(
             "{marker} {key:width$}    {}",
             path.display().to_string().cyan()
-        );
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+    use vfs::{AltrootFS, VfsPath};
+
+    fn test_config() -> Config {
+        let temp_dir = TempDir::new().unwrap();
+        let physical_fs = vfs::PhysicalFS::new("/");
+        let root = VfsPath::new(physical_fs);
+        let temp_root = root
+            .join(temp_dir.path().to_string_lossy().as_ref())
+            .unwrap();
+        let altroot_fs = AltrootFS::new(temp_root);
+        let vfs_root = VfsPath::new(altroot_fs);
+
+        Config {
+            ruby_dirs: vec![vfs_root.join("rubies").unwrap()],
+            gemfile: None,
+            root,
+        }
+    }
+
+    #[test]
+    fn test_ruby_list_text_output() {
+        let config = test_config();
+        // Should not panic - basic smoke test
+        list_rubies(&config, OutputFormat::Text, false).unwrap();
+    }
+
+    #[test]
+    fn test_ruby_list_json_output() {
+        let config = test_config();
+        // Should not panic - basic smoke test
+        list_rubies(&config, OutputFormat::Json, false).unwrap();
     }
 }
