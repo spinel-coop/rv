@@ -16,8 +16,6 @@ use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 use vfs::AltrootFS;
 
-const APP_PREFIX: &str = "rv";
-
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
