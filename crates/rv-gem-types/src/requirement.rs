@@ -97,32 +97,32 @@ impl Requirement {
     ) -> Result<Option<(ComparisonOperator, &str)>, RequirementError> {
         let requirement = requirement.trim();
 
-        if requirement.starts_with(">=") {
+        if let Some(stripped) = requirement.strip_prefix(">=") {
             Ok(Some((
                 ComparisonOperator::GreaterEqual,
-                requirement[2..].trim(),
+                stripped.trim(),
             )))
-        } else if requirement.starts_with("<=") {
+        } else if let Some(stripped) = requirement.strip_prefix("<=") {
             Ok(Some((
                 ComparisonOperator::LessEqual,
-                requirement[2..].trim(),
+                stripped.trim(),
             )))
-        } else if requirement.starts_with("!=") {
+        } else if let Some(stripped) = requirement.strip_prefix("!=") {
             Ok(Some((
                 ComparisonOperator::NotEqual,
-                requirement[2..].trim(),
+                stripped.trim(),
             )))
-        } else if requirement.starts_with("~>") {
+        } else if let Some(stripped) = requirement.strip_prefix("~>") {
             Ok(Some((
                 ComparisonOperator::Pessimistic,
-                requirement[2..].trim(),
+                stripped.trim(),
             )))
-        } else if requirement.starts_with('>') {
-            Ok(Some((ComparisonOperator::Greater, requirement[1..].trim())))
-        } else if requirement.starts_with('<') {
-            Ok(Some((ComparisonOperator::Less, requirement[1..].trim())))
-        } else if requirement.starts_with('=') {
-            Ok(Some((ComparisonOperator::Equal, requirement[1..].trim())))
+        } else if let Some(stripped) = requirement.strip_prefix('>') {
+            Ok(Some((ComparisonOperator::Greater, stripped.trim())))
+        } else if let Some(stripped) = requirement.strip_prefix('<') {
+            Ok(Some((ComparisonOperator::Less, stripped.trim())))
+        } else if let Some(stripped) = requirement.strip_prefix('=') {
+            Ok(Some((ComparisonOperator::Equal, stripped.trim())))
         } else if requirement.starts_with('!') {
             // Handle invalid operators like "! 1"
             Err(RequirementError::InvalidOperator {
