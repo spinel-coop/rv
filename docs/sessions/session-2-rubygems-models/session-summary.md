@@ -85,8 +85,23 @@ Implemented natural ordering where:
 - Added comprehensive test coverage for parsing, matching, and display
 - Fixed all compilation errors and clippy linting issues
 
+### 7. NameTuple and Dependency Models Implementation (Phase 4)
+- Created comprehensive NameTuple model with name, version, and platform fields
+- Implemented platform normalization (empty/nil platforms become "ruby")
+- Added key methods: full_name(), spec_name(), to_array(), from_array(), null()
+- Implemented comparison and sorting logic (name, version, platform priority)
+- Added utility methods: prerelease(), match_platform()
+- Created complete Dependency model with requirement matching
+- Implemented dependency types (Runtime default, Development) with proper handling
+- Added version matching with prerelease logic
+- Implemented dependency merging functionality
+- Added convenience methods: runtime(), development(), with_prerelease()
+- Created comprehensive error handling with NameTupleError and DependencyError enums
+- Added 22 new tests (11 NameTuple, 11 Dependency) with full coverage
+- Fixed Hash implementation for Version type and clippy warnings
+
 ## Current Status
-Phase 3 complete - Version, Requirement, and Platform models fully implemented and tested. All 23 tests passing with full RubyGems compatibility. Platform model includes comprehensive parsing for all OS types, CPU architecture normalization, and proper matching logic. Ready to proceed to Phase 4 (NameTuple and Dependency models) as defined in the implementation plan.
+Phase 4 complete - Version, Requirement, Platform, NameTuple, and Dependency models fully implemented and tested. All 45 tests passing with full RubyGems compatibility. Models include comprehensive functionality for version matching, platform handling, dependency resolution, and proper error handling. Ready to proceed to Phase 5 (Specification model) as defined in the implementation plan.
 
 ## Files Modified
 - `/crates/rv-gem-types/Cargo.toml` - Added dependencies (miette, either, thiserror)
