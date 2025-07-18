@@ -44,9 +44,8 @@ pub struct Version {
 }
 
 impl Version {
-    pub fn new(version: impl Into<String>) -> Result<Self, VersionError> {
-        let version_str = version.into();
-        let normalized = Self::normalize_version(&version_str)?;
+    pub fn new(version: impl AsRef<str>) -> Result<Self, VersionError> {
+        let normalized = Self::normalize_version(version.as_ref())?;
         let segments = Self::parse_segments(&normalized)?;
         Ok(Self {
             version: normalized,
