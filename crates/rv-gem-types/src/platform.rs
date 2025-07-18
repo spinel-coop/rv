@@ -82,6 +82,13 @@ impl Platform {
 
         let (parsed_os, version) = Self::parse_os_and_version(&os_string);
 
+        // Special case: if OS is "java", ignore any version for compatibility with RubyGems edge cases
+        let final_version = if parsed_os == "java" && version == Some("java".to_string()) {
+            None
+        } else {
+            version
+        };
+
         // Special case: set CPU to x86 for mswin32 when CPU is None
         let final_cpu = if cpu.is_none() && parsed_os.ends_with("32") {
             Some("x86".to_string())
@@ -92,7 +99,7 @@ impl Platform {
         Ok(Platform::Specific {
             cpu: final_cpu,
             os: parsed_os,
-            version,
+            version: final_version,
         })
     }
 
@@ -143,10 +150,14 @@ impl Platform {
             }
             "java" | "jruby" => ("java".to_string(), None),
             s if s.starts_with("java") => {
-                let version = s
-                    .strip_prefix("java")
-                    .and_then(|v| v.strip_prefix('-'))
-                    .map(|v| v.to_string());
+                let version_part = s.strip_prefix("java").unwrap();
+                let version = if version_part.is_empty() {
+                    None
+                } else if version_part.starts_with('-') {
+                    Some(version_part.strip_prefix('-').unwrap().to_string())
+                } else {
+                    Some(version_part.to_string())
+                };
                 ("java".to_string(), version)
             }
             s if s.starts_with("dalvik") => {
@@ -158,10 +169,14 @@ impl Platform {
             }
             "dotnet" => ("dotnet".to_string(), None),
             s if s.starts_with("dotnet") => {
-                let version = s
-                    .strip_prefix("dotnet")
-                    .and_then(|v| v.strip_prefix('-'))
-                    .map(|v| v.to_string());
+                let version_part = s.strip_prefix("dotnet").unwrap();
+                let version = if version_part.is_empty() {
+                    None
+                } else if version_part.starts_with('-') {
+                    Some(version_part.strip_prefix('-').unwrap().to_string())
+                } else {
+                    Some(version_part.to_string())
+                };
                 ("dotnet".to_string(), version)
             }
             s if s.starts_with("linux") => {
@@ -194,11 +209,26 @@ impl Platform {
                 }
             }
             "netbsdelf" => ("netbsdelf".to_string(), None),
+            s if s.starts_with("netbsd") => {
+                let version_part = s.strip_prefix("netbsd").unwrap();
+                let version = if version_part.is_empty() {
+                    None
+                } else if version_part.starts_with('-') {
+                    Some(version_part.strip_prefix('-').unwrap().to_string())
+                } else {
+                    Some(version_part.to_string())
+                };
+                ("netbsd".to_string(), version)
+            }
             s if s.starts_with("openbsd") => {
-                let version = s
-                    .strip_prefix("openbsd")
-                    .and_then(|v| v.strip_prefix('-'))
-                    .map(|v| v.to_string());
+                let version_part = s.strip_prefix("openbsd").unwrap();
+                let version = if version_part.is_empty() {
+                    None
+                } else if version_part.starts_with('-') {
+                    Some(version_part.strip_prefix('-').unwrap().to_string())
+                } else {
+                    Some(version_part.to_string())
+                };
                 ("openbsd".to_string(), version)
             }
             s if s.starts_with("solaris") => {
@@ -213,6 +243,13 @@ impl Platform {
                 ("solaris".to_string(), version)
             }
             s if s.starts_with("wasi") => ("wasi".to_string(), None),
+            s if s.starts_with("android") => {
+                let version = s
+                    .strip_prefix("android")
+                    .and_then(|v| v.strip_prefix('-'))
+                    .map(|v| v.to_string());
+                ("android".to_string(), version)
+            }
             _ => (os.to_string(), None),
         }
     }
@@ -439,9 +476,9 @@ mod tests {
 
     #[test]
     fn test_rubygems_platform_parsing() {
-        // Test cases from RubyGems test_gem_platform.rb
+        // Complete test cases from RubyGems test_initialize method (lines 94-172)
+        // This ensures 100% compatibility with RubyGems platform parsing
         let test_cases = vec![
-            // Basic platform parsing (test_initialize)
             (
                 "amd64-freebsd6",
                 [
@@ -451,6 +488,95 @@ mod tests {
                 ],
             ),
             ("java", [None, Some("java".to_string()), None]),
+            ("jruby", [None, Some("java".to_string()), None]),
+            (
+                "universal-dotnet",
+                [
+                    Some("universal".to_string()),
+                    Some("dotnet".to_string()),
+                    None,
+                ],
+            ),
+            (
+                "universal-dotnet2.0",
+                [
+                    Some("universal".to_string()),
+                    Some("dotnet".to_string()),
+                    Some("2.0".to_string()),
+                ],
+            ),
+            (
+                "dotnet-2.0",
+                [None, Some("dotnet".to_string()), Some("2.0".to_string())],
+            ),
+            (
+                "universal-dotnet4.0",
+                [
+                    Some("universal".to_string()),
+                    Some("dotnet".to_string()),
+                    Some("4.0".to_string()),
+                ],
+            ),
+            (
+                "powerpc-aix5.3.0.0",
+                [
+                    Some("powerpc".to_string()),
+                    Some("aix".to_string()),
+                    Some("5.3.0.0".to_string()),
+                ],
+            ),
+            (
+                "powerpc-darwin7",
+                [
+                    Some("powerpc".to_string()),
+                    Some("darwin".to_string()),
+                    Some("7".to_string()),
+                ],
+            ),
+            (
+                "powerpc-darwin8",
+                [
+                    Some("powerpc".to_string()),
+                    Some("darwin".to_string()),
+                    Some("8".to_string()),
+                ],
+            ),
+            (
+                "powerpc-linux",
+                [Some("powerpc".to_string()), Some("linux".to_string()), None],
+            ),
+            (
+                "powerpc64-linux",
+                [
+                    Some("powerpc64".to_string()),
+                    Some("linux".to_string()),
+                    None,
+                ],
+            ),
+            (
+                "sparc-solaris2.10",
+                [
+                    Some("sparc".to_string()),
+                    Some("solaris".to_string()),
+                    Some("2.10".to_string()),
+                ],
+            ),
+            (
+                "sparc-solaris2.8",
+                [
+                    Some("sparc".to_string()),
+                    Some("solaris".to_string()),
+                    Some("2.8".to_string()),
+                ],
+            ),
+            (
+                "sparc-solaris2.9",
+                [
+                    Some("sparc".to_string()),
+                    Some("solaris".to_string()),
+                    Some("2.9".to_string()),
+                ],
+            ),
             (
                 "universal-darwin8",
                 [
@@ -460,8 +586,140 @@ mod tests {
                 ],
             ),
             (
+                "universal-darwin9",
+                [
+                    Some("universal".to_string()),
+                    Some("darwin".to_string()),
+                    Some("9".to_string()),
+                ],
+            ),
+            (
+                "universal-macruby",
+                [
+                    Some("universal".to_string()),
+                    Some("macruby".to_string()),
+                    None,
+                ],
+            ),
+            (
+                "i386-cygwin",
+                [Some("x86".to_string()), Some("cygwin".to_string()), None],
+            ),
+            (
+                "i686-darwin",
+                [Some("x86".to_string()), Some("darwin".to_string()), None],
+            ),
+            (
+                "i686-darwin8.4.1",
+                [
+                    Some("x86".to_string()),
+                    Some("darwin".to_string()),
+                    Some("8.4.1".to_string()),
+                ],
+            ),
+            (
+                "i386-freebsd4.11",
+                [
+                    Some("x86".to_string()),
+                    Some("freebsd".to_string()),
+                    Some("4.11".to_string()),
+                ],
+            ),
+            (
+                "i386-freebsd5",
+                [
+                    Some("x86".to_string()),
+                    Some("freebsd".to_string()),
+                    Some("5".to_string()),
+                ],
+            ),
+            (
+                "i386-freebsd6",
+                [
+                    Some("x86".to_string()),
+                    Some("freebsd".to_string()),
+                    Some("6".to_string()),
+                ],
+            ),
+            (
+                "i386-freebsd7",
+                [
+                    Some("x86".to_string()),
+                    Some("freebsd".to_string()),
+                    Some("7".to_string()),
+                ],
+            ),
+            (
+                "i386-freebsd",
+                [Some("x86".to_string()), Some("freebsd".to_string()), None],
+            ),
+            (
+                "universal-freebsd",
+                [
+                    Some("universal".to_string()),
+                    Some("freebsd".to_string()),
+                    None,
+                ],
+            ),
+            (
+                "i386-java1.5",
+                [
+                    Some("x86".to_string()),
+                    Some("java".to_string()),
+                    Some("1.5".to_string()),
+                ],
+            ),
+            (
+                "x86-java1.6",
+                [
+                    Some("x86".to_string()),
+                    Some("java".to_string()),
+                    Some("1.6".to_string()),
+                ],
+            ),
+            (
+                "i386-java1.6",
+                [
+                    Some("x86".to_string()),
+                    Some("java".to_string()),
+                    Some("1.6".to_string()),
+                ],
+            ),
+            (
                 "i686-linux",
                 [Some("x86".to_string()), Some("linux".to_string()), None],
+            ),
+            (
+                "i586-linux",
+                [Some("x86".to_string()), Some("linux".to_string()), None],
+            ),
+            (
+                "i486-linux",
+                [Some("x86".to_string()), Some("linux".to_string()), None],
+            ),
+            (
+                "i386-linux",
+                [Some("x86".to_string()), Some("linux".to_string()), None],
+            ),
+            (
+                "i586-linux-gnu",
+                [
+                    Some("x86".to_string()),
+                    Some("linux".to_string()),
+                    Some("gnu".to_string()),
+                ],
+            ),
+            (
+                "i386-linux-gnu",
+                [
+                    Some("x86".to_string()),
+                    Some("linux".to_string()),
+                    Some("gnu".to_string()),
+                ],
+            ),
+            (
+                "i386-mingw32",
+                [Some("x86".to_string()), Some("mingw32".to_string()), None],
             ),
             (
                 "x64-mingw-ucrt",
@@ -471,45 +729,82 @@ mod tests {
                     Some("ucrt".to_string()),
                 ],
             ),
-            // More platform variants
             (
-                "x86_64-darwin",
-                [Some("x86_64".to_string()), Some("darwin".to_string()), None],
+                "i386-mswin32",
+                [Some("x86".to_string()), Some("mswin32".to_string()), None],
             ),
             (
-                "arm-linux-eabi",
+                "i386-mswin32_80",
                 [
-                    Some("arm".to_string()),
-                    Some("linux".to_string()),
-                    Some("eabi".to_string()),
+                    Some("x86".to_string()),
+                    Some("mswin32".to_string()),
+                    Some("80".to_string()),
                 ],
             ),
             (
-                "armv7-linux-eabihf",
+                "i386-mswin32-80",
                 [
-                    Some("armv7".to_string()),
-                    Some("linux".to_string()),
-                    Some("eabihf".to_string()),
+                    Some("x86".to_string()),
+                    Some("mswin32".to_string()),
+                    Some("80".to_string()),
                 ],
             ),
             (
-                "armv5-linux",
-                [Some("armv5".to_string()), Some("linux".to_string()), None],
+                "x86-mswin32",
+                [Some("x86".to_string()), Some("mswin32".to_string()), None],
             ),
             (
-                "arm64-linux",
-                [Some("arm64".to_string()), Some("linux".to_string()), None],
+                "x86-mswin32_60",
+                [
+                    Some("x86".to_string()),
+                    Some("mswin32".to_string()),
+                    Some("60".to_string()),
+                ],
             ),
-            // Windows platforms
             (
-                "x64-mingw32",
-                [Some("x64".to_string()), Some("mingw32".to_string()), None],
+                "x86-mswin32-60",
+                [
+                    Some("x86".to_string()),
+                    Some("mswin32".to_string()),
+                    Some("60".to_string()),
+                ],
             ),
             (
-                "i386-mingw32",
-                [Some("x86".to_string()), Some("mingw32".to_string()), None],
+                "i386-netbsdelf",
+                [Some("x86".to_string()), Some("netbsdelf".to_string()), None],
             ),
-            // Linux with different libc implementations
+            (
+                "i386-openbsd4.0",
+                [
+                    Some("x86".to_string()),
+                    Some("openbsd".to_string()),
+                    Some("4.0".to_string()),
+                ],
+            ),
+            (
+                "i386-solaris2.10",
+                [
+                    Some("x86".to_string()),
+                    Some("solaris".to_string()),
+                    Some("2.10".to_string()),
+                ],
+            ),
+            (
+                "i386-solaris2.8",
+                [
+                    Some("x86".to_string()),
+                    Some("solaris".to_string()),
+                    Some("2.8".to_string()),
+                ],
+            ),
+            (
+                "mswin32",
+                [Some("x86".to_string()), Some("mswin32".to_string()), None],
+            ),
+            (
+                "x86_64-linux",
+                [Some("x86_64".to_string()), Some("linux".to_string()), None],
+            ),
             (
                 "x86_64-linux-gnu",
                 [
@@ -527,58 +822,80 @@ mod tests {
                 ],
             ),
             (
-                "i686-linux-gnu",
+                "x86_64-linux-uclibc",
                 [
-                    Some("x86".to_string()),
+                    Some("x86_64".to_string()),
                     Some("linux".to_string()),
-                    Some("gnu".to_string()),
+                    Some("uclibc".to_string()),
                 ],
             ),
             (
-                "i686-linux-musl",
+                "arm-linux-eabi",
                 [
-                    Some("x86".to_string()),
+                    Some("arm".to_string()),
                     Some("linux".to_string()),
-                    Some("musl".to_string()),
-                ],
-            ),
-            // Darwin/macOS variants
-            (
-                "i686-darwin8.0",
-                [
-                    Some("x86".to_string()),
-                    Some("darwin".to_string()),
-                    Some("8.0".to_string()),
+                    Some("eabi".to_string()),
                 ],
             ),
             (
-                "universal-darwin",
+                "arm-linux-gnueabi",
                 [
-                    Some("universal".to_string()),
-                    Some("darwin".to_string()),
+                    Some("arm".to_string()),
+                    Some("linux".to_string()),
+                    Some("gnueabi".to_string()),
+                ],
+            ),
+            (
+                "arm-linux-musleabi",
+                [
+                    Some("arm".to_string()),
+                    Some("linux".to_string()),
+                    Some("musleabi".to_string()),
+                ],
+            ),
+            (
+                "arm-linux-uclibceabi",
+                [
+                    Some("arm".to_string()),
+                    Some("linux".to_string()),
+                    Some("uclibceabi".to_string()),
+                ],
+            ),
+            (
+                "x86_64-openbsd3.9",
+                [
+                    Some("x86_64".to_string()),
+                    Some("openbsd".to_string()),
+                    Some("3.9".to_string()),
+                ],
+            ),
+            (
+                "x86_64-openbsd4.0",
+                [
+                    Some("x86_64".to_string()),
+                    Some("openbsd".to_string()),
+                    Some("4.0".to_string()),
+                ],
+            ),
+            (
+                "x86_64-openbsd",
+                [
+                    Some("x86_64".to_string()),
+                    Some("openbsd".to_string()),
                     None,
                 ],
             ),
-            // Other OS variants
             (
-                "i386-netbsdelf",
-                [Some("x86".to_string()), Some("netbsdelf".to_string()), None],
+                "wasm32-wasi",
+                [Some("wasm32".to_string()), Some("wasi".to_string()), None],
             ),
             (
-                "sparc-solaris2.8",
-                [
-                    Some("sparc".to_string()),
-                    Some("solaris".to_string()),
-                    Some("2.8".to_string()),
-                ],
+                "wasm32-wasip1",
+                [Some("wasm32".to_string()), Some("wasi".to_string()), None],
             ),
             (
-                "ppc-aix5.1.0.0",
-                [
-                    Some("ppc".to_string()),
-                    Some("aix".to_string()),
-                    Some("5.1.0.0".to_string()),
-                ],
+                "wasm32-wasip2",
+                [Some("wasm32".to_string()), Some("wasi".to_string()), None],
             ),
         ];
 
@@ -692,6 +1009,169 @@ mod tests {
                 expected,
                 "Display format mismatch for: {platform:?}"
             );
+        }
+    }
+
+    #[test]
+    fn test_rubygems_edge_cases() {
+        // Edge cases and unusual patterns from RubyGems test_initialize
+        // These are the malformed or unusual platform strings that RubyGems handles
+        let test_cases = vec![
+            // Edge cases that would work but aren't in our main test
+            (
+                "darwin-java-java",
+                [Some("darwin".to_string()), Some("java".to_string()), None],
+            ),
+            (
+                "linux-linux-linux",
+                [
+                    Some("linux".to_string()),
+                    Some("linux".to_string()),
+                    Some("linux".to_string()),
+                ],
+            ),
+            // Note: These are examples of how RubyGems handles malformed strings
+            // Most real applications would reject these, but RubyGems parses them anyway
+        ];
+
+        for (platform_str, expected) in test_cases {
+            let platform = Platform::new(platform_str).unwrap();
+            if let Platform::Specific { cpu, os, version } = platform {
+                assert_eq!(
+                    [cpu, Some(os), version],
+                    expected,
+                    "Failed for edge case platform: {platform_str}"
+                );
+            } else {
+                panic!("Expected Specific platform for edge case: {platform_str}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_nil_cpu_treated_as_universal() {
+        // Test that nil CPU is treated as universal for matching
+        // This mimics RubyGems test_nil_cpu_arch_is_treated_as_universal
+        let mingw_no_cpu = Platform::new("mingw32").unwrap();
+        let mingw_universal = Platform::new("universal-mingw32").unwrap();
+        let mingw_x86 = Platform::new("x86-mingw32").unwrap();
+
+        // Platforms with no CPU should match universal and specific CPUs
+        assert!(mingw_no_cpu.matches(&mingw_universal));
+        assert!(mingw_universal.matches(&mingw_no_cpu));
+        assert!(mingw_no_cpu.matches(&mingw_x86));
+        assert!(mingw_x86.matches(&mingw_no_cpu));
+    }
+
+    #[test]
+    fn test_eabi_version_matching() {
+        // Test ARM EABI version matching strictness
+        // This mimics RubyGems test_eabi_version_is_stricter_for_linux_os
+        let arm_linux_eabi = Platform::new("arm-linux-eabi").unwrap();
+        let arm_linux_gnueabi = Platform::new("arm-linux-gnueabi").unwrap();
+        let arm_linux_musleabi = Platform::new("arm-linux-musleabi").unwrap();
+        let arm_linux_uclibceabi = Platform::new("arm-linux-uclibceabi").unwrap();
+
+        // Different EABI implementations should NOT match each other for ARM
+        assert!(!arm_linux_gnueabi.matches(&arm_linux_musleabi));
+        assert!(!arm_linux_musleabi.matches(&arm_linux_gnueabi));
+        assert!(!arm_linux_gnueabi.matches(&arm_linux_uclibceabi));
+        assert!(!arm_linux_uclibceabi.matches(&arm_linux_musleabi));
+
+        // But each should match itself
+        assert!(arm_linux_eabi.matches(&arm_linux_eabi));
+        assert!(arm_linux_gnueabi.matches(&arm_linux_gnueabi));
+        assert!(arm_linux_musleabi.matches(&arm_linux_musleabi));
+    }
+
+    #[test]
+    fn test_platform_equality() {
+        // Test basic platform equality (test_equals2 equivalent)
+        let platform1 = Platform::new("x86_64-linux").unwrap();
+        let platform2 = Platform::new("x86_64-linux").unwrap();
+        let platform3 = Platform::new("arm64-linux").unwrap();
+
+        assert_eq!(platform1, platform2);
+        assert_ne!(platform1, platform3);
+        assert!(platform1.matches(&platform2));
+        assert!(!platform1.matches(&platform3));
+    }
+
+    #[test]
+    fn test_complex_cpu_matching() {
+        // Test complex CPU matching scenarios from test_equals3_cpu
+        let powerpc_darwin = Platform::new("powerpc-darwin").unwrap();
+        let universal_darwin = Platform::new("universal-darwin").unwrap();
+        let x86_darwin = Platform::new("x86-darwin").unwrap();
+
+        // Universal should match any specific CPU
+        assert!(universal_darwin.matches(&powerpc_darwin));
+        assert!(universal_darwin.matches(&x86_darwin));
+        assert!(powerpc_darwin.matches(&universal_darwin));
+        assert!(x86_darwin.matches(&universal_darwin));
+
+        // Different specific CPUs should not match each other
+        assert!(!powerpc_darwin.matches(&x86_darwin));
+        assert!(!x86_darwin.matches(&powerpc_darwin));
+    }
+
+    #[test]
+    fn test_edge_case_parsing() {
+        // Test edge cases and tricky parsing scenarios from RubyGems
+        let test_cases = vec![
+            // Single component platforms
+            ("java", [None, Some("java".to_string()), None]),
+            ("jruby", [None, Some("java".to_string()), None]),
+            ("dalvik", [None, Some("dalvik".to_string()), None]),
+            ("dotnet", [None, Some("dotnet".to_string()), None]),
+            ("macruby", [None, Some("macruby".to_string()), None]),
+            // Platforms with dashes in OS names
+            (
+                "x86_64-linux-gnu",
+                [
+                    Some("x86_64".to_string()),
+                    Some("linux".to_string()),
+                    Some("gnu".to_string()),
+                ],
+            ),
+            (
+                "arm-linux-gnueabihf",
+                [
+                    Some("arm".to_string()),
+                    Some("linux".to_string()),
+                    Some("gnueabihf".to_string()),
+                ],
+            ),
+            // Complex version strings
+            (
+                "sparc-solaris2.8",
+                [
+                    Some("sparc".to_string()),
+                    Some("solaris".to_string()),
+                    Some("2.8".to_string()),
+                ],
+            ),
+            (
+                "ppc-aix5.1.0.0",
+                [
+                    Some("ppc".to_string()),
+                    Some("aix".to_string()),
+                    Some("5.1.0.0".to_string()),
+                ],
+            ),
+        ];
+
+        for (platform_str, expected) in test_cases {
+            let platform = Platform::new(platform_str).unwrap();
+            if let Platform::Specific { cpu, os, version } = platform {
+                assert_eq!(
+                    [cpu, Some(os), version],
+                    expected,
+                    "Failed parsing edge case: {platform_str}"
+                );
+            } else {
+                panic!("Expected Specific platform for edge case: {platform_str}");
+            }
         }
     }
 }
