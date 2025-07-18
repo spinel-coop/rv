@@ -429,6 +429,47 @@ mod tests {
     }
 
     #[test]
+    fn test_segments() {
+        assert_eq!(
+            v("9.8.7").segments,
+            vec![
+                VersionSegment::Number(9),
+                VersionSegment::Number(8),
+                VersionSegment::Number(7)
+            ]
+        );
+        assert_eq!(
+            v("1.0.0").segments,
+            vec![
+                VersionSegment::Number(1),
+                VersionSegment::Number(0),
+                VersionSegment::Number(0)
+            ]
+        );
+        assert_eq!(
+            v("1.0.0.a.1.0").segments,
+            vec![
+                VersionSegment::Number(1),
+                VersionSegment::Number(0),
+                VersionSegment::Number(0),
+                VersionSegment::String("a".to_string()),
+                VersionSegment::Number(1),
+                VersionSegment::Number(0),
+            ]
+        );
+        assert_eq!(
+            v("1.2.3-1").segments,
+            vec![
+                VersionSegment::Number(1),
+                VersionSegment::Number(2),
+                VersionSegment::Number(3),
+                VersionSegment::String("pre".to_string()),
+                VersionSegment::Number(1),
+            ]
+        );
+    }
+
+    #[test]
     fn test_canonical_segments() {
         assert_eq!(
             v("1.0.0").canonical_segments(),
