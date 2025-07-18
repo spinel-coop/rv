@@ -1096,6 +1096,7 @@ name = "rv-gem-types"
 version = "0.1.0"
 dependencies = [
  "either",
+ "insta",
  "miette",
  "thiserror 1.0.69",
 ]

@@ -7,3 +7,6 @@ edition = "2021"
 miette = "7.2.0"
 either = "1.13.0"
 thiserror = "1.0.65"
+
+[dev-dependencies]
+insta = "1.34.0"

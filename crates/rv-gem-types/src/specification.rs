@@ -254,7 +254,9 @@ impl Specification {
         // Metadata
         if !self.metadata.is_empty() {
             lines.push("  s.metadata = {".to_string());
-            for (key, value) in &self.metadata {
+            let mut sorted_metadata: Vec<_> = self.metadata.iter().collect();
+            sorted_metadata.sort_by_key(|(key, _)| *key);
+            for (key, value) in sorted_metadata {
                 lines.push(format!("    {key:?} => {value:?},"));
             }
             lines.push("  }".to_string());
@@ -485,25 +487,53 @@ mod tests {
     }
     
     #[test]
-    fn test_to_ruby() {
-        let mut spec = Specification::new("test".to_string(), Version::new("1.0.0").unwrap())
+    fn test_to_ruby_minimal() {
+        let spec = Specification::new("test".to_string(), Version::new("1.0.0").unwrap())
             .unwrap()
-            .with_summary("A test gem".to_string())
-            .with_authors(vec!["Test Author".to_string()])
+            .with_summary("A minimal test gem".to_string());
+        
+        insta::assert_snapshot!(spec.to_ruby());
+    }
+    
+    #[test]
+    fn test_to_ruby_comprehensive() {
+        let mut spec = Specification::new("comprehensive-gem".to_string(), Version::new("2.1.0").unwrap())
+            .unwrap()
+            .with_summary("A comprehensive test gem".to_string())
+            .with_description("This is a longer description of the test gem".to_string())
+            .with_authors(vec!["Test Author".to_string(), "Second Author".to_string()])
             .with_email("test@example.com".to_string())
-            .with_license("MIT".to_string());
+            .with_homepage("https://example.com".to_string())
+            .with_licenses(vec!["MIT".to_string(), "Apache-2.0".to_string()])
+            .with_files(vec!["lib/test.rb".to_string(), "README.md".to_string()])
+            .with_executables(vec!["test-cli".to_string()])
+            .with_platform("x86_64-linux".to_string());
         
         spec.add_dependency("runtime_dep".to_string(), vec!["~> 1.0".to_string()]).unwrap();
+        spec.add_dependency("another_dep".to_string(), vec![">= 2.0".to_string(), "< 3.0".to_string()]).unwrap();
+        spec.add_development_dependency("test_dep".to_string(), vec![">= 0.1".to_string()]).unwrap();
         
-        let ruby_code = spec.to_ruby();
+        spec.metadata.insert("changelog_uri".to_string(), "https://example.com/changelog".to_string());
+        spec.metadata.insert("bug_tracker_uri".to_string(), "https://example.com/issues".to_string());
         
-        assert!(ruby_code.contains("s.name = \"test\""));
-        assert!(ruby_code.contains("s.version = \"1.0.0\""));
-        assert!(ruby_code.contains("s.summary = \"A test gem\""));
-        assert!(ruby_code.contains("s.authors = [\"Test Author\"]"));
-        assert!(ruby_code.contains("s.email = \"test@example.com\""));
-        assert!(ruby_code.contains("s.license = \"MIT\""));
-        assert!(ruby_code.contains("s.add_dependency \"runtime_dep\", \"~> 1.0\""));
+        spec.post_install_message = Some("Thanks for installing!".to_string());
+        spec.extensions = vec!["ext/extconf.rb".to_string()];
+        
+        insta::assert_snapshot!(spec.to_ruby());
+    }
+    
+    #[test]
+    fn test_to_ruby_with_custom_requirements() {
+        let mut spec = Specification::new("custom-requirements".to_string(), Version::new("1.0.0").unwrap())
+            .unwrap()
+            .with_summary("Test custom requirements".to_string());
+        
+        spec.required_ruby_version = Requirement::new(vec![">= 2.7"]).unwrap();
+        spec.required_rubygems_version = Requirement::new(vec![">= 3.0"]).unwrap();
+        spec.bindir = "exe".to_string();
+        spec.require_paths = vec!["lib".to_string(), "ext".to_string()];
+        
+        insta::assert_snapshot!(spec.to_ruby());
     }
     
     #[test]

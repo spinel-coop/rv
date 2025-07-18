@@ -1,0 +1,15 @@
+---
+source: crates/rv-gem-types/src/specification.rs
+expression: spec.to_ruby()
+---
+# -*- encoding: utf-8 -*-
+
+Gem::Specification.new do |s|
+  s.name = "custom-requirements"
+  s.version = "1.0.0"
+  s.summary = "Test custom requirements"
+  s.require_paths = ["lib", "ext"]
+  s.bindir = "exe"
+  s.required_ruby_version = ">= 2.7"
+  s.required_rubygems_version = ">= 3.0"
+end

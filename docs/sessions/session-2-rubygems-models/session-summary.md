@@ -100,8 +100,21 @@ Implemented natural ordering where:
 - Added 22 new tests (11 NameTuple, 11 Dependency) with full coverage
 - Fixed Hash implementation for Version type and clippy warnings
 
+### 8. Specification Model Implementation (Phase 5)
+- Created comprehensive Specification struct with all key RubyGems fields
+- Implemented required fields (name, version, summary, require_paths, specification_version, rubygems_version)
+- Added optional fields with proper defaults matching RubyGems behavior
+- Implemented builder pattern methods (with_summary, with_authors, with_license, etc.)
+- Added dependency management (add_dependency, add_development_dependency, runtime_dependencies, development_dependencies)
+- Created comprehensive validation system with structured error reporting
+- Implemented Ruby gemspec serialization with to_ruby() method
+- Added utility methods (full_name, is_prerelease, has_extensions, executable_names)
+- Created extensive test suite with 14 tests including insta snapshot tests for to_ruby() output
+- Added insta dependency for snapshot testing of Ruby code generation
+- Fixed HashMap ordering in metadata serialization for deterministic output
+
 ## Current Status
-Phase 4 complete - Version, Requirement, Platform, NameTuple, and Dependency models fully implemented and tested. All 45 tests passing with full RubyGems compatibility. Models include comprehensive functionality for version matching, platform handling, dependency resolution, and proper error handling. Ready to proceed to Phase 5 (Specification model) as defined in the implementation plan.
+Phase 5 complete - Version, Requirement, Platform, NameTuple, Dependency, and Specification models fully implemented and tested. All 58 tests passing with full RubyGems compatibility. Complete gem specification system with validation, dependency management, and Ruby code generation. The rv-gem-types crate now provides a comprehensive, RubyGems-compatible model system ready for integration with package management tools.
 
 ## Files Modified
 - `/crates/rv-gem-types/Cargo.toml` - Added dependencies (miette, either, thiserror)

@@ -1,0 +1,28 @@
+---
+source: crates/rv-gem-types/src/specification.rs
+expression: spec.to_ruby()
+---
+# -*- encoding: utf-8 -*-
+
+Gem::Specification.new do |s|
+  s.name = "comprehensive-gem"
+  s.version = "2.1.0"
+  s.summary = "A comprehensive test gem"
+  s.authors = ["Test Author", "Second Author"]
+  s.email = "test@example.com"
+  s.description = "This is a longer description of the test gem"
+  s.homepage = "https://example.com"
+  s.licenses = ["MIT", "Apache-2.0"]
+  s.files = ["lib/test.rb", "README.md"]
+  s.executables = ["test-cli"]
+  s.extensions = ["ext/extconf.rb"]
+  s.platform = "x86_64-linux"
+  s.metadata = {
+    "bug_tracker_uri" => "https://example.com/issues",
+    "changelog_uri" => "https://example.com/changelog",
+  }
+  s.post_install_message = "Thanks for installing!"
+  s.add_dependency "runtime_dep", "~> 1.0"
+  s.add_dependency "another_dep", ">= 2.0, < 3.0"
+  s.add_development_dependency "test_dep", ">= 0.1"
+end

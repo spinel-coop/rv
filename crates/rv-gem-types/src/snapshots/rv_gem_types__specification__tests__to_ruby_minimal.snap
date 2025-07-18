@@ -1,0 +1,11 @@
+---
+source: crates/rv-gem-types/src/specification.rs
+expression: spec.to_ruby()
+---
+# -*- encoding: utf-8 -*-
+
+Gem::Specification.new do |s|
+  s.name = "test"
+  s.version = "1.0.0"
+  s.summary = "A minimal test gem"
+end
