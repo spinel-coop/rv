@@ -5,7 +5,6 @@ pub struct Dependency {
     pub name: String,
     pub requirement: Requirement,
     pub dep_type: DependencyType,
-    pub prerelease: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Hash)]
@@ -26,14 +25,12 @@ impl Dependency {
         }
 
         let requirement = Requirement::new(requirements)?;
-
         let dep_type = dep_type.unwrap_or_default();
 
         Ok(Self {
             name,
             requirement,
             dep_type,
-            prerelease: false,
         })
     }
 
@@ -45,18 +42,13 @@ impl Dependency {
         Self::new(name, requirements, Some(DependencyType::Development))
     }
 
-    pub fn with_prerelease(mut self, prerelease: bool) -> Self {
-        self.prerelease = prerelease;
-        self
-    }
-
     pub fn matches(&self, name: &str, version: &Version, allow_prerelease: bool) -> bool {
         if self.name != name {
             return false;
         }
 
         // Check prerelease logic
-        if version.is_prerelease() && !allow_prerelease && !self.prerelease {
+        if version.is_prerelease() && !allow_prerelease && !self.requirement.is_prerelease() {
             return false;
         }
 
@@ -108,7 +100,6 @@ impl Dependency {
             name: self.name.clone(),
             requirement: merged_requirement,
             dep_type: self.dep_type.clone(),
-            prerelease: self.prerelease || other.prerelease,
         })
     }
 
@@ -212,9 +203,8 @@ mod tests {
 
     #[test]
     fn test_dependency_prerelease() {
-        let dep = Dependency::new("test".to_string(), vec![">= 1.0.alpha".to_string()], None)
-            .unwrap()
-            .with_prerelease(true);
+        let dep =
+            Dependency::new("test".to_string(), vec![">= 1.0.alpha".to_string()], None).unwrap();
         let version_prerelease = Version::new("1.0.alpha").unwrap();
 
         assert!(dep.matches("test", &version_prerelease, false));
