@@ -100,10 +100,14 @@ impl Platform {
         // Handle various OS patterns based on rubygems logic
         match os {
             s if s.starts_with("aix") => {
-                let version = s
-                    .strip_prefix("aix")
-                    .and_then(|v| v.strip_prefix('-'))
-                    .map(|v| v.to_string());
+                let version_part = s.strip_prefix("aix").unwrap();
+                let version = if version_part.is_empty() {
+                    None
+                } else if version_part.starts_with('-') {
+                    Some(version_part.strip_prefix('-').unwrap().to_string())
+                } else {
+                    Some(version_part.to_string())
+                };
                 ("aix".to_string(), version)
             }
             s if s.starts_with("cygwin") => ("cygwin".to_string(), None),
@@ -127,10 +131,14 @@ impl Platform {
                 ("macruby".to_string(), version)
             }
             s if s.starts_with("freebsd") => {
-                let version = s
-                    .strip_prefix("freebsd")
-                    .and_then(|v| v.strip_prefix('-'))
-                    .map(|v| v.to_string());
+                let version_part = s.strip_prefix("freebsd").unwrap();
+                let version = if version_part.is_empty() {
+                    None
+                } else if version_part.starts_with('-') {
+                    Some(version_part.strip_prefix('-').unwrap().to_string())
+                } else {
+                    Some(version_part.to_string())
+                };
                 ("freebsd".to_string(), version)
             }
             "java" | "jruby" => ("java".to_string(), None),
@@ -194,10 +202,14 @@ impl Platform {
                 ("openbsd".to_string(), version)
             }
             s if s.starts_with("solaris") => {
-                let version = s
-                    .strip_prefix("solaris")
-                    .and_then(|v| v.strip_prefix('-'))
-                    .map(|v| v.to_string());
+                let version_part = s.strip_prefix("solaris").unwrap();
+                let version = if version_part.is_empty() {
+                    None
+                } else if version_part.starts_with('-') {
+                    Some(version_part.strip_prefix('-').unwrap().to_string())
+                } else {
+                    Some(version_part.to_string())
+                };
                 ("solaris".to_string(), version)
             }
             s if s.starts_with("wasi") => ("wasi".to_string(), None),
@@ -258,8 +270,8 @@ impl Platform {
         match (version1, version2) {
             // For non-Linux platforms, any None version matches
             (None, _) | (_, None) if os != "linux" => true,
-            // For Linux platforms, both None versions match
-            (None, None) if os == "linux" => true,
+            // For Linux platforms, None version matches any version (unversioned matches versioned)
+            (None, _) if os == "linux" => true,
             // For Linux platforms with both versions, they need to match exactly
             (Some(v1), Some(v2)) if os == "linux" => v1 == v2,
             // For all other platforms, versions must match exactly
@@ -422,6 +434,264 @@ mod tests {
             assert_eq!(version, Some("gnu".to_string()));
         } else {
             panic!("Expected Specific platform");
+        }
+    }
+
+    #[test]
+    fn test_rubygems_platform_parsing() {
+        // Test cases from RubyGems test_gem_platform.rb
+        let test_cases = vec![
+            // Basic platform parsing (test_initialize)
+            (
+                "amd64-freebsd6",
+                [
+                    Some("amd64".to_string()),
+                    Some("freebsd".to_string()),
+                    Some("6".to_string()),
+                ],
+            ),
+            ("java", [None, Some("java".to_string()), None]),
+            (
+                "universal-darwin8",
+                [
+                    Some("universal".to_string()),
+                    Some("darwin".to_string()),
+                    Some("8".to_string()),
+                ],
+            ),
+            (
+                "i686-linux",
+                [Some("x86".to_string()), Some("linux".to_string()), None],
+            ),
+            (
+                "x64-mingw-ucrt",
+                [
+                    Some("x64".to_string()),
+                    Some("mingw".to_string()),
+                    Some("ucrt".to_string()),
+                ],
+            ),
+            // More platform variants
+            (
+                "x86_64-darwin",
+                [Some("x86_64".to_string()), Some("darwin".to_string()), None],
+            ),
+            (
+                "arm-linux-eabi",
+                [
+                    Some("arm".to_string()),
+                    Some("linux".to_string()),
+                    Some("eabi".to_string()),
+                ],
+            ),
+            (
+                "armv7-linux-eabihf",
+                [
+                    Some("armv7".to_string()),
+                    Some("linux".to_string()),
+                    Some("eabihf".to_string()),
+                ],
+            ),
+            (
+                "armv5-linux",
+                [Some("armv5".to_string()), Some("linux".to_string()), None],
+            ),
+            (
+                "arm64-linux",
+                [Some("arm64".to_string()), Some("linux".to_string()), None],
+            ),
+            // Windows platforms
+            (
+                "x64-mingw32",
+                [Some("x64".to_string()), Some("mingw32".to_string()), None],
+            ),
+            (
+                "i386-mingw32",
+                [Some("x86".to_string()), Some("mingw32".to_string()), None],
+            ),
+            // Linux with different libc implementations
+            (
+                "x86_64-linux-gnu",
+                [
+                    Some("x86_64".to_string()),
+                    Some("linux".to_string()),
+                    Some("gnu".to_string()),
+                ],
+            ),
+            (
+                "x86_64-linux-musl",
+                [
+                    Some("x86_64".to_string()),
+                    Some("linux".to_string()),
+                    Some("musl".to_string()),
+                ],
+            ),
+            (
+                "i686-linux-gnu",
+                [
+                    Some("x86".to_string()),
+                    Some("linux".to_string()),
+                    Some("gnu".to_string()),
+                ],
+            ),
+            (
+                "i686-linux-musl",
+                [
+                    Some("x86".to_string()),
+                    Some("linux".to_string()),
+                    Some("musl".to_string()),
+                ],
+            ),
+            // Darwin/macOS variants
+            (
+                "i686-darwin8.0",
+                [
+                    Some("x86".to_string()),
+                    Some("darwin".to_string()),
+                    Some("8.0".to_string()),
+                ],
+            ),
+            (
+                "universal-darwin",
+                [
+                    Some("universal".to_string()),
+                    Some("darwin".to_string()),
+                    None,
+                ],
+            ),
+            // Other OS variants
+            (
+                "i386-netbsdelf",
+                [Some("x86".to_string()), Some("netbsdelf".to_string()), None],
+            ),
+            (
+                "sparc-solaris2.8",
+                [
+                    Some("sparc".to_string()),
+                    Some("solaris".to_string()),
+                    Some("2.8".to_string()),
+                ],
+            ),
+            (
+                "ppc-aix5.1.0.0",
+                [
+                    Some("ppc".to_string()),
+                    Some("aix".to_string()),
+                    Some("5.1.0.0".to_string()),
+                ],
+            ),
+        ];
+
+        for (platform_str, expected) in test_cases {
+            let platform = Platform::new(platform_str).unwrap();
+            if let Platform::Specific { cpu, os, version } = platform {
+                assert_eq!(
+                    [cpu, Some(os), version],
+                    expected,
+                    "Failed for platform: {platform_str}"
+                );
+            } else {
+                panic!("Expected Specific platform for: {platform_str}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_arm_cpu_matching() {
+        // Test cases from test_equals3_cpu
+        let arm_linux = Platform::new("arm-linux").unwrap();
+        let armv5_linux = Platform::new("armv5-linux").unwrap();
+        let armv7_linux = Platform::new("armv7-linux").unwrap();
+        let arm64_linux = Platform::new("arm64-linux").unwrap();
+
+        // arm-linux should match armv5-linux (generic arm matches specific armv5)
+        assert!(arm_linux.matches(&armv5_linux));
+
+        // armv5-linux should match itself
+        assert!(armv5_linux.matches(&armv5_linux));
+
+        // armv7-linux should NOT match armv5-linux (different ARM versions)
+        assert!(!armv7_linux.matches(&armv5_linux));
+
+        // arm64-linux should NOT match armv5-linux (different architectures)
+        assert!(!arm64_linux.matches(&armv5_linux));
+    }
+
+    #[test]
+    fn test_nil_version_matching() {
+        // Test cases from test_nil_version_is_treated_as_any_version
+        let darwin_versioned = Platform::new("i686-darwin8.0").unwrap();
+        let darwin_unversioned = Platform::new("i686-darwin").unwrap();
+
+        // Platforms with nil version should match versioned platforms (for non-Linux)
+        assert!(darwin_versioned.matches(&darwin_unversioned));
+        assert!(darwin_unversioned.matches(&darwin_versioned));
+    }
+
+    #[test]
+    fn test_linux_version_strictness() {
+        // Test cases from test_nil_version_is_stricter_for_linux_os
+        let linux_unversioned = Platform::new("i686-linux").unwrap();
+        let linux_gnu = Platform::new("i686-linux-gnu").unwrap();
+        let linux_musl = Platform::new("i686-linux-musl").unwrap();
+
+        // Linux unversioned should match versioned (libc variants)
+        assert!(linux_unversioned.matches(&linux_gnu));
+
+        // Different libc implementations should NOT match each other
+        assert!(!linux_gnu.matches(&linux_musl));
+        assert!(!linux_musl.matches(&linux_gnu));
+    }
+
+    #[test]
+    fn test_universal_platform_matching() {
+        // Universal platforms should match specific architectures
+        let universal_darwin = Platform::new("universal-darwin").unwrap();
+        let x86_64_darwin = Platform::new("x86_64-darwin").unwrap();
+        let arm64_darwin = Platform::new("arm64-darwin").unwrap();
+
+        assert!(universal_darwin.matches(&x86_64_darwin));
+        assert!(universal_darwin.matches(&arm64_darwin));
+        assert!(x86_64_darwin.matches(&universal_darwin));
+        assert!(arm64_darwin.matches(&universal_darwin));
+    }
+
+    #[test]
+    fn test_java_platform_variants() {
+        // Java platform should be normalized
+        let java1 = Platform::new("java").unwrap();
+        let java2 = Platform::new("jruby").unwrap();
+
+        assert_eq!(java1, java2);
+        assert!(java1.matches(&java2));
+        assert!(java2.matches(&java1));
+    }
+
+    #[test]
+    fn test_platform_display_formatting() {
+        // Test various display format cases
+        let test_cases = vec![
+            (Platform::Ruby, "ruby"),
+            (Platform::Current, "current"),
+            (Platform::new("java").unwrap(), "java"),
+            (Platform::new("x86_64-linux").unwrap(), "x86_64-linux"),
+            (
+                Platform::new("x86_64-linux-gnu").unwrap(),
+                "x86_64-linux-gnu",
+            ),
+            (
+                Platform::new("universal-darwin8").unwrap(),
+                "universal-darwin-8",
+            ),
+            (Platform::new("i686-darwin8.0").unwrap(), "x86-darwin-8.0"),
+        ];
+
+        for (platform, expected) in test_cases {
+            assert_eq!(
+                platform.to_string(),
+                expected,
+                "Display format mismatch for: {platform:?}"
+            );
         }
     }
 }
