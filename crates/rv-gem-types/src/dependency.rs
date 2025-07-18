@@ -24,11 +24,11 @@ impl Dependency {
         if name.is_empty() {
             return Err(DependencyError::EmptyName);
         }
-        
+
         let requirement = Requirement::new(requirements)?;
-        
+
         let dep_type = dep_type.unwrap_or_default();
-        
+
         Ok(Self {
             name,
             requirement,
@@ -36,56 +36,59 @@ impl Dependency {
             prerelease: false,
         })
     }
-    
+
     pub fn runtime(name: String, requirements: Vec<String>) -> Result<Self, DependencyError> {
         Self::new(name, requirements, Some(DependencyType::Runtime))
     }
-    
+
     pub fn development(name: String, requirements: Vec<String>) -> Result<Self, DependencyError> {
         Self::new(name, requirements, Some(DependencyType::Development))
     }
-    
+
     pub fn with_prerelease(mut self, prerelease: bool) -> Self {
         self.prerelease = prerelease;
         self
     }
-    
+
     pub fn matches(&self, name: &str, version: &Version, allow_prerelease: bool) -> bool {
         if self.name != name {
             return false;
         }
-        
+
         // Check prerelease logic
         if version.is_prerelease() && !allow_prerelease && !self.prerelease {
             return false;
         }
-        
+
         self.requirement.satisfied_by(version)
     }
-    
+
     pub fn matches_spec(&self, name: &str, version: &Version) -> bool {
         self.matches(name, version, false)
     }
-    
+
     pub fn is_runtime(&self) -> bool {
         matches!(self.dep_type, DependencyType::Runtime)
     }
-    
+
     pub fn is_development(&self) -> bool {
         matches!(self.dep_type, DependencyType::Development)
     }
-    
+
     pub fn is_latest_version(&self) -> bool {
         // Check if the requirement is just ">= 0"
-        self.requirement.constraints.len() == 1 && 
-        matches!(self.requirement.constraints[0].operator, crate::requirement::ComparisonOperator::GreaterEqual) &&
-        self.requirement.constraints[0].version.to_string() == "0"
+        self.requirement.constraints.len() == 1
+            && matches!(
+                self.requirement.constraints[0].operator,
+                crate::requirement::ComparisonOperator::GreaterEqual
+            )
+            && self.requirement.constraints[0].version.to_string() == "0"
     }
-    
+
     pub fn is_specific(&self) -> bool {
         !self.is_latest_version()
     }
-    
+
     pub fn merge(&self, other: &Dependency) -> Result<Dependency, DependencyError> {
         if self.name != other.name {
             return Err(DependencyError::NameMismatch {
@@ -93,14 +96,14 @@ impl Dependency {
                 name2: other.name.clone(),
             });
         }
-        
+
         let mut merged_requirements = self.requirement.constraints.clone();
         merged_requirements.extend(other.requirement.constraints.clone());
-        
+
         let merged_requirement = Requirement {
             constraints: merged_requirements,
         };
-        
+
         Ok(Dependency {
             name: self.name.clone(),
             requirement: merged_requirement,
@@ -108,13 +111,15 @@ impl Dependency {
             prerelease: self.prerelease || other.prerelease,
         })
     }
-    
+
     pub fn requirements_list(&self) -> Vec<String> {
-        self.requirement.constraints.iter()
+        self.requirement
+            .constraints
+            .iter()
             .map(|constraint| constraint.to_string())
             .collect()
     }
-    
+
     pub fn to_lock_name(&self) -> String {
         if self.is_latest_version() {
             self.name.clone()
@@ -234,7 +239,10 @@ mod tests {
 
         let result = dep1.merge(&dep2);
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), DependencyError::NameMismatch { .. }));
+        assert!(matches!(
+            result.unwrap_err(),
+            DependencyError::NameMismatch { .. }
+        ));
     }
 
     #[test]

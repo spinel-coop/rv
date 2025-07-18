@@ -98,25 +98,13 @@ impl Requirement {
         let requirement = requirement.trim();
 
         if let Some(stripped) = requirement.strip_prefix(">=") {
-            Ok(Some((
-                ComparisonOperator::GreaterEqual,
-                stripped.trim(),
-            )))
+            Ok(Some((ComparisonOperator::GreaterEqual, stripped.trim())))
         } else if let Some(stripped) = requirement.strip_prefix("<=") {
-            Ok(Some((
-                ComparisonOperator::LessEqual,
-                stripped.trim(),
-            )))
+            Ok(Some((ComparisonOperator::LessEqual, stripped.trim())))
         } else if let Some(stripped) = requirement.strip_prefix("!=") {
-            Ok(Some((
-                ComparisonOperator::NotEqual,
-                stripped.trim(),
-            )))
+            Ok(Some((ComparisonOperator::NotEqual, stripped.trim())))
         } else if let Some(stripped) = requirement.strip_prefix("~>") {
-            Ok(Some((
-                ComparisonOperator::Pessimistic,
-                stripped.trim(),
-            )))
+            Ok(Some((ComparisonOperator::Pessimistic, stripped.trim())))
         } else if let Some(stripped) = requirement.strip_prefix('>') {
             Ok(Some((ComparisonOperator::Greater, stripped.trim())))
         } else if let Some(stripped) = requirement.strip_prefix('<') {
@@ -142,12 +130,15 @@ impl Requirement {
     pub fn matches(&self, version: &Version) -> bool {
         self.satisfied_by(version)
     }
-    
+
     pub fn is_latest_version(&self) -> bool {
         // Check if the requirement is just ">= 0"
-        self.constraints.len() == 1 && 
-        matches!(self.constraints[0].operator, ComparisonOperator::GreaterEqual) &&
-        self.constraints[0].version.to_string() == "0"
+        self.constraints.len() == 1
+            && matches!(
+                self.constraints[0].operator,
+                ComparisonOperator::GreaterEqual
+            )
+            && self.constraints[0].version.to_string() == "0"
     }
 }
 

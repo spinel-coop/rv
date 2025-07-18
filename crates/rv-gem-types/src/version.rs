@@ -1,4 +1,16 @@
-use miette::{miette, Result};
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum VersionError {
+    #[error("Malformed version number string {version}")]
+    MalformedVersion { version: String },
+    #[error("Invalid segment in version: {segment}")]
+    InvalidSegment { segment: String },
+    #[error("Version cannot contain newlines: {version}")]
+    ContainsNewlines { version: String },
+    #[error("Version cannot contain consecutive dots: {version}")]
+    ConsecutiveDots { version: String },
+    #[error("Version cannot be pure alphabetic: {version}")]
+    PureAlphabetic { version: String },
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum VersionSegment {
@@ -32,7 +44,7 @@ pub struct Version {
 }
 
 impl Version {
-    pub fn new(version: impl Into<String>) -> Result<Self> {
+    pub fn new(version: impl Into<String>) -> Result<Self, VersionError> {
         let version_str = version.into();
         let normalized = Self::normalize_version(&version_str)?;
         let segments = Self::parse_segments(&normalized)?;
@@ -42,7 +54,7 @@ impl Version {
         })
     }
 
-    fn normalize_version(version: &str) -> Result<String> {
+    fn normalize_version(version: &str) -> Result<String, VersionError> {
         let trimmed = version.trim();
 
         if trimmed.is_empty() {
@@ -51,22 +63,28 @@ impl Version {
 
         // Check for invalid characters and patterns
         if trimmed.contains('\n') && trimmed.lines().count() > 1 {
-            return Err(miette!("Malformed version number string {}", version));
+            return Err(VersionError::ContainsNewlines {
+                version: version.to_string(),
+            });
         }
 
         if trimmed.contains("..") {
-            return Err(miette!("Malformed version number string {}", version));
+            return Err(VersionError::ConsecutiveDots {
+                version: version.to_string(),
+            });
         }
 
         // Check for obvious junk
         if trimmed.chars().all(|c| c.is_alphabetic()) {
-            return Err(miette!("Malformed version number string {}", version));
+            return Err(VersionError::PureAlphabetic {
+                version: version.to_string(),
+            });
         }
 
         Ok(trimmed.to_string())
     }
 
-    fn parse_segments(version: &str) -> Result<Vec<VersionSegment>> {
+    fn parse_segments(version: &str) -> Result<Vec<VersionSegment>, VersionError> {
         let mut segments = Vec::new();
         let mut current_segment = String::new();
         let chars = version.chars().peekable();
@@ -104,13 +122,15 @@ impl Version {
         Ok(segments)
     }
 
-    fn parse_segment(segment: &str) -> Result<VersionSegment> {
+    fn parse_segment(segment: &str) -> Result<VersionSegment, VersionError> {
         if let Ok(num) = segment.parse::<u32>() {
             Ok(VersionSegment::Number(num))
         } else if segment.chars().all(|c| c.is_alphanumeric()) {
             Ok(VersionSegment::String(segment.to_string()))
         } else {
-            Err(miette!("Malformed version number string {}", segment))
+            Err(VersionError::InvalidSegment {
+                segment: segment.to_string(),
+            })
         }
     }
 
@@ -133,7 +153,7 @@ impl Version {
         canonical
     }
 
-    pub fn release(&self) -> Result<Version> {
+    pub fn release(&self) -> Result<Version, VersionError> {
         let mut release_segments = Vec::new();
 
         for segment in &self.segments {
@@ -153,7 +173,7 @@ impl Version {
         })
     }
 
-    pub fn bump(&self) -> Result<Version> {
+    pub fn bump(&self) -> Result<Version, VersionError> {
         let mut segments = self.segments.clone();
 
         // Remove all trailing string segments (prerelease parts)
@@ -289,9 +309,9 @@ impl Ord for Version {
 }
 
 impl std::str::FromStr for Version {
-    type Err = miette::Error;
+    type Err = VersionError;
 
-    fn from_str(s: &str) -> Result<Self> {
+    fn from_str(s: &str) -> Result<Self, VersionError> {
         Version::new(s)
     }
 }

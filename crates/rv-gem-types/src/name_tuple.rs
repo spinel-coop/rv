@@ -12,15 +12,19 @@ impl NameTuple {
         let platform = platform
             .filter(|p| !p.is_empty())
             .unwrap_or_else(|| "ruby".to_string());
-        
-        Self { name, version, platform }
+
+        Self {
+            name,
+            version,
+            platform,
+        }
     }
-    
+
     pub fn from_array(array: &[String]) -> Result<Self, NameTupleError> {
         if array.len() < 2 || array.len() > 3 {
             return Err(NameTupleError::InvalidArray);
         }
-        
+
         let name = array[0].clone();
         let version = Version::new(&array[1]).map_err(|_| NameTupleError::InvalidVersion)?;
         let platform = if array.len() == 3 {
@@ -28,10 +32,10 @@ impl NameTuple {
         } else {
             None
         };
-        
+
         Ok(Self::new(name, version, platform))
     }
-    
+
     pub fn null() -> Self {
         Self {
             name: String::new(),
@@ -39,7 +43,7 @@ impl NameTuple {
             platform: String::new(),
         }
     }
-    
+
     pub fn full_name(&self) -> String {
         if self.platform == "ruby" || self.platform.is_empty() {
             format!("{}-{}", self.name, self.version)
@@ -47,19 +51,23 @@ impl NameTuple {
             format!("{}-{}-{}", self.name, self.version, self.platform)
         }
     }
-    
+
     pub fn spec_name(&self) -> String {
         format!("{}.gemspec", self.full_name())
     }
-    
+
     pub fn to_array(&self) -> [String; 3] {
-        [self.name.clone(), self.version.to_string(), self.platform.clone()]
+        [
+            self.name.clone(),
+            self.version.to_string(),
+            self.platform.clone(),
+        ]
     }
-    
+
     pub fn prerelease(&self) -> bool {
         self.version.is_prerelease()
     }
-    
+
     pub fn match_platform(&self, platform: &str) -> bool {
         if self.platform == "ruby" || platform == "ruby" {
             true

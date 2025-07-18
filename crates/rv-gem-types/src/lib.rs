@@ -10,4 +10,4 @@ pub use name_tuple::{NameTuple, NameTupleError};
 pub use platform::Platform;
 pub use requirement::{ComparisonOperator, Requirement, VersionConstraint};
 pub use specification::{Specification, SpecificationError};
-pub use version::Version;
+pub use version::{Version, VersionError};
