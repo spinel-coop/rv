@@ -80,6 +80,20 @@ impl Version {
             });
         }
 
+        // Check for trailing dots
+        if trimmed.ends_with('.') {
+            return Err(VersionError::MalformedVersion {
+                version: version.to_string(),
+            });
+        }
+
+        // Check for spaces in version (not allowed)
+        if trimmed.contains(' ') {
+            return Err(VersionError::MalformedVersion {
+                version: version.to_string(),
+            });
+        }
+
         Ok(trimmed.to_string())
     }
 
@@ -138,7 +152,30 @@ impl Version {
     }
 
     pub fn canonical_segments(&self) -> Vec<VersionSegment> {
-        let mut canonical = self.segments.clone();
+        let mut canonical = Vec::new();
+
+        for (i, segment) in self.segments.iter().enumerate() {
+            // Skip zeros that come after the first segment, unless:
+            // 1. It's the very first segment
+            // 2. The previous segment was a string
+            // 3. This is the last segment and we'd have an empty result
+            if let VersionSegment::Number(0) = segment {
+                if i > 0 && !canonical.is_empty() {
+                    // Check if the previous segment was a string
+                    let prev_was_string =
+                        matches!(canonical.last(), Some(VersionSegment::String(_)));
+                    // Only add the zero if the previous was a string or this would leave us empty
+                    if prev_was_string || (i == self.segments.len() - 1 && canonical.is_empty()) {
+                        canonical.push(segment.clone());
+                    }
+                    // Otherwise skip this zero
+                } else {
+                    canonical.push(segment.clone());
+                }
+            } else {
+                canonical.push(segment.clone());
+            }
+        }
 
         // Remove trailing zeros, but keep at least one segment
         while canonical.len() > 1 {
@@ -147,6 +184,11 @@ impl Version {
             } else {
                 break;
             }
+        }
+
+        // Ensure we have at least one segment
+        if canonical.is_empty() {
+            canonical.push(VersionSegment::Number(0));
         }
 
         canonical
@@ -259,8 +301,8 @@ impl Ord for Version {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         use std::cmp::Ordering;
 
-        let self_segments = &self.segments;
-        let other_segments = &other.segments;
+        let self_segments = self.canonical_segments();
+        let other_segments = other.canonical_segments();
 
         let max_len = self_segments.len().max(other_segments.len());
 
@@ -317,6 +359,8 @@ impl std::str::FromStr for Version {
 
 #[cfg(test)]
 mod tests {
+    use std::cmp::Ordering;
+
     use super::*;
 
     fn v(version: &str) -> Version {
@@ -343,13 +387,18 @@ mod tests {
         assert_eq!(v("").version, "0");
         assert_eq!(v("   ").version, "0");
         assert_eq!(v(" ").version, "0");
+        assert_eq!(v("\t").version, "0");
     }
 
     #[test]
     fn test_invalid_versions() {
         assert!(Version::new("junk").is_err());
-        assert!(Version::new("1..2").is_err());
         assert!(Version::new("1.0\n2.0").is_err());
+        assert!(Version::new("1..2").is_err());
+        assert!(Version::new("1.2 3.4").is_err());
+        assert!(
+            Version::new("2.3422222.222.222222222.22222.ads0as.dasd0.ddd2222.2.qd3e.").is_err()
+        );
     }
 
     #[test]
@@ -370,6 +419,8 @@ mod tests {
     fn test_prerelease_detection() {
         assert!(v("1.2.0.a").is_prerelease());
         assert!(v("2.9.b").is_prerelease());
+        assert!(v("22.1.50.0.d").is_prerelease());
+        assert!(v("1.2.d.42").is_prerelease());
         assert!(v("1.A").is_prerelease());
         assert!(v("1-1").is_prerelease());
         assert!(v("1-a").is_prerelease());
@@ -389,8 +440,6 @@ mod tests {
             v("1.0.0.a.1.0").canonical_segments(),
             vec![
                 VersionSegment::Number(1),
-                VersionSegment::Number(0),
-                VersionSegment::Number(0),
                 VersionSegment::String("a".to_string()),
                 VersionSegment::Number(1)
             ]
@@ -411,6 +460,7 @@ mod tests {
     fn test_release_conversion() {
         assert_eq!(v("1.2.0.a").release().unwrap(), v("1.2.0"));
         assert_eq!(v("1.1.rc10").release().unwrap(), v("1.1"));
+        assert_eq!(v("1.9.3.alpha.5").release().unwrap(), v("1.9.3"));
         assert_eq!(v("1.9.3").release().unwrap(), v("1.9.3"));
     }
 
@@ -418,6 +468,7 @@ mod tests {
     fn test_version_bump() {
         assert_eq!(v("5.2.4").bump().unwrap(), v("5.3"));
         assert_eq!(v("5.2.4.a").bump().unwrap(), v("5.3"));
+        assert_eq!(v("5.2.4.a10").bump().unwrap(), v("5.3"));
         assert_eq!(v("5.0.0").bump().unwrap(), v("5.1"));
         assert_eq!(v("5").bump().unwrap(), v("6"));
     }
@@ -429,5 +480,24 @@ mod tests {
         assert!(v("1.0.0-beta.2") < v("1.0.0-beta.11"));
         assert!(v("1.0.0-beta.11") < v("1.0.0-rc.1"));
         assert!(v("1.0.0-rc1") < v("1.0.0"));
+    }
+
+    #[test]
+    fn test_ord() {
+        assert_eq!(Ordering::Equal, v("1.0").cmp(&v("1.0.0")));
+        assert_eq!(Ordering::Greater, v("1.0").cmp(&v("1.0.a")));
+        assert_eq!(Ordering::Greater, v("1.8.2").cmp(&v("0.0.0")));
+        assert_eq!(Ordering::Greater, v("1.8.2").cmp(&v("1.8.2.a")));
+        assert_eq!(Ordering::Greater, v("1.8.2.b").cmp(&v("1.8.2.a")));
+        assert_eq!(Ordering::Less, v("1.8.2.a").cmp(&v("1.8.2")));
+        assert_eq!(Ordering::Greater, v("1.8.2.a10").cmp(&v("1.8.2.a9")));
+        assert_eq!(Ordering::Equal, v("").cmp(&v("0")));
+
+        assert_eq!(Ordering::Equal, v("0.beta.1").cmp(&v("0.0.beta.1")));
+        assert_eq!(Ordering::Less, v("0.0.beta").cmp(&v("0.0.beta.1")));
+        assert_eq!(Ordering::Less, v("0.0.beta").cmp(&v("0.beta.1")));
+
+        assert_eq!(Ordering::Less, v("5.a").cmp(&v("5.0.0.rc2")));
+        assert_eq!(Ordering::Greater, v("5.x").cmp(&v("5.0.0.rc2")));
     }
 }
