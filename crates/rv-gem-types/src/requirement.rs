@@ -13,12 +13,12 @@ pub enum RequirementError {
     Malformed { requirement: String },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct Requirement {
     pub constraints: Vec<VersionConstraint>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct VersionConstraint {
     pub operator: ComparisonOperator,
     pub version: Version,
@@ -149,6 +149,22 @@ impl Requirement {
     }
 }
 
+impl PartialEq for Requirement {
+    fn eq(&self, other: &Self) -> bool {
+        self.constraints == other.constraints
+    }
+}
+
+impl Eq for Requirement {}
+
+impl PartialEq for VersionConstraint {
+    fn eq(&self, other: &Self) -> bool {
+        self.operator == other.operator && self.version.version == other.version.version
+    }
+}
+
+impl Eq for VersionConstraint {}
+
 impl VersionConstraint {
     pub fn new(operator: ComparisonOperator, version: Version) -> Self {
         Self { operator, version }
@@ -163,9 +179,7 @@ impl VersionConstraint {
             ComparisonOperator::Less => version < &self.version,
             ComparisonOperator::LessEqual => version <= &self.version,
             ComparisonOperator::Pessimistic => {
-                // ~> means: version >= self.version && version < self.version.bump()
-                version >= &self.version
-                    && version < &self.version.bump().unwrap_or_else(|_| self.version.clone())
+                version >= &self.version && version < &self.version.bump()
             }
         }
     }
@@ -350,6 +364,11 @@ mod tests {
         assert!(req("~> 1.4.4").satisfied_by(&v("1.4.5")));
         assert!(!req("~> 1.4.4").satisfied_by(&v("1.5.0")));
         assert!(!req("~> 1.4.4").satisfied_by(&v("1.4.3")));
+
+        assert_ne!(req("~> 1.0.0"), req("~> 1.0"));
+        assert!(req("~> 1.0.0").satisfied_by(&v("1.0.1")));
+        assert!(req("~> 1.0.0").satisfied_by(&v("1")));
+        assert!(!req("~> 1.0.0").satisfied_by(&v("1.1")));
     }
 
     #[test]

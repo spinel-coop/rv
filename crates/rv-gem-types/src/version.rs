@@ -152,32 +152,30 @@ impl Version {
     }
 
     pub fn canonical_segments(&self) -> Vec<VersionSegment> {
+        // Step 1: Remove leading zeros that come before the first string segment
         let mut canonical = Vec::new();
+        let mut first_string_index = None;
 
+        // Find first string segment
         for (i, segment) in self.segments.iter().enumerate() {
-            // Skip zeros that come after the first segment, unless:
-            // 1. It's the very first segment
-            // 2. The previous segment was a string
-            // 3. This is the last segment and we'd have an empty result
-            if let VersionSegment::Number(0) = segment {
-                if i > 0 && !canonical.is_empty() {
-                    // Check if the previous segment was a string
-                    let prev_was_string =
-                        matches!(canonical.last(), Some(VersionSegment::String(_)));
-                    // Only add the zero if the previous was a string or this would leave us empty
-                    if prev_was_string || (i == self.segments.len() - 1 && canonical.is_empty()) {
-                        canonical.push(segment.clone());
-                    }
-                    // Otherwise skip this zero
-                } else {
-                    canonical.push(segment.clone());
-                }
-            } else {
-                canonical.push(segment.clone());
+            if segment.is_string() {
+                first_string_index = Some(i);
+                break;
             }
         }
 
-        // Remove trailing zeros, but keep at least one segment
+        // Copy segments, skipping zeros before first string
+        for (i, segment) in self.segments.iter().enumerate() {
+            if let Some(string_idx) = first_string_index {
+                // Skip zeros between first segment and string segment
+                if i > 0 && i < string_idx && matches!(segment, VersionSegment::Number(0)) {
+                    continue;
+                }
+            }
+            canonical.push(segment.clone());
+        }
+
+        // Step 2: Remove trailing zeros, but keep at least one segment
         while canonical.len() > 1 {
             if let Some(VersionSegment::Number(0)) = canonical.last() {
                 canonical.pop();
@@ -194,7 +192,7 @@ impl Version {
         canonical
     }
 
-    pub fn release(&self) -> Result<Version, VersionError> {
+    pub fn release(&self) -> Version {
         let mut release_segments = Vec::new();
 
         for segment in &self.segments {
@@ -208,13 +206,13 @@ impl Version {
             release_segments.push(VersionSegment::Number(0));
         }
 
-        Ok(Version {
+        Version {
             version: Self::segments_to_string(&release_segments),
             segments: release_segments,
-        })
+        }
     }
 
-    pub fn bump(&self) -> Result<Version, VersionError> {
+    pub fn bump(&self) -> Version {
         let mut segments = self.segments.clone();
 
         // Remove all trailing string segments (prerelease parts)
@@ -234,10 +232,10 @@ impl Version {
             }
         }
 
-        Ok(Version {
+        Version {
             version: Self::segments_to_string(&segments),
             segments,
-        })
+        }
     }
 
     fn segments_to_string(segments: &[VersionSegment]) -> String {
@@ -458,19 +456,19 @@ mod tests {
 
     #[test]
     fn test_release_conversion() {
-        assert_eq!(v("1.2.0.a").release().unwrap(), v("1.2.0"));
-        assert_eq!(v("1.1.rc10").release().unwrap(), v("1.1"));
-        assert_eq!(v("1.9.3.alpha.5").release().unwrap(), v("1.9.3"));
-        assert_eq!(v("1.9.3").release().unwrap(), v("1.9.3"));
+        assert_eq!(v("1.2.0.a").release(), v("1.2.0"));
+        assert_eq!(v("1.1.rc10").release(), v("1.1"));
+        assert_eq!(v("1.9.3.alpha.5").release(), v("1.9.3"));
+        assert_eq!(v("1.9.3").release(), v("1.9.3"));
     }
 
     #[test]
     fn test_version_bump() {
-        assert_eq!(v("5.2.4").bump().unwrap(), v("5.3"));
-        assert_eq!(v("5.2.4.a").bump().unwrap(), v("5.3"));
-        assert_eq!(v("5.2.4.a10").bump().unwrap(), v("5.3"));
-        assert_eq!(v("5.0.0").bump().unwrap(), v("5.1"));
-        assert_eq!(v("5").bump().unwrap(), v("6"));
+        assert_eq!(v("5.2.4").bump(), v("5.3"));
+        assert_eq!(v("5.2.4.a").bump(), v("5.3"));
+        assert_eq!(v("5.2.4.a10").bump(), v("5.3"));
+        assert_eq!(v("5.0.0").bump(), v("5.1"));
+        assert_eq!(v("5").bump(), v("6"));
     }
 
     #[test]
