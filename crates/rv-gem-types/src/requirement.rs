@@ -214,19 +214,89 @@ mod tests {
     #[test]
     fn test_requirement_parsing() {
         // Basic parsing
-        assert_eq!(req("1.0").constraints.len(), 1);
-        assert_eq!(
-            req("= 1.0").constraints[0].operator,
-            ComparisonOperator::Equal
-        );
-        assert_eq!(
-            req("> 1.0").constraints[0].operator,
-            ComparisonOperator::Greater
-        );
-        assert_eq!(
-            req("~> 1.2").constraints[0].operator,
-            ComparisonOperator::Pessimistic
-        );
+        insta::assert_debug_snapshot!(req("1.0"), @r###"
+        Requirement {
+            constraints: [
+                VersionConstraint {
+                    operator: Equal,
+                    version: Version {
+                        version: "1.0",
+                        segments: [
+                            Number(
+                                1,
+                            ),
+                            Number(
+                                0,
+                            ),
+                        ],
+                    },
+                },
+            ],
+        }
+        "###);
+        
+        insta::assert_debug_snapshot!(req("= 1.0"), @r###"
+        Requirement {
+            constraints: [
+                VersionConstraint {
+                    operator: Equal,
+                    version: Version {
+                        version: "1.0",
+                        segments: [
+                            Number(
+                                1,
+                            ),
+                            Number(
+                                0,
+                            ),
+                        ],
+                    },
+                },
+            ],
+        }
+        "###);
+        
+        insta::assert_debug_snapshot!(req("> 1.0"), @r###"
+        Requirement {
+            constraints: [
+                VersionConstraint {
+                    operator: Greater,
+                    version: Version {
+                        version: "1.0",
+                        segments: [
+                            Number(
+                                1,
+                            ),
+                            Number(
+                                0,
+                            ),
+                        ],
+                    },
+                },
+            ],
+        }
+        "###);
+        
+        insta::assert_debug_snapshot!(req("~> 1.2"), @r###"
+        Requirement {
+            constraints: [
+                VersionConstraint {
+                    operator: Pessimistic,
+                    version: Version {
+                        version: "1.2",
+                        segments: [
+                            Number(
+                                1,
+                            ),
+                            Number(
+                                2,
+                            ),
+                        ],
+                    },
+                },
+            ],
+        }
+        "###);
     }
 
     #[test]
