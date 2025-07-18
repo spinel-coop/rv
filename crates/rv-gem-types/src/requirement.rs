@@ -140,6 +140,13 @@ impl Requirement {
             )
             && self.constraints[0].version.to_string() == "0"
     }
+
+    pub fn is_prerelease(&self) -> bool {
+        // A requirement is prerelease if any of its constraint versions are prerelease
+        self.constraints
+            .iter()
+            .any(|constraint| constraint.version.is_prerelease())
+    }
 }
 
 impl VersionConstraint {
@@ -234,7 +241,7 @@ mod tests {
             ],
         }
         "###);
-        
+
         insta::assert_debug_snapshot!(req("= 1.0"), @r###"
         Requirement {
             constraints: [
@@ -255,7 +262,7 @@ mod tests {
             ],
         }
         "###);
-        
+
         insta::assert_debug_snapshot!(req("> 1.0"), @r###"
         Requirement {
             constraints: [
@@ -276,7 +283,7 @@ mod tests {
             ],
         }
         "###);
-        
+
         insta::assert_debug_snapshot!(req("~> 1.2"), @r###"
         Requirement {
             constraints: [
@@ -381,5 +388,41 @@ mod tests {
         assert!(Requirement::parse("").is_err());
         assert!(Requirement::parse("! 1").is_err());
         assert!(Requirement::parse("= junk").is_err());
+        assert!(Requirement::parse("1..2").is_err());
+    }
+
+    #[test]
+    fn test_is_prerelease() {
+        // Regular release versions are not prerelease
+        assert!(!req("1.0").is_prerelease());
+        assert!(!req("= 1.0.0").is_prerelease());
+        assert!(!req("> 1.2.3").is_prerelease());
+        assert!(!req(">= 2.0").is_prerelease());
+        assert!(!req("< 3.0.0").is_prerelease());
+        assert!(!req("<= 1.9.9").is_prerelease());
+        assert!(!req("~> 1.4").is_prerelease());
+
+        // Prerelease versions are prerelease
+        assert!(req("1.0.alpha").is_prerelease());
+        assert!(req("= 1.0.0.beta").is_prerelease());
+        assert!(req("> 1.2.3.rc1").is_prerelease());
+        assert!(req(">= 2.0.pre").is_prerelease());
+        assert!(req("< 3.0.0.dev").is_prerelease());
+        assert!(req("<= 1.9.9.a").is_prerelease());
+        assert!(req("~> 1.4.alpha.1").is_prerelease());
+
+        // Mixed constraints - prerelease if ANY constraint has prerelease version
+        let mixed_req = Requirement::new(vec![">= 1.0", "< 2.0.alpha"]).unwrap();
+        assert!(mixed_req.is_prerelease());
+
+        let all_release_req = Requirement::new(vec![">= 1.0", "< 2.0"]).unwrap();
+        assert!(!all_release_req.is_prerelease());
+
+        let all_prerelease_req = Requirement::new(vec![">= 1.0.alpha", "< 2.0.beta"]).unwrap();
+        assert!(all_prerelease_req.is_prerelease());
+
+        // Default requirement (>= 0) is not prerelease
+        let default_req = Requirement::new(vec![""; 0]).unwrap();
+        assert!(!default_req.is_prerelease());
     }
 }
