@@ -1,4 +1,4 @@
-use crate::Version;
+use crate::{Version, VersionError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NameTuple {
@@ -21,12 +21,12 @@ impl NameTuple {
     }
 
     pub fn from_array(array: &[String]) -> Result<Self, NameTupleError> {
-        if array.len() < 2 || array.len() > 3 {
+        if !(2..=3).contains(&array.len()) {
             return Err(NameTupleError::InvalidArray);
         }
 
         let name = array[0].clone();
-        let version = Version::new(&array[1]).map_err(|_| NameTupleError::InvalidVersion)?;
+        let version = Version::new(&array[1])?;
         let platform = if array.len() == 3 {
             Some(array[2].clone())
         } else {
@@ -45,7 +45,7 @@ impl NameTuple {
     }
 
     pub fn full_name(&self) -> String {
-        if self.platform == "ruby" || self.platform.is_empty() {
+        if self.platform == "ruby" {
             format!("{}-{}", self.name, self.version)
         } else {
             format!("{}-{}-{}", self.name, self.version, self.platform)
@@ -64,16 +64,8 @@ impl NameTuple {
         ]
     }
 
-    pub fn prerelease(&self) -> bool {
+    pub fn is_prerelease(&self) -> bool {
         self.version.is_prerelease()
-    }
-
-    pub fn match_platform(&self, platform: &str) -> bool {
-        if self.platform == "ruby" || platform == "ruby" {
-            true
-        } else {
-            self.platform == platform
-        }
     }
 }
 
@@ -129,7 +121,7 @@ pub enum NameTupleError {
     #[error("Invalid array length for NameTuple")]
     InvalidArray,
     #[error("Invalid version in NameTuple")]
-    InvalidVersion,
+    InvalidVersion(#[from] VersionError),
 }
 
 #[cfg(test)]
@@ -209,26 +201,10 @@ mod tests {
     #[test]
     fn test_prerelease() {
         let tuple = NameTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
-        assert!(!tuple.prerelease());
+        assert!(!tuple.is_prerelease());
 
         let tuple = NameTuple::new("test".to_string(), Version::new("1.0.alpha").unwrap(), None);
-        assert!(tuple.prerelease());
-    }
-
-    #[test]
-    fn test_match_platform() {
-        let tuple = NameTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
-        assert!(tuple.match_platform("ruby"));
-        assert!(tuple.match_platform("linux"));
-
-        let tuple = NameTuple::new(
-            "test".to_string(),
-            Version::new("1.0").unwrap(),
-            Some("linux".to_string()),
-        );
-        assert!(tuple.match_platform("ruby"));
-        assert!(tuple.match_platform("linux"));
-        assert!(!tuple.match_platform("windows"));
+        assert!(tuple.is_prerelease());
     }
 
     #[test]
