@@ -1,4 +1,4 @@
-use crate::{Dependency, DependencyType, Requirement, Version};
+use crate::{Dependency, DependencyType, Platform, Requirement, Version};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -10,6 +10,7 @@ pub struct Specification {
     pub require_paths: Vec<String>,
     pub rubygems_version: String,
     pub specification_version: i32,
+    pub date: String,
 
     // Optional fields with defaults
     pub authors: Vec<String>,
@@ -22,7 +23,7 @@ pub struct Specification {
     pub extensions: Vec<String>,
     pub dependencies: Vec<Dependency>,
     pub metadata: HashMap<String, String>,
-    pub platform: String,
+    pub platform: Platform,
     pub bindir: String,
     pub post_install_message: Option<String>,
     pub requirements: Vec<String>,
@@ -34,6 +35,7 @@ pub struct Specification {
     pub cert_chain: Vec<String>,
     pub signing_key: Option<String>,
     pub autorequire: Option<String>,
+    pub installed_by_version: Option<Version>,
 }
 
 impl Specification {
@@ -41,11 +43,6 @@ impl Specification {
         if name.is_empty() {
             return Err(SpecificationError::EmptyName);
         }
-
-        let default_ruby_requirement =
-            Requirement::new(vec![">= 0"]).map_err(|_| SpecificationError::InvalidRequirement)?;
-        let default_rubygems_requirement =
-            Requirement::new(vec![">= 0"]).map_err(|_| SpecificationError::InvalidRequirement)?;
 
         Ok(Self {
             name,
@@ -64,18 +61,20 @@ impl Specification {
             extensions: Vec::new(),
             dependencies: Vec::new(),
             metadata: HashMap::new(),
-            platform: "ruby".to_string(),
+            platform: Platform::Ruby,
             bindir: "bin".to_string(),
             post_install_message: None,
             requirements: Vec::new(),
-            required_ruby_version: default_ruby_requirement,
-            required_rubygems_version: default_rubygems_requirement,
+            required_ruby_version: Requirement::default(),
+            required_rubygems_version: Requirement::default(),
             test_files: Vec::new(),
             extra_rdoc_files: Vec::new(),
             rdoc_options: Vec::new(),
             cert_chain: Vec::new(),
             signing_key: None,
             autorequire: None,
+            date: "".to_string(),
+            installed_by_version: None,
         })
     }
 
@@ -249,8 +248,8 @@ impl Specification {
         }
 
         // Platform
-        if self.platform != "ruby" {
-            lines.push(format!("  s.platform = {:?}", self.platform));
+        if !self.platform.is_ruby() {
+            lines.push(format!("  s.platform = {:?}", self.platform.to_string()));
         }
 
         // Bindir
@@ -292,22 +291,19 @@ impl Specification {
 
         // Add dependencies
         for dep in &self.dependencies {
+            use std::fmt::Write;
+            let mut line = "  s.add".to_string();
             match dep.dep_type {
-                DependencyType::Runtime => {
-                    lines.push(format!(
-                        "  s.add_dependency {:?}, {:?}",
-                        dep.name,
-                        dep.requirement.to_string()
-                    ));
-                }
                 DependencyType::Development => {
-                    lines.push(format!(
-                        "  s.add_development_dependency {:?}, {:?}",
-                        dep.name,
-                        dep.requirement.to_string()
-                    ));
+                    line.push_str("_development");
                 }
+                DependencyType::Runtime => {}
             }
+            write!(line, "_dependency {:?}", dep.name).unwrap();
+            for req in dep.requirements_list() {
+                write!(line, ", {req:?}").unwrap();
+            }
+            lines.push(line);
         }
 
         lines.push("end".to_string());
@@ -315,7 +311,7 @@ impl Specification {
     }
 
     pub fn full_name(&self) -> String {
-        if self.platform == "ruby" {
+        if self.platform.is_ruby() {
             format!("{}-{}", self.name, self.version)
         } else {
             format!("{}-{}-{}", self.name, self.version, self.platform)
@@ -379,7 +375,7 @@ impl Specification {
         self
     }
 
-    pub fn with_platform(mut self, platform: String) -> Self {
+    pub fn with_platform(mut self, platform: Platform) -> Self {
         self.platform = platform;
         self
     }
@@ -395,8 +391,6 @@ impl std::fmt::Display for Specification {
 pub enum SpecificationError {
     #[error("Specification name cannot be empty")]
     EmptyName,
-    #[error("Invalid requirement")]
-    InvalidRequirement,
     #[error("Dependency error: {0}")]
     DependencyError(#[from] crate::dependency::DependencyError),
 }
@@ -410,7 +404,7 @@ mod tests {
         let spec = Specification::new("test".to_string(), Version::new("1.0.0").unwrap()).unwrap();
         assert_eq!(spec.name, "test");
         assert_eq!(spec.version, Version::new("1.0.0").unwrap());
-        assert_eq!(spec.platform, "ruby");
+        assert_eq!(spec.platform, Platform::Ruby);
         assert_eq!(spec.require_paths, vec!["lib"]);
         assert_eq!(spec.specification_version, 4);
         assert_eq!(spec.rubygems_version, "3.0.0");
@@ -513,7 +507,7 @@ mod tests {
         let spec = Specification::new("test".to_string(), Version::new("1.0.0").unwrap()).unwrap();
         assert_eq!(spec.full_name(), "test-1.0.0");
 
-        let spec = spec.with_platform("x86_64-linux".to_string());
+        let spec = spec.with_platform("x86_64-linux".parse().unwrap());
         assert_eq!(spec.full_name(), "test-1.0.0-x86_64-linux");
     }
 
@@ -551,7 +545,7 @@ mod tests {
         .with_licenses(vec!["MIT".to_string(), "Apache-2.0".to_string()])
         .with_files(vec!["lib/test.rb".to_string(), "README.md".to_string()])
         .with_executables(vec!["test-cli".to_string()])
-        .with_platform("x86_64-linux".to_string());
+        .with_platform("x86_64-linux".parse().unwrap());
 
         spec.add_dependency("runtime_dep".to_string(), vec!["~> 1.0".to_string()])
             .unwrap();

@@ -157,6 +157,17 @@ impl PartialEq for Requirement {
 
 impl Eq for Requirement {}
 
+impl Default for Requirement {
+    fn default() -> Self {
+        Self {
+            constraints: vec![VersionConstraint {
+                operator: ComparisonOperator::GreaterEqual,
+                version: Version::default(),
+            }],
+        }
+    }
+}
+
 impl PartialEq for VersionConstraint {
     fn eq(&self, other: &Self) -> bool {
         self.operator == other.operator && self.version.version == other.version.version

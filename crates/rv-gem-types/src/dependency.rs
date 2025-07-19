@@ -14,6 +14,15 @@ pub enum DependencyType {
     Development,
 }
 
+impl AsRef<str> for DependencyType {
+    fn as_ref(&self) -> &str {
+        match self {
+            DependencyType::Runtime => "runtime",
+            DependencyType::Development => "development",
+        }
+    }
+}
+
 impl Dependency {
     pub fn new(
         name: String,

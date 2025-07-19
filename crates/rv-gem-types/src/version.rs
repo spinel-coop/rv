@@ -271,6 +271,15 @@ impl Version {
     }
 }
 
+impl Default for Version {
+    fn default() -> Self {
+        Version {
+            version: "0".to_string(),
+            segments: vec![VersionSegment::Number(0)],
+        }
+    }
+}
+
 impl PartialEq for Version {
     fn eq(&self, other: &Self) -> bool {
         self.canonical_segments() == other.canonical_segments()

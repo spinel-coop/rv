@@ -23,6 +23,6 @@ Gem::Specification.new do |s|
   }
   s.post_install_message = "Thanks for installing!"
   s.add_dependency "runtime_dep", "~> 1.0"
-  s.add_dependency "another_dep", ">= 2.0, < 3.0"
+  s.add_dependency "another_dep", ">= 2.0", "< 3.0"
   s.add_development_dependency "test_dep", ">= 0.1"
 end

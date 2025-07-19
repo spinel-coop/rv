@@ -32,6 +32,10 @@ impl Platform {
         Platform::Ruby
     }
 
+    pub fn is_ruby(&self) -> bool {
+        matches!(self, Platform::Ruby)
+    }
+
     pub fn java() -> Self {
         Self::new("java").unwrap()
     }
