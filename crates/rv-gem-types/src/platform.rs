@@ -1,4 +1,23 @@
+use once_cell::sync::Lazy;
+use regex::Regex;
 use std::{borrow::Cow, str::FromStr};
+
+// Cached regexes for platform parsing to avoid repeated compilation
+static I386_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"i\d86").unwrap());
+static AIX_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"aix-?(\d)?").unwrap());
+static DARWIN_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"darwin-?(\d)?").unwrap());
+static MACRUBY_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^macruby-?(\d+(?:\.\d+)*)?").unwrap());
+static FREEBSD_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"freebsd-?(\d+)?").unwrap());
+static JAVA_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^java-?(\d+(?:\.\d+)*)?").unwrap());
+static DALVIK_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^dalvik-?(\d+)?$").unwrap());
+static DOTNET_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^dotnet-?(\d+(?:\.\d+)*)?").unwrap());
+static LINUX_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"linux-?(\w+)?").unwrap());
+static MINGW_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"mingw-?(\w+)?").unwrap());
+static MSWIN_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(mswin\d+)(?:[_-](\d+))?").unwrap());
+static OPENBSD_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"openbsd-?(\d+\.\d+)?").unwrap());
+static SOLARIS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"solaris-?(\d+\.\d+)?").unwrap());
+static PLATFORM_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+_platform)-?(\d+)?").unwrap());
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Platform {
@@ -57,17 +76,18 @@ impl Platform {
     }
 
     fn parse_platform_string(platform: &str) -> Result<Platform, PlatformError> {
-        use regex::Regex;
-
         let platform = platform.trim_end_matches('-');
         let parts: Vec<&str> = platform.splitn(2, '-').collect();
         let cpu = parts[0];
         let mut os = parts.get(1).map(|os| Cow::from(*os));
 
-        let cpu = if Regex::new("i\\d86").unwrap().is_match(cpu) {
+        let cpu = if I386_REGEX.is_match(cpu) {
             Some("x86")
         } else if cpu == "dotnet" {
-            os = Some(format!("dotnet-{}", os.unwrap_or(std::borrow::Cow::Borrowed(""))).into());
+            os = Some(match os {
+                Some(os_val) => format!("dotnet-{os_val}").into(),
+                None => "dotnet-".into(),
+            });
             None
         } else {
             Some(cpu)
@@ -79,48 +99,35 @@ impl Platform {
             (None, Cow::from(cpu.unwrap()))
         };
 
-        let (os, version) = if let Some(captures) = Regex::new(r"aix-?(\d)?").unwrap().captures(&os)
-        {
+        let (os, version) = if let Some(captures) = AIX_REGEX.captures(&os) {
             ("aix", captures.get(1).map(|m| m.as_str()))
         } else if os.contains("cygwin") {
             ("cygwin", None)
-        } else if let Some(captures) = Regex::new(r"darwin-?(\d)?").unwrap().captures(&os) {
+        } else if let Some(captures) = DARWIN_REGEX.captures(&os) {
             ("darwin", captures.get(1).map(|m| m.as_str()))
         } else if os == "macruby" {
             ("macruby", None)
-        } else if let Some(captures) = Regex::new(r"^macruby-?(\d+(?:\.\d+)*)?")
-            .unwrap()
-            .captures(&os)
-        {
+        } else if let Some(captures) = MACRUBY_REGEX.captures(&os) {
             ("macruby", captures.get(1).map(|m| m.as_str()))
-        } else if let Some(captures) = Regex::new(r"freebsd-?(\d+)?").unwrap().captures(&os) {
+        } else if let Some(captures) = FREEBSD_REGEX.captures(&os) {
             ("freebsd", captures.get(1).map(|m| m.as_str()))
         } else if os == "java" || os == "jruby" {
             ("java", None)
-        } else if let Some(captures) = Regex::new(r"^java-?(\d+(?:\.\d+)*)?")
-            .unwrap()
-            .captures(&os)
-        {
+        } else if let Some(captures) = JAVA_REGEX.captures(&os) {
             ("java", captures.get(1).map(|m| m.as_str()))
-        } else if let Some(captures) = Regex::new(r"^dalvik-?(\d+)?$").unwrap().captures(&os) {
+        } else if let Some(captures) = DALVIK_REGEX.captures(&os) {
             ("dalvik", captures.get(1).map(|m| m.as_str()))
         } else if os == "dotnet" {
             ("dotnet", None)
-        } else if let Some(captures) = Regex::new(r"^dotnet-?(\d+(?:\.\d+)*)?")
-            .unwrap()
-            .captures(&os)
-        {
+        } else if let Some(captures) = DOTNET_REGEX.captures(&os) {
             ("dotnet", captures.get(1).map(|m| m.as_str()))
-        } else if let Some(captures) = Regex::new(r"linux-?(\w+)?").unwrap().captures(&os) {
+        } else if let Some(captures) = LINUX_REGEX.captures(&os) {
             ("linux", captures.get(1).map(|m| m.as_str()))
         } else if os.contains("mingw32") {
             ("mingw32", None)
-        } else if let Some(captures) = Regex::new(r"mingw-?(\w+)?").unwrap().captures(&os) {
+        } else if let Some(captures) = MINGW_REGEX.captures(&os) {
             ("mingw", captures.get(1).map(|m| m.as_str()))
-        } else if let Some(captures) = Regex::new(r"(mswin\d+)(?:[_-](\d+))?")
-            .unwrap()
-            .captures(&os)
-        {
+        } else if let Some(captures) = MSWIN_REGEX.captures(&os) {
             let os = captures.get(1).unwrap().as_str();
 
             if cpu.is_none() && os.ends_with("32") {
@@ -130,16 +137,13 @@ impl Platform {
             (os, captures.get(2).map(|m| m.as_str()))
         } else if os.contains("netbsdelf") {
             ("netbsdelf", None)
-        } else if let Some(captures) = Regex::new(r"openbsd-?(\d+\.\d+)?").unwrap().captures(&os) {
+        } else if let Some(captures) = OPENBSD_REGEX.captures(&os) {
             ("openbsd", captures.get(1).map(|m| m.as_str()))
-        } else if let Some(captures) = Regex::new(r"solaris-?(\d+\.\d+)?").unwrap().captures(&os) {
+        } else if let Some(captures) = SOLARIS_REGEX.captures(&os) {
             ("solaris", captures.get(1).map(|m| m.as_str()))
         } else if os.contains("wasi") {
             ("wasi", None)
-        } else if let Some(captures) = Regex::new(r"^(\w+_platform)-?(\d+)?")
-            .unwrap()
-            .captures(&os)
-        {
+        } else if let Some(captures) = PLATFORM_REGEX.captures(&os) {
             (
                 captures.get(1).unwrap().as_str(),
                 captures.get(2).map(|m| m.as_str()),

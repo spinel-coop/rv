@@ -195,7 +195,7 @@ impl Specification {
 
         // Required fields
         lines.push(format!("  s.name = {:?}", self.name));
-        lines.push(format!("  s.version = {:?}", self.version.to_string()));
+        lines.push(format!("  s.version = \"{}\"", self.version));
         lines.push(format!("  s.summary = {:?}", self.summary));
 
         // Authors
