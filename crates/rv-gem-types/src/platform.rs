@@ -20,26 +20,12 @@ pub enum PlatformError {
 }
 
 impl Platform {
-    pub fn new(platform: impl Into<String>) -> Result<Self, PlatformError> {
-        let platform_str = platform.into();
-
-        match platform_str.as_str() {
+    pub fn new(platform: impl AsRef<str>) -> Result<Self, PlatformError> {
+        match platform.as_ref() {
             "ruby" | "" => Ok(Platform::Ruby),
             "current" => Ok(Platform::Current),
-            _ => Self::parse_platform_string(&platform_str),
+            str => Self::parse_platform_string(&str),
         }
-    }
-
-    pub fn from_array(parts: &[String]) -> Result<Self, PlatformError> {
-        if parts.len() > 3 {
-            return Err(PlatformError::InvalidArray);
-        }
-
-        let cpu = parts.first().cloned();
-        let os = parts.get(1).cloned().unwrap_or_default();
-        let version = parts.get(2).cloned();
-
-        Ok(Platform::Specific { cpu, os, version })
     }
 
     fn parse_platform_string(platform: &str) -> Result<Platform, PlatformError> {
@@ -141,12 +127,12 @@ impl Platform {
         })
     }
 
-    pub fn to_array(&self) -> Vec<Option<String>> {
+    pub fn to_array(&self) -> [Option<&str>; 3] {
         match self {
-            Platform::Ruby => vec![None, Some("ruby".to_string()), None],
-            Platform::Current => vec![None, Some("current".to_string()), None],
+            Platform::Ruby => [None, Some("ruby"), None],
+            Platform::Current => [None, Some("current"), None],
             Platform::Specific { cpu, os, version } => {
-                vec![cpu.clone(), Some(os.clone()), version.clone()]
+                [cpu.as_deref(), Some(os), version.as_deref()]
             }
         }
     }
@@ -347,556 +333,201 @@ mod tests {
     }
 
     #[test]
-    fn test_from_array() {
-        let platform =
-            Platform::from_array(&["x86_64".to_string(), "linux".to_string(), "gnu".to_string()])
-                .unwrap();
-
-        if let Platform::Specific { cpu, os, version } = platform {
-            assert_eq!(cpu, Some("x86_64".to_string()));
-            assert_eq!(os, "linux");
-            assert_eq!(version, Some("gnu".to_string()));
-        } else {
-            panic!("Expected Specific platform");
-        }
-    }
-
-    #[test]
     fn test_rubygems_platform_parsing() {
         // Complete test cases from RubyGems test_initialize method (lines 94-172)
         // This ensures 100% compatibility with RubyGems platform parsing
         let test_cases = vec![
             (
                 "amd64-freebsd6",
-                [
-                    Some("amd64".to_string()),
-                    Some("freebsd".to_string()),
-                    Some("6".to_string()),
-                ],
+                [Some("amd64"), Some("freebsd"), Some("6")],
             ),
-            ("java", [None, Some("java".to_string()), None]),
-            ("jruby", [None, Some("java".to_string()), None]),
+            ("java", [None, Some("java"), None]),
+            ("jruby", [None, Some("java"), None]),
             (
                 "universal-dotnet",
-                [
-                    Some("universal".to_string()),
-                    Some("dotnet".to_string()),
-                    None,
-                ],
+                [Some("universal"), Some("dotnet"), None],
             ),
             (
                 "universal-dotnet2.0",
-                [
-                    Some("universal".to_string()),
-                    Some("dotnet".to_string()),
-                    Some("2.0".to_string()),
-                ],
+                [Some("universal"), Some("dotnet"), Some("2.0")],
             ),
-            (
-                "dotnet-2.0",
-                [None, Some("dotnet".to_string()), Some("2.0".to_string())],
-            ),
+            ("dotnet-2.0", [None, Some("dotnet"), Some("2.0")]),
             (
                 "universal-dotnet4.0",
-                [
-                    Some("universal".to_string()),
-                    Some("dotnet".to_string()),
-                    Some("4.0".to_string()),
-                ],
+                [Some("universal"), Some("dotnet"), Some("4.0")],
             ),
             (
                 "powerpc-aix5.3.0.0",
-                [
-                    Some("powerpc".to_string()),
-                    Some("aix".to_string()),
-                    Some("5".to_string()),
-                ],
+                [Some("powerpc"), Some("aix"), Some("5")],
             ),
             (
                 "powerpc-darwin7",
-                [
-                    Some("powerpc".to_string()),
-                    Some("darwin".to_string()),
-                    Some("7".to_string()),
-                ],
+                [Some("powerpc"), Some("darwin"), Some("7")],
             ),
             (
                 "powerpc-darwin8",
-                [
-                    Some("powerpc".to_string()),
-                    Some("darwin".to_string()),
-                    Some("8".to_string()),
-                ],
+                [Some("powerpc"), Some("darwin"), Some("8")],
             ),
-            (
-                "powerpc-linux",
-                [Some("powerpc".to_string()), Some("linux".to_string()), None],
-            ),
-            (
-                "powerpc64-linux",
-                [
-                    Some("powerpc64".to_string()),
-                    Some("linux".to_string()),
-                    None,
-                ],
-            ),
+            ("powerpc-linux", [Some("powerpc"), Some("linux"), None]),
+            ("powerpc64-linux", [Some("powerpc64"), Some("linux"), None]),
             (
                 "sparc-solaris2.10",
-                [
-                    Some("sparc".to_string()),
-                    Some("solaris".to_string()),
-                    Some("2.10".to_string()),
-                ],
+                [Some("sparc"), Some("solaris"), Some("2.10")],
             ),
             (
                 "sparc-solaris2.8",
-                [
-                    Some("sparc".to_string()),
-                    Some("solaris".to_string()),
-                    Some("2.8".to_string()),
-                ],
+                [Some("sparc"), Some("solaris"), Some("2.8")],
             ),
             (
                 "sparc-solaris2.9",
-                [
-                    Some("sparc".to_string()),
-                    Some("solaris".to_string()),
-                    Some("2.9".to_string()),
-                ],
+                [Some("sparc"), Some("solaris"), Some("2.9")],
             ),
             (
                 "universal-darwin8",
-                [
-                    Some("universal".to_string()),
-                    Some("darwin".to_string()),
-                    Some("8".to_string()),
-                ],
+                [Some("universal"), Some("darwin"), Some("8")],
             ),
             (
                 "universal-darwin9",
-                [
-                    Some("universal".to_string()),
-                    Some("darwin".to_string()),
-                    Some("9".to_string()),
-                ],
+                [Some("universal"), Some("darwin"), Some("9")],
             ),
             (
                 "universal-macruby",
-                [
-                    Some("universal".to_string()),
-                    Some("macruby".to_string()),
-                    None,
-                ],
+                [Some("universal"), Some("macruby"), None],
             ),
-            (
-                "i386-cygwin",
-                [Some("x86".to_string()), Some("cygwin".to_string()), None],
-            ),
-            (
-                "i686-darwin",
-                [Some("x86".to_string()), Some("darwin".to_string()), None],
-            ),
-            (
-                "i686-darwin8.4.1",
-                [
-                    Some("x86".to_string()),
-                    Some("darwin".to_string()),
-                    Some("8".to_string()),
-                ],
-            ),
+            ("i386-cygwin", [Some("x86"), Some("cygwin"), None]),
+            ("i686-darwin", [Some("x86"), Some("darwin"), None]),
+            ("i686-darwin8.4.1", [Some("x86"), Some("darwin"), Some("8")]),
             (
                 "i386-freebsd4.11",
-                [
-                    Some("x86".to_string()),
-                    Some("freebsd".to_string()),
-                    Some("4".to_string()),
-                ],
+                [Some("x86"), Some("freebsd"), Some("4")],
             ),
-            (
-                "i386-freebsd5",
-                [
-                    Some("x86".to_string()),
-                    Some("freebsd".to_string()),
-                    Some("5".to_string()),
-                ],
-            ),
-            (
-                "i386-freebsd6",
-                [
-                    Some("x86".to_string()),
-                    Some("freebsd".to_string()),
-                    Some("6".to_string()),
-                ],
-            ),
-            (
-                "i386-freebsd7",
-                [
-                    Some("x86".to_string()),
-                    Some("freebsd".to_string()),
-                    Some("7".to_string()),
-                ],
-            ),
-            (
-                "i386-freebsd",
-                [Some("x86".to_string()), Some("freebsd".to_string()), None],
-            ),
+            ("i386-freebsd5", [Some("x86"), Some("freebsd"), Some("5")]),
+            ("i386-freebsd6", [Some("x86"), Some("freebsd"), Some("6")]),
+            ("i386-freebsd7", [Some("x86"), Some("freebsd"), Some("7")]),
+            ("i386-freebsd", [Some("x86"), Some("freebsd"), None]),
             (
                 "universal-freebsd",
-                [
-                    Some("universal".to_string()),
-                    Some("freebsd".to_string()),
-                    None,
-                ],
+                [Some("universal"), Some("freebsd"), None],
             ),
-            (
-                "i386-java1.5",
-                [
-                    Some("x86".to_string()),
-                    Some("java".to_string()),
-                    Some("1.5".to_string()),
-                ],
-            ),
-            (
-                "x86-java1.6",
-                [
-                    Some("x86".to_string()),
-                    Some("java".to_string()),
-                    Some("1.6".to_string()),
-                ],
-            ),
-            (
-                "i386-java1.6",
-                [
-                    Some("x86".to_string()),
-                    Some("java".to_string()),
-                    Some("1.6".to_string()),
-                ],
-            ),
-            (
-                "i686-linux",
-                [Some("x86".to_string()), Some("linux".to_string()), None],
-            ),
-            (
-                "i586-linux",
-                [Some("x86".to_string()), Some("linux".to_string()), None],
-            ),
-            (
-                "i486-linux",
-                [Some("x86".to_string()), Some("linux".to_string()), None],
-            ),
-            (
-                "i386-linux",
-                [Some("x86".to_string()), Some("linux".to_string()), None],
-            ),
-            (
-                "i586-linux-gnu",
-                [
-                    Some("x86".to_string()),
-                    Some("linux".to_string()),
-                    Some("gnu".to_string()),
-                ],
-            ),
-            (
-                "i386-linux-gnu",
-                [
-                    Some("x86".to_string()),
-                    Some("linux".to_string()),
-                    Some("gnu".to_string()),
-                ],
-            ),
-            (
-                "i386-mingw32",
-                [Some("x86".to_string()), Some("mingw32".to_string()), None],
-            ),
-            (
-                "x64-mingw-ucrt",
-                [
-                    Some("x64".to_string()),
-                    Some("mingw".to_string()),
-                    Some("ucrt".to_string()),
-                ],
-            ),
-            (
-                "i386-mswin32",
-                [Some("x86".to_string()), Some("mswin32".to_string()), None],
-            ),
+            ("i386-java1.5", [Some("x86"), Some("java"), Some("1.5")]),
+            ("x86-java1.6", [Some("x86"), Some("java"), Some("1.6")]),
+            ("i386-java1.6", [Some("x86"), Some("java"), Some("1.6")]),
+            ("i686-linux", [Some("x86"), Some("linux"), None]),
+            ("i586-linux", [Some("x86"), Some("linux"), None]),
+            ("i486-linux", [Some("x86"), Some("linux"), None]),
+            ("i386-linux", [Some("x86"), Some("linux"), None]),
+            ("i586-linux-gnu", [Some("x86"), Some("linux"), Some("gnu")]),
+            ("i386-linux-gnu", [Some("x86"), Some("linux"), Some("gnu")]),
+            ("i386-mingw32", [Some("x86"), Some("mingw32"), None]),
+            ("x64-mingw-ucrt", [Some("x64"), Some("mingw"), Some("ucrt")]),
+            ("i386-mswin32", [Some("x86"), Some("mswin32"), None]),
             (
                 "i386-mswin32_80",
-                [
-                    Some("x86".to_string()),
-                    Some("mswin32".to_string()),
-                    Some("80".to_string()),
-                ],
+                [Some("x86"), Some("mswin32"), Some("80")],
             ),
             (
                 "i386-mswin32-80",
-                [
-                    Some("x86".to_string()),
-                    Some("mswin32".to_string()),
-                    Some("80".to_string()),
-                ],
+                [Some("x86"), Some("mswin32"), Some("80")],
             ),
-            (
-                "x86-mswin32",
-                [Some("x86".to_string()), Some("mswin32".to_string()), None],
-            ),
-            (
-                "x86-mswin32_60",
-                [
-                    Some("x86".to_string()),
-                    Some("mswin32".to_string()),
-                    Some("60".to_string()),
-                ],
-            ),
-            (
-                "x86-mswin32-60",
-                [
-                    Some("x86".to_string()),
-                    Some("mswin32".to_string()),
-                    Some("60".to_string()),
-                ],
-            ),
-            (
-                "i386-netbsdelf",
-                [Some("x86".to_string()), Some("netbsdelf".to_string()), None],
-            ),
+            ("x86-mswin32", [Some("x86"), Some("mswin32"), None]),
+            ("x86-mswin32_60", [Some("x86"), Some("mswin32"), Some("60")]),
+            ("x86-mswin32-60", [Some("x86"), Some("mswin32"), Some("60")]),
+            ("i386-netbsdelf", [Some("x86"), Some("netbsdelf"), None]),
             (
                 "i386-openbsd4.0",
-                [
-                    Some("x86".to_string()),
-                    Some("openbsd".to_string()),
-                    Some("4.0".to_string()),
-                ],
+                [Some("x86"), Some("openbsd"), Some("4.0")],
             ),
             (
                 "i386-solaris2.10",
-                [
-                    Some("x86".to_string()),
-                    Some("solaris".to_string()),
-                    Some("2.10".to_string()),
-                ],
+                [Some("x86"), Some("solaris"), Some("2.10")],
             ),
             (
                 "i386-solaris2.8",
-                [
-                    Some("x86".to_string()),
-                    Some("solaris".to_string()),
-                    Some("2.8".to_string()),
-                ],
+                [Some("x86"), Some("solaris"), Some("2.8")],
             ),
-            (
-                "mswin32",
-                [Some("x86".to_string()), Some("mswin32".to_string()), None],
-            ),
-            (
-                "x86_64-linux",
-                [Some("x86_64".to_string()), Some("linux".to_string()), None],
-            ),
+            ("mswin32", [Some("x86"), Some("mswin32"), None]),
+            ("x86_64-linux", [Some("x86_64"), Some("linux"), None]),
             (
                 "x86_64-linux-gnu",
-                [
-                    Some("x86_64".to_string()),
-                    Some("linux".to_string()),
-                    Some("gnu".to_string()),
-                ],
+                [Some("x86_64"), Some("linux"), Some("gnu")],
             ),
             (
                 "x86_64-linux-musl",
-                [
-                    Some("x86_64".to_string()),
-                    Some("linux".to_string()),
-                    Some("musl".to_string()),
-                ],
+                [Some("x86_64"), Some("linux"), Some("musl")],
             ),
             (
                 "x86_64-linux-uclibc",
-                [
-                    Some("x86_64".to_string()),
-                    Some("linux".to_string()),
-                    Some("uclibc".to_string()),
-                ],
+                [Some("x86_64"), Some("linux"), Some("uclibc")],
             ),
-            (
-                "arm-linux-eabi",
-                [
-                    Some("arm".to_string()),
-                    Some("linux".to_string()),
-                    Some("eabi".to_string()),
-                ],
-            ),
+            ("arm-linux-eabi", [Some("arm"), Some("linux"), Some("eabi")]),
             (
                 "arm-linux-gnueabi",
-                [
-                    Some("arm".to_string()),
-                    Some("linux".to_string()),
-                    Some("gnueabi".to_string()),
-                ],
+                [Some("arm"), Some("linux"), Some("gnueabi")],
             ),
             (
                 "arm-linux-musleabi",
-                [
-                    Some("arm".to_string()),
-                    Some("linux".to_string()),
-                    Some("musleabi".to_string()),
-                ],
+                [Some("arm"), Some("linux"), Some("musleabi")],
             ),
             (
                 "arm-linux-uclibceabi",
-                [
-                    Some("arm".to_string()),
-                    Some("linux".to_string()),
-                    Some("uclibceabi".to_string()),
-                ],
+                [Some("arm"), Some("linux"), Some("uclibceabi")],
             ),
             (
                 "x86_64-openbsd3.9",
-                [
-                    Some("x86_64".to_string()),
-                    Some("openbsd".to_string()),
-                    Some("3.9".to_string()),
-                ],
+                [Some("x86_64"), Some("openbsd"), Some("3.9")],
             ),
             (
                 "x86_64-openbsd4.0",
-                [
-                    Some("x86_64".to_string()),
-                    Some("openbsd".to_string()),
-                    Some("4.0".to_string()),
-                ],
+                [Some("x86_64"), Some("openbsd"), Some("4.0")],
             ),
-            (
-                "x86_64-openbsd",
-                [
-                    Some("x86_64".to_string()),
-                    Some("openbsd".to_string()),
-                    None,
-                ],
-            ),
-            (
-                "wasm32-wasi",
-                [Some("wasm32".to_string()), Some("wasi".to_string()), None],
-            ),
-            (
-                "wasm32-wasip1",
-                [Some("wasm32".to_string()), Some("wasi".to_string()), None],
-            ),
-            (
-                "wasm32-wasip2",
-                [Some("wasm32".to_string()), Some("wasi".to_string()), None],
-            ),
+            ("x86_64-openbsd", [Some("x86_64"), Some("openbsd"), None]),
+            ("wasm32-wasi", [Some("wasm32"), Some("wasi"), None]),
+            ("wasm32-wasip1", [Some("wasm32"), Some("wasi"), None]),
+            ("wasm32-wasip2", [Some("wasm32"), Some("wasi"), None]),
             // Edge cases and malformed platform strings that RubyGems handles
-            (
-                "darwin-java-java",
-                [Some("darwin".to_string()), Some("java".to_string()), None],
-            ),
+            ("darwin-java-java", [Some("darwin"), Some("java"), None]),
             (
                 "linux-linux-linux",
-                [
-                    Some("linux".to_string()),
-                    Some("linux".to_string()),
-                    Some("linux".to_string()),
-                ],
+                [Some("linux"), Some("linux"), Some("linux")],
             ),
             (
                 "linux-linux-linux1.0",
-                [
-                    Some("linux".to_string()),
-                    Some("linux".to_string()),
-                    Some("linux1".to_string()),
-                ],
+                [Some("linux"), Some("linux"), Some("linux1")],
             ),
             (
                 "x86x86-1x86x86x86x861linuxx86x86",
-                [
-                    Some("x86x86".to_string()),
-                    Some("linux".to_string()),
-                    Some("x86x86".to_string()),
-                ],
+                [Some("x86x86"), Some("linux"), Some("x86x86")],
             ),
-            (
-                "freebsd0",
-                [None, Some("freebsd".to_string()), Some("0".to_string())],
-            ),
-            (
-                "darwin0",
-                [None, Some("darwin".to_string()), Some("0".to_string())],
-            ),
-            (
-                "darwin0---",
-                [None, Some("darwin".to_string()), Some("0".to_string())],
-            ),
+            ("freebsd0", [None, Some("freebsd"), Some("0")]),
+            ("darwin0", [None, Some("darwin"), Some("0")]),
+            ("darwin0---", [None, Some("darwin"), Some("0")]),
             (
                 "x86-linux-x8611.0l",
-                [
-                    Some("x86".to_string()),
-                    Some("linux".to_string()),
-                    Some("x8611".to_string()),
-                ],
+                [Some("x86"), Some("linux"), Some("x8611")],
             ),
-            (
-                "0-x86linuxx86---",
-                [
-                    Some("0".to_string()),
-                    Some("linux".to_string()),
-                    Some("x86".to_string()),
-                ],
-            ),
+            ("0-x86linuxx86---", [Some("0"), Some("linux"), Some("x86")]),
             (
                 "x86_64-macruby-x86",
-                [
-                    Some("x86_64".to_string()),
-                    Some("macruby".to_string()),
-                    None,
-                ],
+                [Some("x86_64"), Some("macruby"), None],
             ),
-            (
-                "x86_64-dotnetx86",
-                [Some("x86_64".to_string()), Some("dotnet".to_string()), None],
-            ),
+            ("x86_64-dotnetx86", [Some("x86_64"), Some("dotnet"), None]),
             (
                 "x86_64-dalvik0",
-                [
-                    Some("x86_64".to_string()),
-                    Some("dalvik".to_string()),
-                    Some("0".to_string()),
-                ],
+                [Some("x86_64"), Some("dalvik"), Some("0")],
             ),
             (
                 "x86_64-dotnet1.",
-                [
-                    Some("x86_64".to_string()),
-                    Some("dotnet".to_string()),
-                    Some("1".to_string()),
-                ],
+                [Some("x86_64"), Some("dotnet"), Some("1")],
             ),
         ];
 
         for (platform_str, expected) in test_cases {
+            // let expected = expected.map(|s| s.map(|s| s.to_string()));
             let platform = Platform::new(platform_str).unwrap();
-            let platform2 = Platform::new(platform.to_string()).unwrap();
+            assert_eq!(expected, platform.to_array());
 
-            {
-                if let Platform::Specific { cpu, os, version } = platform {
-                    assert_eq!(
-                        [cpu, Some(os), version],
-                        expected,
-                        "Failed for platform: {platform_str}"
-                    );
-                } else {
-                    panic!("Expected Specific platform for: {platform_str}");
-                }
-            }
-            {
-                if let Platform::Specific { cpu, os, version } = platform2 {
-                    assert_eq!(
-                        [cpu, Some(os), version],
-                        expected,
-                        "Failed for platform: {platform_str}"
-                    );
-                } else {
-                    panic!("Expected Specific platform for: {platform_str}");
-                }
-            }
+            let platform2 = Platform::new(platform.to_string()).unwrap();
+            assert_eq!(expected, platform2.to_array());
         }
     }
 
