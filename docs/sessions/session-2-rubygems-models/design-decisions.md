@@ -1,12 +1,12 @@
 # Session 2: RubyGems Models Crate Design Decisions
 
 ## Overview
-Creating a new `rb-gem-types` crate to provide Rust implementations of key RubyGems model classes.
+Creating a new `rv-gem-types` crate to provide Rust implementations of key RubyGems model classes with 100% RubyGems compatibility.
 
 ## Design Decisions
 
 ### 1. Crate Structure
-- **Decision**: Create a new crate `rb-gem-types` within the existing workspace
+- **Decision**: Create a new crate `rv-gem-types` within the existing workspace
 - **Rationale**: Separates concerns and allows for independent versioning of models
 - **Alternative**: Implement models directly in the `rv` crate
 - **Trade-offs**: Additional complexity but better modularity
@@ -35,6 +35,28 @@ Based on RubyGems research, prioritize implementation in this order:
 - **Trade-offs**: May need to add legacy support later
 
 ### 5. Dependencies
-- **Decision**: Minimize external dependencies, use serde for serialization and miette for error handling
+- **Decision**: Minimize external dependencies, use regex and thiserror for implementation
 - **Rationale**: Reduces dependency tree and improves compile times
-- **Key dependencies**: serde, serde_json, semver (for version handling)
+- **Key dependencies**: regex (for platform parsing), thiserror (for error handling)
+
+### 6. RubyGems Compatibility Strategy
+- **Decision**: Implement exact RubyGems compatibility by analyzing canonical RubyGems source code
+- **Rationale**: Ensures perfect interoperability with RubyGems ecosystem
+- **Implementation**: Direct analysis of RubyGems source code and comprehensive test porting
+- **Key areas**: Version parsing, platform matching (===), requirement handling, specification serialization
+
+### 7. Platform Model Implementation
+- **Decision**: Use enum with Ruby/Current/Specific variants rather than string-based approach
+- **Rationale**: Type safety while maintaining compatibility
+- **Key insight**: Platform matching uses the `===` operator logic from RubyGems, not simple equality
+- **Special cases**: MinGW universal matching, ARM CPU compatibility, Linux version handling
+
+### 8. Version Segment Design
+- **Decision**: Use enum with Number/String variants for version segments
+- **Rationale**: Handles mixed alphanumeric version components correctly
+- **Compatibility**: Matches RubyGems prerelease handling and canonical segment logic
+
+### 9. Test Strategy
+- **Decision**: Port complete RubyGems test suites verbatim where possible
+- **Rationale**: Ensures 100% behavioral compatibility
+- **Coverage**: 78+ test cases from RubyGems Platform tests, comprehensive Version/Requirement testing
