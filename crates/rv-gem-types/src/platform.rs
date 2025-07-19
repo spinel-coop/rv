@@ -73,10 +73,10 @@ impl Platform {
             Some(cpu)
         };
 
-        let (mut cpu, os) = if os.is_none() {
-            (None, Cow::from(cpu.unwrap()))
+        let (mut cpu, os) = if let Some(os) = os {
+            (cpu, os)
         } else {
-            (cpu, os.unwrap())
+            (None, Cow::from(cpu.unwrap()))
         };
 
         let (os, version) = if let Some(captures) = Regex::new(r"aix-?(\d)?").unwrap().captures(&os)
