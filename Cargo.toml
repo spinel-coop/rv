@@ -1,3 +1,7 @@
 [workspace]
-members = ["crates/rv", "crates/rv-gem-types"]
+members = [
+  "crates/rv",
+  "crates/rv-gem-specification-yaml",
+  "crates/rv-gem-types",
+]
 resolver = "2"

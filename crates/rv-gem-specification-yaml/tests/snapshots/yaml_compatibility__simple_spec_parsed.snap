@@ -1,0 +1,95 @@
+---
+source: crates/rv-gem-specification-yaml/tests/yaml_compatibility.rs
+expression: spec
+---
+Specification {
+    name: "simple-gem",
+    version: Version {
+        version: "1.0.0",
+        segments: [
+            Number(
+                1,
+            ),
+            Number(
+                0,
+            ),
+            Number(
+                0,
+            ),
+        ],
+    },
+    summary: "A simple gem for testing",
+    require_paths: [
+        "lib",
+    ],
+    rubygems_version: "3.4.20",
+    specification_version: 4,
+    date: "",
+    authors: [
+        "Test Author",
+    ],
+    email: [
+        "test@example.com",
+    ],
+    homepage: Some(
+        "https://example.com/simple-gem",
+    ),
+    description: Some(
+        "This is a simple gem specification for testing YAML serialization",
+    ),
+    licenses: [
+        "MIT",
+    ],
+    files: [],
+    executables: [],
+    extensions: [],
+    dependencies: [],
+    metadata: {},
+    platform: Ruby,
+    bindir: "bin",
+    post_install_message: None,
+    requirements: [],
+    required_ruby_version: Requirement {
+        constraints: [
+            VersionConstraint {
+                operator: GreaterEqual,
+                version: Version {
+                    version: "2.7.0",
+                    segments: [
+                        Number(
+                            2,
+                        ),
+                        Number(
+                            7,
+                        ),
+                        Number(
+                            0,
+                        ),
+                    ],
+                },
+            },
+        ],
+    },
+    required_rubygems_version: Requirement {
+        constraints: [
+            VersionConstraint {
+                operator: GreaterEqual,
+                version: Version {
+                    version: "0",
+                    segments: [
+                        Number(
+                            0,
+                        ),
+                    ],
+                },
+            },
+        ],
+    },
+    test_files: [],
+    extra_rdoc_files: [],
+    rdoc_options: [],
+    cert_chain: [],
+    signing_key: None,
+    autorequire: None,
+    installed_by_version: None,
+}

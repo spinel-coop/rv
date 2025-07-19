@@ -1,0 +1,120 @@
+---
+source: crates/rv-gem-specification-yaml/tests/round_trip.rs
+expression: round_trip_yaml
+---
+---
+!ruby/object:Gem::Specification 
+name: complex-gem
+version: !ruby/object:Gem::Version 
+  version: 2.1.3
+platform: ruby
+authors:
+  - Author One
+  - Author Two
+autorequire: ~
+bindir: bin
+cert_chain: []
+date: ~
+dependencies:
+  - !ruby/object:Gem::Dependency 
+    name: json
+    requirement: !ruby/object:Gem::Requirement 
+      requirements:
+        - - ~>
+          - !ruby/object:Gem::Version 
+            version: "2.0"
+    type: ":runtime"
+    prerelease: false
+    version_requirements: !ruby/object:Gem::Requirement 
+      requirements:
+        - - ~>
+          - !ruby/object:Gem::Version 
+            version: "2.0"
+  - !ruby/object:Gem::Dependency 
+    name: nokogiri
+    requirement: !ruby/object:Gem::Requirement 
+      requirements:
+        - - ">="
+          - !ruby/object:Gem::Version 
+            version: 1.10.0
+        - - "<"
+          - !ruby/object:Gem::Version 
+            version: "2.0"
+    type: ":runtime"
+    prerelease: false
+    version_requirements: !ruby/object:Gem::Requirement 
+      requirements:
+        - - ">="
+          - !ruby/object:Gem::Version 
+            version: 1.10.0
+        - - "<"
+          - !ruby/object:Gem::Version 
+            version: "2.0"
+  - !ruby/object:Gem::Dependency 
+    name: rspec
+    requirement: !ruby/object:Gem::Requirement 
+      requirements:
+        - - ~>
+          - !ruby/object:Gem::Version 
+            version: "3.0"
+    type: ":development"
+    prerelease: false
+    version_requirements: !ruby/object:Gem::Requirement 
+      requirements:
+        - - ~>
+          - !ruby/object:Gem::Version 
+            version: "3.0"
+  - !ruby/object:Gem::Dependency 
+    name: rake
+    requirement: !ruby/object:Gem::Requirement 
+      requirements:
+        - - ">="
+          - !ruby/object:Gem::Version 
+            version: "12.0"
+    type: ":development"
+    prerelease: false
+    version_requirements: !ruby/object:Gem::Requirement 
+      requirements:
+        - - ">="
+          - !ruby/object:Gem::Version 
+            version: "12.0"
+description: This gem has multiple dependencies and complex metadata
+email:
+  - author1@example.com
+  - author2@example.com
+executables:
+  - complex-gem
+extensions: []
+extra_rdoc_files: []
+files:
+  - lib/complex_gem.rb
+  - lib/complex_gem/version.rb
+  - README.md
+homepage: "https://github.com/example/complex-gem"
+licenses:
+  - Apache-2.0
+metadata:
+  bug_tracker_uri: "https://github.com/example/complex-gem/issues"
+  changelog_uri: "https://github.com/example/complex-gem/blob/main/CHANGELOG.md"
+  documentation_uri: "https://rubydoc.info/gems/complex-gem"
+  source_code_uri: "https://github.com/example/complex-gem"
+post_install_message: ~
+rdoc_options: []
+require_paths:
+  - lib
+required_ruby_version: !ruby/object:Gem::Requirement 
+  requirements:
+    - - ">="
+      - !ruby/object:Gem::Version 
+        version: 3.0.0
+required_rubygems_version: !ruby/object:Gem::Requirement 
+  requirements:
+    - - ">="
+      - !ruby/object:Gem::Version 
+        version: 3.0.0
+requirements: []
+rubygems_version: 3.4.20
+signing_key: ~
+specification_version: 4
+summary: A complex gem with dependencies
+test_files: []

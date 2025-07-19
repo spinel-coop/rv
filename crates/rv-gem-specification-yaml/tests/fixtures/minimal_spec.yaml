@@ -1,0 +1,41 @@
+--- !ruby/object:Gem::Specification
+name: minimal-gem
+version: !ruby/object:Gem::Version
+  version: 1.0.0
+platform: ruby
+authors:
+- Minimal Author
+autorequire:
+bindir: bin
+cert_chain: []
+date:
+dependencies: []
+description:
+email:
+executables: []
+extensions: []
+extra_rdoc_files: []
+files: []
+homepage:
+licenses: []
+metadata: {}
+post_install_message:
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 3.4.20
+signing_key:
+specification_version: 4
+summary: Minimal gem specification
+test_files: []

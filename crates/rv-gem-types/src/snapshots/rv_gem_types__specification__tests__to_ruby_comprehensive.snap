@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
   s.version = "2.1.0"
   s.summary = "A comprehensive test gem"
   s.authors = ["Test Author", "Second Author"]
-  s.email = "test@example.com"
+  s.email = ["test@example.com"]
   s.description = "This is a longer description of the test gem"
   s.homepage = "https://example.com"
   s.licenses = ["MIT", "Apache-2.0"]

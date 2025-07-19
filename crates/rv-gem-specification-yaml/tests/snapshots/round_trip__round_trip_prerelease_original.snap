@@ -1,0 +1,80 @@
+---
+source: crates/rv-gem-specification-yaml/tests/round_trip.rs
+expression: original_yaml
+---
+--- !ruby/object:Gem::Specification
+name: prerelease-gem
+version: !ruby/object:Gem::Version
+  version: 2.0.0.alpha1
+platform: ruby
+authors:
+- Alpha Developer
+autorequire:
+bindir: bin
+cert_chain: []
+date:
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: rspec
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '3.10'
+  type: :development
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '3.10'
+- !ruby/object:Gem::Dependency
+  name: activesupport
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '5.0'
+    - - "<"
+      - !ruby/object:Gem::Version
+        version: '8.0'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '5.0'
+    - - "<"
+      - !ruby/object:Gem::Version
+        version: '8.0'
+description:
+email:
+executables: []
+extensions: []
+extra_rdoc_files: []
+files:
+- lib/prerelease.rb
+homepage:
+licenses: []
+metadata: {}
+post_install_message:
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">"
+    - !ruby/object:Gem::Version
+      version: 1.3.1
+requirements: []
+rubygems_version: 3.4.20
+signing_key:
+specification_version: 4
+summary: A prerelease gem
+test_files: []

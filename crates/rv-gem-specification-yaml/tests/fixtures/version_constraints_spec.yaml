@@ -1,0 +1,109 @@
+--- !ruby/object:Gem::Specification
+name: version-constraints-gem
+version: !ruby/object:Gem::Version
+  version: 0.1.0.pre.alpha
+platform: ruby
+authors:
+- Version Tester
+autorequire:
+bindir: bin
+cert_chain: []
+date:
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: rails
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '6.0'
+    - - "<"
+      - !ruby/object:Gem::Version
+        version: '8.0'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '6.0'
+    - - "<"
+      - !ruby/object:Gem::Version
+        version: '8.0'
+- !ruby/object:Gem::Dependency
+  name: pg
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '1.1'
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 1.1.4
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '1.1'
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 1.1.4
+- !ruby/object:Gem::Dependency
+  name: rspec-rails
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '5.0'
+  type: :development
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '5.0'
+- !ruby/object:Gem::Dependency
+  name: factory_bot
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - "!="
+      - !ruby/object:Gem::Version
+        version: 6.0.0
+  type: :development
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - "!="
+      - !ruby/object:Gem::Version
+        version: 6.0.0
+description:
+email: version@example.com
+executables: []
+extensions: []
+extra_rdoc_files: []
+files: []
+homepage:
+licenses: []
+metadata: {}
+post_install_message:
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">"
+    - !ruby/object:Gem::Version
+      version: 1.3.1
+requirements: []
+rubygems_version: 3.4.20
+signing_key:
+specification_version: 4
+summary: Testing various version constraints
+test_files: []

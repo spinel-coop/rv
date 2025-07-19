@@ -1,0 +1,23 @@
+[package]
+name = "rv-gem-specification-yaml"
+version = "0.1.0"
+edition = "2021"
+description = "YAML serialization/deserialization for Gem::Specification with Ruby compatibility"
+repository = "https://github.com/spinel-sh/rv"
+
+[dependencies]
+rv-gem-types = { path = "../rv-gem-types" }
+saphyr = "0.0.6"
+saphyr-parser = "0.0.6"
+winnow = "0.6"
+thiserror = "1.0"
+indexmap = "2.0"
+miette = "7.0"
+
+[dev-dependencies]
+insta = "1.38"
+pretty_assertions = { version = "1.4.1", features = ["unstable"] }
+miette = { version = "*", features = ["fancy"] }
+
+[[example]]
+name = "parse_gem_spec"

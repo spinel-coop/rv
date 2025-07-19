@@ -1,5 +1,5 @@
 use crate::{Dependency, DependencyType, Platform, Requirement, Version};
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Specification {
@@ -14,7 +14,7 @@ pub struct Specification {
 
     // Optional fields with defaults
     pub authors: Vec<String>,
-    pub email: Option<String>,
+    pub email: Vec<String>,
     pub homepage: Option<String>,
     pub description: Option<String>,
     pub licenses: Vec<String>,
@@ -22,7 +22,7 @@ pub struct Specification {
     pub executables: Vec<String>,
     pub extensions: Vec<String>,
     pub dependencies: Vec<Dependency>,
-    pub metadata: HashMap<String, String>,
+    pub metadata: IndexMap<String, String>,
     pub platform: Platform,
     pub bindir: String,
     pub post_install_message: Option<String>,
@@ -52,7 +52,7 @@ impl Specification {
             rubygems_version: "3.0.0".to_string(),
             specification_version: 4,
             authors: Vec::new(),
-            email: None,
+            email: Vec::new(),
             homepage: None,
             description: None,
             licenses: Vec::new(),
@@ -60,7 +60,7 @@ impl Specification {
             executables: Vec::new(),
             extensions: Vec::new(),
             dependencies: Vec::new(),
-            metadata: HashMap::new(),
+            metadata: IndexMap::new(),
             platform: Platform::Ruby,
             bindir: "bin".to_string(),
             post_install_message: None,
@@ -204,8 +204,8 @@ impl Specification {
         }
 
         // Email
-        if let Some(email) = &self.email {
-            lines.push(format!("  s.email = {email:?}"));
+        if !self.email.is_empty() {
+            lines.push(format!("  s.email = {:?}", self.email));
         }
 
         // Description
@@ -345,8 +345,8 @@ impl Specification {
         self
     }
 
-    pub fn with_email(mut self, email: String) -> Self {
-        self.email = Some(email);
+    pub fn with_email(mut self, email: Vec<String>) -> Self {
+        self.email = email;
         self
     }
 
@@ -419,14 +419,14 @@ mod tests {
             .with_summary("A test gem".to_string())
             .with_description("A longer description".to_string())
             .with_authors(vec!["Test Author".to_string()])
-            .with_email("test@example.com".to_string())
+            .with_email(vec!["test@example.com".into()])
             .with_homepage("https://example.com".to_string())
             .with_license("MIT".to_string());
 
         assert_eq!(spec.summary, "A test gem");
         assert_eq!(spec.description, Some("A longer description".to_string()));
         assert_eq!(spec.authors, vec!["Test Author"]);
-        assert_eq!(spec.email, Some("test@example.com".to_string()));
+        assert_eq!(spec.email, vec!["test@example.com"]);
         assert_eq!(spec.homepage, Some("https://example.com".to_string()));
         assert_eq!(spec.licenses, vec!["MIT"]);
     }
@@ -540,7 +540,7 @@ mod tests {
         .with_summary("A comprehensive test gem".to_string())
         .with_description("This is a longer description of the test gem".to_string())
         .with_authors(vec!["Test Author".to_string(), "Second Author".to_string()])
-        .with_email("test@example.com".to_string())
+        .with_email(vec!["test@example.com".into()])
         .with_homepage("https://example.com".to_string())
         .with_licenses(vec!["MIT".to_string(), "Apache-2.0".to_string()])
         .with_files(vec!["lib/test.rb".to_string(), "README.md".to_string()])
