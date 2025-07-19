@@ -24,8 +24,32 @@ impl Platform {
         match platform.as_ref() {
             "ruby" | "" => Ok(Platform::Ruby),
             "current" => Ok(Platform::Current),
-            str => Self::parse_platform_string(&str),
+            str => Self::parse_platform_string(str),
         }
+    }
+
+    pub fn ruby() -> Self {
+        Platform::Ruby
+    }
+
+    pub fn java() -> Self {
+        Self::new("java").unwrap()
+    }
+
+    pub fn mswin() -> Self {
+        Self::new("mswin32").unwrap()
+    }
+
+    pub fn mswin64() -> Self {
+        Self::new("mswin64").unwrap()
+    }
+
+    pub fn universal_mingw() -> Self {
+        Self::new("universal-mingw").unwrap()
+    }
+
+    pub fn windows() -> Vec<Self> {
+        vec![Self::mswin(), Self::mswin64(), Self::universal_mingw()]
     }
 
     fn parse_platform_string(platform: &str) -> Result<Platform, PlatformError> {
@@ -45,7 +69,7 @@ impl Platform {
             Some(cpu)
         };
 
-        let (mut cpu, os) = if os == None {
+        let (mut cpu, os) = if os.is_none() {
             (None, Cow::from(cpu.unwrap()))
         } else {
             (cpu, os.unwrap())
@@ -153,40 +177,54 @@ impl Platform {
                     version: version2,
                 },
             ) => {
-                self.cpu_matches(cpu1, cpu2)
-                    && os1 == os2
-                    && self.version_matches(os1, version1, version2)
+                // Special mingw universal matching (like RubyGems line 202-203)
+                if (cpu1.as_deref() == Some("universal") || cpu2.as_deref() == Some("universal"))
+                    && os1.starts_with("mingw")
+                    && os2.starts_with("mingw")
+                {
+                    return true;
+                }
+
+                // CPU matching logic (like RubyGems lines 206-207)
+                let cpu_compatible = cpu1.is_none()
+                    || cpu2.is_none()
+                    || cpu1.as_deref() == Some("universal")
+                    || cpu2.as_deref() == Some("universal")
+                    || cpu1 == cpu2
+                    || (cpu1.as_deref() == Some("arm")
+                        && cpu2.as_ref().is_some_and(|c| c.starts_with("armv")));
+
+                // OS matching (like RubyGems line 210)
+                let os_compatible = os1 == os2;
+
+                // Version matching (like RubyGems lines 213-217)
+                let version_compatible = if os1 != "linux" {
+                    // For non-Linux platforms, nil version matches any version
+                    version1.is_none() || version2.is_none() || version1 == version2
+                } else {
+                    // For Linux platforms, nil version matches any version (unversioned matches versioned libc)
+                    version1.is_none() || version2.is_none() || version1 == version2
+                    // TODO: Add musl variant matching if needed
+                };
+
+                cpu_compatible && os_compatible && version_compatible
             }
             _ => false,
         }
     }
 
-    fn cpu_matches(&self, cpu1: &Option<String>, cpu2: &Option<String>) -> bool {
-        match (cpu1, cpu2) {
-            (None, _) | (_, None) => true,
-            (Some(c1), Some(c2)) if c1 == "universal" || c2 == "universal" => true,
-            (Some(c1), Some(c2)) if c1 == c2 => true,
-            (Some(c1), Some(c2)) if c1 == "arm" && c2.starts_with("armv") => true,
-            _ => false,
-        }
-    }
-
-    fn version_matches(
-        &self,
-        os: &str,
-        version1: &Option<String>,
-        version2: &Option<String>,
-    ) -> bool {
-        match (version1, version2) {
-            // For non-Linux platforms, any None version matches
-            (None, _) | (_, None) if os != "linux" => true,
-            // For Linux platforms, None version matches any version (unversioned matches versioned)
-            (None, _) if os == "linux" => true,
-            // For Linux platforms with both versions, they need to match exactly
-            (Some(v1), Some(v2)) if os == "linux" => v1 == v2,
-            // For all other platforms, versions must match exactly
-            (Some(v1), Some(v2)) => v1 == v2,
-            _ => false,
+    pub fn generic(&self) -> Self {
+        match self {
+            Platform::Current => unimplemented!(),
+            Platform::Ruby => Platform::Ruby,
+            Platform::Specific { .. } => {
+                let mut generics = Self::windows();
+                generics.insert(0, Self::java());
+                generics
+                    .into_iter()
+                    .find(|generic| self.matches(generic))
+                    .unwrap_or(Platform::Ruby)
+            }
         }
     }
 }
@@ -791,5 +829,76 @@ mod tests {
                 panic!("Expected Specific platform for edge case: {platform_str}");
             }
         }
+    }
+
+    #[test]
+    fn test_platform_generic() {
+        // Test cases from test_generic in RubyGems test_gem_platform.rb
+
+        // Non-Windows platforms should convert to ruby
+        assert_eq!(
+            Platform::new("x86-darwin-10").unwrap().generic(),
+            Platform::ruby()
+        );
+        assert_eq!(Platform::ruby().generic(), Platform::ruby());
+        assert_eq!(
+            Platform::new("unknown").unwrap().generic(),
+            Platform::ruby()
+        );
+
+        // Java platform variants should convert to java
+        assert_eq!(Platform::new("java").unwrap().generic(), Platform::java());
+        assert_eq!(
+            Platform::new("universal-java-17").unwrap().generic(),
+            Platform::java()
+        );
+
+        // MSWin platform variants should convert to mswin32
+        assert_eq!(
+            Platform::new("mswin32").unwrap().generic(),
+            Platform::mswin()
+        );
+        assert_eq!(
+            Platform::new("i386-mswin32").unwrap().generic(),
+            Platform::mswin()
+        );
+        assert_eq!(
+            Platform::new("x86-mswin32").unwrap().generic(),
+            Platform::mswin()
+        );
+
+        // MSWin64 platform variants should convert to mswin64
+        assert_eq!(
+            Platform::new("mswin64").unwrap().generic(),
+            Platform::mswin64()
+        );
+
+        // 32-bit MinGW platform variants should convert to universal-mingw
+        assert_eq!(
+            Platform::new("i386-mingw32").unwrap().generic(),
+            Platform::universal_mingw()
+        );
+        assert_eq!(
+            Platform::new("x86-mingw32").unwrap().generic(),
+            Platform::universal_mingw()
+        );
+
+        // 64-bit MinGW platform variants should convert to universal-mingw
+        assert_eq!(
+            Platform::new("x64-mingw32").unwrap().generic(),
+            Platform::universal_mingw()
+        );
+
+        // x64 MinGW UCRT platform variants should convert to universal-mingw
+        assert_eq!(
+            Platform::new("x64-mingw-ucrt").unwrap().generic(),
+            Platform::universal_mingw()
+        );
+
+        // aarch64 MinGW UCRT platform variants should convert to universal-mingw
+        assert_eq!(
+            Platform::new("aarch64-mingw-ucrt").unwrap().generic(),
+            Platform::universal_mingw()
+        );
     }
 }
