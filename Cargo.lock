@@ -1098,6 +1098,7 @@ dependencies = [
  "either",
  "insta",
  "miette",
+ "regex",
  "thiserror 1.0.69",
 ]
 

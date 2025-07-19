@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{borrow::Cow, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Platform {
@@ -43,215 +43,102 @@ impl Platform {
     }
 
     fn parse_platform_string(platform: &str) -> Result<Platform, PlatformError> {
+        use regex::Regex;
+
         let platform = platform.trim_end_matches('-');
-        let parts: Vec<&str> = platform.split('-').collect();
+        let parts: Vec<&str> = platform.splitn(2, '-').collect();
+        let cpu = parts[0];
+        let mut os = parts.get(1).map(|os| Cow::from(*os));
 
-        if parts.is_empty() {
-            return Err(PlatformError::InvalidPlatform {
-                platform: platform.to_string(),
-            });
-        }
-
-        let (cpu, os_string) = if parts.len() == 1 {
-            // Single part - treat as OS (legacy jruby case)
-            (None, parts[0].to_string())
-        } else {
-            let cpu_part = parts[0];
-            let os_part = parts[1..].join("-");
-
-            // Handle special CPU cases
-            let cpu = if cpu_part.starts_with('i')
-                && cpu_part.len() == 4
-                && cpu_part.chars().skip(1).all(|c| c.is_ascii_digit())
-            {
-                Some("x86".to_string())
-            } else if cpu_part == "dotnet" {
-                None
-            } else {
-                Some(cpu_part.to_string())
-            };
-
-            let os = if cpu_part == "dotnet" {
-                format!("dotnet-{os_part}")
-            } else {
-                os_part
-            };
-
-            (cpu, os)
-        };
-
-        let (parsed_os, version) = Self::parse_os_and_version(&os_string);
-
-        // Special case: if OS is "java", ignore any version for compatibility with RubyGems edge cases
-        let final_version = if parsed_os == "java" && version == Some("java".to_string()) {
+        let cpu = if Regex::new("i\\d86").unwrap().is_match(cpu) {
+            Some("x86")
+        } else if cpu == "dotnet" {
+            os = Some(format!("dotnet-{}", os.unwrap_or(std::borrow::Cow::Borrowed(""))).into());
             None
         } else {
-            version
+            Some(cpu)
         };
 
-        // Special case: set CPU to x86 for mswin32 when CPU is None
-        let final_cpu = if cpu.is_none() && parsed_os.ends_with("32") {
-            Some("x86".to_string())
+        let (mut cpu, os) = if os == None {
+            (None, Cow::from(cpu.unwrap()))
         } else {
-            cpu
+            (cpu, os.unwrap())
+        };
+
+        let (os, version) = if let Some(captures) = Regex::new(r"aix-?(\d)?").unwrap().captures(&os)
+        {
+            ("aix", captures.get(1).map(|m| m.as_str()))
+        } else if os.contains("cygwin") {
+            ("cygwin", None)
+        } else if let Some(captures) = Regex::new(r"darwin-?(\d)?").unwrap().captures(&os) {
+            ("darwin", captures.get(1).map(|m| m.as_str()))
+        } else if os == "macruby" {
+            ("macruby", None)
+        } else if let Some(captures) = Regex::new(r"^macruby-?(\d+(?:\.\d+)*)?")
+            .unwrap()
+            .captures(&os)
+        {
+            ("macruby", captures.get(1).map(|m| m.as_str()))
+        } else if let Some(captures) = Regex::new(r"freebsd-?(\d+)?").unwrap().captures(&os) {
+            ("freebsd", captures.get(1).map(|m| m.as_str()))
+        } else if os == "java" || os == "jruby" {
+            ("java", None)
+        } else if let Some(captures) = Regex::new(r"^java-?(\d+(?:\.\d+)*)?")
+            .unwrap()
+            .captures(&os)
+        {
+            ("java", captures.get(1).map(|m| m.as_str()))
+        } else if let Some(captures) = Regex::new(r"^dalvik-?(\d+)?$").unwrap().captures(&os) {
+            ("dalvik", captures.get(1).map(|m| m.as_str()))
+        } else if os == "dotnet" {
+            ("dotnet", None)
+        } else if let Some(captures) = Regex::new(r"^dotnet-?(\d+(?:\.\d+)*)?")
+            .unwrap()
+            .captures(&os)
+        {
+            ("dotnet", captures.get(1).map(|m| m.as_str()))
+        } else if let Some(captures) = Regex::new(r"linux-?(\w+)?").unwrap().captures(&os) {
+            ("linux", captures.get(1).map(|m| m.as_str()))
+        } else if os.contains("mingw32") {
+            ("mingw32", None)
+        } else if let Some(captures) = Regex::new(r"mingw-?(\w+)?").unwrap().captures(&os) {
+            ("mingw", captures.get(1).map(|m| m.as_str()))
+        } else if let Some(captures) = Regex::new(r"(mswin\d+)(?:[_-](\d+))?")
+            .unwrap()
+            .captures(&os)
+        {
+            let os = captures.get(1).unwrap().as_str();
+
+            if cpu.is_none() && os.ends_with("32") {
+                cpu = Some("x86");
+            }
+
+            (os, captures.get(2).map(|m| m.as_str()))
+        } else if os.contains("netbsdelf") {
+            ("netbsdelf", None)
+        } else if let Some(captures) = Regex::new(r"openbsd-?(\d+\.\d+)?").unwrap().captures(&os) {
+            ("openbsd", captures.get(1).map(|m| m.as_str()))
+        } else if let Some(captures) = Regex::new(r"solaris-?(\d+\.\d+)?").unwrap().captures(&os) {
+            ("solaris", captures.get(1).map(|m| m.as_str()))
+        } else if os.contains("wasi") {
+            ("wasi", None)
+        } else if let Some(captures) = Regex::new(r"^(\w+_platform)-?(\d+)?")
+            .unwrap()
+            .captures(&os)
+        {
+            (
+                captures.get(1).unwrap().as_str(),
+                captures.get(2).map(|m| m.as_str()),
+            )
+        } else {
+            ("unknown", None)
         };
 
         Ok(Platform::Specific {
-            cpu: final_cpu,
-            os: parsed_os,
-            version: final_version,
+            cpu: cpu.map(str::to_string),
+            os: os.to_string(),
+            version: version.map(str::to_string),
         })
-    }
-
-    fn parse_os_and_version(os: &str) -> (String, Option<String>) {
-        // Handle various OS patterns based on rubygems logic
-        match os {
-            s if s.starts_with("aix") => {
-                let version_part = s.strip_prefix("aix").unwrap();
-                let version = if version_part.is_empty() {
-                    None
-                } else if version_part.starts_with('-') {
-                    Some(version_part.strip_prefix('-').unwrap().to_string())
-                } else {
-                    Some(version_part.to_string())
-                };
-                ("aix".to_string(), version)
-            }
-            s if s.starts_with("cygwin") => ("cygwin".to_string(), None),
-            s if s.starts_with("darwin") => {
-                let version_part = s.strip_prefix("darwin").unwrap();
-                let version = if version_part.is_empty() {
-                    None
-                } else if version_part.starts_with('-') {
-                    Some(version_part.strip_prefix('-').unwrap().to_string())
-                } else {
-                    Some(version_part.to_string())
-                };
-                ("darwin".to_string(), version)
-            }
-            "macruby" => ("macruby".to_string(), None),
-            s if s.starts_with("macruby") => {
-                let version = s
-                    .strip_prefix("macruby")
-                    .and_then(|v| v.strip_prefix('-'))
-                    .map(|v| v.to_string());
-                ("macruby".to_string(), version)
-            }
-            s if s.starts_with("freebsd") => {
-                let version_part = s.strip_prefix("freebsd").unwrap();
-                let version = if version_part.is_empty() {
-                    None
-                } else if version_part.starts_with('-') {
-                    Some(version_part.strip_prefix('-').unwrap().to_string())
-                } else {
-                    Some(version_part.to_string())
-                };
-                ("freebsd".to_string(), version)
-            }
-            "java" | "jruby" => ("java".to_string(), None),
-            s if s.starts_with("java") => {
-                let version_part = s.strip_prefix("java").unwrap();
-                let version = if version_part.is_empty() {
-                    None
-                } else if version_part.starts_with('-') {
-                    Some(version_part.strip_prefix('-').unwrap().to_string())
-                } else {
-                    Some(version_part.to_string())
-                };
-                ("java".to_string(), version)
-            }
-            s if s.starts_with("dalvik") => {
-                let version = s
-                    .strip_prefix("dalvik")
-                    .and_then(|v| v.strip_prefix('-'))
-                    .map(|v| v.to_string());
-                ("dalvik".to_string(), version)
-            }
-            "dotnet" => ("dotnet".to_string(), None),
-            s if s.starts_with("dotnet") => {
-                let version_part = s.strip_prefix("dotnet").unwrap();
-                let version = if version_part.is_empty() {
-                    None
-                } else if version_part.starts_with('-') {
-                    Some(version_part.strip_prefix('-').unwrap().to_string())
-                } else {
-                    Some(version_part.to_string())
-                };
-                ("dotnet".to_string(), version)
-            }
-            s if s.starts_with("linux") => {
-                let version = s
-                    .strip_prefix("linux")
-                    .and_then(|v| v.strip_prefix('-'))
-                    .map(|v| v.to_string());
-                ("linux".to_string(), version)
-            }
-            "mingw32" => ("mingw32".to_string(), None),
-            s if s.starts_with("mingw") => {
-                let version = s
-                    .strip_prefix("mingw")
-                    .and_then(|v| v.strip_prefix('-'))
-                    .map(|v| v.to_string());
-                ("mingw".to_string(), version)
-            }
-            s if s.starts_with("mswin") => {
-                // Handle mswin32_80 or mswin32-80 patterns
-                if let Some(underscore_pos) = s.find('_') {
-                    let os_part = &s[..underscore_pos];
-                    let version_part = &s[underscore_pos + 1..];
-                    (os_part.to_string(), Some(version_part.to_string()))
-                } else if let Some(dash_pos) = s.find('-') {
-                    let os_part = &s[..dash_pos];
-                    let version_part = &s[dash_pos + 1..];
-                    (os_part.to_string(), Some(version_part.to_string()))
-                } else {
-                    (s.to_string(), None)
-                }
-            }
-            "netbsdelf" => ("netbsdelf".to_string(), None),
-            s if s.starts_with("netbsd") => {
-                let version_part = s.strip_prefix("netbsd").unwrap();
-                let version = if version_part.is_empty() {
-                    None
-                } else if version_part.starts_with('-') {
-                    Some(version_part.strip_prefix('-').unwrap().to_string())
-                } else {
-                    Some(version_part.to_string())
-                };
-                ("netbsd".to_string(), version)
-            }
-            s if s.starts_with("openbsd") => {
-                let version_part = s.strip_prefix("openbsd").unwrap();
-                let version = if version_part.is_empty() {
-                    None
-                } else if version_part.starts_with('-') {
-                    Some(version_part.strip_prefix('-').unwrap().to_string())
-                } else {
-                    Some(version_part.to_string())
-                };
-                ("openbsd".to_string(), version)
-            }
-            s if s.starts_with("solaris") => {
-                let version_part = s.strip_prefix("solaris").unwrap();
-                let version = if version_part.is_empty() {
-                    None
-                } else if version_part.starts_with('-') {
-                    Some(version_part.strip_prefix('-').unwrap().to_string())
-                } else {
-                    Some(version_part.to_string())
-                };
-                ("solaris".to_string(), version)
-            }
-            s if s.starts_with("wasi") => ("wasi".to_string(), None),
-            s if s.starts_with("android") => {
-                let version = s
-                    .strip_prefix("android")
-                    .and_then(|v| v.strip_prefix('-'))
-                    .map(|v| v.to_string());
-                ("android".to_string(), version)
-            }
-            _ => (os.to_string(), None),
-        }
     }
 
     pub fn to_array(&self) -> Vec<Option<String>> {
@@ -522,7 +409,7 @@ mod tests {
                 [
                     Some("powerpc".to_string()),
                     Some("aix".to_string()),
-                    Some("5.3.0.0".to_string()),
+                    Some("5".to_string()),
                 ],
             ),
             (
@@ -614,7 +501,7 @@ mod tests {
                 [
                     Some("x86".to_string()),
                     Some("darwin".to_string()),
-                    Some("8.4.1".to_string()),
+                    Some("8".to_string()),
                 ],
             ),
             (
@@ -622,7 +509,7 @@ mod tests {
                 [
                     Some("x86".to_string()),
                     Some("freebsd".to_string()),
-                    Some("4.11".to_string()),
+                    Some("4".to_string()),
                 ],
             ),
             (
@@ -897,18 +784,118 @@ mod tests {
                 "wasm32-wasip2",
                 [Some("wasm32".to_string()), Some("wasi".to_string()), None],
             ),
+            // Edge cases and malformed platform strings that RubyGems handles
+            (
+                "darwin-java-java",
+                [Some("darwin".to_string()), Some("java".to_string()), None],
+            ),
+            (
+                "linux-linux-linux",
+                [
+                    Some("linux".to_string()),
+                    Some("linux".to_string()),
+                    Some("linux".to_string()),
+                ],
+            ),
+            (
+                "linux-linux-linux1.0",
+                [
+                    Some("linux".to_string()),
+                    Some("linux".to_string()),
+                    Some("linux1".to_string()),
+                ],
+            ),
+            (
+                "x86x86-1x86x86x86x861linuxx86x86",
+                [
+                    Some("x86x86".to_string()),
+                    Some("linux".to_string()),
+                    Some("x86x86".to_string()),
+                ],
+            ),
+            (
+                "freebsd0",
+                [None, Some("freebsd".to_string()), Some("0".to_string())],
+            ),
+            (
+                "darwin0",
+                [None, Some("darwin".to_string()), Some("0".to_string())],
+            ),
+            (
+                "darwin0---",
+                [None, Some("darwin".to_string()), Some("0".to_string())],
+            ),
+            (
+                "x86-linux-x8611.0l",
+                [
+                    Some("x86".to_string()),
+                    Some("linux".to_string()),
+                    Some("x8611".to_string()),
+                ],
+            ),
+            (
+                "0-x86linuxx86---",
+                [
+                    Some("0".to_string()),
+                    Some("linux".to_string()),
+                    Some("x86".to_string()),
+                ],
+            ),
+            (
+                "x86_64-macruby-x86",
+                [
+                    Some("x86_64".to_string()),
+                    Some("macruby".to_string()),
+                    None,
+                ],
+            ),
+            (
+                "x86_64-dotnetx86",
+                [Some("x86_64".to_string()), Some("dotnet".to_string()), None],
+            ),
+            (
+                "x86_64-dalvik0",
+                [
+                    Some("x86_64".to_string()),
+                    Some("dalvik".to_string()),
+                    Some("0".to_string()),
+                ],
+            ),
+            (
+                "x86_64-dotnet1.",
+                [
+                    Some("x86_64".to_string()),
+                    Some("dotnet".to_string()),
+                    Some("1".to_string()),
+                ],
+            ),
         ];
 
         for (platform_str, expected) in test_cases {
             let platform = Platform::new(platform_str).unwrap();
-            if let Platform::Specific { cpu, os, version } = platform {
-                assert_eq!(
-                    [cpu, Some(os), version],
-                    expected,
-                    "Failed for platform: {platform_str}"
-                );
-            } else {
-                panic!("Expected Specific platform for: {platform_str}");
+            let platform2 = Platform::new(platform.to_string()).unwrap();
+
+            {
+                if let Platform::Specific { cpu, os, version } = platform {
+                    assert_eq!(
+                        [cpu, Some(os), version],
+                        expected,
+                        "Failed for platform: {platform_str}"
+                    );
+                } else {
+                    panic!("Expected Specific platform for: {platform_str}");
+                }
+            }
+            {
+                if let Platform::Specific { cpu, os, version } = platform2 {
+                    assert_eq!(
+                        [cpu, Some(os), version],
+                        expected,
+                        "Failed for platform: {platform_str}"
+                    );
+                } else {
+                    panic!("Expected Specific platform for: {platform_str}");
+                }
             }
         }
     }
@@ -1000,7 +987,7 @@ mod tests {
                 Platform::new("universal-darwin8").unwrap(),
                 "universal-darwin-8",
             ),
-            (Platform::new("i686-darwin8.0").unwrap(), "x86-darwin-8.0"),
+            (Platform::new("i686-darwin8.0").unwrap(), "x86-darwin-8"),
         ];
 
         for (platform, expected) in test_cases {
@@ -1156,7 +1143,7 @@ mod tests {
                 [
                     Some("ppc".to_string()),
                     Some("aix".to_string()),
-                    Some("5.1.0.0".to_string()),
+                    Some("5".to_string()),
                 ],
             ),
         ];
