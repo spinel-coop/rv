@@ -1,0 +1,16 @@
+--- !ruby/object:Gem::Specification
+name: old-dependency-test
+version: !ruby/object:Gem::Version
+  version: 1.0.0
+summary: Test old dependency format
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: old_style_dep
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: 1.0.0
+  type: :runtime
+authors:
+- Test Author

@@ -111,3 +111,99 @@ fn test_parse_edge_case_specification() {
         }
     }
 }
+
+#[test]
+fn test_parse_version_with_extras_specification() {
+    let yaml_content = load_fixture("version_with_extras");
+    let result = parse(&yaml_content);
+
+    match result {
+        Ok(spec) => {
+            insta::assert_debug_snapshot!("version_with_extras_spec_parsed", spec);
+        }
+        Err(e) => {
+            panic!("Failed to parse version with extras specification: {e}");
+        }
+    }
+}
+
+#[test]
+fn test_parse_requirement_with_none_specification() {
+    let yaml_content = load_fixture("requirement_with_none");
+    let result = parse(&yaml_content);
+
+    match result {
+        Ok(spec) => {
+            insta::assert_debug_snapshot!("requirement_with_none_spec_parsed", spec);
+        }
+        Err(e) => {
+            panic!("Failed to parse requirement with none specification: {e}");
+        }
+    }
+}
+
+#[test]
+fn test_parse_old_dependency_format_specification() {
+    let yaml_content = load_fixture("old_dependency_format");
+    let result = parse(&yaml_content);
+
+    match result {
+        Ok(spec) => {
+            insta::assert_debug_snapshot!("old_dependency_format_spec_parsed", spec);
+        }
+        Err(e) => {
+            panic!("Failed to parse old dependency format specification: {e}");
+        }
+    }
+}
+
+#[test]
+fn test_parse_null_authors_email_specification() {
+    let yaml_content = load_fixture("null_authors_email");
+    let result = parse(&yaml_content);
+
+    match result {
+        Ok(spec) => {
+            // Verify semantic null handling
+            assert_eq!(spec.authors.len(), 3);
+            assert_eq!(spec.authors[0], Some("Real Author".to_string()));
+            assert_eq!(spec.authors[1], None);
+            assert_eq!(spec.authors[2], Some("Another Author".to_string()));
+            
+            assert_eq!(spec.email.len(), 3);
+            assert_eq!(spec.email[0], Some("real@example.com".to_string()));
+            assert_eq!(spec.email[1], None);
+            assert_eq!(spec.email[2], Some("another@example.com".to_string()));
+            
+            insta::assert_debug_snapshot!("null_authors_email_spec_parsed", spec);
+        }
+        Err(e) => {
+            panic!("Failed to parse null authors/email specification: {e}");
+        }
+    }
+}
+
+#[test]
+fn test_parse_comprehensive_features_specification() {
+    let yaml_content = load_fixture("comprehensive_features");
+    let result = parse(&yaml_content);
+
+    match result {
+        Ok(spec) => {
+            // Verify all features work together
+            assert_eq!(spec.name, "comprehensive-test");
+            assert_eq!(spec.version.to_string(), "1.0.0");
+            assert_eq!(spec.dependencies.len(), 2);
+            assert_eq!(spec.dependencies[0].name, "runtime_dep");
+            assert_eq!(spec.dependencies[1].name, "old_style_dep");
+            assert!(!spec.required_ruby_version.is_latest_version());
+            assert!(!spec.required_rubygems_version.is_latest_version());
+            
+            insta::assert_debug_snapshot!("comprehensive_features_spec_parsed", spec);
+        }
+        Err(e) => {
+            panic!("Failed to parse comprehensive features specification: {e}");
+        }
+    }
+}
+

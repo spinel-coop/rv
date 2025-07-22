@@ -27,7 +27,7 @@ fn specification_to_yaml_node(spec: &Specification) -> Result<Yaml<'static>> {
     insert_string_field(&mut mapping, "name", &spec.name);
     insert_version_field(&mut mapping, "version", &spec.version);
     insert_string_field(&mut mapping, "platform", &spec.platform.to_string());
-    insert_string_array_field(&mut mapping, "authors", &spec.authors);
+    insert_optional_string_array_field(&mut mapping, "authors", &spec.authors);
     insert_null_field(&mut mapping, "autorequire");
     insert_string_field(&mut mapping, "bindir", &spec.bindir);
     insert_empty_array_field(&mut mapping, "cert_chain");
@@ -38,7 +38,7 @@ fn specification_to_yaml_node(spec: &Specification) -> Result<Yaml<'static>> {
         insert_string_field(&mut mapping, "description", description);
     }
 
-    insert_string_array_field(&mut mapping, "email", &spec.email);
+    insert_optional_string_array_field(&mut mapping, "email", &spec.email);
     insert_string_array_field(&mut mapping, "executables", &spec.executables);
     insert_string_array_field(&mut mapping, "extensions", &spec.extensions);
     insert_empty_array_field(&mut mapping, "extra_rdoc_files");
@@ -113,6 +113,19 @@ fn insert_string_array_field(mapping: &mut saphyr::Mapping<'static>, key: &str, 
     let array_items: Vec<Yaml> = values
         .iter()
         .map(|s| Yaml::scalar_from_string(s.clone()))
+        .collect();
+    let value_yaml = Yaml::Sequence(array_items);
+    mapping.insert(key_yaml, value_yaml);
+}
+
+fn insert_optional_string_array_field(mapping: &mut saphyr::Mapping<'static>, key: &str, values: &[Option<String>]) {
+    let key_yaml = Yaml::scalar_from_string(key.to_string());
+    let array_items: Vec<Yaml> = values
+        .iter()
+        .map(|opt_s| match opt_s {
+            Some(s) => Yaml::scalar_from_string(s.clone()),
+            None => Yaml::Value(saphyr::Scalar::Null),
+        })
         .collect();
     let value_yaml = Yaml::Sequence(array_items);
     mapping.insert(key_yaml, value_yaml);

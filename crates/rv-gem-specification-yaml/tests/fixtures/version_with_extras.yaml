@@ -1,0 +1,14 @@
+--- !ruby/object:Gem::Specification
+name: version-extras-test
+version: !ruby/object:Gem::Version
+  version: 1.0.0
+  prerelease: false
+  hash: 123
+  segments:
+  - 1
+  - 0
+  - 0
+summary: Test version with extra fields
+authors:
+- Test Author
+dependencies: []

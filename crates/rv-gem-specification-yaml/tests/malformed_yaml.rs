@@ -1,5 +1,12 @@
 use pretty_assertions::assert_matches;
 use rv_gem_specification_yaml::parse;
+use std::fs;
+
+fn load_fixture(name: &str) -> String {
+    let fixture_path = format!("tests/fixtures/{name}.yaml");
+    fs::read_to_string(&fixture_path)
+        .unwrap_or_else(|_| panic!("Failed to read fixture: {fixture_path}"))
+}
 
 #[test]
 fn test_malformed_wrong_root_tag() {
@@ -315,3 +322,46 @@ metadata: "should_be_mapping_not_string"
     assert!(result.is_err());
     // Verify that we get a meaningful error (specific assertions can be added as needed)
 }
+
+#[test]
+fn test_unsupported_folded_scalar_syntax() {
+    // Current limitation: bacon-1.2.0.gem uses YAML folded scalar syntax with tag (! 'text...')
+    // This is valid YAML but not currently supported by our parser
+    let yaml_content = load_fixture("folded_scalar_syntax");
+    let result = parse(&yaml_content);
+
+    // Currently fails due to folded scalar syntax limitation
+    assert!(result.is_err(), "Folded scalar syntax is not yet supported");
+    
+    let error_msg = format!("{:?}", result.unwrap_err());
+    assert!(error_msg.contains("YAML parsing error") || error_msg.contains("parse"));
+}
+
+#[test]
+fn test_unsupported_version_requirement_class() {
+    // Current limitation: terminal-table-1.4.5.gem uses Gem::Version::Requirement instead of Gem::Requirement  
+    // This is valid Ruby but uses a different class hierarchy than we currently support
+    let yaml_content = load_fixture("version_requirement_class");
+    let result = parse(&yaml_content);
+
+    // Currently fails because we only support !ruby/object:Gem::Requirement, not Gem::Version::Requirement
+    assert!(result.is_err(), "Gem::Version::Requirement class is not yet supported");
+    
+    let error_msg = format!("{:?}", result.unwrap_err());
+    assert!(error_msg.contains("expected_event") || error_msg.contains("Gem::Requirement"));
+}
+
+#[test]
+fn test_unsupported_yaml_anchors_and_prerelease_field() {
+    // Current limitation: mocha-on-bacon-0.2.2.gem uses YAML anchors/references and dependency prerelease field
+    // This includes: &id001 anchor, *id001 reference, and prerelease field in dependencies
+    let yaml_content = load_fixture("yaml_anchors_and_prerelease");
+    let result = parse(&yaml_content);
+
+    // Currently fails due to unsupported YAML anchors and dependency prerelease field
+    assert!(result.is_err(), "YAML anchors and dependency prerelease field are not yet supported");
+    
+    let error_msg = format!("{:?}", result.unwrap_err());
+    assert!(error_msg.contains("expected_event") || error_msg.contains("YAML"));
+}
+

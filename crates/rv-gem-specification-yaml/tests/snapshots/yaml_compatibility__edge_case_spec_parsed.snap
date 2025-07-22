@@ -29,7 +29,9 @@ Specification {
     specification_version: 4,
     date: "",
     authors: [
-        "Edge Developer",
+        Some(
+            "Edge Developer",
+        ),
     ],
     email: [],
     homepage: None,

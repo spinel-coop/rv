@@ -3,7 +3,7 @@ source: crates/rv-gem-specification-yaml/tests/yaml_compatibility.rs
 expression: spec
 ---
 Specification {
-    name: "simple-gem",
+    name: "null-handling-test",
     version: Version {
         version: "1.0.0",
         segments: [
@@ -18,32 +18,34 @@ Specification {
             ),
         ],
     },
-    summary: "A simple gem for testing",
+    summary: "Test null value handling",
     require_paths: [
         "lib",
     ],
-    rubygems_version: "3.4.20",
+    rubygems_version: "3.0.0",
     specification_version: 4,
     date: "",
     authors: [
         Some(
-            "Test Author",
+            "Real Author",
+        ),
+        None,
+        Some(
+            "Another Author",
         ),
     ],
     email: [
         Some(
-            "test@example.com",
+            "real@example.com",
+        ),
+        None,
+        Some(
+            "another@example.com",
         ),
     ],
-    homepage: Some(
-        "https://example.com/simple-gem",
-    ),
-    description: Some(
-        "This is a simple gem specification for testing YAML serialization",
-    ),
-    licenses: [
-        "MIT",
-    ],
+    homepage: None,
+    description: None,
+    licenses: [],
     files: [],
     executables: [],
     extensions: [],
@@ -58,14 +60,8 @@ Specification {
             VersionConstraint {
                 operator: GreaterEqual,
                 version: Version {
-                    version: "2.7.0",
+                    version: "0",
                     segments: [
-                        Number(
-                            2,
-                        ),
-                        Number(
-                            7,
-                        ),
                         Number(
                             0,
                         ),

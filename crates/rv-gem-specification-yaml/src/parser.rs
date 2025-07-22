@@ -19,7 +19,7 @@ pub enum DeserializationError {
     Parse {
         #[source]
         source: saphyr_parser::ScanError,
-        #[label("parsing failed here")]
+        #[label("{source}")]
         bad_bit: SourceSpan,
     },
     #[error("Expected {expected}, found {found}")]
@@ -220,7 +220,11 @@ fn tagged_mapping_start<'a>(
 ) -> impl winnow::Parser<&'a [(Event<'a>, Span)], (), ContextError> + 'a {
     move |input: &mut &'a [(Event<'a>, Span)]| {
         any.verify_map(|(event, _span)| match event {
-            Event::MappingStart(_, Some(tag)) if tag.suffix == expected_tag => Some(()),
+            Event::MappingStart(_, Some(tag))
+                if tag.handle == "!" && tag.suffix == expected_tag =>
+            {
+                Some(())
+            }
             _ => None,
         })
         .context(StrContext::Expected(expected_tag.into()))
@@ -241,21 +245,47 @@ fn parse_version<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<Version
 fn parse_version_fields<'a>(
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Version, ContextError> {
-    // Simple implementation - expect "version" key followed by scalar value
-    let key = string
-        .context(StrContext::Expected(StrContextValue::Description(
-            "version field key",
-        )))
-        .parse_next(input)?;
-    if key != "version" {
-        return Err(ErrMode::Cut(ContextError::new()));
+    let mut version_str: Option<String> = None;
+
+    // Parse all fields in the version object until we hit mapping_end
+    loop {
+        // Check if we're at the end of the mapping
+        match peek(any::<_, ContextError>).parse_next(input) {
+            Ok((Event::MappingEnd, _)) => break,
+            Ok(_) => {
+                // Continue parsing key-value pairs
+            }
+            Err(_) => break, // End of stream
+        }
+
+        // Parse key-value pair
+        let key = string
+            .context(StrContext::Expected(StrContextValue::Description(
+                "version field key",
+            )))
+            .parse_next(input)?;
+        match key.as_str() {
+            "version" => {
+                version_str = Some(
+                    string
+                        .context(StrContext::Expected(StrContextValue::Description(
+                            "version string value",
+                        )))
+                        .parse_next(input)?,
+                );
+            }
+            "prerelease" => {
+                // Skip prerelease field - we don't need it for the version string
+                skip_value.parse_next(input)?;
+            }
+            _ => {
+                // Skip unknown fields
+                skip_value.parse_next(input)?;
+            }
+        }
     }
 
-    let version_str = string
-        .context(StrContext::Expected(StrContextValue::Description(
-            "version string value",
-        )))
-        .parse_next(input)?;
+    let version_str = version_str.ok_or_else(|| ErrMode::Cut(ContextError::new()))?;
     Version::new(&version_str).map_err(|_e| ErrMode::Cut(ContextError::new()))
 }
 
@@ -284,7 +314,7 @@ fn skip_mapping<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<(), Cont
     .parse_next(input)
 }
 
-// String array parsing
+// String array parsing for regular string arrays
 fn parse_string_array<'a>(
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Vec<String>, ContextError> {
@@ -295,6 +325,30 @@ fn parse_string_array<'a>(
     ))
     .context(StrContext::Label("string array"))
     .parse_next(input)
+}
+
+// Optional string array parsing - handles arrays with null/empty values
+fn parse_optional_string_array<'a>(
+    input: &mut &'a [(Event<'a>, Span)],
+) -> ModalResult<Vec<Option<String>>, ContextError> {
+    alt((
+        delimited(
+            sequence_start,
+            repeat(0.., parse_optional_string_entry),
+            sequence_end,
+        ),
+        null.map(|_| vec![]),
+        string.map(|s| vec![Some(s)]),
+    ))
+    .context(StrContext::Label("optional string array"))
+    .parse_next(input)
+}
+
+// Parse a string entry that might be null/empty
+fn parse_optional_string_entry<'a>(
+    input: &mut &'a [(Event<'a>, Span)],
+) -> ModalResult<Option<String>, ContextError> {
+    alt((string.map(Some), null.map(|_| None))).parse_next(input)
 }
 
 fn null<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<(), ContextError> {
@@ -331,24 +385,50 @@ fn parse_requirement<'a>(
 fn parse_requirement_fields<'a>(
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Requirement, ContextError> {
-    // Expect "requirements" key followed by sequence
-    let key = string
-        .context(StrContext::Expected(StrContextValue::Description(
-            "requirements field key",
-        )))
-        .parse_next(input)?;
-    if key != "requirements" {
-        return Err(ErrMode::Cut(ContextError::new()));
+    let mut constraints: Option<Vec<String>> = None;
+
+    // Parse all fields in the requirement object until we hit mapping_end
+    loop {
+        // Check if we're at the end of the mapping
+        match peek(any::<_, ContextError>).parse_next(input) {
+            Ok((Event::MappingEnd, _)) => break,
+            Ok(_) => {
+                // Continue parsing key-value pairs
+            }
+            Err(_) => break, // End of stream
+        }
+
+        // Parse key-value pair
+        let key = string
+            .context(StrContext::Expected(StrContextValue::Description(
+                "requirement field key",
+            )))
+            .parse_next(input)?;
+        match key.as_str() {
+            "requirements" => {
+                constraints = Some(
+                    delimited(
+                        sequence_start,
+                        repeat(0.., parse_constraint_pair),
+                        sequence_end,
+                    )
+                    .context(StrContext::Label("requirements array"))
+                    .parse_next(input)?,
+                );
+            }
+            "none" => {
+                // Skip the 'none' field - it's legacy metadata
+                skip_value.parse_next(input)?;
+            }
+            _ => {
+                // Skip unknown fields
+                skip_value.parse_next(input)?;
+            }
+        }
     }
 
-    delimited(
-        sequence_start,
-        repeat(0.., parse_constraint_pair),
-        sequence_end,
-    )
-    .context(StrContext::Label("requirements array"))
-    .try_map(Requirement::new)
-    .parse_next(input)
+    let constraints = constraints.ok_or_else(|| ErrMode::Cut(ContextError::new()))?;
+    Requirement::new(constraints).map_err(|_e| ErrMode::Cut(ContextError::new()))
 }
 
 fn parse_constraint_pair<'a>(
@@ -418,6 +498,10 @@ fn parse_dependency_fields<'a>(
             "requirement" => {
                 requirement = Some(parse_requirement.parse_next(input)?);
             }
+            // Handle older gem specification field names
+            "version_requirements" => {
+                requirement = Some(parse_requirement.parse_next(input)?);
+            }
             "type" => {
                 let type_str = string.parse_next(input)?;
                 dep_type = match type_str.as_str() {
@@ -427,7 +511,7 @@ fn parse_dependency_fields<'a>(
                 };
             }
             _ => {
-                // Skip unknown fields
+                // Skip unknown fields (version_requirement, version, etc.)
                 skip_value.parse_next(input)?;
             }
         }
@@ -466,8 +550,8 @@ fn parse_gem_specification_winnow<'a>(
     // Parse all fields in a more flexible way
     let mut name: Option<String> = None;
     let mut version: Option<Version> = None;
-    let mut authors: Vec<String> = Vec::new();
-    let mut email: Vec<String> = Vec::new();
+    let mut authors: Vec<Option<String>> = Vec::new();
+    let mut email: Vec<Option<String>> = Vec::new();
     let mut homepage: Option<String> = None;
     let mut summary: Option<String> = None;
     let mut description: Option<String> = None;
@@ -531,7 +615,7 @@ fn parse_gem_specification_winnow<'a>(
                 );
             }
             "authors" => {
-                authors = parse_string_array.parse_next(input)?;
+                authors = parse_optional_string_array.parse_next(input)?;
             }
             "dependencies" => {
                 dependencies = parse_dependencies.parse_next(input)?;
@@ -576,7 +660,7 @@ fn parse_gem_specification_winnow<'a>(
                 metadata = parse_metadata_as_map.parse_next(input)?;
             }
             "email" => {
-                email = parse_string_array.parse_next(input)?;
+                email = parse_optional_string_array.parse_next(input)?;
             }
             "homepage" => {
                 homepage = optional_string.parse_next(input)?;
@@ -806,7 +890,7 @@ authors:
         let spec = parse(yaml).expect("Failed to parse YAML with authors");
         assert_eq!(spec.name, "test-gem");
         assert_eq!(spec.version.to_string(), "1.0.0");
-        assert_eq!(spec.authors, vec!["Test Author"]);
+        assert_eq!(spec.authors, vec![Some("Test Author".to_string())]);
     }
 
     #[test]

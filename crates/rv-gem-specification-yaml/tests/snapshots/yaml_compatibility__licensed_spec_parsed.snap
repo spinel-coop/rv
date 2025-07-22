@@ -27,12 +27,20 @@ Specification {
     specification_version: 4,
     date: "",
     authors: [
-        "License Developer",
-        "Meta Author",
+        Some(
+            "License Developer",
+        ),
+        Some(
+            "Meta Author",
+        ),
     ],
     email: [
-        "dev@example.com",
-        "meta@example.com",
+        Some(
+            "dev@example.com",
+        ),
+        Some(
+            "meta@example.com",
+        ),
     ],
     homepage: Some(
         "https://github.com/example/licensed-gem",

@@ -26,12 +26,20 @@ Specification {
     specification_version: 4,
     date: "",
     authors: [
-        "Author One",
-        "Author Two",
+        Some(
+            "Author One",
+        ),
+        Some(
+            "Author Two",
+        ),
     ],
     email: [
-        "author1@example.com",
-        "author2@example.com",
+        Some(
+            "author1@example.com",
+        ),
+        Some(
+            "author2@example.com",
+        ),
     ],
     homepage: Some(
         "https://github.com/example/complex-gem",

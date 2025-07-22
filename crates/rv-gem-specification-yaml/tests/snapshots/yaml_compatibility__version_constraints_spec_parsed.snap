@@ -32,10 +32,14 @@ Specification {
     specification_version: 4,
     date: "",
     authors: [
-        "Version Tester",
+        Some(
+            "Version Tester",
+        ),
     ],
     email: [
-        "version@example.com",
+        Some(
+            "version@example.com",
+        ),
     ],
     homepage: None,
     description: None,
