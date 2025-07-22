@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "crates/rv",
+  "crates/rv-gem-package",
   "crates/rv-gem-specification-yaml",
   "crates/rv-gem-types",
 ]

@@ -1,0 +1,16 @@
+[package]
+name = "rv-gem-package"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tar = "0.4"
+flate2 = "1.0"
+rv-gem-types = { path = "../rv-gem-types" }
+rv-gem-specification-yaml = { path = "../rv-gem-specification-yaml" }
+sha2 = "0.10"
+thiserror = "1.0.65"
+miette = "7.2.0"
+
+[dev-dependencies]
+insta = "1.34.0"
