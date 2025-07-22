@@ -3,7 +3,7 @@ use miette::{Diagnostic, Result, SourceSpan};
 use saphyr::Scalar;
 use saphyr_parser::{Event, Parser as SaphyrParser, Span, StrInput};
 use winnow::combinator::*;
-use winnow::error::{ContextError, ErrMode, StrContext, StrContextValue};
+use winnow::error::{ContextError, ErrMode, ParserError, StrContext, StrContextValue};
 use winnow::token::*;
 use winnow::{ModalResult, Parser};
 
@@ -121,7 +121,7 @@ fn parse_yaml_events<'a>(source: &'a str) -> Result<Vec<(Event<'a>, Span)>> {
 // Basic event parsers
 fn scalar_event<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<Scalar<'a>, ContextError> {
     any.verify_map(|(event, _span)| match event {
-        Event::Scalar(value, style, 0, tag) => {
+        Event::Scalar(value, style, _, tag) => {
             Scalar::parse_from_cow_and_metadata(value, style, tag.as_ref())
         }
         _ => None,
@@ -140,7 +140,7 @@ fn optional_string<'a>(
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Option<String>, ContextError> {
     any.verify_map(|(event, _span)| match event {
-        Event::Scalar(value, style, 0, tag) => {
+        Event::Scalar(value, style, _, tag) => {
             Scalar::parse_from_cow_and_metadata(value, style, tag.as_ref()).map(|s| match s {
                 Scalar::String(s) => Some(s.to_string()),
                 _ => None,
@@ -234,7 +234,7 @@ fn tagged_mapping_start<'a>(
 
 fn parse_version<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<Version, ContextError> {
     delimited(
-        tagged_mapping_start("ruby/object:Gem::Version"), // Already consumed MappingStart in tagged_mapping_start
+        tagged_mapping_start("ruby/object:Gem::Version"),
         parse_version_fields,
         mapping_end,
     )
@@ -285,13 +285,20 @@ fn parse_version_fields<'a>(
         }
     }
 
-    let version_str = version_str.ok_or_else(|| ErrMode::Cut(ContextError::new()))?;
-    Version::new(&version_str).map_err(|_e| ErrMode::Cut(ContextError::new()))
+    // TODO: surface missing fields as errors that span the entire mapping
+    let version_str = version_str.ok_or_else(|| ErrMode::Cut(ContextError::from_input(input)))?;
+    Version::new(&version_str).map_err(|_e| ErrMode::Cut(ContextError::from_input(input)))
 }
 
 // Skip any YAML value - handles scalars, sequences, mappings, and nil values
 fn skip_value<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<(), ContextError> {
-    alt((scalar_event.map(|_| ()), skip_sequence, skip_mapping)).parse_next(input)
+    alt((
+        scalar_event.map(|_| ()),
+        skip_alias,
+        skip_sequence,
+        skip_mapping,
+    ))
+    .parse_next(input)
 }
 
 fn skip_sequence<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<(), ContextError> {
@@ -307,10 +314,18 @@ fn skip_sequence<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<(), Con
 fn skip_mapping<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<(), ContextError> {
     delimited(
         mapping_start,
-        repeat::<_, _, Vec<_>, _, _>(0.., (string.map(|_| ()), skip_value)), // key-value pairs
+        repeat::<_, _, Vec<_>, _, _>(0.., (skip_value, skip_value)), // key-value pairs
         mapping_end,
     )
     .map(|_| ())
+    .parse_next(input)
+}
+
+fn skip_alias<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<(), ContextError> {
+    any.verify_map(|(e, _)| match e {
+        Event::Alias(_) => Some(()),
+        _ => None,
+    })
     .parse_next(input)
 }
 
@@ -435,28 +450,12 @@ fn parse_constraint_pair<'a>(
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<String, ContextError> {
     // Parse a sequence like [">=", version_object]
-    sequence_start
-        .context(StrContext::Expected(StrContextValue::Description(
-            "constraint pair sequence start",
-        )))
-        .parse_next(input)?;
-    let operator = string
-        .context(StrContext::Expected(StrContextValue::Description(
-            "version constraint operator (e.g., '>=', '~>')",
-        )))
-        .parse_next(input)?;
-    let version = parse_version
-        .context(StrContext::Expected(StrContextValue::Description(
-            "version object in constraint",
-        )))
-        .parse_next(input)?;
-    sequence_end
-        .context(StrContext::Expected(StrContextValue::Description(
-            "constraint pair sequence end",
-        )))
-        .parse_next(input)?;
-
-    Ok(format!("{operator} {version}"))
+    delimited(
+        sequence_start,
+        (string, parse_version).map(|(op, version)| format!("{op} {version}")),
+        sequence_end,
+    )
+    .parse_next(input)
 }
 
 fn parse_dependency<'a>(
@@ -464,7 +463,7 @@ fn parse_dependency<'a>(
 ) -> ModalResult<Dependency, ContextError> {
     delimited(
         tagged_mapping_start("ruby/object:Gem::Dependency"),
-        parse_dependency_fields,
+        parse_dependency_fields.context(StrContext::Label("dependency fields")),
         mapping_end,
     )
     .context(StrContext::Label("Gem::Dependency object"))
@@ -500,7 +499,13 @@ fn parse_dependency_fields<'a>(
             }
             // Handle older gem specification field names
             "version_requirements" => {
-                requirement = Some(parse_requirement.parse_next(input)?);
+                requirement = match requirement {
+                    Some(r) => {
+                        skip_value.parse_next(input)?;
+                        Some(r)
+                    }
+                    None => Some(parse_requirement.parse_next(input)?),
+                };
             }
             "type" => {
                 let type_str = string.parse_next(input)?;
@@ -510,15 +515,19 @@ fn parse_dependency_fields<'a>(
                     _ => DependencyType::Runtime, // default fallback
                 };
             }
+            "prerelease" => {
+                skip_value.parse_next(input)?;
+            }
             _ => {
-                // Skip unknown fields (version_requirement, version, etc.)
+                // Skip unknown fields
                 skip_value.parse_next(input)?;
             }
         }
     }
 
-    let name = name.ok_or_else(|| ErrMode::Cut(ContextError::new()))?;
-    let requirement = requirement.ok_or_else(|| ErrMode::Cut(ContextError::new()))?;
+    let name = name.ok_or_else(|| ErrMode::Cut(ParserError::assert(input, "name missing")))?;
+    let requirement = requirement
+        .ok_or_else(|| ErrMode::Cut(ParserError::assert(input, "requirement missing")))?;
 
     Ok(Dependency {
         name,
