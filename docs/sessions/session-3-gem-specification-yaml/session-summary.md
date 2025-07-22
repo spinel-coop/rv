@@ -1,5 +1,9 @@
 # Session 3: rv-gem-specification-yaml - Session Summary
 
+## Session Motivation
+
+This session addressed the critical need for YAML serialization/deserialization of Ruby Gem::Specification objects to enable rv to work with existing Ruby ecosystem tools. Ruby's gemspec YAML format uses tagged objects (`!ruby/object:Gem::Specification`) with complex nested structures that standard YAML libraries cannot handle properly. The goal was to create a dedicated crate providing Ruby-compatible YAML processing with strict validation and comprehensive error reporting.
+
 ## Accomplishments
 
 Successfully designed and implemented the `rv-gem-specification-yaml` crate, providing Ruby-compatible YAML deserialization for `Gem::Specification` objects.
