@@ -1,0 +1,62 @@
+--- !ruby/object:Gem::Specification
+name: licensed-gem
+version: !ruby/object:Gem::Version
+  version: 1.5.2
+platform: ruby
+authors:
+- License Developer
+- Meta Author
+autorequire:
+bindir: bin
+cert_chain: []
+date:
+dependencies: []
+description: This gem demonstrates comprehensive metadata usage including licensing,
+  URLs, and custom fields.
+email:
+- dev@example.com
+- meta@example.com
+executables:
+- licensed-cli
+extensions: []
+extra_rdoc_files: []
+files:
+- lib/licensed.rb
+- README.md
+- LICENSE
+homepage: https://github.com/example/licensed-gem
+licenses:
+- MIT
+- Apache-2.0
+metadata:
+  bug_tracker_uri: https://github.com/example/licensed-gem/issues
+  changelog_uri: https://github.com/example/licensed-gem/blob/main/CHANGELOG.md
+  documentation_uri: https://rubydoc.info/gems/licensed-gem
+  funding_uri: https://github.com/sponsors/example
+  mailing_list_uri: https://groups.google.com/forum/#\!forum/licensed-gem
+  source_code_uri: https://github.com/example/licensed-gem
+  wiki_uri: https://github.com/example/licensed-gem/wiki
+  custom_field: custom_value
+post_install_message:
+rdoc_options: []
+require_paths:
+- lib
+- ext
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.7.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 3.0.0
+requirements:
+- libssl >= 1.1
+- cmake >= 3.10
+rubygems_version: 3.4.20
+signing_key:
+specification_version: 4
+summary: A gem with extensive metadata
+test_files: []

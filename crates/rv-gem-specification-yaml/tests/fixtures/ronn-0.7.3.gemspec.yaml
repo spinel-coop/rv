@@ -1,0 +1,183 @@
+--- !ruby/object:Gem::Specification 
+name: ronn
+version: !ruby/object:Gem::Version 
+  hash: 5
+  prerelease: false
+  segments: 
+  - 0
+  - 7
+  - 3
+  version: 0.7.3
+platform: ruby
+authors: 
+- Ryan Tomayko
+autorequire: 
+bindir: bin
+cert_chain: []
+
+date: 2010-06-24 00:00:00 -07:00
+default_executable: 
+dependencies: 
+- !ruby/object:Gem::Dependency 
+  name: hpricot
+  prerelease: false
+  requirement: &id001 !ruby/object:Gem::Requirement 
+    none: false
+    requirements: 
+    - - ">="
+      - !ruby/object:Gem::Version 
+        hash: 59
+        segments: 
+        - 0
+        - 8
+        - 2
+        version: 0.8.2
+  type: :runtime
+  version_requirements: *id001
+- !ruby/object:Gem::Dependency 
+  name: rdiscount
+  prerelease: false
+  requirement: &id002 !ruby/object:Gem::Requirement 
+    none: false
+    requirements: 
+    - - ">="
+      - !ruby/object:Gem::Version 
+        hash: 19
+        segments: 
+        - 1
+        - 5
+        - 8
+        version: 1.5.8
+  type: :runtime
+  version_requirements: *id002
+- !ruby/object:Gem::Dependency 
+  name: mustache
+  prerelease: false
+  requirement: &id003 !ruby/object:Gem::Requirement 
+    none: false
+    requirements: 
+    - - ">="
+      - !ruby/object:Gem::Version 
+        hash: 3
+        segments: 
+        - 0
+        - 7
+        - 0
+        version: 0.7.0
+  type: :runtime
+  version_requirements: *id003
+description: Builds manuals
+email: rtomayko@gmail.com
+executables: 
+- ronn
+extensions: []
+
+extra_rdoc_files: 
+- COPYING
+- AUTHORS
+files: 
+- AUTHORS
+- CHANGES
+- COPYING
+- INSTALLING
+- README.md
+- Rakefile
+- bin/ronn
+- config.ru
+- lib/ronn.rb
+- lib/ronn/document.rb
+- lib/ronn/index.rb
+- lib/ronn/roff.rb
+- lib/ronn/server.rb
+- lib/ronn/template.rb
+- lib/ronn/template/80c.css
+- lib/ronn/template/dark.css
+- lib/ronn/template/darktoc.css
+- lib/ronn/template/default.html
+- lib/ronn/template/man.css
+- lib/ronn/template/print.css
+- lib/ronn/template/screen.css
+- lib/ronn/template/toc.css
+- lib/ronn/utils.rb
+- man/index.html
+- man/index.txt
+- man/ronn-format.7
+- man/ronn-format.7.ronn
+- man/ronn.1
+- man/ronn.1.ronn
+- ronn.gemspec
+- test/angle_bracket_syntax.html
+- test/angle_bracket_syntax.ronn
+- test/basic_document.html
+- test/basic_document.ronn
+- test/contest.rb
+- test/custom_title_document.html
+- test/custom_title_document.ronn
+- test/definition_list_syntax.html
+- test/definition_list_syntax.roff
+- test/definition_list_syntax.ronn
+- test/dots_at_line_start_test.roff
+- test/dots_at_line_start_test.ronn
+- test/entity_encoding_test.html
+- test/entity_encoding_test.roff
+- test/entity_encoding_test.ronn
+- test/index.txt
+- test/markdown_syntax.html
+- test/markdown_syntax.roff
+- test/markdown_syntax.ronn
+- test/middle_paragraph.html
+- test/middle_paragraph.roff
+- test/middle_paragraph.ronn
+- test/missing_spaces.roff
+- test/missing_spaces.ronn
+- test/pre_block_with_quotes.roff
+- test/pre_block_with_quotes.ronn
+- test/section_reference_links.html
+- test/section_reference_links.roff
+- test/section_reference_links.ronn
+- test/test_ronn.rb
+- test/test_ronn_document.rb
+- test/test_ronn_index.rb
+- test/titleless_document.html
+- test/titleless_document.ronn
+- test/underline_spacing_test.roff
+- test/underline_spacing_test.ronn
+has_rdoc: true
+homepage: http://rtomayko.github.com/ronn
+licenses: []
+
+post_install_message: 
+rdoc_options: 
+- --line-numbers
+- --inline-source
+- --title
+- Ronn
+require_paths: 
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement 
+  none: false
+  requirements: 
+  - - ">="
+    - !ruby/object:Gem::Version 
+      hash: 3
+      segments: 
+      - 0
+      version: "0"
+required_rubygems_version: !ruby/object:Gem::Requirement 
+  none: false
+  requirements: 
+  - - ">="
+    - !ruby/object:Gem::Version 
+      hash: 3
+      segments: 
+      - 0
+      version: "0"
+requirements: []
+
+rubyforge_project: 
+rubygems_version: 1.3.7
+signing_key: 
+specification_version: 3
+summary: Builds manuals
+test_files: []
+

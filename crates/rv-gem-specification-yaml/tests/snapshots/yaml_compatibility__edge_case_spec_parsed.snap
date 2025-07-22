@@ -1,0 +1,279 @@
+---
+source: crates/rv-gem-specification-yaml/tests/yaml_compatibility.rs
+expression: spec
+---
+Specification {
+    name: "edge-case-gem",
+    version: Version {
+        version: "0.1.0.pre",
+        segments: [
+            Number(
+                0,
+            ),
+            Number(
+                1,
+            ),
+            Number(
+                0,
+            ),
+            String(
+                "pre",
+            ),
+        ],
+    },
+    summary: "Testing edge cases",
+    require_paths: [
+        "lib",
+    ],
+    rubygems_version: "3.4.20",
+    specification_version: 4,
+    date: "",
+    authors: [
+        Some(
+            "Edge Developer",
+        ),
+    ],
+    email: [],
+    homepage: None,
+    description: None,
+    licenses: [],
+    files: [],
+    executables: [],
+    extensions: [],
+    dependencies: [
+        Dependency {
+            name: "nokogiri",
+            requirement: Requirement {
+                constraints: [
+                    VersionConstraint {
+                        operator: Pessimistic,
+                        version: Version {
+                            version: "1.13.0",
+                            segments: [
+                                Number(
+                                    1,
+                                ),
+                                Number(
+                                    13,
+                                ),
+                                Number(
+                                    0,
+                                ),
+                            ],
+                        },
+                    },
+                ],
+            },
+            dep_type: Runtime,
+        },
+        Dependency {
+            name: "zeitwerk",
+            requirement: Requirement {
+                constraints: [
+                    VersionConstraint {
+                        operator: Pessimistic,
+                        version: Version {
+                            version: "2.5",
+                            segments: [
+                                Number(
+                                    2,
+                                ),
+                                Number(
+                                    5,
+                                ),
+                            ],
+                        },
+                    },
+                ],
+            },
+            dep_type: Runtime,
+        },
+        Dependency {
+            name: "dry-types",
+            requirement: Requirement {
+                constraints: [
+                    VersionConstraint {
+                        operator: GreaterEqual,
+                        version: Version {
+                            version: "1.5",
+                            segments: [
+                                Number(
+                                    1,
+                                ),
+                                Number(
+                                    5,
+                                ),
+                            ],
+                        },
+                    },
+                    VersionConstraint {
+                        operator: Less,
+                        version: Version {
+                            version: "2.0",
+                            segments: [
+                                Number(
+                                    2,
+                                ),
+                                Number(
+                                    0,
+                                ),
+                            ],
+                        },
+                    },
+                ],
+            },
+            dep_type: Runtime,
+        },
+        Dependency {
+            name: "activesupport",
+            requirement: Requirement {
+                constraints: [
+                    VersionConstraint {
+                        operator: Pessimistic,
+                        version: Version {
+                            version: "7.0.0",
+                            segments: [
+                                Number(
+                                    7,
+                                ),
+                                Number(
+                                    0,
+                                ),
+                                Number(
+                                    0,
+                                ),
+                            ],
+                        },
+                    },
+                    VersionConstraint {
+                        operator: GreaterEqual,
+                        version: Version {
+                            version: "7.0.4",
+                            segments: [
+                                Number(
+                                    7,
+                                ),
+                                Number(
+                                    0,
+                                ),
+                                Number(
+                                    4,
+                                ),
+                            ],
+                        },
+                    },
+                ],
+            },
+            dep_type: Runtime,
+        },
+        Dependency {
+            name: "minitest",
+            requirement: Requirement {
+                constraints: [
+                    VersionConstraint {
+                        operator: Pessimistic,
+                        version: Version {
+                            version: "5.0",
+                            segments: [
+                                Number(
+                                    5,
+                                ),
+                                Number(
+                                    0,
+                                ),
+                            ],
+                        },
+                    },
+                ],
+            },
+            dep_type: Development,
+        },
+        Dependency {
+            name: "rubocop",
+            requirement: Requirement {
+                constraints: [
+                    VersionConstraint {
+                        operator: Pessimistic,
+                        version: Version {
+                            version: "1.50",
+                            segments: [
+                                Number(
+                                    1,
+                                ),
+                                Number(
+                                    50,
+                                ),
+                            ],
+                        },
+                    },
+                    VersionConstraint {
+                        operator: GreaterEqual,
+                        version: Version {
+                            version: "1.50.2",
+                            segments: [
+                                Number(
+                                    1,
+                                ),
+                                Number(
+                                    50,
+                                ),
+                                Number(
+                                    2,
+                                ),
+                            ],
+                        },
+                    },
+                ],
+            },
+            dep_type: Development,
+        },
+    ],
+    metadata: {},
+    platform: Ruby,
+    bindir: "bin",
+    post_install_message: None,
+    requirements: [],
+    required_ruby_version: Requirement {
+        constraints: [
+            VersionConstraint {
+                operator: Pessimistic,
+                version: Version {
+                    version: "3.0",
+                    segments: [
+                        Number(
+                            3,
+                        ),
+                        Number(
+                            0,
+                        ),
+                    ],
+                },
+            },
+        ],
+    },
+    required_rubygems_version: Requirement {
+        constraints: [
+            VersionConstraint {
+                operator: Pessimistic,
+                version: Version {
+                    version: "3.3",
+                    segments: [
+                        Number(
+                            3,
+                        ),
+                        Number(
+                            3,
+                        ),
+                    ],
+                },
+            },
+        ],
+    },
+    test_files: [],
+    extra_rdoc_files: [],
+    rdoc_options: [],
+    cert_chain: [],
+    signing_key: None,
+    autorequire: None,
+    installed_by_version: None,
+}

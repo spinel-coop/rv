@@ -1,0 +1,90 @@
+--- !ruby/object:Gem::Specification 
+rubygems_version: 0.9.4
+specification_version: 1
+name: terminal-table
+version: !ruby/object:Gem::Version 
+  version: 1.4.5
+date: 2012-03-15 00:00:00 +00:00
+summary: Simple, feature rich ascii table generation library
+require_paths: 
+- lib
+email: tj@vision-media.ca
+homepage: http://github.com/visionmedia/terminal-table
+rubyforge_project: terminal-table
+description: Simple, feature rich ascii table generation library
+autorequire: 
+default_executable: 
+bindir: bin
+has_rdoc: false
+required_ruby_version: !ruby/object:Gem::Version::Requirement 
+  requirements: 
+  - - ">"
+    - !ruby/object:Gem::Version 
+      version: 0.0.0
+  version: 
+platform: ruby
+signing_key: 
+cert_chain: 
+post_install_message: 
+authors: 
+- TJ Holowaychuk
+- Scott J. Goldman
+files: 
+- History.rdoc
+- Manifest
+- README.rdoc
+- Rakefile
+- Todo.rdoc
+- examples/examples.rb
+- lib/terminal-table.rb
+- lib/terminal-table/cell.rb
+- lib/terminal-table/core_ext.rb
+- lib/terminal-table/import.rb
+- lib/terminal-table/table.rb
+- lib/terminal-table/table_helper.rb
+- lib/terminal-table/version.rb
+- lib/terminal-table/row.rb
+- lib/terminal-table/separator.rb
+- lib/terminal-table/style.rb
+- spec/cell_spec.rb
+- spec/core_ext_spec.rb
+- spec/import_spec.rb
+- spec/spec.opts
+- spec/spec_helper.rb
+- spec/table_spec.rb
+- tasks/docs.rake
+- tasks/gemspec.rake
+- tasks/spec.rake
+- terminal-table.gemspec
+test_files: []
+
+rdoc_options: 
+- --line-numbers
+- --inline-source
+- --title
+- Terminal-table
+- --main
+- README.rdoc
+extra_rdoc_files: 
+- README.rdoc
+- lib/terminal-table.rb
+- lib/terminal-table/cell.rb
+- lib/terminal-table/core_ext.rb
+- lib/terminal-table/import.rb
+- lib/terminal-table/table.rb
+- lib/terminal-table/version.rb
+- lib/terminal-table/row.rb
+- lib/terminal-table/separator.rb
+- lib/terminal-table/style.rb
+- lib/terminal-table/table_helper.rb
+- tasks/docs.rake
+- tasks/gemspec.rake
+- tasks/spec.rake
+executables: []
+
+extensions: []
+
+requirements: []
+
+dependencies: []
+

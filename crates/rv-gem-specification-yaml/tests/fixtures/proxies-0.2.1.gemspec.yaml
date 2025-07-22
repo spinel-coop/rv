@@ -1,0 +1,122 @@
+--- !ruby/object:Gem::Specification 
+name: proxies
+version: !ruby/object:Gem::Version 
+  prerelease: false
+  segments: 
+  - 0
+  - 2
+  - 1
+  version: 0.2.1
+platform: ruby
+authors: 
+- "Jakub Ku\xC5\xBAma"
+autorequire: 
+bindir: bin
+cert_chain: []
+
+date: 2010-09-25 00:00:00 +02:00
+default_executable: 
+dependencies: 
+- !ruby/object:Gem::Dependency 
+  name: bundler
+  requirement: &id001 !ruby/object:Gem::Requirement 
+    none: false
+    requirements: 
+    - - ">="
+      - !ruby/object:Gem::Version 
+        segments: 
+        - 1
+        - 0
+        - 0
+        version: 1.0.0
+  type: :development
+  prerelease: false
+  version_requirements: *id001
+- !ruby/object:Gem::Dependency 
+  name: test-unit
+  requirement: &id002 !ruby/object:Gem::Requirement 
+    none: false
+    requirements: 
+    - - ">="
+      - !ruby/object:Gem::Version 
+        segments: 
+        - 2
+        version: "2"
+  type: :development
+  prerelease: false
+  version_requirements: *id002
+- !ruby/object:Gem::Dependency 
+  name: mocha
+  requirement: &id003 !ruby/object:Gem::Requirement 
+    none: false
+    requirements: 
+    - - ">="
+      - !ruby/object:Gem::Version 
+        segments: 
+        - 0
+        version: "0"
+  type: :development
+  prerelease: false
+  version_requirements: *id003
+description: Proxies can even proxy other proxies
+email: 
+- qoobaa@gmail.com
+executables: []
+
+extensions: []
+
+extra_rdoc_files: []
+
+files: 
+- .gitignore
+- Gemfile
+- Gemfile.lock
+- LICENSE
+- README.rdoc
+- Rakefile
+- lib/proxies.rb
+- lib/proxies/proxy.rb
+- lib/proxies/version.rb
+- proxies.gemspec
+- test/helper.rb
+- test/test_proxy_extend.rb
+- test/test_proxy_owner.rb
+- test/test_proxy_respond_to.rb
+- test/test_proxy_target.rb
+has_rdoc: true
+homepage: http://rubygems.org/gems/proxies
+licenses: []
+
+post_install_message: 
+rdoc_options: []
+
+require_paths: 
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement 
+  none: false
+  requirements: 
+  - - ">="
+    - !ruby/object:Gem::Version 
+      hash: 3699584780831755527
+      segments: 
+      - 0
+      version: "0"
+required_rubygems_version: !ruby/object:Gem::Requirement 
+  none: false
+  requirements: 
+  - - ">="
+    - !ruby/object:Gem::Version 
+      segments: 
+      - 1
+      - 3
+      - 6
+      version: 1.3.6
+requirements: []
+
+rubyforge_project: proxies
+rubygems_version: 1.3.7
+signing_key: 
+specification_version: 3
+summary: Proxies can even proxy other proxies
+test_files: []
+

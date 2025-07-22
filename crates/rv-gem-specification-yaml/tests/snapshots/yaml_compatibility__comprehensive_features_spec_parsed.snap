@@ -1,0 +1,170 @@
+---
+source: crates/rv-gem-specification-yaml/tests/yaml_compatibility.rs
+expression: spec
+---
+Specification {
+    name: "comprehensive-test",
+    version: Version {
+        version: "1.0.0",
+        segments: [
+            Number(
+                1,
+            ),
+            Number(
+                0,
+            ),
+            Number(
+                0,
+            ),
+        ],
+    },
+    summary: "A comprehensive test gem",
+    require_paths: [
+        "lib",
+    ],
+    rubygems_version: "3.0.0",
+    specification_version: 4,
+    date: "",
+    authors: [
+        Some(
+            "First Author",
+        ),
+        None,
+        Some(
+            "Third Author",
+        ),
+    ],
+    email: [
+        Some(
+            "first@example.com",
+        ),
+        None,
+        Some(
+            "third@example.com",
+        ),
+    ],
+    homepage: None,
+    description: Some(
+        "A longer description",
+    ),
+    licenses: [
+        "MIT",
+    ],
+    files: [
+        "lib/test.rb",
+        "README.md",
+    ],
+    executables: [
+        "test-cli",
+    ],
+    extensions: [],
+    dependencies: [
+        Dependency {
+            name: "runtime_dep",
+            requirement: Requirement {
+                constraints: [
+                    VersionConstraint {
+                        operator: GreaterEqual,
+                        version: Version {
+                            version: "1.0.0",
+                            segments: [
+                                Number(
+                                    1,
+                                ),
+                                Number(
+                                    0,
+                                ),
+                                Number(
+                                    0,
+                                ),
+                            ],
+                        },
+                    },
+                ],
+            },
+            dep_type: Runtime,
+        },
+        Dependency {
+            name: "old_style_dep",
+            requirement: Requirement {
+                constraints: [
+                    VersionConstraint {
+                        operator: Pessimistic,
+                        version: Version {
+                            version: "2.0.0",
+                            segments: [
+                                Number(
+                                    2,
+                                ),
+                                Number(
+                                    0,
+                                ),
+                                Number(
+                                    0,
+                                ),
+                            ],
+                        },
+                    },
+                ],
+            },
+            dep_type: Development,
+        },
+    ],
+    metadata: {
+        "homepage_uri": "https://example.com",
+        "source_code_uri": "https://github.com/example/test",
+    },
+    platform: Ruby,
+    bindir: "bin",
+    post_install_message: None,
+    requirements: [],
+    required_ruby_version: Requirement {
+        constraints: [
+            VersionConstraint {
+                operator: GreaterEqual,
+                version: Version {
+                    version: "2.7.0",
+                    segments: [
+                        Number(
+                            2,
+                        ),
+                        Number(
+                            7,
+                        ),
+                        Number(
+                            0,
+                        ),
+                    ],
+                },
+            },
+        ],
+    },
+    required_rubygems_version: Requirement {
+        constraints: [
+            VersionConstraint {
+                operator: GreaterEqual,
+                version: Version {
+                    version: "3.0.0",
+                    segments: [
+                        Number(
+                            3,
+                        ),
+                        Number(
+                            0,
+                        ),
+                        Number(
+                            0,
+                        ),
+                    ],
+                },
+            },
+        ],
+    },
+    test_files: [],
+    extra_rdoc_files: [],
+    rdoc_options: [],
+    cert_chain: [],
+    signing_key: None,
+    autorequire: None,
+    installed_by_version: None,
+}

@@ -1,0 +1,13 @@
+--- !ruby/object:Gem::Specification 
+name: terminal-table
+version: !ruby/object:Gem::Version 
+  version: 1.4.5
+summary: Simple table library
+required_ruby_version: !ruby/object:Gem::Version::Requirement 
+  requirements: 
+  - - ">"
+    - !ruby/object:Gem::Version 
+      version: 0.0.0
+authors:
+- Test Author
+dependencies: []

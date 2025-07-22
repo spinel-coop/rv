@@ -1,0 +1,222 @@
+---
+source: crates/rv-gem-specification-yaml/tests/yaml_compatibility.rs
+expression: spec
+---
+Specification {
+    name: "version-constraints-gem",
+    version: Version {
+        version: "0.1.0.pre.alpha",
+        segments: [
+            Number(
+                0,
+            ),
+            Number(
+                1,
+            ),
+            Number(
+                0,
+            ),
+            String(
+                "pre",
+            ),
+            String(
+                "alpha",
+            ),
+        ],
+    },
+    summary: "Testing various version constraints",
+    require_paths: [
+        "lib",
+    ],
+    rubygems_version: "3.4.20",
+    specification_version: 4,
+    date: "",
+    authors: [
+        Some(
+            "Version Tester",
+        ),
+    ],
+    email: [
+        Some(
+            "version@example.com",
+        ),
+    ],
+    homepage: None,
+    description: None,
+    licenses: [],
+    files: [],
+    executables: [],
+    extensions: [],
+    dependencies: [
+        Dependency {
+            name: "rails",
+            requirement: Requirement {
+                constraints: [
+                    VersionConstraint {
+                        operator: GreaterEqual,
+                        version: Version {
+                            version: "6.0",
+                            segments: [
+                                Number(
+                                    6,
+                                ),
+                                Number(
+                                    0,
+                                ),
+                            ],
+                        },
+                    },
+                    VersionConstraint {
+                        operator: Less,
+                        version: Version {
+                            version: "8.0",
+                            segments: [
+                                Number(
+                                    8,
+                                ),
+                                Number(
+                                    0,
+                                ),
+                            ],
+                        },
+                    },
+                ],
+            },
+            dep_type: Runtime,
+        },
+        Dependency {
+            name: "pg",
+            requirement: Requirement {
+                constraints: [
+                    VersionConstraint {
+                        operator: Pessimistic,
+                        version: Version {
+                            version: "1.1",
+                            segments: [
+                                Number(
+                                    1,
+                                ),
+                                Number(
+                                    1,
+                                ),
+                            ],
+                        },
+                    },
+                    VersionConstraint {
+                        operator: GreaterEqual,
+                        version: Version {
+                            version: "1.1.4",
+                            segments: [
+                                Number(
+                                    1,
+                                ),
+                                Number(
+                                    1,
+                                ),
+                                Number(
+                                    4,
+                                ),
+                            ],
+                        },
+                    },
+                ],
+            },
+            dep_type: Runtime,
+        },
+        Dependency {
+            name: "rspec-rails",
+            requirement: Requirement {
+                constraints: [
+                    VersionConstraint {
+                        operator: Pessimistic,
+                        version: Version {
+                            version: "5.0",
+                            segments: [
+                                Number(
+                                    5,
+                                ),
+                                Number(
+                                    0,
+                                ),
+                            ],
+                        },
+                    },
+                ],
+            },
+            dep_type: Development,
+        },
+        Dependency {
+            name: "factory_bot",
+            requirement: Requirement {
+                constraints: [
+                    VersionConstraint {
+                        operator: NotEqual,
+                        version: Version {
+                            version: "6.0.0",
+                            segments: [
+                                Number(
+                                    6,
+                                ),
+                                Number(
+                                    0,
+                                ),
+                                Number(
+                                    0,
+                                ),
+                            ],
+                        },
+                    },
+                ],
+            },
+            dep_type: Development,
+        },
+    ],
+    metadata: {},
+    platform: Ruby,
+    bindir: "bin",
+    post_install_message: None,
+    requirements: [],
+    required_ruby_version: Requirement {
+        constraints: [
+            VersionConstraint {
+                operator: GreaterEqual,
+                version: Version {
+                    version: "0",
+                    segments: [
+                        Number(
+                            0,
+                        ),
+                    ],
+                },
+            },
+        ],
+    },
+    required_rubygems_version: Requirement {
+        constraints: [
+            VersionConstraint {
+                operator: Greater,
+                version: Version {
+                    version: "1.3.1",
+                    segments: [
+                        Number(
+                            1,
+                        ),
+                        Number(
+                            3,
+                        ),
+                        Number(
+                            1,
+                        ),
+                    ],
+                },
+            },
+        ],
+    },
+    test_files: [],
+    extra_rdoc_files: [],
+    rdoc_options: [],
+    cert_chain: [],
+    signing_key: None,
+    autorequire: None,
+    installed_by_version: None,
+}

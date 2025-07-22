@@ -1,0 +1,14 @@
+--- !ruby/object:Gem::Specification
+name: requirement-none-test
+version: !ruby/object:Gem::Version
+  version: 1.0.0
+summary: Test requirement with none field
+required_ruby_version: !ruby/object:Gem::Requirement
+  none: false
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.0.0
+authors:
+- Test Author
+dependencies: []

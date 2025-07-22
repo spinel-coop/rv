@@ -1,0 +1,70 @@
+--- !ruby/object:Gem::Specification
+name: bacon
+version: !ruby/object:Gem::Version
+  version: 1.2.0
+  prerelease: 
+platform: ruby
+authors:
+- Christian Neukirchen
+autorequire: 
+bindir: bin
+cert_chain: []
+date: 2012-12-21 00:00:00.000000000 Z
+dependencies: []
+description: ! 'Bacon is a small RSpec clone weighing less than 350 LoC but
+
+  nevertheless providing all essential features.
+
+
+  http://github.com/chneukirchen/bacon
+
+'
+email: chneukirchen@gmail.com
+executables:
+- bacon
+extensions: []
+extra_rdoc_files:
+- README.rdoc
+- RDOX
+files:
+- .travis.yml
+- COPYING
+- README.rdoc
+- Rakefile
+- bacon.gemspec
+- bin/bacon
+- lib/autotest/bacon.rb
+- lib/autotest/bacon_rspec.rb
+- lib/autotest/discover.rb
+- lib/bacon.rb
+- test/spec_bacon.rb
+- test/spec_nontrue.rb
+- test/spec_should.rb
+- RDOX
+- ChangeLog
+homepage: http://github.com/chneukirchen/bacon
+licenses: []
+post_install_message: 
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  none: false
+  requirements:
+  - - ! '>='
+    - !ruby/object:Gem::Version
+      version: '0'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  none: false
+  requirements:
+  - - ! '>='
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubyforge_project: 
+rubygems_version: 1.8.23
+signing_key: 
+specification_version: 3
+summary: a small RSpec clone
+test_files: []
+has_rdoc: true

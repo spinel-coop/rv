@@ -1,0 +1,131 @@
+---
+source: crates/rv-gem-specification-yaml/tests/yaml_compatibility.rs
+expression: spec
+---
+Specification {
+    name: "licensed-gem",
+    version: Version {
+        version: "1.5.2",
+        segments: [
+            Number(
+                1,
+            ),
+            Number(
+                5,
+            ),
+            Number(
+                2,
+            ),
+        ],
+    },
+    summary: "A gem with extensive metadata",
+    require_paths: [
+        "lib",
+        "ext",
+    ],
+    rubygems_version: "3.4.20",
+    specification_version: 4,
+    date: "",
+    authors: [
+        Some(
+            "License Developer",
+        ),
+        Some(
+            "Meta Author",
+        ),
+    ],
+    email: [
+        Some(
+            "dev@example.com",
+        ),
+        Some(
+            "meta@example.com",
+        ),
+    ],
+    homepage: Some(
+        "https://github.com/example/licensed-gem",
+    ),
+    description: Some(
+        "This gem demonstrates comprehensive metadata usage including licensing, URLs, and custom fields.",
+    ),
+    licenses: [
+        "MIT",
+        "Apache-2.0",
+    ],
+    files: [
+        "lib/licensed.rb",
+        "README.md",
+        "LICENSE",
+    ],
+    executables: [
+        "licensed-cli",
+    ],
+    extensions: [],
+    dependencies: [],
+    metadata: {
+        "bug_tracker_uri": "https://github.com/example/licensed-gem/issues",
+        "changelog_uri": "https://github.com/example/licensed-gem/blob/main/CHANGELOG.md",
+        "documentation_uri": "https://rubydoc.info/gems/licensed-gem",
+        "funding_uri": "https://github.com/sponsors/example",
+        "mailing_list_uri": "https://groups.google.com/forum/#\\!forum/licensed-gem",
+        "source_code_uri": "https://github.com/example/licensed-gem",
+        "wiki_uri": "https://github.com/example/licensed-gem/wiki",
+        "custom_field": "custom_value",
+    },
+    platform: Ruby,
+    bindir: "bin",
+    post_install_message: None,
+    requirements: [
+        "libssl >= 1.1",
+        "cmake >= 3.10",
+    ],
+    required_ruby_version: Requirement {
+        constraints: [
+            VersionConstraint {
+                operator: GreaterEqual,
+                version: Version {
+                    version: "2.7.0",
+                    segments: [
+                        Number(
+                            2,
+                        ),
+                        Number(
+                            7,
+                        ),
+                        Number(
+                            0,
+                        ),
+                    ],
+                },
+            },
+        ],
+    },
+    required_rubygems_version: Requirement {
+        constraints: [
+            VersionConstraint {
+                operator: GreaterEqual,
+                version: Version {
+                    version: "3.0.0",
+                    segments: [
+                        Number(
+                            3,
+                        ),
+                        Number(
+                            0,
+                        ),
+                        Number(
+                            0,
+                        ),
+                    ],
+                },
+            },
+        ],
+    },
+    test_files: [],
+    extra_rdoc_files: [],
+    rdoc_options: [],
+    cert_chain: [],
+    signing_key: None,
+    autorequire: None,
+    installed_by_version: None,
+}

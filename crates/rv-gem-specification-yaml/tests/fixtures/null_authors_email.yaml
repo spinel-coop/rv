@@ -1,0 +1,14 @@
+--- !ruby/object:Gem::Specification
+name: null-handling-test
+version: !ruby/object:Gem::Version
+  version: 1.0.0
+summary: Test null value handling
+authors:
+- Real Author
+- 
+- Another Author
+email:
+- real@example.com
+- 
+- another@example.com
+dependencies: []

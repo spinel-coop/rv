@@ -1,0 +1,57 @@
+--- !ruby/object:Gem::Specification
+name: comprehensive-test
+version: !ruby/object:Gem::Version
+  version: 1.0.0
+  prerelease: 
+platform: ruby
+authors:
+- First Author
+- 
+- Third Author
+email:
+- first@example.com
+- 
+- third@example.com
+summary: A comprehensive test gem
+description: A longer description
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: runtime_dep
+  requirement: !ruby/object:Gem::Requirement
+    none: false
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 1.0.0
+        prerelease:
+  type: :runtime
+- !ruby/object:Gem::Dependency
+  name: old_style_dep
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: 2.0.0
+  type: :development
+required_ruby_version: !ruby/object:Gem::Requirement
+  none: false
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.7.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  none: false
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 3.0.0
+files:
+- lib/test.rb
+- README.md
+executables:
+- test-cli
+licenses:
+- MIT
+metadata:
+  homepage_uri: https://example.com
+  source_code_uri: https://github.com/example/test

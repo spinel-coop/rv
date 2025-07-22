@@ -1,0 +1,89 @@
+---
+source: crates/rv-gem-specification-yaml/tests/yaml_compatibility.rs
+expression: spec
+---
+Specification {
+    name: "requirement-none-test",
+    version: Version {
+        version: "1.0.0",
+        segments: [
+            Number(
+                1,
+            ),
+            Number(
+                0,
+            ),
+            Number(
+                0,
+            ),
+        ],
+    },
+    summary: "Test requirement with none field",
+    require_paths: [
+        "lib",
+    ],
+    rubygems_version: "3.0.0",
+    specification_version: 4,
+    date: "",
+    authors: [
+        Some(
+            "Test Author",
+        ),
+    ],
+    email: [],
+    homepage: None,
+    description: None,
+    licenses: [],
+    files: [],
+    executables: [],
+    extensions: [],
+    dependencies: [],
+    metadata: {},
+    platform: Ruby,
+    bindir: "bin",
+    post_install_message: None,
+    requirements: [],
+    required_ruby_version: Requirement {
+        constraints: [
+            VersionConstraint {
+                operator: GreaterEqual,
+                version: Version {
+                    version: "2.0.0",
+                    segments: [
+                        Number(
+                            2,
+                        ),
+                        Number(
+                            0,
+                        ),
+                        Number(
+                            0,
+                        ),
+                    ],
+                },
+            },
+        ],
+    },
+    required_rubygems_version: Requirement {
+        constraints: [
+            VersionConstraint {
+                operator: GreaterEqual,
+                version: Version {
+                    version: "0",
+                    segments: [
+                        Number(
+                            0,
+                        ),
+                    ],
+                },
+            },
+        ],
+    },
+    test_files: [],
+    extra_rdoc_files: [],
+    rdoc_options: [],
+    cert_chain: [],
+    signing_key: None,
+    autorequire: None,
+    installed_by_version: None,
+}

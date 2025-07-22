@@ -1,0 +1,84 @@
+--- !ruby/object:Gem::Specification 
+name: mocha-on-bacon
+version: !ruby/object:Gem::Version 
+  hash: 19
+  prerelease: 
+  segments: 
+  - 0
+  - 2
+  - 2
+  version: 0.2.2
+platform: ruby
+authors: 
+- Eloy Duran
+autorequire: 
+bindir: bin
+cert_chain: []
+
+date: 2013-01-28 00:00:00 Z
+dependencies: 
+- !ruby/object:Gem::Dependency 
+  name: mocha
+  prerelease: false
+  requirement: &id001 !ruby/object:Gem::Requirement 
+    none: false
+    requirements: 
+    - - ">="
+      - !ruby/object:Gem::Version 
+        hash: 43
+        segments: 
+        - 0
+        - 13
+        - 0
+        version: 0.13.0
+  type: :runtime
+  version_requirements: *id001
+description: A Mocha adapter for Bacon, because it's yummy!
+email: eloy.de.enige@gmail.com
+executables: []
+
+extensions: []
+
+extra_rdoc_files: 
+- LICENSE
+- README.md
+files: 
+- LICENSE
+- README.md
+- lib/mocha-on-bacon.rb
+homepage: https://github.com/alloy/mocha-on-bacon
+licenses: []
+
+post_install_message: 
+rdoc_options: 
+- --charset=UTF-8
+require_paths: 
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement 
+  none: false
+  requirements: 
+  - - ">="
+    - !ruby/object:Gem::Version 
+      hash: 3
+      segments: 
+      - 0
+      version: "0"
+required_rubygems_version: !ruby/object:Gem::Requirement 
+  none: false
+  requirements: 
+  - - ">="
+    - !ruby/object:Gem::Version 
+      hash: 3
+      segments: 
+      - 0
+      version: "0"
+requirements: []
+
+rubyforge_project: 
+rubygems_version: 1.8.24
+signing_key: 
+specification_version: 3
+summary: A Mocha adapter for Bacon
+test_files: []
+
+has_rdoc: 
