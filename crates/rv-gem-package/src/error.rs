@@ -30,7 +30,7 @@ pub enum Error {
     IoError(#[from] io::Error),
 
     #[error("YAML parsing error")]
-    #[diagnostic(code(rv_gem_package::yaml_error))]
+    #[diagnostic(transparent)]
     YamlParsing(#[diagnostic_source] miette::Report),
 }
 
