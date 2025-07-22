@@ -206,3 +206,232 @@ fn test_parse_comprehensive_features_specification() {
         }
     }
 }
+
+// Tests for gems that now parse successfully due to prerelease field support
+
+#[test]
+fn test_ronn_0_7_3_dependency_prerelease_field() {
+    // ronn-0.7.3.gem now parses successfully with prerelease field support
+    let yaml_content = std::fs::read_to_string("tests/fixtures/ronn-0.7.3.gemspec.yaml")
+        .expect("ronn-0.7.3 fixture should exist");
+    let result = parse(&yaml_content);
+
+    match result {
+        Ok(spec) => {
+            assert_eq!(spec.name, "ronn");
+            assert_eq!(spec.version.to_string(), "0.7.3");
+            // Verify dependencies with prerelease fields are handled correctly
+            assert!(!spec.dependencies.is_empty());
+        }
+        Err(e) => {
+            panic!("ronn-0.7.3 should now parse successfully: {e}");
+        }
+    }
+}
+
+#[test]
+fn test_net_http_pipeline_1_0_1_dependency_prerelease() {
+    let yaml_content =
+        std::fs::read_to_string("tests/fixtures/net-http-pipeline-1.0.1.gemspec.yaml")
+            .expect("net-http-pipeline-1.0.1 fixture should exist");
+    let result = parse(&yaml_content);
+
+    match result {
+        Ok(spec) => {
+            assert_eq!(spec.name, "net-http-pipeline");
+            assert_eq!(spec.version.to_string(), "1.0.1");
+        }
+        Err(e) => {
+            panic!("net-http-pipeline-1.0.1 should now parse successfully: {e}");
+        }
+    }
+}
+
+#[test]
+fn test_postgres_0_8_1_dependency_prerelease() {
+    let yaml_content = std::fs::read_to_string("tests/fixtures/postgres-0.8.1.gemspec.yaml")
+        .expect("postgres-0.8.1 fixture should exist");
+    let result = parse(&yaml_content);
+
+    match result {
+        Ok(spec) => {
+            assert_eq!(spec.name, "postgres");
+            assert_eq!(spec.version.to_string(), "0.8.1");
+        }
+        Err(e) => {
+            panic!("postgres-0.8.1 should now parse successfully: {e}");
+        }
+    }
+}
+
+#[test]
+fn test_dm_do_adapter_1_2_0_dependency_prerelease() {
+    let yaml_content = std::fs::read_to_string("tests/fixtures/dm-do-adapter-1.2.0.gemspec.yaml")
+        .expect("dm-do-adapter-1.2.0 fixture should exist");
+    let result = parse(&yaml_content);
+
+    match result {
+        Ok(spec) => {
+            assert_eq!(spec.name, "dm-do-adapter");
+            assert_eq!(spec.version.to_string(), "1.2.0");
+        }
+        Err(e) => {
+            panic!("dm-do-adapter-1.2.0 should now parse successfully: {e}");
+        }
+    }
+}
+
+#[test]
+fn test_dm_postgres_adapter_1_2_0_dependency_prerelease() {
+    let yaml_content =
+        std::fs::read_to_string("tests/fixtures/dm-postgres-adapter-1.2.0.gemspec.yaml")
+            .expect("dm-postgres-adapter-1.2.0 fixture should exist");
+    let result = parse(&yaml_content);
+
+    match result {
+        Ok(spec) => {
+            assert_eq!(spec.name, "dm-postgres-adapter");
+            assert_eq!(spec.version.to_string(), "1.2.0");
+        }
+        Err(e) => {
+            panic!("dm-postgres-adapter-1.2.0 should now parse successfully: {e}");
+        }
+    }
+}
+
+#[test]
+fn test_proxies_0_2_1_dependency_prerelease() {
+    let yaml_content = std::fs::read_to_string("tests/fixtures/proxies-0.2.1.gemspec.yaml")
+        .expect("proxies-0.2.1 fixture should exist");
+    let result = parse(&yaml_content);
+
+    match result {
+        Ok(spec) => {
+            assert_eq!(spec.name, "proxies");
+            assert_eq!(spec.version.to_string(), "0.2.1");
+        }
+        Err(e) => {
+            panic!("proxies-0.2.1 should now parse successfully: {e}");
+        }
+    }
+}
+
+#[test]
+fn test_rest_client_1_6_7_dependency_prerelease() {
+    let yaml_content = std::fs::read_to_string("tests/fixtures/rest-client-1.6.7.gemspec.yaml")
+        .expect("rest-client-1.6.7 fixture should exist");
+    let result = parse(&yaml_content);
+
+    match result {
+        Ok(spec) => {
+            assert_eq!(spec.name, "rest-client");
+            assert_eq!(spec.version.to_string(), "1.6.7");
+        }
+        Err(e) => {
+            panic!("rest-client-1.6.7 should now parse successfully: {e}");
+        }
+    }
+}
+
+#[test]
+fn test_sinatra_1_0_dependency_prerelease() {
+    let yaml_content = std::fs::read_to_string("tests/fixtures/sinatra-1.0.gemspec.yaml")
+        .expect("sinatra-1.0 fixture should exist");
+    let result = parse(&yaml_content);
+
+    match result {
+        Ok(spec) => {
+            assert_eq!(spec.name, "sinatra");
+            assert_eq!(spec.version.to_string(), "1.0");
+        }
+        Err(e) => {
+            panic!("sinatra-1.0 should now parse successfully: {e}");
+        }
+    }
+}
+
+#[test]
+fn test_creole_0_5_0_dependency_prerelease() -> miette::Result<()> {
+    // creole-0.5.0.gem with prerelease field in dependencies
+    let yaml_content = std::fs::read_to_string("tests/fixtures/creole-0.5.0.gemspec.yaml")
+        .expect("creole-0.5.0 fixture should exist");
+    let result = parse(&yaml_content)?;
+
+    insta::assert_debug_snapshot!(result.dependencies, @r#"
+    [
+        Dependency {
+            name: "bacon",
+            requirement: Requirement {
+                constraints: [
+                    VersionConstraint {
+                        operator: GreaterEqual,
+                        version: Version {
+                            version: "0",
+                            segments: [
+                                Number(
+                                    0,
+                                ),
+                            ],
+                        },
+                    },
+                ],
+            },
+            dep_type: Development,
+        },
+        Dependency {
+            name: "rake",
+            requirement: Requirement {
+                constraints: [
+                    VersionConstraint {
+                        operator: GreaterEqual,
+                        version: Version {
+                            version: "0",
+                            segments: [
+                                Number(
+                                    0,
+                                ),
+                            ],
+                        },
+                    },
+                ],
+            },
+            dep_type: Development,
+        },
+    ]
+    "#);
+    Ok(())
+}
+
+#[test]
+fn test_mocha_on_bacon_0_2_2_yaml_anchors() {
+    // mocha-on-bacon-0.2.2.gem now parses successfully despite YAML anchors and prerelease fields
+    let yaml_content = std::fs::read_to_string("tests/fixtures/mocha-on-bacon-0.2.2.gemspec.yaml")
+        .expect("mocha-on-bacon-0.2.2 fixture should exist");
+    let result = parse(&yaml_content);
+
+    match result {
+        Ok(spec) => {
+            assert_eq!(spec.name, "mocha-on-bacon");
+            assert_eq!(spec.version.to_string(), "0.2.2");
+        }
+        Err(e) => {
+            panic!("mocha-on-bacon-0.2.2 should now parse successfully: {e}");
+        }
+    }
+}
+
+#[test]
+fn test_yaml_anchors_and_prerelease_field() {
+    // This fixture now parses successfully with prerelease field support
+    let yaml_content = load_fixture("yaml_anchors_and_prerelease");
+    let result = parse(&yaml_content);
+
+    match result {
+        Ok(_spec) => {
+            // Successfully parsed YAML with anchors and prerelease fields
+        }
+        Err(e) => {
+            panic!("YAML anchors and prerelease field should now parse successfully: {e}");
+        }
+    }
+}
