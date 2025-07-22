@@ -28,11 +28,11 @@
 - [x] **4.4** Add file metadata (size, mode, type) to entries
 - [x] **4.5** Ensure streaming works with seekable IO sources
 
-### Phase 5: Verification
-- [ ] **5.1** Implement checksum calculation during reading
-- [ ] **5.2** Support all Ruby checksum algorithms (SHA256, SHA512, etc.)
-- [ ] **5.3** Add `Package::verify()` for checksum verification
-- [ ] **5.4** Create detailed error types for verification failures
+### Phase 5: Verification ✅ COMPLETED
+- [x] **5.1** Implement checksum calculation during reading
+- [x] **5.2** Support all Ruby checksum algorithms (SHA256, SHA512, etc.)
+- [x] **5.3** Add `Package::verify()` for checksum verification
+- [x] **5.4** Create detailed error types for verification failures
 
 ### Phase 6: Testing
 - [ ] **6.1** Create test fixtures: minimal .gem files with Ruby

@@ -1,3 +1,5 @@
+use sha1::{Digest as Sha1Digest, Sha1};
+use sha2::{Sha256, Sha512};
 use std::collections::HashMap;
 
 /// Checksums for files in a gem package
@@ -84,5 +86,84 @@ impl ChecksumAlgorithm {
             ChecksumAlgorithm::Sha256,
             ChecksumAlgorithm::Sha512,
         ]
+    }
+
+    /// Calculate checksum for given data
+    pub fn calculate(&self, data: &[u8]) -> String {
+        match self {
+            ChecksumAlgorithm::Sha1 => {
+                let mut hasher = Sha1::new();
+                hasher.update(data);
+                format!("{:x}", hasher.finalize())
+            }
+            ChecksumAlgorithm::Sha256 => {
+                let mut hasher = Sha256::new();
+                hasher.update(data);
+                format!("{:x}", hasher.finalize())
+            }
+            ChecksumAlgorithm::Sha512 => {
+                let mut hasher = Sha512::new();
+                hasher.update(data);
+                format!("{:x}", hasher.finalize())
+            }
+        }
+    }
+}
+
+/// Checksum calculator that can compute multiple algorithms at once
+pub struct ChecksumCalculator {
+    sha1: Option<Sha1>,
+    sha256: Option<Sha256>,
+    sha512: Option<Sha512>,
+}
+
+impl ChecksumCalculator {
+    /// Create a new calculator for the specified algorithms
+    pub fn new(algorithms: &[ChecksumAlgorithm]) -> Self {
+        let mut calculator = Self {
+            sha1: None,
+            sha256: None,
+            sha512: None,
+        };
+
+        for algorithm in algorithms {
+            match algorithm {
+                ChecksumAlgorithm::Sha1 => calculator.sha1 = Some(Sha1::new()),
+                ChecksumAlgorithm::Sha256 => calculator.sha256 = Some(Sha256::new()),
+                ChecksumAlgorithm::Sha512 => calculator.sha512 = Some(Sha512::new()),
+            }
+        }
+
+        calculator
+    }
+
+    /// Update all configured hashers with data
+    pub fn update(&mut self, data: &[u8]) {
+        if let Some(ref mut hasher) = self.sha1 {
+            hasher.update(data);
+        }
+        if let Some(ref mut hasher) = self.sha256 {
+            hasher.update(data);
+        }
+        if let Some(ref mut hasher) = self.sha512 {
+            hasher.update(data);
+        }
+    }
+
+    /// Finalize and get all checksums
+    pub fn finalize(self) -> HashMap<String, String> {
+        let mut results = HashMap::new();
+
+        if let Some(hasher) = self.sha1 {
+            results.insert("SHA1".to_string(), format!("{:x}", hasher.finalize()));
+        }
+        if let Some(hasher) = self.sha256 {
+            results.insert("SHA256".to_string(), format!("{:x}", hasher.finalize()));
+        }
+        if let Some(hasher) = self.sha512 {
+            results.insert("SHA512".to_string(), format!("{:x}", hasher.finalize()));
+        }
+
+        results
     }
 }

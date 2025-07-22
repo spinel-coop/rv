@@ -1,4 +1,9 @@
-use crate::{checksum::Checksums, entry::DataReader, source::PackageSource, Error, Result};
+use crate::{
+    checksum::{ChecksumAlgorithm, Checksums},
+    entry::DataReader,
+    source::PackageSource,
+    Error, Result,
+};
 use flate2::read::GzDecoder;
 use rv_gem_types::Specification;
 use saphyr::{LoadableYamlNode, Yaml};
@@ -95,7 +100,51 @@ impl<S: PackageSource> Package<S> {
 
     /// Verify the package checksums
     pub fn verify(&mut self) -> Result<()> {
-        todo!("implement in phase 5")
+        let checksums = self.checksums()?.clone();
+
+        if checksums.is_empty() {
+            // No checksums available - this is allowed for older gems
+            return Ok(());
+        }
+
+        let mut data_reader = self.data()?;
+
+        // Verify each file mentioned in checksums
+        for algorithm_name in checksums.algorithms() {
+            let algorithm = ChecksumAlgorithm::from_name(algorithm_name).ok_or_else(|| {
+                Error::checksum_error(format!(
+                    "Unsupported checksum algorithm: {algorithm_name}"
+                ))
+            })?;
+
+            if let Some(files) = checksums.files_for_algorithm(algorithm_name) {
+                for file_path in files {
+                    // Find and read the file
+                    if let Some(file_reader) = data_reader.find_file(file_path)? {
+                        if file_reader.is_file() {
+                            let content = file_reader.content();
+                            let calculated = algorithm.calculate(content);
+
+                            if let Some(expected) =
+                                checksums.get_checksum(algorithm_name, file_path)
+                            {
+                                if calculated != expected {
+                                    return Err(Error::checksum_error(format!(
+                                        "Checksum mismatch for file '{file_path}' using {algorithm_name}: expected {expected}, got {calculated}"
+                                    )));
+                                }
+                            }
+                        }
+                    } else {
+                        return Err(Error::checksum_error(format!(
+                            "File '{file_path}' not found in data archive but listed in checksums"
+                        )));
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Get the checksums (lazy loaded)
