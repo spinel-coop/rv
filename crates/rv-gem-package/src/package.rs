@@ -7,7 +7,7 @@ use crate::{
 use flate2::read::GzDecoder;
 use rv_gem_types::Specification;
 use saphyr::{LoadableYamlNode, Yaml};
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{Read, SeekFrom};
 use std::path::Path;
 use tar::Archive;
 
@@ -21,25 +21,9 @@ pub struct Package<S: PackageSource> {
 
 impl Package<std::fs::File> {
     /// Open a .gem file from the filesystem
-    /// Use ::from_source here, instead of duplicating logic
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let mut file = std::fs::File::open(path)?;
-
-        // Check for old-style gem format by reading the first few bytes
-        let mut buffer = [0u8; 32];
-        file.read_exact(&mut buffer)?;
-        file.seek(SeekFrom::Start(0))?;
-
-        // Check if it's an old-style gem (contains "MD5SUM =")
-        if buffer.windows(8).any(|window| window == b"MD5SUM =") {
-            return Err(Error::OldFormatError);
-        }
-
-        Ok(Self {
-            source: file,
-            spec: None,
-            checksums: None,
-        })
+        let file = std::fs::File::open(path)?;
+        Self::from_source(file)
     }
 }
 
@@ -78,11 +62,8 @@ impl<S: PackageSource> Package<S> {
         let mut archive = Archive::new(&mut self.source);
 
         for entry in archive.entries()? {
-            let mut entry = entry.map_err(|e| Error::tar_error(e.to_string()))?;
-            let path = entry
-                .header()
-                .path()
-                .map_err(|e| Error::tar_error(e.to_string()))?;
+            let mut entry = entry?;
+            let path = entry.header().path()?;
             let path_str = path.to_string_lossy();
 
             if path_str == "data.tar.gz" {
@@ -96,7 +77,7 @@ impl<S: PackageSource> Package<S> {
             }
         }
 
-        Err(Error::format_error("No data.tar.gz found in gem"))
+        Err(Error::missing_file("data.tar.gz"))
     }
 
     /// Verify the package checksums
@@ -111,9 +92,8 @@ impl<S: PackageSource> Package<S> {
         // Verify checksums for gem's top-level files (metadata.gz, data.tar.gz, etc.)
 
         for algorithm_name in checksums.algorithms() {
-            let algorithm = ChecksumAlgorithm::from_name(algorithm_name).ok_or_else(|| {
-                Error::checksum_error(format!("Unsupported checksum algorithm: {algorithm_name}"))
-            })?;
+            let algorithm = ChecksumAlgorithm::from_name(algorithm_name)
+                .ok_or_else(|| Error::unsupported_algorithm(algorithm_name))?;
 
             if let Some(files) = checksums.files_for_algorithm(algorithm_name) {
                 for file_path in files {
@@ -123,12 +103,8 @@ impl<S: PackageSource> Package<S> {
 
                     let mut found = false;
                     for entry_result in archive.entries()? {
-                        let mut entry =
-                            entry_result.map_err(|e| Error::tar_error(e.to_string()))?;
-                        let path = entry
-                            .header()
-                            .path()
-                            .map_err(|e| Error::tar_error(e.to_string()))?;
+                        let mut entry = entry_result?;
+                        let path = entry.header().path()?;
                         let path_str = path.to_string_lossy();
 
                         if path_str == file_path {
@@ -141,9 +117,12 @@ impl<S: PackageSource> Package<S> {
                                 checksums.get_checksum(algorithm_name, file_path)
                             {
                                 if calculated != expected {
-                                    return Err(Error::checksum_error(format!(
-                                        "Checksum mismatch for file '{file_path}' using {algorithm_name}: expected {expected}, got {calculated}"
-                                    )));
+                                    return Err(Error::checksum_mismatch(
+                                        file_path,
+                                        algorithm_name,
+                                        expected,
+                                        calculated,
+                                    ));
                                 }
                             }
                             break;
@@ -151,13 +130,13 @@ impl<S: PackageSource> Package<S> {
                     }
 
                     if !found {
-                        return Err(Error::checksum_error(format!(
-                            "File '{file_path}' not found in gem archive but listed in checksums"
-                        )));
+                        return Err(Error::checksum_missing_file(file_path));
                     }
                 }
             }
         }
+
+        self.load_spec()?;
 
         Ok(())
     }
@@ -176,11 +155,8 @@ impl<S: PackageSource> Package<S> {
         let mut archive = Archive::new(&mut self.source);
 
         for entry in archive.entries()? {
-            let mut entry = entry.map_err(|e| Error::tar_error(e.to_string()))?;
-            let path = entry
-                .header()
-                .path()
-                .map_err(|e| Error::tar_error(e.to_string()))?;
+            let mut entry = entry?;
+            let path = entry.header().path()?;
             let path_str = path.to_string_lossy();
 
             match path_str.as_ref() {
@@ -189,13 +165,12 @@ impl<S: PackageSource> Package<S> {
                     let mut decoder = GzDecoder::new(&mut entry);
                     decoder.read_to_end(&mut content)?;
 
-                    let yaml_str = String::from_utf8(content).map_err(|e| {
-                        Error::format_error(format!("Invalid UTF-8 in metadata.gz: {e}"))
-                    })?;
+                    let yaml_str = String::from_utf8(content)
+                        .map_err(|e| Error::invalid_utf8("metadata.gz", e))?;
 
                     self.spec = Some(
                         rv_gem_specification_yaml::parse(&yaml_str)
-                            .map_err(|e| Error::YamlError(e.to_string()))?,
+                            .map_err(Error::YamlParsing)?,
                     );
                     return Ok(());
                 }
@@ -203,13 +178,12 @@ impl<S: PackageSource> Package<S> {
                     let mut content = Vec::new();
                     entry.read_to_end(&mut content)?;
 
-                    let yaml_str = String::from_utf8(content).map_err(|e| {
-                        Error::format_error(format!("Invalid UTF-8 in metadata: {e}"))
-                    })?;
+                    let yaml_str = String::from_utf8(content)
+                        .map_err(|e| Error::invalid_utf8("metadata", e))?;
 
                     self.spec = Some(
                         rv_gem_specification_yaml::parse(&yaml_str)
-                            .map_err(|e| Error::YamlError(e.to_string()))?,
+                            .map_err(Error::YamlParsing)?,
                     );
                     return Ok(());
                 }
@@ -217,7 +191,7 @@ impl<S: PackageSource> Package<S> {
             }
         }
 
-        Err(Error::format_error("No metadata found in gem"))
+        Err(Error::missing_file("metadata"))
     }
 
     /// Load checksums from checksums.yaml.gz
@@ -226,11 +200,8 @@ impl<S: PackageSource> Package<S> {
         let mut archive = Archive::new(&mut self.source);
 
         for entry in archive.entries()? {
-            let mut entry = entry.map_err(|e| Error::tar_error(e.to_string()))?;
-            let path = entry
-                .header()
-                .path()
-                .map_err(|e| Error::tar_error(e.to_string()))?;
+            let mut entry = entry?;
+            let path = entry.header().path()?;
             let path_str = path.to_string_lossy();
 
             if path_str == "checksums.yaml.gz" {
@@ -238,9 +209,8 @@ impl<S: PackageSource> Package<S> {
                 let mut decoder = GzDecoder::new(&mut entry);
                 decoder.read_to_end(&mut content)?;
 
-                let yaml_str = String::from_utf8(content).map_err(|e| {
-                    Error::format_error(format!("Invalid UTF-8 in checksums.yaml.gz: {e}"))
-                })?;
+                let yaml_str = String::from_utf8(content)
+                    .map_err(|e| Error::invalid_utf8("checksums.yaml.gz", e))?;
 
                 // Parse the YAML manually since it's a simple structure
                 self.checksums = Some(self.parse_checksums_yaml(&yaml_str)?);
@@ -257,11 +227,11 @@ impl<S: PackageSource> Package<S> {
     fn parse_checksums_yaml(&self, yaml_str: &str) -> Result<Checksums> {
         // Use saphyr for parsing the checksums structure
         let docs = Yaml::load_from_str(yaml_str)
-            .map_err(|e| Error::format_error(format!("Invalid checksums YAML: {e}")))?;
+            .map_err(|e| Error::invalid_yaml("checksums.yaml.gz", e))?;
 
         let doc = docs
             .first()
-            .ok_or_else(|| Error::format_error("Empty checksums YAML"))?;
+            .ok_or_else(|| Error::empty_yaml("checksums.yaml.gz"))?;
 
         let mut checksums = Checksums::new();
 

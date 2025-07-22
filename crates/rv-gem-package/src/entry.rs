@@ -46,16 +46,15 @@ impl Entry {
             tar::EntryType::Directory => EntryType::Directory,
             tar::EntryType::Symlink | tar::EntryType::Link => {
                 let target = header
-                    .link_name()
-                    .map_err(|e| Error::tar_error(e.to_string()))?
-                    .ok_or_else(|| Error::tar_error("Symlink missing target".to_string()))?
+                    .link_name()?
+                    .ok_or_else(Error::tar_missing_symlink_target)?
                     .to_string_lossy()
                     .to_string();
                 EntryType::Symlink { target }
             }
             _ => {
-                return Err(Error::tar_error(format!(
-                    "Unsupported entry type: {:?}",
+                return Err(Error::tar_unsupported_entry_type(format!(
+                    "{:?}",
                     header.entry_type()
                 )))
             }
@@ -154,11 +153,11 @@ impl<R: Read> DataReader<R> {
     /// Find a specific file by path and return a streaming reader
     pub fn find_file(&mut self, target_path: &str) -> Result<Option<FileReader>> {
         for entry_result in self.archive.entries()? {
-            let mut entry = entry_result.map_err(|e| Error::tar_error(e.to_string()))?;
+            let mut entry = entry_result?;
             let path = entry
                 .header()
                 .path()
-                .map_err(|e| Error::tar_error(e.to_string()))?;
+?;
             let path_str = path.to_string_lossy();
 
             if path_str == target_path {
@@ -183,11 +182,11 @@ impl<R: Read> DataReader<R> {
         let mut result = Vec::new();
 
         for entry_result in self.archive.entries()? {
-            let entry = entry_result.map_err(|e| Error::tar_error(e.to_string()))?;
+            let entry = entry_result?;
             let header = entry.header();
             let path = header
                 .path()
-                .map_err(|e| Error::tar_error(e.to_string()))?
+?
                 .to_string_lossy()
                 .to_string();
 
