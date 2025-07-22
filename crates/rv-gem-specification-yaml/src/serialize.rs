@@ -118,7 +118,11 @@ fn insert_string_array_field(mapping: &mut saphyr::Mapping<'static>, key: &str, 
     mapping.insert(key_yaml, value_yaml);
 }
 
-fn insert_optional_string_array_field(mapping: &mut saphyr::Mapping<'static>, key: &str, values: &[Option<String>]) {
+fn insert_optional_string_array_field(
+    mapping: &mut saphyr::Mapping<'static>,
+    key: &str,
+    values: &[Option<String>],
+) {
     let key_yaml = Yaml::scalar_from_string(key.to_string());
     let array_items: Vec<Yaml> = values
         .iter()

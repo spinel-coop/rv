@@ -200,17 +200,21 @@ impl Specification {
 
         // Authors
         if !self.authors.is_empty() {
-            let author_strings: Vec<String> = self.authors.iter().map(|a| 
-                a.as_ref().unwrap_or(&"".to_string()).clone()
-            ).collect();
+            let author_strings: Vec<String> = self
+                .authors
+                .iter()
+                .map(|a| a.as_ref().unwrap_or(&"".to_string()).clone())
+                .collect();
             lines.push(format!("  s.authors = {:?}", author_strings));
         }
 
         // Email
         if !self.email.is_empty() {
-            let email_strings: Vec<String> = self.email.iter().map(|e| 
-                e.as_ref().unwrap_or(&"".to_string()).clone()
-            ).collect();
+            let email_strings: Vec<String> = self
+                .email
+                .iter()
+                .map(|e| e.as_ref().unwrap_or(&"".to_string()).clone())
+                .collect();
             lines.push(format!("  s.email = {:?}", email_strings));
         }
 
@@ -545,7 +549,10 @@ mod tests {
         .unwrap()
         .with_summary("A comprehensive test gem".to_string())
         .with_description("This is a longer description of the test gem".to_string())
-        .with_authors(vec![Some("Test Author".to_string()), Some("Second Author".to_string())])
+        .with_authors(vec![
+            Some("Test Author".to_string()),
+            Some("Second Author".to_string()),
+        ])
         .with_email(vec![Some("test@example.com".into())])
         .with_homepage("https://example.com".to_string())
         .with_licenses(vec!["MIT".to_string(), "Apache-2.0".to_string()])

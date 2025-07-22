@@ -332,21 +332,24 @@ fn test_unsupported_folded_scalar_syntax() {
 
     // Currently fails due to folded scalar syntax limitation
     assert!(result.is_err(), "Folded scalar syntax is not yet supported");
-    
+
     let error_msg = format!("{:?}", result.unwrap_err());
     assert!(error_msg.contains("YAML parsing error") || error_msg.contains("parse"));
 }
 
 #[test]
 fn test_unsupported_version_requirement_class() {
-    // Current limitation: terminal-table-1.4.5.gem uses Gem::Version::Requirement instead of Gem::Requirement  
+    // Current limitation: terminal-table-1.4.5.gem uses Gem::Version::Requirement instead of Gem::Requirement
     // This is valid Ruby but uses a different class hierarchy than we currently support
     let yaml_content = load_fixture("version_requirement_class");
     let result = parse(&yaml_content);
 
     // Currently fails because we only support !ruby/object:Gem::Requirement, not Gem::Version::Requirement
-    assert!(result.is_err(), "Gem::Version::Requirement class is not yet supported");
-    
+    assert!(
+        result.is_err(),
+        "Gem::Version::Requirement class is not yet supported"
+    );
+
     let error_msg = format!("{:?}", result.unwrap_err());
     assert!(error_msg.contains("expected_event") || error_msg.contains("Gem::Requirement"));
 }
@@ -359,8 +362,11 @@ fn test_unsupported_yaml_anchors_and_prerelease_field() {
     let result = parse(&yaml_content);
 
     // Currently fails due to unsupported YAML anchors and dependency prerelease field
-    assert!(result.is_err(), "YAML anchors and dependency prerelease field are not yet supported");
-    
+    assert!(
+        result.is_err(),
+        "YAML anchors and dependency prerelease field are not yet supported"
+    );
+
     let error_msg = format!("{:?}", result.unwrap_err());
     assert!(error_msg.contains("expected_event") || error_msg.contains("YAML"));
 }
@@ -376,19 +382,29 @@ fn test_bacon_1_2_0_folded_scalar() {
     let result = parse(&yaml_content);
 
     // Should fail with YAML parsing error due to folded scalar syntax
-    assert!(result.is_err(), "bacon-1.2.0 should fail due to folded scalar syntax limitation");
-    
+    assert!(
+        result.is_err(),
+        "bacon-1.2.0 should fail due to folded scalar syntax limitation"
+    );
+
     let error = result.unwrap_err();
     let error_msg = format!("{}", error);
-    assert!(error_msg.contains("YAML parsing error"), "Expected YAML parsing error, got: {}", error_msg);
-    
+    assert!(
+        error_msg.contains("YAML parsing error"),
+        "Expected YAML parsing error, got: {}",
+        error_msg
+    );
+
     // Check the diagnostic contains information about the folded scalar issue
     let debug_msg = format!("{:?}", error);
-    assert!(debug_msg.contains("invalid indentation in quoted scalar") || debug_msg.contains("line 14"),
-        "Expected folded scalar error details, got: {}", debug_msg);
+    assert!(
+        debug_msg.contains("invalid indentation in quoted scalar") || debug_msg.contains("line 14"),
+        "Expected folded scalar error details, got: {}",
+        debug_msg
+    );
 }
 
-#[test] 
+#[test]
 fn test_ronn_0_7_3_dependency_prerelease_field() {
     // ronn-0.7.3.gem fails due to prerelease field in dependencies
     // Dependencies have an unsupported "prerelease: false" field we don't parse
@@ -396,52 +412,74 @@ fn test_ronn_0_7_3_dependency_prerelease_field() {
         .expect("ronn-0.7.3 fixture should exist");
     let result = parse(&yaml_content);
 
-    // Should fail when parsing dependency with prerelease field  
-    assert!(result.is_err(), "ronn-0.7.3 should fail due to dependency prerelease field");
-    
+    // Should fail when parsing dependency with prerelease field
+    assert!(
+        result.is_err(),
+        "ronn-0.7.3 should fail due to dependency prerelease field"
+    );
+
     let error = result.unwrap_err();
     let error_msg = format!("{}", error);
-    assert!(error_msg.contains("Expected") && error_msg.contains("found"),
-        "Expected parsing structure error, got: {}", error_msg);
-    
+    assert!(
+        error_msg.contains("Expected") && error_msg.contains("found"),
+        "Expected parsing structure error, got: {}",
+        error_msg
+    );
+
     // Error should occur around the dependency prerelease field
     let debug_msg = format!("{:?}", error);
-    assert!(debug_msg.contains("expected_event") || debug_msg.contains("line 2"),
-        "Expected dependency parsing error details, got: {}", debug_msg);
+    assert!(
+        debug_msg.contains("expected_event") || debug_msg.contains("line 2"),
+        "Expected dependency parsing error details, got: {}",
+        debug_msg
+    );
 }
 
 #[test]
 fn test_net_http_pipeline_1_0_1_dependency_prerelease() {
     // net-http-pipeline-1.0.1.gem fails due to prerelease field in dependencies
     // Similar to ronn, has prerelease: false in dependency objects
-    let yaml_content = std::fs::read_to_string("tests/fixtures/net-http-pipeline-1.0.1.gemspec.yaml")
-        .expect("net-http-pipeline-1.0.1 fixture should exist");
+    let yaml_content =
+        std::fs::read_to_string("tests/fixtures/net-http-pipeline-1.0.1.gemspec.yaml")
+            .expect("net-http-pipeline-1.0.1 fixture should exist");
     let result = parse(&yaml_content);
 
     // Should fail when encountering dependency prerelease field
-    assert!(result.is_err(), "net-http-pipeline-1.0.1 should fail due to dependency prerelease field");
-    
+    assert!(
+        result.is_err(),
+        "net-http-pipeline-1.0.1 should fail due to dependency prerelease field"
+    );
+
     let error = result.unwrap_err();
     let error_msg = format!("{}", error);
-    assert!(error_msg.contains("Expected") || error_msg.contains("YAML parsing error"),
-        "Expected parsing error, got: {}", error_msg);
+    assert!(
+        error_msg.contains("Expected") || error_msg.contains("YAML parsing error"),
+        "Expected parsing error, got: {}",
+        error_msg
+    );
 }
 
 #[test]
 fn test_postgres_0_8_1_dependency_prerelease() {
-    // postgres-0.8.1.gem fails due to prerelease field in dependencies  
+    // postgres-0.8.1.gem fails due to prerelease field in dependencies
     // Another case of unsupported prerelease field in dependency structure
     let yaml_content = std::fs::read_to_string("tests/fixtures/postgres-0.8.1.gemspec.yaml")
         .expect("postgres-0.8.1 fixture should exist");
     let result = parse(&yaml_content);
 
     // Should fail due to dependency prerelease field parsing
-    assert!(result.is_err(), "postgres-0.8.1 should fail due to dependency prerelease field");
-    
+    assert!(
+        result.is_err(),
+        "postgres-0.8.1 should fail due to dependency prerelease field"
+    );
+
     let error = result.unwrap_err();
     let error_msg = format!("{}", error);
-    assert!(error_msg.contains("Expected") || error_msg.contains("expected_event"),
-        "Expected dependency parsing error, got: {}", error_msg);
+    assert!(
+        error_msg.contains("Expected") || error_msg.contains("expected_event"),
+        "Expected dependency parsing error, got: {}",
+        error_msg
+    );
 }
 
 #[test]
@@ -453,12 +491,18 @@ fn test_mocha_on_bacon_0_2_2_yaml_anchors() {
     let result = parse(&yaml_content);
 
     // Should fail due to YAML anchors and dependency prerelease field
-    assert!(result.is_err(), "mocha-on-bacon-0.2.2 should fail due to YAML anchors and prerelease fields");
-    
+    assert!(
+        result.is_err(),
+        "mocha-on-bacon-0.2.2 should fail due to YAML anchors and prerelease fields"
+    );
+
     let error = result.unwrap_err();
     let error_msg = format!("{}", error);
-    assert!(error_msg.contains("Expected") || error_msg.contains("expected_event"),
-        "Expected YAML anchor parsing error, got: {}", error_msg);
+    assert!(
+        error_msg.contains("Expected") || error_msg.contains("expected_event"),
+        "Expected YAML anchor parsing error, got: {}",
+        error_msg
+    );
 }
 
 #[test]
@@ -470,17 +514,26 @@ fn test_terminal_table_1_4_5_version_requirement_class() {
     let result = parse(&yaml_content);
 
     // Should fail when parsing Gem::Version::Requirement tag
-    assert!(result.is_err(), "terminal-table-1.4.5 should fail due to Gem::Version::Requirement class");
-    
+    assert!(
+        result.is_err(),
+        "terminal-table-1.4.5 should fail due to Gem::Version::Requirement class"
+    );
+
     let error = result.unwrap_err();
     let error_msg = format!("{}", error);
-    assert!(error_msg.contains("Expected") && error_msg.contains("`ruby/object:Gem::Requirement`"),
-        "Expected Gem::Requirement vs Gem::Version::Requirement error, got: {}", error_msg);
-    
+    assert!(
+        error_msg.contains("Expected") && error_msg.contains("`ruby/object:Gem::Requirement`"),
+        "Expected Gem::Requirement vs Gem::Version::Requirement error, got: {}",
+        error_msg
+    );
+
     // Should specifically mention the Gem::Requirement expectation
     let debug_msg = format!("{:?}", error);
-    assert!(debug_msg.contains("expected_event") || debug_msg.contains("requirements"),
-        "Expected requirement class error details, got: {}", debug_msg);
+    assert!(
+        debug_msg.contains("expected_event") || debug_msg.contains("requirements"),
+        "Expected requirement class error details, got: {}",
+        debug_msg
+    );
 }
 
 #[test]
@@ -492,29 +545,42 @@ fn test_dm_do_adapter_1_2_0_dependency_prerelease() {
     let result = parse(&yaml_content);
 
     // Should fail due to dependency structure parsing
-    assert!(result.is_err(), "dm-do-adapter-1.2.0 should fail due to dependency prerelease field");
-    
+    assert!(
+        result.is_err(),
+        "dm-do-adapter-1.2.0 should fail due to dependency prerelease field"
+    );
+
     let error = result.unwrap_err();
     let error_msg = format!("{}", error);
-    assert!(error_msg.contains("Expected") || error_msg.contains("expected_event"),
-        "Expected dependency parsing error, got: {}", error_msg);
+    assert!(
+        error_msg.contains("Expected") || error_msg.contains("expected_event"),
+        "Expected dependency parsing error, got: {}",
+        error_msg
+    );
 }
 
 #[test]
 fn test_dm_postgres_adapter_1_2_0_dependency_prerelease() {
     // dm-postgres-adapter-1.2.0.gem fails due to dependency prerelease field
     // DataMapper adapter gem with similar prerelease field issue
-    let yaml_content = std::fs::read_to_string("tests/fixtures/dm-postgres-adapter-1.2.0.gemspec.yaml")
-        .expect("dm-postgres-adapter-1.2.0 fixture should exist");
+    let yaml_content =
+        std::fs::read_to_string("tests/fixtures/dm-postgres-adapter-1.2.0.gemspec.yaml")
+            .expect("dm-postgres-adapter-1.2.0 fixture should exist");
     let result = parse(&yaml_content);
 
     // Should fail when parsing dependency prerelease field
-    assert!(result.is_err(), "dm-postgres-adapter-1.2.0 should fail due to dependency prerelease field");
-    
+    assert!(
+        result.is_err(),
+        "dm-postgres-adapter-1.2.0 should fail due to dependency prerelease field"
+    );
+
     let error = result.unwrap_err();
     let error_msg = format!("{}", error);
-    assert!(error_msg.contains("Expected") || error_msg.contains("expected_event"),
-        "Expected dependency parsing error, got: {}", error_msg);
+    assert!(
+        error_msg.contains("Expected") || error_msg.contains("expected_event"),
+        "Expected dependency parsing error, got: {}",
+        error_msg
+    );
 }
 
 #[test]
@@ -526,12 +592,18 @@ fn test_proxies_0_2_1_dependency_prerelease() {
     let result = parse(&yaml_content);
 
     // Should fail due to unsupported dependency prerelease field
-    assert!(result.is_err(), "proxies-0.2.1 should fail due to dependency prerelease field");
-    
+    assert!(
+        result.is_err(),
+        "proxies-0.2.1 should fail due to dependency prerelease field"
+    );
+
     let error = result.unwrap_err();
     let error_msg = format!("{}", error);
-    assert!(error_msg.contains("Expected") || error_msg.contains("expected_event"),
-        "Expected dependency parsing error, got: {}", error_msg);
+    assert!(
+        error_msg.contains("Expected") || error_msg.contains("expected_event"),
+        "Expected dependency parsing error, got: {}",
+        error_msg
+    );
 }
 
 #[test]
@@ -543,12 +615,18 @@ fn test_rest_client_1_6_7_dependency_prerelease() {
     let result = parse(&yaml_content);
 
     // Should fail when encountering prerelease field in dependency
-    assert!(result.is_err(), "rest-client-1.6.7 should fail due to dependency prerelease field");
-    
+    assert!(
+        result.is_err(),
+        "rest-client-1.6.7 should fail due to dependency prerelease field"
+    );
+
     let error = result.unwrap_err();
     let error_msg = format!("{}", error);
-    assert!(error_msg.contains("Expected") || error_msg.contains("expected_event"),
-        "Expected dependency parsing error, got: {}", error_msg);
+    assert!(
+        error_msg.contains("Expected") || error_msg.contains("expected_event"),
+        "Expected dependency parsing error, got: {}",
+        error_msg
+    );
 }
 
 #[test]
@@ -560,12 +638,18 @@ fn test_sinatra_1_0_dependency_prerelease() {
     let result = parse(&yaml_content);
 
     // Should fail due to dependency prerelease field parsing
-    assert!(result.is_err(), "sinatra-1.0 should fail due to dependency prerelease field");
-    
+    assert!(
+        result.is_err(),
+        "sinatra-1.0 should fail due to dependency prerelease field"
+    );
+
     let error = result.unwrap_err();
     let error_msg = format!("{}", error);
-    assert!(error_msg.contains("Expected") || error_msg.contains("expected_event"),
-        "Expected dependency parsing error, got: {}", error_msg);
+    assert!(
+        error_msg.contains("Expected") || error_msg.contains("expected_event"),
+        "Expected dependency parsing error, got: {}",
+        error_msg
+    );
 }
 
 #[test]
@@ -577,11 +661,16 @@ fn test_creole_0_5_0_dependency_prerelease() {
     let result = parse(&yaml_content);
 
     // Should fail when parsing dependency with prerelease field
-    assert!(result.is_err(), "creole-0.5.0 should fail due to dependency prerelease field");
-    
+    assert!(
+        result.is_err(),
+        "creole-0.5.0 should fail due to dependency prerelease field"
+    );
+
     let error = result.unwrap_err();
     let error_msg = format!("{}", error);
-    assert!(error_msg.contains("Expected") || error_msg.contains("expected_event"),
-        "Expected dependency parsing error, got: {}", error_msg);
+    assert!(
+        error_msg.contains("Expected") || error_msg.contains("expected_event"),
+        "Expected dependency parsing error, got: {}",
+        error_msg
+    );
 }
-

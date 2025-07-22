@@ -169,12 +169,12 @@ fn test_parse_null_authors_email_specification() {
             assert_eq!(spec.authors[0], Some("Real Author".to_string()));
             assert_eq!(spec.authors[1], None);
             assert_eq!(spec.authors[2], Some("Another Author".to_string()));
-            
+
             assert_eq!(spec.email.len(), 3);
             assert_eq!(spec.email[0], Some("real@example.com".to_string()));
             assert_eq!(spec.email[1], None);
             assert_eq!(spec.email[2], Some("another@example.com".to_string()));
-            
+
             insta::assert_debug_snapshot!("null_authors_email_spec_parsed", spec);
         }
         Err(e) => {
@@ -198,7 +198,7 @@ fn test_parse_comprehensive_features_specification() {
             assert_eq!(spec.dependencies[1].name, "old_style_dep");
             assert!(!spec.required_ruby_version.is_latest_version());
             assert!(!spec.required_rubygems_version.is_latest_version());
-            
+
             insta::assert_debug_snapshot!("comprehensive_features_spec_parsed", spec);
         }
         Err(e) => {
@@ -206,4 +206,3 @@ fn test_parse_comprehensive_features_specification() {
         }
     }
 }
-

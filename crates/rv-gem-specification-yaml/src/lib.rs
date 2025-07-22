@@ -2,8 +2,8 @@
 //!
 //! A Rust library for parsing and serializing Ruby gem specification YAML files.
 //!
-//! This crate provides functionality to parse the `metadata.gz` files found in Ruby gem 
-//! packages (`.gem` files) and convert them to structured Rust types, as well as serialize 
+//! This crate provides functionality to parse the `metadata.gz` files found in Ruby gem
+//! packages (`.gem` files) and convert them to structured Rust types, as well as serialize
 //! specifications back to YAML format.
 //!
 //! ## Features
