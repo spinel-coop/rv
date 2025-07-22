@@ -388,19 +388,17 @@ fn test_bacon_1_2_0_folded_scalar() {
     );
 
     let error = result.unwrap_err();
-    let error_msg = format!("{}", error);
+    let error_msg = format!("{error}");
     assert!(
         error_msg.contains("YAML parsing error"),
-        "Expected YAML parsing error, got: {}",
-        error_msg
+        "Expected YAML parsing error, got: {error_msg}"
     );
 
     // Check the diagnostic contains information about the folded scalar issue
-    let debug_msg = format!("{:?}", error);
+    let debug_msg = format!("{error:?}");
     assert!(
         debug_msg.contains("invalid indentation in quoted scalar") || debug_msg.contains("line 14"),
-        "Expected folded scalar error details, got: {}",
-        debug_msg
+        "Expected folded scalar error details, got: {debug_msg}"
     );
 }
 
@@ -419,19 +417,17 @@ fn test_ronn_0_7_3_dependency_prerelease_field() {
     );
 
     let error = result.unwrap_err();
-    let error_msg = format!("{}", error);
+    let error_msg = format!("{error}");
     assert!(
         error_msg.contains("Expected") && error_msg.contains("found"),
-        "Expected parsing structure error, got: {}",
-        error_msg
+        "Expected parsing structure error, got: {error_msg}"
     );
 
     // Error should occur around the dependency prerelease field
-    let debug_msg = format!("{:?}", error);
+    let debug_msg = format!("{error:?}");
     assert!(
         debug_msg.contains("expected_event") || debug_msg.contains("line 2"),
-        "Expected dependency parsing error details, got: {}",
-        debug_msg
+        "Expected dependency parsing error details, got: {debug_msg}"
     );
 }
 
@@ -451,11 +447,10 @@ fn test_net_http_pipeline_1_0_1_dependency_prerelease() {
     );
 
     let error = result.unwrap_err();
-    let error_msg = format!("{}", error);
+    let error_msg = format!("{error}");
     assert!(
         error_msg.contains("Expected") || error_msg.contains("YAML parsing error"),
-        "Expected parsing error, got: {}",
-        error_msg
+        "Expected parsing error, got: {error_msg}"
     );
 }
 
@@ -474,11 +469,10 @@ fn test_postgres_0_8_1_dependency_prerelease() {
     );
 
     let error = result.unwrap_err();
-    let error_msg = format!("{}", error);
+    let error_msg = format!("{error}");
     assert!(
         error_msg.contains("Expected") || error_msg.contains("expected_event"),
-        "Expected dependency parsing error, got: {}",
-        error_msg
+        "Expected dependency parsing error, got: {error_msg}"
     );
 }
 
@@ -497,11 +491,10 @@ fn test_mocha_on_bacon_0_2_2_yaml_anchors() {
     );
 
     let error = result.unwrap_err();
-    let error_msg = format!("{}", error);
+    let error_msg = format!("{error}");
     assert!(
         error_msg.contains("Expected") || error_msg.contains("expected_event"),
-        "Expected YAML anchor parsing error, got: {}",
-        error_msg
+        "Expected YAML anchor parsing error, got: {error_msg}"
     );
 }
 
@@ -520,19 +513,17 @@ fn test_terminal_table_1_4_5_version_requirement_class() {
     );
 
     let error = result.unwrap_err();
-    let error_msg = format!("{}", error);
+    let error_msg = format!("{error}");
     assert!(
         error_msg.contains("Expected") && error_msg.contains("`ruby/object:Gem::Requirement`"),
-        "Expected Gem::Requirement vs Gem::Version::Requirement error, got: {}",
-        error_msg
+        "Expected Gem::Requirement vs Gem::Version::Requirement error, got: {error_msg}"
     );
 
     // Should specifically mention the Gem::Requirement expectation
-    let debug_msg = format!("{:?}", error);
+    let debug_msg = format!("{error:?}");
     assert!(
         debug_msg.contains("expected_event") || debug_msg.contains("requirements"),
-        "Expected requirement class error details, got: {}",
-        debug_msg
+        "Expected requirement class error details, got: {debug_msg}"
     );
 }
 
@@ -551,11 +542,10 @@ fn test_dm_do_adapter_1_2_0_dependency_prerelease() {
     );
 
     let error = result.unwrap_err();
-    let error_msg = format!("{}", error);
+    let error_msg = format!("{error}");
     assert!(
         error_msg.contains("Expected") || error_msg.contains("expected_event"),
-        "Expected dependency parsing error, got: {}",
-        error_msg
+        "Expected dependency parsing error, got: {error_msg}"
     );
 }
 
@@ -575,11 +565,10 @@ fn test_dm_postgres_adapter_1_2_0_dependency_prerelease() {
     );
 
     let error = result.unwrap_err();
-    let error_msg = format!("{}", error);
+    let error_msg = format!("{error}");
     assert!(
         error_msg.contains("Expected") || error_msg.contains("expected_event"),
-        "Expected dependency parsing error, got: {}",
-        error_msg
+        "Expected dependency parsing error, got: {error_msg}"
     );
 }
 
@@ -598,11 +587,10 @@ fn test_proxies_0_2_1_dependency_prerelease() {
     );
 
     let error = result.unwrap_err();
-    let error_msg = format!("{}", error);
+    let error_msg = format!("{error}");
     assert!(
         error_msg.contains("Expected") || error_msg.contains("expected_event"),
-        "Expected dependency parsing error, got: {}",
-        error_msg
+        "Expected dependency parsing error, got: {error_msg}"
     );
 }
 
@@ -621,11 +609,10 @@ fn test_rest_client_1_6_7_dependency_prerelease() {
     );
 
     let error = result.unwrap_err();
-    let error_msg = format!("{}", error);
+    let error_msg = format!("{error}");
     assert!(
         error_msg.contains("Expected") || error_msg.contains("expected_event"),
-        "Expected dependency parsing error, got: {}",
-        error_msg
+        "Expected dependency parsing error, got: {error_msg}"
     );
 }
 
@@ -644,11 +631,10 @@ fn test_sinatra_1_0_dependency_prerelease() {
     );
 
     let error = result.unwrap_err();
-    let error_msg = format!("{}", error);
+    let error_msg = format!("{error}");
     assert!(
         error_msg.contains("Expected") || error_msg.contains("expected_event"),
-        "Expected dependency parsing error, got: {}",
-        error_msg
+        "Expected dependency parsing error, got: {error_msg}"
     );
 }
 
@@ -667,10 +653,9 @@ fn test_creole_0_5_0_dependency_prerelease() {
     );
 
     let error = result.unwrap_err();
-    let error_msg = format!("{}", error);
+    let error_msg = format!("{error}");
     assert!(
         error_msg.contains("Expected") || error_msg.contains("expected_event"),
-        "Expected dependency parsing error, got: {}",
-        error_msg
+        "Expected dependency parsing error, got: {error_msg}"
     );
 }

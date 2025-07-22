@@ -205,7 +205,7 @@ impl Specification {
                 .iter()
                 .map(|a| a.as_ref().unwrap_or(&"".to_string()).clone())
                 .collect();
-            lines.push(format!("  s.authors = {:?}", author_strings));
+            lines.push(format!("  s.authors = {author_strings:?}"));
         }
 
         // Email
@@ -215,7 +215,7 @@ impl Specification {
                 .iter()
                 .map(|e| e.as_ref().unwrap_or(&"".to_string()).clone())
                 .collect();
-            lines.push(format!("  s.email = {:?}", email_strings));
+            lines.push(format!("  s.email = {email_strings:?}"));
         }
 
         // Description
