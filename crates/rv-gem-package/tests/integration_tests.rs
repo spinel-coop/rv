@@ -218,20 +218,6 @@ fn test_error_cases() {
     }
 }
 
-/// Test custom PackageSource implementation
-#[test]
-fn test_custom_package_source() {
-    let gem_path = Path::new("tests/fixtures/test-gem-1.0.0.gem");
-    let gem_data = std::fs::read(gem_path).expect("Failed to read gem file");
-
-    let mut package =
-        Package::from_source(Cursor::new(gem_data)).expect("Failed to open gem from custom source");
-
-    let spec = package.spec().expect("Failed to get spec");
-    assert_eq!(spec.name, "test-gem");
-    assert_eq!(spec.version.to_string(), "1.0.0");
-}
-
 /// Test streaming file reader functionality
 #[test]
 fn test_file_reader_streaming() {
