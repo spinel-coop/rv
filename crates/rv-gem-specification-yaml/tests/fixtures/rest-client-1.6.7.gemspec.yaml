@@ -1,0 +1,155 @@
+--- !ruby/object:Gem::Specification 
+name: rest-client
+version: !ruby/object:Gem::Version 
+  hash: 1
+  prerelease: 
+  segments: 
+  - 1
+  - 6
+  - 7
+  version: 1.6.7
+platform: ruby
+authors: 
+- Adam Wiggins
+- Julien Kirch
+autorequire: 
+bindir: bin
+cert_chain: []
+
+date: 2011-08-24 00:00:00 Z
+dependencies: 
+- !ruby/object:Gem::Dependency 
+  name: mime-types
+  prerelease: false
+  requirement: &id001 !ruby/object:Gem::Requirement 
+    none: false
+    requirements: 
+    - - ">="
+      - !ruby/object:Gem::Version 
+        hash: 47
+        segments: 
+        - 1
+        - 16
+        version: "1.16"
+  type: :runtime
+  version_requirements: *id001
+- !ruby/object:Gem::Dependency 
+  name: webmock
+  prerelease: false
+  requirement: &id002 !ruby/object:Gem::Requirement 
+    none: false
+    requirements: 
+    - - ">="
+      - !ruby/object:Gem::Version 
+        hash: 57
+        segments: 
+        - 0
+        - 9
+        - 1
+        version: 0.9.1
+  type: :development
+  version_requirements: *id002
+- !ruby/object:Gem::Dependency 
+  name: rspec
+  prerelease: false
+  requirement: &id003 !ruby/object:Gem::Requirement 
+    none: false
+    requirements: 
+    - - ">="
+      - !ruby/object:Gem::Version 
+        hash: 3
+        segments: 
+        - 0
+        version: "0"
+  type: :development
+  version_requirements: *id003
+description: "A simple HTTP and REST client for Ruby, inspired by the Sinatra microframework style of specifying actions: get, put, post, delete."
+email: rest.client@librelist.com
+executables: 
+- restclient
+extensions: []
+
+extra_rdoc_files: 
+- README.rdoc
+- history.md
+files: 
+- README.rdoc
+- Rakefile
+- VERSION
+- bin/restclient
+- lib/rest-client.rb
+- lib/rest_client.rb
+- lib/restclient.rb
+- lib/restclient/abstract_response.rb
+- lib/restclient/exceptions.rb
+- lib/restclient/net_http_ext.rb
+- lib/restclient/payload.rb
+- lib/restclient/raw_response.rb
+- lib/restclient/request.rb
+- lib/restclient/resource.rb
+- lib/restclient/response.rb
+- spec/abstract_response_spec.rb
+- spec/base.rb
+- spec/exceptions_spec.rb
+- spec/integration/certs/equifax.crt
+- spec/integration/certs/verisign.crt
+- spec/integration/request_spec.rb
+- spec/integration_spec.rb
+- spec/master_shake.jpg
+- spec/payload_spec.rb
+- spec/raw_response_spec.rb
+- spec/request2_spec.rb
+- spec/request_spec.rb
+- spec/resource_spec.rb
+- spec/response_spec.rb
+- spec/restclient_spec.rb
+- history.md
+homepage: http://github.com/archiloque/rest-client
+licenses: []
+
+post_install_message: 
+rdoc_options: []
+
+require_paths: 
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement 
+  none: false
+  requirements: 
+  - - ">="
+    - !ruby/object:Gem::Version 
+      hash: 3
+      segments: 
+      - 0
+      version: "0"
+required_rubygems_version: !ruby/object:Gem::Requirement 
+  none: false
+  requirements: 
+  - - ">="
+    - !ruby/object:Gem::Version 
+      hash: 3
+      segments: 
+      - 0
+      version: "0"
+requirements: []
+
+rubyforge_project: 
+rubygems_version: 1.8.5
+signing_key: 
+specification_version: 3
+summary: Simple HTTP and REST client for Ruby, inspired by microframework syntax for specifying actions.
+test_files: 
+- spec/abstract_response_spec.rb
+- spec/base.rb
+- spec/exceptions_spec.rb
+- spec/integration/certs/equifax.crt
+- spec/integration/certs/verisign.crt
+- spec/integration/request_spec.rb
+- spec/integration_spec.rb
+- spec/master_shake.jpg
+- spec/payload_spec.rb
+- spec/raw_response_spec.rb
+- spec/request2_spec.rb
+- spec/request_spec.rb
+- spec/resource_spec.rb
+- spec/response_spec.rb
+- spec/restclient_spec.rb

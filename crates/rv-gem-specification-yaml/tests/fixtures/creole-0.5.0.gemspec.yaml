@@ -1,0 +1,81 @@
+--- !ruby/object:Gem::Specification
+name: creole
+version: !ruby/object:Gem::Version
+  version: 0.5.0
+  prerelease: 
+platform: ruby
+authors:
+- Lars Christensen
+- Daniel Mendler
+autorequire: 
+bindir: bin
+cert_chain: []
+date: 2012-10-29 00:00:00.000000000 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: bacon
+  requirement: &7674580 !ruby/object:Gem::Requirement
+    none: false
+    requirements:
+    - - ! '>='
+      - !ruby/object:Gem::Version
+        version: '0'
+  type: :development
+  prerelease: false
+  version_requirements: *7674580
+- !ruby/object:Gem::Dependency
+  name: rake
+  requirement: &7674100 !ruby/object:Gem::Requirement
+    none: false
+    requirements:
+    - - ! '>='
+      - !ruby/object:Gem::Version
+        version: '0'
+  type: :development
+  prerelease: false
+  version_requirements: *7674100
+description: Creole is a lightweight markup language (http://wikicreole.org/).
+email:
+- larsch@belunktum.dk
+- mail@daniel-mendler.de
+executables: []
+extensions: []
+extra_rdoc_files:
+- README.creole
+files:
+- .gitignore
+- .travis.yml
+- CHANGES
+- Gemfile
+- README.creole
+- Rakefile
+- creole.gemspec
+- lib/creole.rb
+- lib/creole/parser.rb
+- lib/creole/version.rb
+- test/parser_test.rb
+homepage: http://github.com/minad/creole
+licenses: []
+post_install_message: 
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  none: false
+  requirements:
+  - - ! '>='
+    - !ruby/object:Gem::Version
+      version: '0'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  none: false
+  requirements:
+  - - ! '>='
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubyforge_project: creole
+rubygems_version: 1.8.15
+signing_key: 
+specification_version: 3
+summary: Lightweight markup language
+test_files: []
