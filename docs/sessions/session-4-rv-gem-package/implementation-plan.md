@@ -21,12 +21,12 @@
 - [x] **3.4** Implement metadata.gz extraction and parsing
 - [x] **3.5** Add method to read checksums.yaml.gz
 
-### Phase 4: Data Access (No Extraction)
-- [ ] **4.1** Implement `Package::data()` to iterate files in data.tar.gz
-- [ ] **4.2** Add streaming `Entry` iteration support
-- [ ] **4.3** Create method to read specific file contents by path
-- [ ] **4.4** Add file metadata (size, mode, type) to entries
-- [ ] **4.5** Ensure streaming works with seekable IO sources
+### Phase 4: Data Access (No Extraction) ✅ COMPLETED
+- [x] **4.1** Implement `Package::data()` to iterate files in data.tar.gz
+- [x] **4.2** Add streaming `Entry` iteration support
+- [x] **4.3** Create method to read specific file contents by path
+- [x] **4.4** Add file metadata (size, mode, type) to entries
+- [x] **4.5** Ensure streaming works with seekable IO sources
 
 ### Phase 5: Verification
 - [ ] **5.1** Implement checksum calculation during reading
