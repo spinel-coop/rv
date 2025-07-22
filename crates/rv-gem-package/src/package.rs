@@ -12,6 +12,7 @@ use std::path::Path;
 use tar::Archive;
 
 /// A .gem package that can be read and analyzed
+#[derive(Debug)]
 pub struct Package<S: PackageSource> {
     source: S,
     spec: Option<Specification>,
@@ -107,23 +108,34 @@ impl<S: PackageSource> Package<S> {
             return Ok(());
         }
 
-        let mut data_reader = self.data()?;
+        // Verify checksums for gem's top-level files (metadata.gz, data.tar.gz, etc.)
 
-        // Verify each file mentioned in checksums
         for algorithm_name in checksums.algorithms() {
             let algorithm = ChecksumAlgorithm::from_name(algorithm_name).ok_or_else(|| {
-                Error::checksum_error(format!(
-                    "Unsupported checksum algorithm: {algorithm_name}"
-                ))
+                Error::checksum_error(format!("Unsupported checksum algorithm: {algorithm_name}"))
             })?;
 
             if let Some(files) = checksums.files_for_algorithm(algorithm_name) {
                 for file_path in files {
-                    // Find and read the file
-                    if let Some(file_reader) = data_reader.find_file(file_path)? {
-                        if file_reader.is_file() {
-                            let content = file_reader.content();
-                            let calculated = algorithm.calculate(content);
+                    // Reset and find the file in the gem's top-level archive
+                    self.source.seek(SeekFrom::Start(0))?;
+                    let mut archive = Archive::new(&mut self.source);
+
+                    let mut found = false;
+                    for entry_result in archive.entries()? {
+                        let mut entry =
+                            entry_result.map_err(|e| Error::tar_error(e.to_string()))?;
+                        let path = entry
+                            .header()
+                            .path()
+                            .map_err(|e| Error::tar_error(e.to_string()))?;
+                        let path_str = path.to_string_lossy();
+
+                        if path_str == file_path {
+                            found = true;
+                            let mut content = Vec::new();
+                            entry.read_to_end(&mut content)?;
+                            let calculated = algorithm.calculate(&content);
 
                             if let Some(expected) =
                                 checksums.get_checksum(algorithm_name, file_path)
@@ -134,10 +146,13 @@ impl<S: PackageSource> Package<S> {
                                     )));
                                 }
                             }
+                            break;
                         }
-                    } else {
+                    }
+
+                    if !found {
                         return Err(Error::checksum_error(format!(
-                            "File '{file_path}' not found in data archive but listed in checksums"
+                            "File '{file_path}' not found in gem archive but listed in checksums"
                         )));
                     }
                 }

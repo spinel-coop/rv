@@ -34,12 +34,12 @@
 - [x] **5.3** Add `Package::verify()` for checksum verification
 - [x] **5.4** Create detailed error types for verification failures
 
-### Phase 6: Testing
-- [ ] **6.1** Create test fixtures: minimal .gem files with Ruby
-- [ ] **6.2** Add test for old-format .gem detection
-- [ ] **6.3** Add integration tests for reading real gems
-- [ ] **6.4** Test streaming from both files and in-memory sources
-- [ ] **6.5** Test error cases (corrupt files, bad checksums)
+### Phase 6: Testing ✅ COMPLETED
+- [x] **6.1** Create test fixtures: minimal .gem files with Ruby
+- [x] **6.2** Add test for old-format .gem detection
+- [x] **6.3** Add integration tests for reading real gems
+- [x] **6.4** Test streaming from both files and in-memory sources
+- [x] **6.5** Test error cases (corrupt files, bad checksums)
 
 ### Phase 7: Documentation and Polish
 - [ ] **7.1** Write comprehensive API documentation
