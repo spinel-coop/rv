@@ -28,6 +28,10 @@ pub enum Error {
     #[error("IO error")]
     #[diagnostic(code(rv_gem_package::io_error))]
     IoError(#[from] io::Error),
+
+    #[error("YAML parsing error: {0}")]
+    #[diagnostic(code(rv_gem_package::yaml_error))]
+    YamlError(String),
 }
 
 impl Error {
