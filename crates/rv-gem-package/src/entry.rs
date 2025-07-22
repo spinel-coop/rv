@@ -93,6 +93,52 @@ impl Entry {
     }
 }
 
+/// Wrapper that provides streaming access to file contents
+pub struct FileReader {
+    content: std::io::Cursor<Vec<u8>>,
+    metadata: Entry,
+}
+
+impl FileReader {
+    pub fn new(content: Vec<u8>, metadata: Entry) -> Self {
+        Self {
+            content: std::io::Cursor::new(content),
+            metadata,
+        }
+    }
+
+    /// Get the file metadata
+    pub fn metadata(&self) -> &Entry {
+        &self.metadata
+    }
+
+    /// Get the file path
+    pub fn path(&self) -> &str {
+        &self.metadata.path
+    }
+
+    /// Get the file size
+    pub fn size(&self) -> u64 {
+        self.metadata.size
+    }
+
+    /// Check if this is a regular file
+    pub fn is_file(&self) -> bool {
+        self.metadata.is_file()
+    }
+
+    /// Get the content as bytes (already loaded)
+    pub fn content(&self) -> &[u8] {
+        self.content.get_ref()
+    }
+}
+
+impl Read for FileReader {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.content.read(buf)
+    }
+}
+
 /// Iterator over gem data entries with streaming content access
 pub struct DataReader<R: Read> {
     archive: Archive<R>,
@@ -105,8 +151,8 @@ impl<R: Read> DataReader<R> {
         }
     }
 
-    /// Find and read a specific file by path
-    pub fn find_file(&mut self, target_path: &str) -> Result<Option<Vec<u8>>> {
+    /// Find a specific file by path and return a streaming reader
+    pub fn find_file(&mut self, target_path: &str) -> Result<Option<FileReader>> {
         for entry_result in self.archive.entries()? {
             let mut entry = entry_result.map_err(|e| Error::tar_error(e.to_string()))?;
             let path = entry
@@ -116,9 +162,17 @@ impl<R: Read> DataReader<R> {
             let path_str = path.to_string_lossy();
 
             if path_str == target_path {
-                let mut content = Vec::new();
-                entry.read_to_end(&mut content)?;
-                return Ok(Some(content));
+                let metadata = Entry::from_tar_header(entry.header(), path_str.to_string())?;
+
+                // Only load content for regular files
+                if metadata.is_file() {
+                    let mut content = Vec::new();
+                    entry.read_to_end(&mut content)?;
+                    return Ok(Some(FileReader::new(content, metadata)));
+                } else {
+                    // For directories and symlinks, return empty content
+                    return Ok(Some(FileReader::new(Vec::new(), metadata)));
+                }
             }
         }
         Ok(None)

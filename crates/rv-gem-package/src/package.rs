@@ -66,6 +66,7 @@ impl<S: PackageSource> Package<S> {
     }
 
     /// Get access to the data.tar.gz contents for streaming
+    /// Returns a DataReader that can iterate over files or find specific files
     pub fn data(&mut self) -> Result<DataReader<GzDecoder<std::io::Cursor<Vec<u8>>>>> {
         self.source.seek(SeekFrom::Start(0))?;
         let mut archive = Archive::new(&mut self.source);
@@ -79,6 +80,8 @@ impl<S: PackageSource> Package<S> {
             let path_str = path.to_string_lossy();
 
             if path_str == "data.tar.gz" {
+                // For now, we'll read the data into memory for simplicity
+                // This avoids complex lifetime issues while still providing streaming access to individual files
                 let mut data = Vec::new();
                 entry.read_to_end(&mut data)?;
                 let cursor = std::io::Cursor::new(data);
