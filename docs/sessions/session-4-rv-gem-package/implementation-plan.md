@@ -14,12 +14,12 @@
 - [x] **2.3** Define `Checksums` type for checksum data
 - [x] **2.4** Create `PackageSource` trait for different input sources (file, seekable IO)
 
-### Phase 3: Basic Reading Functionality
-- [ ] **3.1** Implement `Package::open()` to open a .gem file
-- [ ] **3.2** Add tar reading to iterate over top-level entries
-- [ ] **3.3** Detect and error on old-style .gem format (MD5SUM)
-- [ ] **3.4** Implement metadata.gz extraction and parsing
-- [ ] **3.5** Add method to read checksums.yaml.gz
+### Phase 3: Basic Reading Functionality ✅ COMPLETED
+- [x] **3.1** Implement `Package::open()` to open a .gem file
+- [x] **3.2** Add tar reading to iterate over top-level entries
+- [x] **3.3** Detect and error on old-style .gem format (MD5SUM)
+- [x] **3.4** Implement metadata.gz extraction and parsing
+- [x] **3.5** Add method to read checksums.yaml.gz
 
 ### Phase 4: Data Access (No Extraction)
 - [ ] **4.1** Implement `Package::data()` to iterate files in data.tar.gz

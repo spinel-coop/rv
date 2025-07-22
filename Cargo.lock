@@ -1225,6 +1225,7 @@ dependencies = [
  "miette",
  "rv-gem-specification-yaml",
  "rv-gem-types",
+ "saphyr",
  "sha2",
  "tar",
  "thiserror 1.0.69",
