@@ -8,6 +8,7 @@ tar = "0.4"
 flate2 = "1.0"
 rv-gem-types = { path = "../rv-gem-types" }
 rv-gem-specification-yaml = { path = "../rv-gem-specification-yaml" }
+sha1 = "0.10"
 sha2 = "0.10"
 thiserror = "1.0.65"
 miette = "7.2.0"
