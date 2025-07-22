@@ -66,8 +66,28 @@ impl<S: PackageSource> Package<S> {
     }
 
     /// Get access to the data.tar.gz contents for streaming
-    pub fn data(&mut self) -> Result<DataReader<Box<dyn std::io::Read>>> {
-        todo!("implement in phase 4")
+    pub fn data(&mut self) -> Result<DataReader<GzDecoder<std::io::Cursor<Vec<u8>>>>> {
+        self.source.seek(SeekFrom::Start(0))?;
+        let mut archive = Archive::new(&mut self.source);
+
+        for entry in archive.entries()? {
+            let mut entry = entry.map_err(|e| Error::tar_error(e.to_string()))?;
+            let path = entry
+                .header()
+                .path()
+                .map_err(|e| Error::tar_error(e.to_string()))?;
+            let path_str = path.to_string_lossy();
+
+            if path_str == "data.tar.gz" {
+                let mut data = Vec::new();
+                entry.read_to_end(&mut data)?;
+                let cursor = std::io::Cursor::new(data);
+                let gzip_decoder = GzDecoder::new(cursor);
+                return Ok(DataReader::new(gzip_decoder));
+            }
+        }
+
+        Err(Error::format_error("No data.tar.gz found in gem"))
     }
 
     /// Verify the package checksums
