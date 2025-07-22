@@ -1,0 +1,3 @@
+MD5SUM = abcdef1234567890abcdef1234567890
+This is a fake old-format gem file for testing error detection.
+The presence of "MD5SUM =" at the beginning should trigger the old format error.
