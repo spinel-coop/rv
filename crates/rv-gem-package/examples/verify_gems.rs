@@ -52,13 +52,10 @@ fn main() -> Result<()> {
                         gem_file.file_name().unwrap_or_default().to_string_lossy(),
                         e
                     );
-                    if e.chain()
-                        .find(|e| {
-                            e.downcast_ref::<rv_gem_package::Error>()
-                                .is_some_and(|e| matches!(e, Error::YamlParsing(_)))
-                        })
-                        .is_some()
-                    {
+                    if e.chain().any(|e| {
+                        e.downcast_ref::<rv_gem_package::Error>()
+                            .is_some_and(|e| matches!(e, Error::YamlParsing(_)))
+                    }) {
                         if let Err(extract_err) = extract_failing_gem_metadata(&gem_file) {
                             eprintln!(
                                 "Failed to extract metadata from {}: {}",
@@ -76,15 +73,15 @@ fn main() -> Result<()> {
 
     // Print summary
     println!("📊 Summary:");
-    println!("   Total gems found: {}", total_gems);
-    println!("   Successfully verified: {}", verified_gems);
-    println!("   Failed verification: {}", failed_gems);
+    println!("   Total gems found: {total_gems}");
+    println!("   Successfully verified: {verified_gems}");
+    println!("   Failed verification: {failed_gems}");
 
     if !errors.is_empty() {
         println!("\n🔍 Detailed errors:");
         for error in &errors[..errors.len().min(10)] {
             // Show max 10 errors
-            println!("   {}", error);
+            println!("   {error}");
         }
         if errors.len() > 10 {
             println!("   ... and {} more errors", errors.len() - 10);
@@ -126,7 +123,7 @@ fn verify_gem(gem_path: &Path) -> Result<GemInfo> {
 fn find_gem_files(dir: &Path) -> Result<Vec<PathBuf>> {
     let mut gem_files = Vec::new();
 
-    if dir.is_file() && dir.extension().map_or(false, |ext| ext == "gem") {
+    if dir.is_file() && dir.extension().is_some_and(|ext| ext == "gem") {
         gem_files.push(dir.to_path_buf());
         return Ok(gem_files);
     }
@@ -139,7 +136,7 @@ fn find_gem_files(dir: &Path) -> Result<Vec<PathBuf>> {
         let entry = entry.into_diagnostic()?;
         let path = entry.path();
 
-        if path.is_file() && path.extension().map_or(false, |ext| ext == "gem") {
+        if path.is_file() && path.extension().is_some_and(|ext| ext == "gem") {
             gem_files.push(path);
         }
     }
@@ -210,7 +207,7 @@ fn extract_failing_gem_metadata(gem_path: &Path) -> Result<()> {
 
     // Create output path in the fixtures directory
     let fixtures_dir = Path::new("crates/rv-gem-specification-yaml/tests/fixtures");
-    let output_path = fixtures_dir.join(format!("{}.gemspec.yaml", full_name));
+    let output_path = fixtures_dir.join(format!("{full_name}.gemspec.yaml"));
 
     // Skip if fixture already exists
     if output_path.exists() {
@@ -220,7 +217,7 @@ fn extract_failing_gem_metadata(gem_path: &Path) -> Result<()> {
 
     // Extract metadata.gz using tar command
     let tar_output = Command::new("tar")
-        .args(&["-xzOf", &gem_path.to_string_lossy(), "metadata.gz"])
+        .args(["-xzOf", &gem_path.to_string_lossy(), "metadata.gz"])
         .output()
         .into_diagnostic()
         .with_context(|| format!("Failed to run tar on {}", gem_path.display()))?;
