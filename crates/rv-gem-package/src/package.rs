@@ -169,8 +169,7 @@ impl<S: PackageSource> Package<S> {
                         .map_err(|e| Error::invalid_utf8("metadata.gz", e))?;
 
                     self.spec = Some(
-                        rv_gem_specification_yaml::parse(&yaml_str)
-                            .map_err(Error::YamlParsing)?,
+                        rv_gem_specification_yaml::parse(&yaml_str).map_err(Error::YamlParsing)?,
                     );
                     return Ok(());
                 }
@@ -182,8 +181,7 @@ impl<S: PackageSource> Package<S> {
                         .map_err(|e| Error::invalid_utf8("metadata", e))?;
 
                     self.spec = Some(
-                        rv_gem_specification_yaml::parse(&yaml_str)
-                            .map_err(Error::YamlParsing)?,
+                        rv_gem_specification_yaml::parse(&yaml_str).map_err(Error::YamlParsing)?,
                     );
                     return Ok(());
                 }
