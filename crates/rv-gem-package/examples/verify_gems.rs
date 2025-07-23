@@ -1,3 +1,4 @@
+use miette::{miette, Result};
 use miette::{Context, IntoDiagnostic};
 use rv_gem_package::{Error, Package};
 use std::env;

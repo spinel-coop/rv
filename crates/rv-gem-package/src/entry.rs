@@ -154,10 +154,7 @@ impl<R: Read> DataReader<R> {
     pub fn find_file(&mut self, target_path: &str) -> Result<Option<FileReader>> {
         for entry_result in self.archive.entries()? {
             let mut entry = entry_result?;
-            let path = entry
-                .header()
-                .path()
-?;
+            let path = entry.header().path()?;
             let path_str = path.to_string_lossy();
 
             if path_str == target_path {
@@ -184,11 +181,7 @@ impl<R: Read> DataReader<R> {
         for entry_result in self.archive.entries()? {
             let entry = entry_result?;
             let header = entry.header();
-            let path = header
-                .path()
-?
-                .to_string_lossy()
-                .to_string();
+            let path = header.path()?.to_string_lossy().to_string();
 
             result.push(Entry::from_tar_header(header, path)?);
         }
