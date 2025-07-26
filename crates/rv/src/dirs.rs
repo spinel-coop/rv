@@ -53,23 +53,6 @@ pub fn user_cache_dir(root: &VfsPath) -> VfsPath {
         })
 }
 
-/// Returns the legacy cache directory path.
-///
-/// Uses `/Users/user/Library/Application Support/rv` on macOS, in contrast to the new preference
-/// for using the XDG directories on all Unix platforms.
-pub fn legacy_user_cache_dir() -> Option<PathBuf> {
-    etcetera::base_strategy::choose_native_strategy()
-        .ok()
-        .map(|dirs| dirs.cache_dir().join("rv"))
-        .map(|dir| {
-            if cfg!(windows) {
-                dir.join("cache")
-            } else {
-                dir
-            }
-        })
-}
-
 /// Returns an appropriate user-level directory for storing application state.
 ///
 /// Corresponds to `$XDG_DATA_HOME/rv` on Unix.
@@ -85,17 +68,6 @@ pub fn user_state_dir(root: &VfsPath) -> VfsPath {
                 .and_then(|p| p.join("rv"))
                 .unwrap_or_else(|_| root.clone())
         })
-}
-
-/// Returns the legacy state directory path.
-///
-/// Uses `/Users/user/Library/Application Support/rv` on macOS, in contrast to the new preference
-/// for using the XDG directories on all Unix platforms.
-pub fn legacy_user_state_dir() -> Option<PathBuf> {
-    etcetera::base_strategy::choose_native_strategy()
-        .ok()
-        .map(|dirs| dirs.data_dir().join("rv"))
-        .map(|dir| if cfg!(windows) { dir.join("data") } else { dir })
 }
 
 /// Return a [`PathBuf`] if the given [`OsString`] is an absolute path.
