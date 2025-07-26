@@ -25,7 +25,6 @@ pub fn list_rubies(config: &Config, format: OutputFormat, _installed_only: bool)
             let active_version = find_active_ruby_version();
 
             // Calculate the maximum width for the name column to align output
-            // Using the same approach as uv with fold()
             let width = rubies
                 .iter()
                 .fold(0usize, |acc, ruby| acc.max(ruby.display_name().len()));
@@ -61,7 +60,6 @@ fn format_ruby_entry(
     };
 
     // Check if the path is a symlink and format accordingly
-    // Following uv's exact pattern with active marker
     if let Some(ref symlink_target) = ruby.symlink {
         format!(
             "{marker} {key:width$}    {} -> {}",
