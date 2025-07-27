@@ -1,20 +1,22 @@
-use std::{fs, path::PathBuf};
+use std::path::PathBuf;
 
 use anstream::stream::IsTerminal;
 use clap::{Parser, Subcommand};
+use config::Config;
 use miette::{IntoDiagnostic, Result};
+use tokio::main;
+use tracing_indicatif::IndicatifLayer;
+use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
+use vfs::AltrootFS;
 
 pub mod commands;
 pub mod config;
 pub mod dirs;
 pub mod ruby;
 
-use commands::ruby::{RubyArgs, RubyCommand, list_rubies};
-use config::Config;
-use tokio::main;
-use tracing_indicatif::IndicatifLayer;
-use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
-use vfs::AltrootFS;
+use crate::commands::ruby::list::list as ruby_list;
+use crate::commands::ruby::pin::pin as ruby_pin;
+use commands::ruby::{RubyArgs, RubyCommand};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -177,17 +179,11 @@ async fn main() -> Result<()> {
                 RubyCommand::List {
                     format,
                     installed_only,
-                } => list_rubies(&config, format, installed_only)?,
-                RubyCommand::Pin {} => pin_ruby()?,
+                } => ruby_list(&config, format, installed_only)?,
+                RubyCommand::Pin { version } => ruby_pin(version)?,
             },
         },
     }
 
-    Ok(())
-}
-
-fn pin_ruby() -> Result<()> {
-    let ruby_version: String = fs::read_to_string(".ruby-version").into_diagnostic()?;
-    println!("{ruby_version}");
     Ok(())
 }

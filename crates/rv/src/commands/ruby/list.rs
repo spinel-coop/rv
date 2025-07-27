@@ -11,7 +11,7 @@ pub enum OutputFormat {
     Json,
 }
 
-pub fn list_rubies(config: &Config, format: OutputFormat, _installed_only: bool) -> Result<()> {
+pub fn list(config: &Config, format: OutputFormat, _installed_only: bool) -> Result<()> {
     let rubies = config.rubies()?;
 
     if rubies.is_empty() {
@@ -101,13 +101,13 @@ mod tests {
     fn test_ruby_list_text_output() {
         let config = test_config();
         // Should not panic - basic smoke test
-        list_rubies(&config, OutputFormat::Text, false).unwrap();
+        list(&config, OutputFormat::Text, false).unwrap();
     }
 
     #[test]
     fn test_ruby_list_json_output() {
         let config = test_config();
         // Should not panic - basic smoke test
-        list_rubies(&config, OutputFormat::Json, false).unwrap();
+        list(&config, OutputFormat::Json, false).unwrap();
     }
 }
