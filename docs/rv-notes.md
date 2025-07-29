@@ -18,7 +18,7 @@ rv combines several things that have previously been separate tools:
 - ruby version installer (like ruby-build, ruby-install)
 - gem installer (like rubygems)
 - dependency installer (like bundler)
-- project runner (like bundler, npm)
+- project runner (like bundler, npm, make, rake)
 - package dev & publishing (like rubygems+bundler)
 - running packages (like gemx or npx)
 - installing tools (like `uv tool`, ruby and node lack this today)
