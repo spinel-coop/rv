@@ -1,15 +1,5 @@
 # rv notes
 
-## open questions
-
-1. Should configuration use KDL instead of TOML?
-    TOML is more popular, has wider ecosystem support, and has more packages and tooling already available.
-    On the other hand, KDL handles nesting dramatically better, composes multiple files together better, and TOML's creator [has some issues](https://en.wikipedia.org/wiki/Tom_Preston-Werner#Resignation_from_GitHub).
-
-2. Should we support a `.ruby-versions` (plural) file? That's more of a library feature than an application feature, but it would allow e.g. declaring all supported versions of ruby in a standardized and machine-readable way.
-
-3. Should we match the python and node naming convention and switch to `rv run NAME` to run a command from inside the bundle, reserving `rv exec NAME` for installing and running commands from gems that are not in the bundle? I (André) think we probably should do this, because it has become a standard in tooling for two other languages that are both numerically more popular than Ruby, but I might be missing something.
-
 ## functionality
 
 rv combines several things that have previously been separate tools:
@@ -97,6 +87,7 @@ The install command downloads a precompiled ruby for the current architecture an
 #### [pin](/docs/rv/ruby/pin.md)
 
 Pin with no arguments reports the project's currently chosen version of Ruby.
+
 Pin with a version argument tries to set that version for the current project, validating the version, installing the version if needed, and then writing the version into the current project's `.ruby-version` file.
 
 #### find
@@ -106,3 +97,13 @@ The `ruby find` subcommand returns the full path to the currently chosen Ruby in
 ### tool
 
 The tool subcommand manages binaries available on the PATH, ensuring that a usable Ruby is installed, the gem and all of its dependencies are installed, and a binary is created and put somewhere in the PATH. The binary needs to ignore the currently chosen ruby version, the current bundle environment, and anything else necessary to ensure that when it is invoked it will run completely independently.
+
+## open questions
+
+1. Should configuration use KDL instead of TOML?
+    TOML is more popular, has wider ecosystem support, and has more packages and tooling already available.
+    On the other hand, KDL handles nesting dramatically better, composes multiple files together better, and TOML's creator [has some issues](https://en.wikipedia.org/wiki/Tom_Preston-Werner#Resignation_from_GitHub).
+
+2. Should we build support for an `rbproject.toml` or similar file to configure projects? It could potentially replace `Gemfile`, `.gemspec`, `.ruby-versions`, `.bundle/config`, `Rakefile`, `.rubocop.yaml`, and any other dependency, package, linter, or script configurations. It would be nice to end the reign of the Filefile, and it would provide a place for arbitrary machine-formatted data that tooling could use. It would also provide a location to configure future multi-project workspaces.
+
+3. Should we match the python and node naming convention and switch to `rv run NAME` to run a command from inside the bundle, reserving `rv exec NAME` for installing and running commands from gems that are not in the bundle? I (André) think we probably should do this, because it has become a standard in tooling for two other languages that are both numerically more popular than Ruby, but I might be missing something.
