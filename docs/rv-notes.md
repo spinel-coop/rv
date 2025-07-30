@@ -32,7 +32,7 @@ Most `rv` commands (like `add,` `remove,` `install,` and `lock`) are scoped to a
 
 ## project subtypes
 
-Projects can be one of:
+Projects can be one or more of:
 
 - application (like a Rails or Hanami app)
 - gem (published library)
