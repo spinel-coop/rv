@@ -38,9 +38,9 @@ Projects can be one or more of:
 - gem (published library)
 - library (structured like a gem but not published)
 
-Applications typically have their own framework generators, so it's unlikely we will need to build any application-specific functionality. On the other hand, gems and libraries are typically generated using `bundle gem`.
+We may want to provide explicit support for libraries vs gems, although today Bundler treats them as the same.
 
-We may want to provide explicit support for libraries vs gems. If we get super ambitious, we may want to offer an extremely faster generator framework that applications could use instead of Thor.
+Applications typically have their own framework generators, so it's unlikely we will need to build any application-specific functionality. On the other hand, gems and libraries are typically generated using `bundle gem` so we will likely want to support generation for that. On the third hand, we may want to offer an extremely fast templating and generator framework that applications could use instead of Thor.
 
 ## workspaces
 
