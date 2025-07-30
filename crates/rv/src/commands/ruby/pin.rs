@@ -1,9 +1,28 @@
 use miette::{IntoDiagnostic, Result};
-use std::fs;
+use owo_colors::OwoColorize;
+
+use crate::config::Config;
 
 pub fn pin(config: &Config, _version: Option<String>) -> Result<()> {
-    let ruby_version: String = fs::read_to_string(".ruby-version").into_diagnostic()?;
-    println!("{ruby_version}");
+    let ruby_version = config
+        .project_dir.as_ref()
+        .ok_or_else(|| {
+            miette::miette!(
+                "Could not find a Ruby project. Please run this command in a project directory, with a `Gemfile` or `.ruby-version` file."
+            )
+        })?
+        .join(".ruby-version")
+        .into_diagnostic()?
+        .read_to_string()
+        .into_diagnostic()?
+        .trim()
+        .to_string();
+
+    println!(
+        "{0} is pinned to Ruby {1}",
+        config.project_dir.clone().unwrap().as_str().cyan(),
+        ruby_version.cyan()
+    );
     Ok(())
 }
 
@@ -21,10 +40,14 @@ mod tests {
         let project_dir = root.join("/project").into_diagnostic()?;
         project_dir.create_dir_all().into_diagnostic()?;
 
+        let current_dir = root.join("/project").into_diagnostic()?;
+
         Ok(Config {
             ruby_dirs: vec![ruby_dir],
             gemfile: None,
             root: root,
+            project_dir: Some(project_dir),
+            current_dir,
         })
     }
 
@@ -41,11 +64,13 @@ mod tests {
         let version = "3.2.0".to_string();
 
         // Should not panic - basic smoke test
-        pin(&config, Some(version)).unwrap();
+        pin(&config, Some(version.clone())).unwrap();
 
         // Verify the file was created
         let ruby_version_path = config.root.join(".ruby-version").unwrap();
         assert!(ruby_version_path.exists().unwrap());
+        let content = ruby_version_path.read_to_string().unwrap();
+        assert_eq!(content, version);
     }
 
     #[test]

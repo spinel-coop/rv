@@ -58,6 +58,17 @@ impl Cli {
             PhysicalFS::new("/").into()
         };
 
+        let current_dir: VfsPath = root
+            .join(
+                std::env::current_dir()
+                    .into_diagnostic()
+                    .unwrap()
+                    .to_str()
+                    .unwrap(),
+            )
+            .unwrap();
+        let project_dir = Some(current_dir.clone());
+
         Config {
             ruby_dirs: if self.ruby_dir.is_empty() {
                 config::default_ruby_dirs(&root)
@@ -70,6 +81,8 @@ impl Cli {
             },
             gemfile: self.gemfile.clone(),
             root,
+            current_dir,
+            project_dir,
         }
     }
 }

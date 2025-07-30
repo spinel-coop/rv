@@ -94,6 +94,8 @@ mod tests {
             ruby_dirs: vec![vfs_root.join("rubies").unwrap()],
             gemfile: None,
             root,
+            current_dir: vfs_root.join("project").unwrap(),
+            project_dir: None,
         }
     }
 
