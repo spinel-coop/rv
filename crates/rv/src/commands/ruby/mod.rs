@@ -26,6 +26,6 @@ pub enum RubyCommand {
     #[command(about = "Show or set the Ruby version for the current project")]
     Pin {
         /// The Ruby version to pin
-        version: Option<String>,
+        version_request: Option<String>,
     },
 }

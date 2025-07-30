@@ -180,7 +180,7 @@ async fn main() -> Result<()> {
                     format,
                     installed_only,
                 } => ruby_list(&config, format, installed_only)?,
-                RubyCommand::Pin { version } => ruby_pin(version)?,
+                RubyCommand::Pin { version_request } => ruby_pin(&config, version_request)?,
             },
         },
     }
