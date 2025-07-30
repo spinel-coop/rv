@@ -50,7 +50,9 @@ Supporting workspaces means commands like `rv add` are scoped to a single projec
 
 ## ruby version file
 
-A ruby version file (named `.ruby-version`) indicates the desired/locked Ruby version for a specific project or workspace. Any project intended to be usable by itself, outside of a workspace context, should declare a desired Ruby version.
+A ruby version file (named `.ruby-version`) indicates the desired/locked Ruby version for a specific project or workspace. Any project intended to be usable by itself, outside of a workspace context, should declare a Ruby version.
+
+The ruby version can also be provided by a [`.tool-versions` file](https://asdf-vm.com/manage/configuration.html#tool-versions), shared by tools like asdf and mise.
 
 ## ruby locations
 
