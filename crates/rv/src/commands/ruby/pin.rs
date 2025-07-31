@@ -3,7 +3,49 @@ use owo_colors::OwoColorize;
 
 use crate::config::Config;
 
-pub fn pin(config: &Config, _version: Option<String>) -> Result<()> {
+pub fn pin(config: &Config, version: Option<String>) -> Result<()> {
+    match version {
+        None => show_pinned_ruby(config),
+        Some(version) => set_pinned_ruby(config, version),
+    }
+}
+
+fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
+    if config.project_dir.is_none() {
+        return Err(miette::miette!(
+            "No project directory found. Please run this command in a Ruby project directory."
+        ));
+    }
+
+    let ruby_version_path = config
+        .project_dir
+        .as_ref()
+        .ok_or_else(|| {
+            miette::miette!(
+                "Could not find a Ruby project. Please run this command in a project directory, with a `Gemfile` or `.ruby-version` file."
+            )
+        })?
+        .join(".ruby-version")
+        .into_diagnostic()?;
+
+    let mut ruby_version_file = ruby_version_path.create_file().into_diagnostic()?;
+    write!(ruby_version_file, "{version}").into_diagnostic()?;
+
+    println!(
+        "{0} pinned to Ruby {1}",
+        config.project_dir.clone().unwrap().as_str().cyan(),
+        version.cyan()
+    );
+
+    Ok(())
+}
+
+fn show_pinned_ruby(config: &Config) -> Result<()> {
+    if config.project_dir.is_none() {
+        return Err(miette::miette!(
+            "No project directory found. Please run this command in a Ruby project directory."
+        ));
+    }
     let ruby_version = config
         .project_dir.as_ref()
         .ok_or_else(|| {
@@ -55,6 +97,17 @@ mod tests {
     fn test_pin_returns_version() {
         let config = test_config().unwrap();
 
+        let mut ruby_version_file = config
+            .project_dir
+            .as_ref()
+            .unwrap()
+            .join(".ruby-version")
+            .into_diagnostic()
+            .unwrap()
+            .create_file()
+            .unwrap();
+        write!(ruby_version_file, "3.2.0").unwrap();
+
         pin(&config, None).unwrap();
     }
 
@@ -67,7 +120,7 @@ mod tests {
         pin(&config, Some(version.clone())).unwrap();
 
         // Verify the file was created
-        let ruby_version_path = config.root.join(".ruby-version").unwrap();
+        let ruby_version_path = config.project_dir.unwrap().join(".ruby-version").unwrap();
         assert!(ruby_version_path.exists().unwrap());
         let content = ruby_version_path.read_to_string().unwrap();
         assert_eq!(content, version);
@@ -86,7 +139,7 @@ mod tests {
         pin(&config, Some(second_version.clone())).unwrap();
 
         // Verify the file contains the second version
-        let ruby_version_path = config.root.join(".ruby-version").unwrap();
+        let ruby_version_path = config.project_dir.unwrap().join(".ruby-version").unwrap();
         let content = ruby_version_path.read_to_string().unwrap();
         assert_eq!(content, second_version);
     }
@@ -98,7 +151,7 @@ mod tests {
 
         pin(&config, Some(version.clone())).unwrap();
 
-        let ruby_version_path = config.root.join(".ruby-version").unwrap();
+        let ruby_version_path = config.project_dir.unwrap().join(".ruby-version").unwrap();
         let content = ruby_version_path.read_to_string().unwrap();
         assert_eq!(content, version);
     }
@@ -110,7 +163,7 @@ mod tests {
 
         pin(&config, Some(version.clone())).unwrap();
 
-        let ruby_version_path = config.root.join(".ruby-version").unwrap();
+        let ruby_version_path = config.project_dir.unwrap().join(".ruby-version").unwrap();
         let content = ruby_version_path.read_to_string().unwrap();
         assert_eq!(content, version);
     }
