@@ -15,7 +15,7 @@ fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
     let ruby_version_path = project_dir.join(".ruby-version").into_diagnostic()?;
 
     let mut ruby_version_file = ruby_version_path.create_file().into_diagnostic()?;
-    write!(ruby_version_file, "{version}\n").into_diagnostic()?;
+    writeln!(ruby_version_file, "{version}").into_diagnostic()?;
 
     println!(
         "{0} pinned to Ruby {1}",
@@ -86,7 +86,7 @@ mod tests {
             .unwrap();
         write!(ruby_version_file, "3.2.0").unwrap();
         pin(&config, None).unwrap();
-        write!(ruby_version_file, "3.2.0\n").unwrap();
+        writeln!(ruby_version_file, "3.2.0").unwrap();
         pin(&config, None).unwrap();
     }
 
