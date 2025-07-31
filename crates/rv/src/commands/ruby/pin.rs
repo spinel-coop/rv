@@ -11,19 +11,15 @@ pub fn pin(config: &Config, version: Option<String>) -> Result<()> {
 }
 
 fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
-    let ruby_version_path = config
-        .project_dir
-        .as_ref()
-        .unwrap()
-        .join(".ruby-version")
-        .into_diagnostic()?;
+    let project_dir = config.project_dir.as_ref().unwrap();
+    let ruby_version_path = project_dir.join(".ruby-version").into_diagnostic()?;
 
     let mut ruby_version_file = ruby_version_path.create_file().into_diagnostic()?;
     write!(ruby_version_file, "{version}\n").into_diagnostic()?;
 
     println!(
         "{0} pinned to Ruby {1}",
-        config.project_dir.clone().unwrap().as_str().cyan(),
+        project_dir.as_str().cyan(),
         version.cyan()
     );
 
