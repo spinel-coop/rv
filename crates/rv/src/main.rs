@@ -195,7 +195,9 @@ async fn main() -> Result<()> {
                     installed_only,
                 } => ruby_list(&config, format, installed_only)?,
                 RubyCommand::Pin { version_request } => ruby_pin(&config, version_request)?,
-                RubyCommand::Install { version_request } => ruby_install(&config, version_request)?,
+                RubyCommand::Install { version_request } => {
+                    ruby_install(&config, version_request).await?
+                }
             },
         },
     }
