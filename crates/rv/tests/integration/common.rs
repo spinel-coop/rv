@@ -18,7 +18,23 @@ impl RvTest {
     }
 
     pub fn rv_command(&self) -> Command {
-        let mut cmd = Command::new(env!("CARGO_BIN_EXE_rv"));
+        // Use the binary path from the workspace target directory
+        let binary_path = std::env::var("CARGO_BIN_EXE_rv").unwrap_or_else(|_| {
+            // Fallback to the expected location in the target directory
+            let manifest_dir = env!("CARGO_MANIFEST_DIR");
+            let workspace_root = std::path::Path::new(manifest_dir)
+                .parent()
+                .and_then(|p| p.parent())
+                .expect("Failed to find workspace root");
+            workspace_root
+                .join("target")
+                .join("debug")
+                .join("rv")
+                .to_string_lossy()
+                .to_string()
+        });
+
+        let mut cmd = Command::new(binary_path);
         cmd.env("RV_ROOT_DIR", &self.test_root);
         // Set consistent arch/os for cross-platform testing
         cmd.env("RV_TEST_ARCH", "aarch64");
