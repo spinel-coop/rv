@@ -19,7 +19,7 @@ fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
         .into_diagnostic()?;
 
     let mut ruby_version_file = ruby_version_path.create_file().into_diagnostic()?;
-    write!(ruby_version_file, "{version}").into_diagnostic()?;
+    write!(ruby_version_file, "{version}\n").into_diagnostic()?;
 
     println!(
         "{0} pinned to Ruby {1}",
@@ -89,7 +89,8 @@ mod tests {
             .create_file()
             .unwrap();
         write!(ruby_version_file, "3.2.0").unwrap();
-
+        pin(&config, None).unwrap();
+        write!(ruby_version_file, "3.2.0\n").unwrap();
         pin(&config, None).unwrap();
     }
 
@@ -105,7 +106,7 @@ mod tests {
         let ruby_version_path = config.project_dir.unwrap().join(".ruby-version").unwrap();
         assert!(ruby_version_path.exists().unwrap());
         let content = ruby_version_path.read_to_string().unwrap();
-        assert_eq!(content, version);
+        assert_eq!(content, format!("{version}\n"));
     }
 
     #[test]
@@ -123,7 +124,7 @@ mod tests {
         // Verify the file contains the second version
         let ruby_version_path = config.project_dir.unwrap().join(".ruby-version").unwrap();
         let content = ruby_version_path.read_to_string().unwrap();
-        assert_eq!(content, second_version);
+        assert_eq!(content, format!("{second_version}\n"));
     }
 
     #[test]
@@ -135,7 +136,7 @@ mod tests {
 
         let ruby_version_path = config.project_dir.unwrap().join(".ruby-version").unwrap();
         let content = ruby_version_path.read_to_string().unwrap();
-        assert_eq!(content, version);
+        assert_eq!(content, format!("{version}\n"));
     }
 
     #[test]
@@ -147,6 +148,6 @@ mod tests {
 
         let ruby_version_path = config.project_dir.unwrap().join(".ruby-version").unwrap();
         let content = ruby_version_path.read_to_string().unwrap();
-        assert_eq!(content, version);
+        assert_eq!(content, format!("{version}\n"));
     }
 }
