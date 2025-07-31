@@ -87,7 +87,7 @@ mod tests {
         Ok(Config {
             ruby_dirs: vec![ruby_dir],
             gemfile: None,
-            root: root,
+            root,
             project_dir: Some(project_dir),
             current_dir,
         })
