@@ -2,6 +2,7 @@ use clap::{Args, Subcommand};
 
 use crate::commands::ruby::list::OutputFormat;
 
+pub mod install;
 pub mod list;
 pub mod pin;
 
@@ -27,5 +28,10 @@ pub enum RubyCommand {
     Pin {
         /// The Ruby version to pin
         version_request: Option<String>,
+    },
+    #[command(about = "Install a Ruby version")]
+    Install {
+        /// The Ruby version to install
+        version_request: String,
     },
 }

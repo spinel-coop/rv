@@ -14,6 +14,7 @@ pub mod config;
 pub mod dirs;
 pub mod ruby;
 
+use crate::commands::ruby::install::install as ruby_install;
 use crate::commands::ruby::list::list as ruby_list;
 use crate::commands::ruby::pin::pin as ruby_pin;
 use commands::ruby::{RubyArgs, RubyCommand};
@@ -194,6 +195,7 @@ async fn main() -> Result<()> {
                     installed_only,
                 } => ruby_list(&config, format, installed_only)?,
                 RubyCommand::Pin { version_request } => ruby_pin(&config, version_request)?,
+                RubyCommand::Install { version_request } => ruby_install(&config, version_request)?,
             },
         },
     }
