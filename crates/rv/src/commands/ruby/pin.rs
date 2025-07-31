@@ -11,20 +11,10 @@ pub fn pin(config: &Config, version: Option<String>) -> Result<()> {
 }
 
 fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
-    if config.project_dir.is_none() {
-        return Err(miette::miette!(
-            "No project directory found. Please run this command in a Ruby project directory."
-        ));
-    }
-
     let ruby_version_path = config
         .project_dir
         .as_ref()
-        .ok_or_else(|| {
-            miette::miette!(
-                "Could not find a Ruby project. Please run this command in a project directory, with a `Gemfile` or `.ruby-version` file."
-            )
-        })?
+        .unwrap()
         .join(".ruby-version")
         .into_diagnostic()?;
 
@@ -41,18 +31,10 @@ fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
 }
 
 fn show_pinned_ruby(config: &Config) -> Result<()> {
-    if config.project_dir.is_none() {
-        return Err(miette::miette!(
-            "No project directory found. Please run this command in a Ruby project directory."
-        ));
-    }
     let ruby_version = config
-        .project_dir.as_ref()
-        .ok_or_else(|| {
-            miette::miette!(
-                "Could not find a Ruby project. Please run this command in a project directory, with a `Gemfile` or `.ruby-version` file."
-            )
-        })?
+        .project_dir
+        .as_ref()
+        .unwrap()
         .join(".ruby-version")
         .into_diagnostic()?
         .read_to_string()
