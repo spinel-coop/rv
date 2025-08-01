@@ -5,19 +5,18 @@ use vfs::VfsPath;
 use crate::config::Config;
 
 fn rubies_dir(config: &Config) -> &VfsPath {
-    &config.ruby_dirs.first().unwrap()
+    config.ruby_dirs.first().unwrap()
 }
 
 fn ruby_url(version: &str) -> String {
     format!(
-        "https://github.com/spinel-coop/rv-ruby/releases/download/{}/portable-ruby-{}.arm64_sonoma.bottle.tar.gz",
-        version, version,
+        "https://github.com/spinel-coop/rv-ruby/releases/download/{version}/portable-ruby-{version}.arm64_sonoma.bottle.tar.gz"
     )
 }
 
 fn tarball_path(config: &Config, version: &str) -> Result<VfsPath> {
     rubies_dir(config)
-        .join(format!("portable-ruby-{}.tar.gz", version))
+        .join(format!("portable-ruby-{version}.tar.gz"))
         .into_diagnostic()
 }
 
