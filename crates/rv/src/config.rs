@@ -10,6 +10,8 @@ pub struct Config {
     pub ruby_dirs: Vec<VfsPath>,
     pub gemfile: Option<PathBuf>,
     pub root: VfsPath,
+    pub current_dir: VfsPath,
+    pub project_dir: Option<VfsPath>,
 }
 
 impl Config {

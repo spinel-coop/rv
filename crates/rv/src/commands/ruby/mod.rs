@@ -1,8 +1,9 @@
 use clap::{Args, Subcommand};
 
-pub mod list;
+use crate::commands::ruby::list::OutputFormat;
 
-pub use list::{OutputFormat, list_rubies};
+pub mod list;
+pub mod pin;
 
 #[derive(Args)]
 pub struct RubyArgs {
@@ -22,5 +23,9 @@ pub enum RubyCommand {
         #[arg(long)]
         installed_only: bool,
     },
-    Pin {},
+    #[command(about = "Show or set the Ruby version for the current project")]
+    Pin {
+        /// The Ruby version to pin
+        version_request: Option<String>,
+    },
 }
