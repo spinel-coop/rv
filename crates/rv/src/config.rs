@@ -1,9 +1,15 @@
-use miette::Result;
+use miette::{Diagnostic, Result};
 use std::path::PathBuf;
 use tracing::instrument;
 use vfs::VfsPath;
 
 use crate::ruby::Ruby;
+
+#[derive(Debug, thiserror::Error, Diagnostic)]
+pub enum Error {
+    #[error("No project was found in the parents of {}", current_dir.as_str())]
+    NoProjectDir { current_dir: VfsPath },
+}
 
 #[derive(Debug)]
 pub struct Config {
@@ -41,6 +47,15 @@ impl Config {
         rubies.sort();
 
         Ok(rubies)
+    }
+
+    pub fn get_project_dir(&self) -> Result<&VfsPath, Error> {
+        match self.project_dir {
+            None => Err(Error::NoProjectDir {
+                current_dir: self.current_dir.clone(),
+            }),
+            Some(ref dir) => Ok(dir),
+        }
     }
 }
 
