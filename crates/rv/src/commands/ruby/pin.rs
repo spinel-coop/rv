@@ -1,7 +1,20 @@
-use miette::{IntoDiagnostic, Result};
+use miette::Diagnostic;
 use owo_colors::OwoColorize;
+use vfs::VfsError;
 
-use crate::config::Config;
+use crate::config::{self, Config};
+
+#[derive(Debug, thiserror::Error, Diagnostic)]
+pub enum Error {
+    #[error(transparent)]
+    ConfigError(#[from] config::Error),
+    #[error(transparent)]
+    VfsError(#[from] VfsError),
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
+}
+
+type Result<T> = miette::Result<T, Error>;
 
 pub fn pin(config: &Config, version: Option<String>) -> Result<()> {
     match version {
@@ -11,11 +24,11 @@ pub fn pin(config: &Config, version: Option<String>) -> Result<()> {
 }
 
 fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
-    let project_dir = config.project_dir.as_ref().unwrap();
-    let ruby_version_path = project_dir.join(".ruby-version").into_diagnostic()?;
+    let project_dir = config.get_project_dir()?;
+    let ruby_version_path = project_dir.join(".ruby-version")?;
 
-    let mut ruby_version_file = ruby_version_path.create_file().into_diagnostic()?;
-    writeln!(ruby_version_file, "{version}").into_diagnostic()?;
+    let mut ruby_version_file = ruby_version_path.create_file()?;
+    writeln!(ruby_version_file, "{version}")?;
 
     println!(
         "{0} pinned to Ruby {1}",
@@ -31,10 +44,8 @@ fn show_pinned_ruby(config: &Config) -> Result<()> {
         .project_dir
         .as_ref()
         .unwrap()
-        .join(".ruby-version")
-        .into_diagnostic()?
-        .read_to_string()
-        .into_diagnostic()?
+        .join(".ruby-version")?
+        .read_to_string()?
         .trim()
         .to_string();
 
@@ -51,16 +62,16 @@ mod tests {
     use super::*;
     use vfs::VfsPath;
 
-    fn test_config() -> miette::Result<Config> {
+    fn test_config() -> Result<Config> {
         let memory_fs = vfs::MemoryFS::new();
         let root = VfsPath::new(memory_fs);
-        let ruby_dir = root.join("/opt/rubies").into_diagnostic()?;
-        ruby_dir.create_dir_all().into_diagnostic()?;
+        let ruby_dir = root.join("/opt/rubies")?;
+        ruby_dir.create_dir_all()?;
 
-        let project_dir = root.join("/project").into_diagnostic()?;
-        project_dir.create_dir_all().into_diagnostic()?;
+        let project_dir = root.join("/project")?;
+        project_dir.create_dir_all()?;
 
-        let current_dir = root.join("/project").into_diagnostic()?;
+        let current_dir = root.join("/project")?;
 
         Ok(Config {
             ruby_dirs: vec![ruby_dir],
@@ -80,7 +91,6 @@ mod tests {
             .as_ref()
             .unwrap()
             .join(".ruby-version")
-            .into_diagnostic()
             .unwrap()
             .create_file()
             .unwrap();
