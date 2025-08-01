@@ -1,17 +1,16 @@
 use miette::Result;
 use std::path::PathBuf;
 use tracing::instrument;
-use vfs::VfsPath;
 
 use crate::ruby::Ruby;
 
 #[derive(Debug)]
 pub struct Config {
-    pub ruby_dirs: Vec<VfsPath>,
+    pub ruby_dirs: Vec<PathBuf>,
     pub gemfile: Option<PathBuf>,
-    pub root: VfsPath,
-    pub current_dir: VfsPath,
-    pub project_dir: Option<VfsPath>,
+    pub root: PathBuf,
+    pub current_dir: PathBuf,
+    pub project_dir: Option<PathBuf>,
 }
 
 impl Config {
@@ -20,18 +19,20 @@ impl Config {
         let mut rubies = Vec::new();
 
         for ruby_dir in &self.ruby_dirs {
-            if !ruby_dir.exists().unwrap_or(false) {
+            if !ruby_dir.exists() {
                 continue;
             }
 
-            if let Ok(entries) = ruby_dir.read_dir() {
+            if let Ok(entries) = std::fs::read_dir(ruby_dir) {
                 for entry in entries {
-                    if let Ok(metadata) = entry.metadata()
-                        && metadata.file_type == vfs::VfsFileType::Directory
-                        && let Ok(ruby) = Ruby::from_dir(entry)
-                        && ruby.is_valid()
-                    {
-                        rubies.push(ruby);
+                    if let Ok(entry) = entry {
+                        if let Ok(metadata) = entry.metadata()
+                            && metadata.is_dir()
+                            && let Ok(ruby) = Ruby::from_dir(entry.path())
+                            && ruby.is_valid()
+                        {
+                            rubies.push(ruby);
+                        }
                     }
                 }
             }
@@ -45,13 +46,20 @@ impl Config {
 }
 
 /// Default Ruby installation directories
-pub fn default_ruby_dirs(root: &VfsPath) -> Vec<VfsPath> {
+pub fn default_ruby_dirs(root: &PathBuf) -> Vec<PathBuf> {
     vec![
         shellexpand::tilde("~/.rubies").as_ref(),
         "/opt/rubies",
         "/usr/local/rubies",
     ]
     .into_iter()
-    .filter_map(|path| root.join(path).ok())
+    .filter_map(|path| {
+        let full_path = root.join(path);
+        if full_path.starts_with(root) {
+            Some(full_path)
+        } else {
+            PathBuf::from(path).canonicalize().ok()
+        }
+    })
     .collect()
 }

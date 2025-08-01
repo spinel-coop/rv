@@ -1,0 +1,87 @@
+---
+source: crates/rv/tests/integration/mod.rs
+assertion_line: 24
+expression: output.normalized_stdout()
+---
+[
+  {
+    "key": "ruby-3.4.5-macos-aarch64",
+    "version": "3.4.5",
+    "path": "/Users/andre/.rubies/ruby-3.4.5",
+    "implementation": "ruby",
+    "arch": "aarch64",
+    "os": "macos"
+  },
+  {
+    "key": "ruby-3.4.5-macos-aarch64",
+    "version": "3.4.5",
+    "path": "/Users/andre/.rubies/3.4.5",
+    "implementation": "ruby",
+    "arch": "aarch64",
+    "os": "macos"
+  },
+  {
+    "key": "ruby-3.4.5-macos-aarch64",
+    "version": "3.4.5",
+    "path": "/opt/rubies/3.4.5",
+    "implementation": "ruby",
+    "arch": "aarch64",
+    "os": "macos"
+  },
+  {
+    "key": "ruby-3.4.4-macos-aarch64",
+    "version": "3.4.4",
+    "path": "/Users/andre/.rubies/ruby-3.4.4",
+    "implementation": "ruby",
+    "arch": "aarch64",
+    "os": "macos"
+  },
+  {
+    "key": "ruby-3.4.3-macos-aarch64",
+    "version": "3.4.3",
+    "path": "/Users/andre/.rubies/ruby-3.4.3",
+    "implementation": "ruby",
+    "arch": "aarch64",
+    "os": "macos"
+  },
+  {
+    "key": "ruby-3.4.2-macos-aarch64",
+    "version": "3.4.2",
+    "path": "/Users/andre/.rubies/ruby-3.4.2",
+    "implementation": "ruby",
+    "arch": "aarch64",
+    "os": "macos"
+  },
+  {
+    "key": "ruby-3.4.1-macos-aarch64",
+    "version": "3.4.1",
+    "path": "/Users/andre/.rubies/ruby-3.4.1",
+    "implementation": "ruby",
+    "arch": "aarch64",
+    "os": "macos"
+  },
+  {
+    "key": "ruby-3.3.6-macos-aarch64",
+    "version": "3.3.6",
+    "path": "/Users/andre/.rubies/ruby-3.3.6",
+    "implementation": "ruby",
+    "arch": "aarch64",
+    "os": "macos"
+  },
+  {
+    "key": "ruby-3.3.5-macos-aarch64",
+    "version": "3.3.5",
+    "path": "/Users/andre/.rubies/ruby-3.3.5",
+    "implementation": "ruby",
+    "arch": "aarch64",
+    "os": "macos"
+  },
+  {
+    "key": "ruby-3.1.6-macos-aarch64",
+    "version": "3.1.6",
+    "path": "/Users/andre/.rubies/ruby-3.1.6",
+    "implementation": "ruby",
+    "arch": "aarch64",
+    "os": "macos"
+  }
+]

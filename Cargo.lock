@@ -1773,7 +1773,6 @@ dependencies = [
  "tracing-indicatif",
  "tracing-subscriber",
  "tracing-test",
- "vfs",
 ]
 
 [[package]]

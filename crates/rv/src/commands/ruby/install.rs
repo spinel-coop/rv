@@ -1,10 +1,10 @@
 use miette::{IntoDiagnostic, Result};
 use owo_colors::OwoColorize;
-use vfs::VfsPath;
+use std::path::PathBuf;
 
 use crate::config::Config;
 
-fn rubies_dir(config: &Config) -> &VfsPath {
+fn rubies_dir(config: &Config) -> &PathBuf {
     config.ruby_dirs.first().unwrap()
 }
 
@@ -14,13 +14,11 @@ fn ruby_url(version: &str) -> String {
     )
 }
 
-fn tarball_path(config: &Config, version: &str) -> Result<VfsPath> {
-    rubies_dir(config)
-        .join(format!("portable-ruby-{version}.tar.gz"))
-        .into_diagnostic()
+fn tarball_path(config: &Config, version: &str) -> Result<PathBuf> {
+    Ok(rubies_dir(config).join(format!("portable-ruby-{version}.tar.gz")))
 }
 
-async fn download_ruby_tarball(url: &str, tarball_path: &VfsPath) -> Result<()> {
+async fn download_ruby_tarball(url: &str, tarball_path: &PathBuf) -> Result<()> {
     let response = reqwest::get(url).await.into_diagnostic()?;
     if !response.status().is_success() {
         return Err(miette::miette!(
@@ -30,34 +28,44 @@ async fn download_ruby_tarball(url: &str, tarball_path: &VfsPath) -> Result<()> 
         ));
     }
     let tarball = response.bytes().await.into_diagnostic()?;
-    tarball_path
-        .create_file()
-        .into_diagnostic()?
-        .write(&tarball)
-        .into_diagnostic()?;
+
+    // Create parent directories if they don't exist
+    if let Some(parent) = tarball_path.parent() {
+        std::fs::create_dir_all(parent).into_diagnostic()?;
+    }
+
+    std::fs::write(tarball_path, &tarball).into_diagnostic()?;
 
     println!(
         "Downloaded {} to {}",
         url.cyan(),
-        tarball_path.as_str().cyan()
+        tarball_path.display().to_string().cyan()
     );
 
     Ok(())
 }
 
-async fn extract_ruby_tarball(tarball_path: &VfsPath, rubies_dir: &VfsPath) -> Result<()> {
-    let tarball = tarball_path.open_file().into_diagnostic()?;
-    let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
+async fn extract_ruby_tarball(tarball_path: &PathBuf, rubies_dir: &PathBuf) -> Result<()> {
+    let tarball_file = std::fs::File::open(tarball_path).into_diagnostic()?;
+    let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball_file));
+
+    // Create the rubies directory if it doesn't exist
+    std::fs::create_dir_all(rubies_dir).into_diagnostic()?;
+
     for e in archive.entries().into_diagnostic()? {
         let mut entry = e.into_diagnostic()?;
         let entry_path = entry.path().into_diagnostic()?;
         let path = entry_path
             .strip_prefix("portable-ruby/")
-            .into_diagnostic()?
-            .to_str()
-            .ok_or(miette::miette!("Invalid path in tarball"))?;
-        let entry_path = rubies_dir.join(path).into_diagnostic()?;
-        entry.unpack(entry_path.as_str()).into_diagnostic()?;
+            .into_diagnostic()?;
+        let target_path = rubies_dir.join(path);
+
+        // Ensure parent directory exists
+        if let Some(parent) = target_path.parent() {
+            std::fs::create_dir_all(parent).into_diagnostic()?;
+        }
+
+        entry.unpack(&target_path).into_diagnostic()?;
     }
 
     Ok(())
@@ -68,10 +76,10 @@ pub async fn install(config: &Config, version: String) -> Result<()> {
     let url = ruby_url(&version);
     let tarball_path = tarball_path(config, &version)?;
 
-    if tarball_path.exists().into_diagnostic()? {
+    if tarball_path.exists() {
         println!(
             "Tarball {} already exists, skipping download.",
-            tarball_path.as_str().cyan()
+            tarball_path.display().to_string().cyan()
         );
     } else {
         download_ruby_tarball(&url, &tarball_path).await?;
@@ -82,7 +90,7 @@ pub async fn install(config: &Config, version: String) -> Result<()> {
     println!(
         "Installed Ruby version {} to {}",
         version.cyan(),
-        rubies_dir.as_str().cyan()
+        rubies_dir.display().to_string().cyan()
     );
 
     Ok(())

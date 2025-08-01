@@ -64,7 +64,7 @@ fn format_ruby_entry(
         format!(
             "{marker} {key:width$}    {} -> {}",
             path.display().to_string().cyan(),
-            symlink_target.as_str().cyan()
+            symlink_target.display().to_string().cyan()
         )
     } else {
         format!(
@@ -77,24 +77,15 @@ fn format_ruby_entry(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
-    use vfs::{AltrootFS, VfsPath};
 
     fn test_config() -> Config {
-        let temp_dir = TempDir::new().unwrap();
-        let physical_fs = vfs::PhysicalFS::new("/");
-        let root = VfsPath::new(physical_fs);
-        let temp_root = root
-            .join(temp_dir.path().to_string_lossy().as_ref())
-            .unwrap();
-        let altroot_fs = AltrootFS::new(temp_root);
-        let vfs_root = VfsPath::new(altroot_fs);
-
+        let temp_dir = assert_fs::TempDir::new().unwrap();
+        let root = temp_dir.path().to_path_buf();
         Config {
-            ruby_dirs: vec![vfs_root.join("rubies").unwrap()],
+            ruby_dirs: vec![root.join("rubies")],
             gemfile: None,
-            root,
-            current_dir: vfs_root.join("project").unwrap(),
+            root: root.clone(),
+            current_dir: root.join("project"),
             project_dir: None,
         }
     }
