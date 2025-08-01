@@ -82,7 +82,7 @@ Notes about the functionality and implementation of each command.
 
 The `ruby` subcommand manages ruby versions, using subcommands `install`, `uninstall`, `pin`, and `find`.
 
-#### install
+#### [install](/docs/rv/ruby/install.md)
 
 The install command downloads a precompiled ruby for the current architecture and operating system, installing it into the rubies directory (which defaults to ~/.rubies).
 
