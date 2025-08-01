@@ -32,7 +32,7 @@ impl RvTest {
         cmd.args(args);
 
         let output = cmd.output().expect("Failed to execute rv command");
-        RvOutput::new(output)
+        RvOutput::new(output, self.test_root.clone())
     }
 
     pub fn create_ruby_dir(&self, name: &str) -> std::path::PathBuf {
@@ -62,11 +62,12 @@ impl RvTest {
 
 pub struct RvOutput {
     pub output: std::process::Output,
+    pub test_root: String,
 }
 
 impl RvOutput {
-    fn new(output: std::process::Output) -> Self {
-        Self { output }
+    fn new(output: std::process::Output, test_root: String) -> Self {
+        Self { output, test_root }
     }
 
     pub fn success(&self) -> bool {
@@ -90,6 +91,9 @@ impl RvOutput {
         if cfg!(windows) {
             output = output.replace('\\', "/");
         }
+
+        // Replace the temporary test root with a stable path for snapshots
+        output = output.replace(&self.test_root, "");
 
         // Remove trailing whitespace and normalize line endings
         output.to_string()

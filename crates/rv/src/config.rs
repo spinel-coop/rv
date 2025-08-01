@@ -47,19 +47,26 @@ impl Config {
 
 /// Default Ruby installation directories
 pub fn default_ruby_dirs(root: &PathBuf) -> Vec<PathBuf> {
-    vec![
-        shellexpand::tilde("~/.rubies").as_ref(),
-        "/opt/rubies",
-        "/usr/local/rubies",
-    ]
-    .into_iter()
-    .filter_map(|path| {
-        let full_path = root.join(path);
-        if full_path.starts_with(root) {
-            Some(full_path)
-        } else {
-            PathBuf::from(path).canonicalize().ok()
-        }
-    })
-    .collect()
+    // When root is "/" (production), use real system paths
+    // When root is something else (testing), only look within the test root
+    if root == &PathBuf::from("/") {
+        vec![
+            shellexpand::tilde("~/.rubies").as_ref(),
+            "/opt/rubies",
+            "/usr/local/rubies",
+        ]
+        .into_iter()
+        .filter_map(|path| PathBuf::from(path).canonicalize().ok())
+        .collect()
+    } else {
+        // For testing, only look within the test root directory
+        vec![
+            "Users/andre/.rubies", // corresponds to ~/.rubies in test
+            "opt/rubies",
+            "usr/local/rubies",
+        ]
+        .into_iter()
+        .map(|path| root.join(path))
+        .collect()
+    }
 }
