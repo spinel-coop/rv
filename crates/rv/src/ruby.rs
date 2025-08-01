@@ -687,6 +687,14 @@ fn extract_ruby_info_from_path(ruby_path: &Path) -> Option<String> {
         }
     }
 
+    if let Ok(re) = Regex::new(r"/([\d.]+[^/]*)/bin/ruby")
+        && let Some(captures) = re.captures(&path_str)
+        && let Some(matched) = captures.get(1)
+    {
+        // If we find a version without an engine prefix, assume it's ruby
+        return Some(format!("ruby-{}", matched.as_str()));
+    }
+
     // If no pattern matches, default to "ruby" (we know it's some Ruby)
     Some("ruby".to_string())
 }
@@ -1106,6 +1114,11 @@ mod tests {
     fn test_extract_ruby_info_from_path() {
         // Test standard Ruby path
         let ruby_path = PathBuf::from("/Users/user/.rubies/ruby-3.1.4/bin/ruby");
+        let result = extract_ruby_info_from_path(&ruby_path);
+        assert_eq!(result, Some("ruby-3.1.4".to_string()));
+
+        // Test no-engine Ruby path
+        let ruby_path = PathBuf::from("/Users/user/.rubies/3.1.4/bin/ruby");
         let result = extract_ruby_info_from_path(&ruby_path);
         assert_eq!(result, Some("ruby-3.1.4".to_string()));
 
