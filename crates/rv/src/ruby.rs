@@ -431,7 +431,7 @@ fn normalize_os(os: &str) -> String {
 }
 
 /// Custom serializer for PathBuf that serializes as the display string
-fn serialize_path<S>(path: &PathBuf, serializer: S) -> Result<S::Ok, S::Error>
+fn serialize_path<S>(path: &Path, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {

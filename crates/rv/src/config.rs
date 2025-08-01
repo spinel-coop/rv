@@ -24,15 +24,13 @@ impl Config {
             }
 
             if let Ok(entries) = std::fs::read_dir(ruby_dir) {
-                for entry in entries {
-                    if let Ok(entry) = entry {
-                        if let Ok(metadata) = entry.metadata()
-                            && metadata.is_dir()
-                            && let Ok(ruby) = Ruby::from_dir(entry.path())
-                            && ruby.is_valid()
-                        {
-                            rubies.push(ruby);
-                        }
+                for entry in entries.flatten() {
+                    if let Ok(metadata) = entry.metadata()
+                        && metadata.is_dir()
+                        && let Ok(ruby) = Ruby::from_dir(entry.path())
+                        && ruby.is_valid()
+                    {
+                        rubies.push(ruby);
                     }
                 }
             }
