@@ -1,27 +1,73 @@
 use miette::{IntoDiagnostic, Result};
 use owo_colors::OwoColorize;
+use vfs::VfsPath;
 
 use crate::config::Config;
 
-pub async fn install(config: &Config, version: String) -> Result<()> {
-    let ruby_dirs = &config.ruby_dirs;
-    let ruby_dir = ruby_dirs.first().unwrap();
+fn rubies_dir(config: &Config) -> &VfsPath {
+    &config.ruby_dirs.first().unwrap()
+}
 
-    println!(
-        "Installing Ruby version {} in {}",
-        version.cyan(),
-        ruby_dir.as_str().cyan()
-    );
-
-    // build a URL to download the Ruby version
-    let url = format!(
+fn ruby_url(version: &str) -> String {
+    format!(
         "https://github.com/spinel-coop/rv-ruby/releases/download/{}/portable-ruby-{}.arm64_sonoma.bottle.tar.gz",
         version, version,
+    )
+}
+
+fn tarball_path(config: &Config, version: &str) -> Result<VfsPath> {
+    rubies_dir(config)
+        .join(format!("portable-ruby-{}.tar.gz", version))
+        .into_diagnostic()
+}
+
+async fn download_ruby_tarball(url: &str, tarball_path: &VfsPath) -> Result<()> {
+    let response = reqwest::get(url).await.into_diagnostic()?;
+    if !response.status().is_success() {
+        return Err(miette::miette!(
+            "Failed to download {} with status {}",
+            url,
+            response.status()
+        ));
+    }
+    let tarball = response.bytes().await.into_diagnostic()?;
+    tarball_path
+        .create_file()
+        .into_diagnostic()?
+        .write(&tarball)
+        .into_diagnostic()?;
+
+    println!(
+        "Downloaded {} to {}",
+        url.cyan(),
+        tarball_path.as_str().cyan()
     );
 
-    let tarball_path = ruby_dir
-        .join(format!("portable-ruby-{}.tar.gz", version))
-        .into_diagnostic()?;
+    Ok(())
+}
+
+async fn extract_ruby_tarball(tarball_path: &VfsPath, rubies_dir: &VfsPath) -> Result<()> {
+    let tarball = tarball_path.open_file().into_diagnostic()?;
+    let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
+    for e in archive.entries().into_diagnostic()? {
+        let mut entry = e.into_diagnostic()?;
+        let entry_path = entry.path().into_diagnostic()?;
+        let path = entry_path
+            .strip_prefix("portable-ruby/")
+            .into_diagnostic()?
+            .to_str()
+            .ok_or(miette::miette!("Invalid path in tarball"))?;
+        let entry_path = rubies_dir.join(path).into_diagnostic()?;
+        entry.unpack(entry_path.as_str()).into_diagnostic()?;
+    }
+
+    Ok(())
+}
+
+pub async fn install(config: &Config, version: String) -> Result<()> {
+    let rubies_dir = rubies_dir(config);
+    let url = ruby_url(&version);
+    let tarball_path = tarball_path(config, &version)?;
 
     if tarball_path.exists().into_diagnostic()? {
         println!(
@@ -29,57 +75,15 @@ pub async fn install(config: &Config, version: String) -> Result<()> {
             tarball_path.as_str().cyan()
         );
     } else {
-        // download and untar the Ruby version in `url` into `ruby.path`
-        let response = reqwest::get(&url).await.into_diagnostic()?;
-        if !response.status().is_success() {
-            return Err(miette::miette!(
-                "Failed to download Ruby version {}: {}",
-                version,
-                response.status()
-            ));
-        }
-        let tarball = response.bytes().await.into_diagnostic()?;
-        tarball_path
-            .create_file()
-            .into_diagnostic()?
-            .write(&tarball)
-            .into_diagnostic()?;
-
-        println!(
-            "Downloaded Ruby version {} to {}",
-            version.cyan(),
-            tarball_path.as_str().cyan()
-        );
+        download_ruby_tarball(&url, &tarball_path).await?;
     }
 
-    let tar_gz = tarball_path.open_file().into_diagnostic()?;
-    let tar = flate2::read::GzDecoder::new(tar_gz);
-    let mut archive = tar::Archive::new(tar);
-    for entry in archive.entries().into_diagnostic()? {
-        let mut entry = entry.into_diagnostic()?;
-        let path = entry.path().into_diagnostic()?;
-        let path_str = path.to_str().unwrap();
-        let prefix = format!("portable-ruby/");
-        let path_str = path_str.strip_prefix(&prefix).unwrap_or(path_str);
-        let path_str = path_str.strip_suffix("/").unwrap_or(path_str);
-        let target_path = ruby_dir.join(path_str).into_diagnostic()?;
-        println!(
-            "Extracting {} to {}",
-            path_str.cyan(),
-            target_path.as_str().cyan()
-        );
-        if entry.header().entry_type().is_dir() {
-            target_path.create_dir_all().into_diagnostic()?;
-        } else {
-            target_path.parent().create_dir_all().into_diagnostic()?;
-            let mut file = target_path.create_file().into_diagnostic()?;
-            std::io::copy(&mut entry, &mut file).into_diagnostic()?;
-        }
-    }
+    extract_ruby_tarball(&tarball_path, rubies_dir).await?;
+
     println!(
-        "Extracted Ruby version {} to {}",
+        "Installed Ruby version {} to {}",
         version.cyan(),
-        ruby_dir.as_str().cyan()
+        rubies_dir.as_str().cyan()
     );
 
     Ok(())
