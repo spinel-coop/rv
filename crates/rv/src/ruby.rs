@@ -322,6 +322,11 @@ pub enum RubyError {
 ///          "unknown-ruby-1.0.0" -> ("unknown-ruby", "1.0.0")
 fn parse_ruby_dir_name(dir_name: &str) -> Result<(String, String), RubyError> {
     let parts: Vec<&str> = dir_name.splitn(2, '-').collect();
+
+    if parts.len() == 1 && parse_version(parts[0]).is_ok() {
+        return Ok(("ruby".to_string(), parts[0].to_string()));
+    }
+
     if parts.len() != 2 {
         return Err(RubyError::InvalidDirectoryName(dir_name.to_string()));
     }
@@ -694,6 +699,11 @@ mod tests {
     fn test_parse_ruby_dir_name() {
         assert_eq!(
             parse_ruby_dir_name("ruby-3.1.4").unwrap(),
+            ("ruby".to_string(), "3.1.4".to_string())
+        );
+
+        assert_eq!(
+            parse_ruby_dir_name("3.1.4").unwrap(),
             ("ruby".to_string(), "3.1.4".to_string())
         );
 
