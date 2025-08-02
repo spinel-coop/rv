@@ -5,7 +5,6 @@ use std::{
 };
 
 use etcetera::BaseStrategy;
-use vfs::VfsPath;
 
 /// Returns an appropriate user-level directory for storing executables.
 ///
@@ -39,35 +38,25 @@ pub fn user_executable_directory(override_variable: Option<&'static str>) -> Opt
 /// Returns an appropriate user-level directory for storing the cache.
 ///
 /// Corresponds to `$XDG_CACHE_HOME/rv` on Unix.
-pub fn user_cache_dir(root: &VfsPath) -> VfsPath {
+pub fn user_cache_dir(root: &PathBuf) -> PathBuf {
     let cache_path = etcetera::base_strategy::choose_base_strategy()
         .ok()
         .map(|dirs| dirs.cache_dir().join("rv"))
         .unwrap_or_else(|| std::env::temp_dir().join("rv"));
 
     root.join(cache_path.to_string_lossy().as_ref())
-        .unwrap_or_else(|_| {
-            root.join("tmp")
-                .and_then(|p| p.join("rv"))
-                .unwrap_or_else(|_| root.clone())
-        })
 }
 
 /// Returns an appropriate user-level directory for storing application state.
 ///
 /// Corresponds to `$XDG_DATA_HOME/rv` on Unix.
-pub fn user_state_dir(root: &VfsPath) -> VfsPath {
+pub fn user_state_dir(root: &PathBuf) -> PathBuf {
     let data_path = etcetera::base_strategy::choose_base_strategy()
         .ok()
         .map(|dirs| dirs.data_dir().join("rv"))
         .unwrap_or_else(|| std::env::temp_dir().join("rv"));
 
     root.join(data_path.to_string_lossy().as_ref())
-        .unwrap_or_else(|_| {
-            root.join("tmp")
-                .and_then(|p| p.join("rv"))
-                .unwrap_or_else(|_| root.clone())
-        })
 }
 
 /// Return a [`PathBuf`] if the given [`OsString`] is an absolute path.
