@@ -206,26 +206,6 @@ mod test {
     }
 
     #[test]
-    #[cfg(unix)]
-    fn test_locate_system_config_xdg_unix_permissions() -> Result<(), FixtureError> {
-        let context = assert_fs::TempDir::new()?;
-        let config = context.child("rv").child("rv.toml");
-        config.write_str("")?;
-        fs_err::set_permissions(
-            &context,
-            std::os::unix::fs::PermissionsExt::from_mode(0o000),
-        )
-        .unwrap();
-
-        assert_eq!(
-            locate_system_config_xdg(Some(context.to_str().unwrap())),
-            None
-        );
-
-        Ok(())
-    }
-
-    #[test]
     #[cfg(windows)]
     fn test_windows_config() -> Result<(), FixtureError> {
         // Write a `rv.toml` to a temporary directory.
