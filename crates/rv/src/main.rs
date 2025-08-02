@@ -7,7 +7,6 @@ use miette::{IntoDiagnostic, Result};
 use tokio::main;
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
-use vfs::AltrootFS;
 
 pub mod commands;
 pub mod config;
@@ -44,41 +43,23 @@ struct Cli {
 }
 
 impl Cli {
-    fn config(&self) -> Config {
-        use vfs::{PhysicalFS, VfsPath};
+    fn config(&self) -> Config<rsfs::disk::FS> {
+        let root = rsfs::disk::FS;
 
-        let root: VfsPath = if let Some(ref root) = self.root_dir {
-            AltrootFS::new(
-                VfsPath::new(PhysicalFS::new("/"))
-                    .join(root.as_os_str().to_str().unwrap())
-                    .unwrap(),
-            )
-            .into()
-        } else {
-            PhysicalFS::new("/").into()
-        };
-
-        let current_dir: VfsPath = root
-            .join(
-                std::env::current_dir()
-                    .into_diagnostic()
-                    .unwrap()
-                    .to_str()
-                    .unwrap(),
-            )
-            .unwrap();
+        let current_dir = std::env::current_dir().into_diagnostic().unwrap();
         let project_dir = Some(current_dir.clone());
 
+        // Use root_dir for ruby directories if provided (for testing)
+        let ruby_dirs = if let Some(ref root_dir) = self.root_dir {
+            vec![root_dir.join("opt").join("rubies")]
+        } else if self.ruby_dir.is_empty() {
+            config::default_ruby_dirs()
+        } else {
+            self.ruby_dir.clone()
+        };
+
         Config {
-            ruby_dirs: if self.ruby_dir.is_empty() {
-                config::default_ruby_dirs(&root)
-            } else {
-                let root = VfsPath::new(PhysicalFS::new("/"));
-                self.ruby_dir
-                    .iter()
-                    .filter_map(|path| root.join(path.to_string_lossy().as_ref()).ok())
-                    .collect()
-            },
+            ruby_dirs,
             gemfile: self.gemfile.clone(),
             root,
             current_dir,

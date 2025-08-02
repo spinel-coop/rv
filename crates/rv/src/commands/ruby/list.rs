@@ -1,6 +1,7 @@
 use miette::{IntoDiagnostic, Result};
 use owo_colors::OwoColorize;
 use tracing::{info, warn};
+use rsfs::GenFS;
 
 use crate::config::Config;
 use crate::ruby::find_active_ruby_version;
@@ -11,7 +12,7 @@ pub enum OutputFormat {
     Json,
 }
 
-pub fn list(config: &Config, format: OutputFormat, _installed_only: bool) -> Result<()> {
+pub fn list<F: GenFS>(config: &Config<F>, format: OutputFormat, _installed_only: bool) -> Result<()> {
     let rubies = config.rubies()?;
 
     if rubies.is_empty() {
@@ -64,7 +65,7 @@ fn format_ruby_entry(
         format!(
             "{marker} {key:width$}    {} -> {}",
             path.display().to_string().cyan(),
-            symlink_target.as_str().cyan()
+            symlink_target.display().to_string().cyan()
         )
     } else {
         format!(
@@ -78,23 +79,19 @@ fn format_ruby_entry(
 mod tests {
     use super::*;
     use tempfile::TempDir;
-    use vfs::{AltrootFS, VfsPath};
+    use rsfs::mem::FS;
 
-    fn test_config() -> Config {
+    fn test_config() -> Config<FS> {
         let temp_dir = TempDir::new().unwrap();
-        let physical_fs = vfs::PhysicalFS::new("/");
-        let root = VfsPath::new(physical_fs);
-        let temp_root = root
-            .join(temp_dir.path().to_string_lossy().as_ref())
-            .unwrap();
-        let altroot_fs = AltrootFS::new(temp_root);
-        let vfs_root = VfsPath::new(altroot_fs);
+        let fs = FS::new();
+        let ruby_dirs = vec![temp_dir.path().join("rubies")];
+        let current_dir = temp_dir.path().join("project");
 
         Config {
-            ruby_dirs: vec![vfs_root.join("rubies").unwrap()],
+            ruby_dirs,
             gemfile: None,
-            root,
-            current_dir: vfs_root.join("project").unwrap(),
+            root: fs,
+            current_dir,
             project_dir: None,
         }
     }

@@ -1,10 +1,11 @@
 use miette::{IntoDiagnostic, Result};
 use owo_colors::OwoColorize;
-use vfs::VfsPath;
+use rsfs::GenFS;
+use std::path::{Path, PathBuf};
 
 use crate::config::Config;
 
-fn rubies_dir(config: &Config) -> &VfsPath {
+fn rubies_dir<F: GenFS>(config: &Config<F>) -> &PathBuf {
     config.ruby_dirs.first().unwrap()
 }
 
@@ -14,13 +15,11 @@ fn ruby_url(version: &str) -> String {
     )
 }
 
-fn tarball_path(config: &Config, version: &str) -> Result<VfsPath> {
-    rubies_dir(config)
-        .join(format!("portable-ruby-{version}.tar.gz"))
-        .into_diagnostic()
+fn tarball_path<F: GenFS>(config: &Config<F>, version: &str) -> Result<PathBuf> {
+    Ok(rubies_dir(config).join(format!("portable-ruby-{version}.tar.gz")))
 }
 
-async fn download_ruby_tarball(url: &str, tarball_path: &VfsPath) -> Result<()> {
+async fn download_ruby_tarball<F: GenFS>(fs: &F, url: &str, tarball_path: &Path) -> Result<()> {
     let response = reqwest::get(url).await.into_diagnostic()?;
     if !response.status().is_success() {
         return Err(miette::miette!(
@@ -30,24 +29,21 @@ async fn download_ruby_tarball(url: &str, tarball_path: &VfsPath) -> Result<()> 
         ));
     }
     let tarball = response.bytes().await.into_diagnostic()?;
-    tarball_path
-        .create_file()
-        .into_diagnostic()?
-        .write(&tarball)
-        .into_diagnostic()?;
+    let mut tarball_file = fs.create_file(tarball_path).into_diagnostic()?;
+    std::io::Write::write_all(&mut tarball_file, &tarball).into_diagnostic()?;
 
     println!(
         "Downloaded {} to {}",
         url.cyan(),
-        tarball_path.as_str().cyan()
+        tarball_path.display().to_string().cyan()
     );
 
     Ok(())
 }
 
-async fn extract_ruby_tarball(tarball_path: &VfsPath, rubies_dir: &VfsPath) -> Result<()> {
-    let tarball = tarball_path.open_file().into_diagnostic()?;
-    let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
+async fn extract_ruby_tarball<F: GenFS>(fs: &F, tarball_path: &Path, rubies_dir: &Path) -> Result<()> {
+    let tarball_file = fs.open_file(tarball_path).into_diagnostic()?;
+    let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball_file));
     for e in archive.entries().into_diagnostic()? {
         let mut entry = e.into_diagnostic()?;
         let entry_path = entry.path().into_diagnostic()?;
@@ -56,33 +52,36 @@ async fn extract_ruby_tarball(tarball_path: &VfsPath, rubies_dir: &VfsPath) -> R
             .into_diagnostic()?
             .to_str()
             .ok_or(miette::miette!("Invalid path in tarball"))?;
-        let entry_path = rubies_dir.join(path).into_diagnostic()?;
-        entry.unpack(entry_path.as_str()).into_diagnostic()?;
+        let entry_target_path = rubies_dir.join(path);
+
+        // For rsfs compatibility, we need to extract to the actual filesystem for now
+        // This is a limitation but necessary for tar extraction
+        entry.unpack(&entry_target_path).into_diagnostic()?;
     }
 
     Ok(())
 }
 
-pub async fn install(config: &Config, version: String) -> Result<()> {
+pub async fn install<F: GenFS>(config: &Config<F>, version: String) -> Result<()> {
     let rubies_dir = rubies_dir(config);
     let url = ruby_url(&version);
     let tarball_path = tarball_path(config, &version)?;
 
-    if tarball_path.exists().into_diagnostic()? {
+    if config.root.metadata(&tarball_path).is_ok() {
         println!(
             "Tarball {} already exists, skipping download.",
-            tarball_path.as_str().cyan()
+            tarball_path.display().to_string().cyan()
         );
     } else {
-        download_ruby_tarball(&url, &tarball_path).await?;
+        download_ruby_tarball(&config.root, &url, &tarball_path).await?;
     }
 
-    extract_ruby_tarball(&tarball_path, rubies_dir).await?;
+    extract_ruby_tarball(&config.root, &tarball_path, rubies_dir).await?;
 
     println!(
         "Installed Ruby version {} to {}",
         version.cyan(),
-        rubies_dir.as_str().cyan()
+        rubies_dir.display().to_string().cyan()
     );
 
     Ok(())

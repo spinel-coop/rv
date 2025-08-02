@@ -1,34 +1,35 @@
 use miette::Result;
+use rsfs::*;
 use std::path::PathBuf;
 use tracing::instrument;
-use vfs::VfsPath;
 
 use crate::ruby::Ruby;
 
 #[derive(Debug)]
-pub struct Config {
-    pub ruby_dirs: Vec<VfsPath>,
+pub struct Config<F: GenFS> {
+    pub ruby_dirs: Vec<PathBuf>,
     pub gemfile: Option<PathBuf>,
-    pub root: VfsPath,
-    pub current_dir: VfsPath,
-    pub project_dir: Option<VfsPath>,
+    pub root: F,
+    pub current_dir: PathBuf,
+    pub project_dir: Option<PathBuf>,
 }
 
-impl Config {
+impl<F: GenFS> Config<F> {
     #[instrument(skip_all)]
     pub fn rubies(&self) -> Result<Vec<Ruby>> {
         let mut rubies = Vec::new();
 
         for ruby_dir in &self.ruby_dirs {
-            if !ruby_dir.exists().unwrap_or(false) {
+            if self.root.metadata(ruby_dir).is_err() {
                 continue;
             }
 
-            if let Ok(entries) = ruby_dir.read_dir() {
-                for entry in entries {
+            if let Ok(entries) = self.root.read_dir(ruby_dir) {
+                for entry in entries.flatten() {
+                    let entry_path = entry.path();
                     if let Ok(metadata) = entry.metadata()
-                        && metadata.file_type == vfs::VfsFileType::Directory
-                        && let Ok(ruby) = Ruby::from_dir(entry)
+                        && metadata.is_dir()
+                        && let Ok(ruby) = Ruby::from_dir(&self.root, &entry_path)
                         && ruby.is_valid()
                     {
                         rubies.push(ruby);
@@ -45,13 +46,13 @@ impl Config {
 }
 
 /// Default Ruby installation directories
-pub fn default_ruby_dirs(root: &VfsPath) -> Vec<VfsPath> {
+pub fn default_ruby_dirs() -> Vec<PathBuf> {
     vec![
         shellexpand::tilde("~/.rubies").as_ref(),
         "/opt/rubies",
         "/usr/local/rubies",
     ]
     .into_iter()
-    .filter_map(|path| root.join(path).ok())
+    .map(PathBuf::from)
     .collect()
 }

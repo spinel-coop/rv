@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 etcetera = "0.10.0"
 tracing = "0.1.41"
-vfs = "0.12.2"
 
 [dev-dependencies]
 assert_fs = "1.1.3"

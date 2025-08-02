@@ -91,8 +91,59 @@ impl RvOutput {
             output = output.replace('\\', "/");
         }
 
-        // Remove trailing whitespace and normalize line endings
-        output.to_string()
+        // Use a simple replacement to normalize the temporary directory path
+        let lines: Vec<String> = output
+            .lines()
+            .map(|line| {
+                if line.contains("/opt/rubies/") {
+                    // For JSON output, handle quoted paths
+                    if line.contains("\"path\":") {
+                        // JSON path normalization
+                        if let Some(path_start) = line.find("\"/") {
+                            let before_path = &line[..path_start + 1];
+                            if let Some(opt_pos) = line.find("/opt/rubies/") {
+                                let after_opt = &line[opt_pos..];
+                                format!("{before_path}{after_opt}")
+                            } else {
+                                line.to_string()
+                            }
+                        } else {
+                            line.to_string()
+                        }
+                    } else {
+                        // Text output normalization
+                        if let Some(opt_pos) = line.find("/opt/rubies/") {
+                            let after_opt = &line[opt_pos..];
+                            // Find the last space before the path to preserve formatting
+                            if let Some(space_pos) = line.rfind(' ') {
+                                let prefix = &line[..space_pos + 1];
+                                // Check if there's a color code right after the space
+                                let after_space = &line[space_pos + 1..opt_pos];
+                                if after_space.starts_with('\x1b') {
+                                    // Find the end of the color code (m)
+                                    if let Some(color_end) = after_space.find('m') {
+                                        let color_code = &after_space[..color_end + 1];
+                                        format!("{prefix}{color_code}{after_opt}")
+                                    } else {
+                                        format!("{prefix}{after_opt}")
+                                    }
+                                } else {
+                                    format!("{prefix}{after_opt}")
+                                }
+                            } else {
+                                after_opt.to_string()
+                            }
+                        } else {
+                            line.to_string()
+                        }
+                    }
+                } else {
+                    line.to_string()
+                }
+            })
+            .collect();
+
+        lines.join("\n")
     }
 
     /// Normalize stderr for cross-platform snapshot testing

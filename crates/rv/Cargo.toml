@@ -16,7 +16,6 @@ serde_json = "1.0"
 serde_with = "3.11"
 shellexpand = "3.1"
 thiserror = "2.0"
-vfs = "0.12"
 tokio = { version = "1.46.1", features = [
   "tracing",
   "macros",
