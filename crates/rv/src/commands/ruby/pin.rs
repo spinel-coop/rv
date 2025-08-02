@@ -55,7 +55,7 @@ mod tests {
     use assert_fs::TempDir;
 
     fn test_config() -> miette::Result<(Config, TempDir)> {
-        let temp_dir = TempDir::new().into_diagnostic()?;
+        let temp_dir = TempDir::new_in("/tmp/ram").unwrap();
         let root = temp_dir.path().to_path_buf();
         let ruby_dir = root.join("opt").join("rubies");
         std::fs::create_dir_all(&ruby_dir).into_diagnostic()?;

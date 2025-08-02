@@ -163,7 +163,7 @@ mod test {
     #[cfg(not(windows))]
     fn test_locate_system_config_xdg() -> Result<(), FixtureError> {
         // Write a `rv.toml` to a temporary directory.
-        let context = assert_fs::TempDir::new()?;
+        let context = assert_fs::TempDir::new_in("/tmp/ram")?;
         context.child("rv").child("rv.toml").write_str(indoc! {
             r#"
             [ruby]
@@ -206,7 +206,7 @@ mod test {
     #[cfg(windows)]
     fn test_windows_config() -> Result<(), FixtureError> {
         // Write a `rv.toml` to a temporary directory.
-        let context = assert_fs::TempDir::new()?;
+        let context = assert_fs::TempDir::new_in("/tmp/ram")?;
         context
             .child("ProgramData")
             .child("rv")
@@ -228,7 +228,7 @@ mod test {
         );
 
         // This does not have a `ProgramData` child, so contains no config.
-        let context = assert_fs::TempDir::new()?;
+        let context = assert_fs::TempDir::new_in("/tmp/ram")?;
         assert_eq!(locate_system_config_windows(context.path()), None);
 
         Ok(())

@@ -79,7 +79,7 @@ mod tests {
     use super::*;
 
     fn test_config() -> Config {
-        let temp_dir = assert_fs::TempDir::new().unwrap();
+        let temp_dir = assert_fs::TempDir::new_in("/tmp/ram").unwrap();
         let root = temp_dir.path().to_path_buf();
         Config {
             ruby_dirs: vec![root.join("rubies")],

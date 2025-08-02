@@ -918,7 +918,7 @@ mod tests {
         }
 
         // Create a temporary directory for testing
-        let temp_dir = assert_fs::TempDir::new().unwrap();
+        let temp_dir = assert_fs::TempDir::new_in("/tmp/ram").unwrap();
         let root = temp_dir.path().to_path_buf();
 
         // Test RUBY_ROOT environment variable
@@ -972,7 +972,7 @@ mod tests {
         assert_eq!(result, Some("2.7.6".to_string()));
 
         // Test no environment variables set with empty filesystem (no .ruby-version, no PATH)
-        let empty_temp = assert_fs::TempDir::new().unwrap();
+        let empty_temp = assert_fs::TempDir::new_in("/tmp/ram").unwrap();
         let empty_root = empty_temp.path().to_path_buf();
         let env = MockEnv {
             vars: std::collections::HashMap::new(),
@@ -999,7 +999,7 @@ mod tests {
         use assert_fs::prelude::*;
 
         // Create a temporary directory for testing
-        let temp_dir = assert_fs::TempDir::new().unwrap();
+        let temp_dir = assert_fs::TempDir::new_in("/tmp/ram").unwrap();
         let root = temp_dir.path().to_path_buf();
 
         // Create a .ruby-version file with whitespace
@@ -1021,8 +1021,7 @@ mod tests {
         // This test verifies the parent directory logic works
 
         // Create a temporary directory for testing
-        let temp_dir = assert_fs::TempDir::new().unwrap();
-        let _root = temp_dir.path().to_path_buf();
+        let temp_dir = assert_fs::TempDir::new_in("/tmp/ram").unwrap();
 
         // Set up a directory structure with .ruby-version in a parent directory
         temp_dir.child("parent").create_dir_all().unwrap();
@@ -1133,7 +1132,7 @@ mod tests {
         }
 
         // Test with empty filesystem and no environment variables (PATH fallback will be tested)
-        let empty_temp = assert_fs::TempDir::new().unwrap();
+        let empty_temp = assert_fs::TempDir::new_in("/tmp/ram").unwrap();
         let empty_root = empty_temp.path().to_path_buf();
 
         let env = MockEnvWithPath {
