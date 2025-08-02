@@ -16,7 +16,10 @@ fn set_pinned_ruby<F: GenFS>(config: &Config<F>, version: String) -> Result<()> 
     let project_dir = config.project_dir.as_ref().unwrap();
     let ruby_version_path = project_dir.join(".ruby-version");
 
-    let mut ruby_version_file = config.root.create_file(&ruby_version_path).into_diagnostic()?;
+    let mut ruby_version_file = config
+        .root
+        .create_file(&ruby_version_path)
+        .into_diagnostic()?;
     writeln!(ruby_version_file, "{version}").into_diagnostic()?;
 
     println!(
@@ -32,7 +35,10 @@ fn show_pinned_ruby<F: GenFS>(config: &Config<F>) -> Result<()> {
     let project_dir = config.project_dir.as_ref().unwrap();
     let ruby_version_path = project_dir.join(".ruby-version");
 
-    let mut ruby_version_file = config.root.open_file(&ruby_version_path).into_diagnostic()?;
+    let mut ruby_version_file = config
+        .root
+        .open_file(&ruby_version_path)
+        .into_diagnostic()?;
     let mut ruby_version = String::new();
     std::io::Read::read_to_string(&mut ruby_version_file, &mut ruby_version).into_diagnostic()?;
 
@@ -46,32 +52,37 @@ fn show_pinned_ruby<F: GenFS>(config: &Config<F>) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use rsfs::disk::FS;
+    use tempfile::TempDir;
+
     use super::*;
-    use rsfs::mem::FS;
     use std::io::Write;
 
-    fn test_config() -> miette::Result<Config<FS>> {
-        let fs = FS::new();
-        let ruby_dir = std::path::PathBuf::from("/opt/rubies");
-        let project_dir = std::path::PathBuf::from("/project");
-        let current_dir = std::path::PathBuf::from("/project");
+    fn test_config() -> miette::Result<(Config<FS>, TempDir)> {
+        let temp_dir = TempDir::new().unwrap();
+        let fs = rsfs::disk::FS;
+        let ruby_dir = temp_dir.path().join("rubies");
+        let project_dir = temp_dir.path().join("project");
+        let current_dir = project_dir.clone();
 
-        // Create the necessary directories in the in-memory filesystem
-        fs.create_dir_all(&ruby_dir).ok();
-        fs.create_dir_all(&project_dir).ok();
+        // Create the necessary directories
+        fs.create_dir_all(&ruby_dir).into_diagnostic()?;
+        fs.create_dir_all(&project_dir).into_diagnostic()?;
 
-        Ok(Config {
+        let config = Config {
             ruby_dirs: vec![ruby_dir],
             gemfile: None,
             root: fs,
             project_dir: Some(project_dir),
             current_dir,
-        })
+        };
+
+        Ok((config, temp_dir))
     }
 
     #[test]
     fn test_pin_returns_version() {
-        let config = test_config().unwrap();
+        let (config, _temp_dir) = test_config().unwrap();
         let project_dir = config.project_dir.as_ref().unwrap();
         let ruby_version_path = project_dir.join(".ruby-version");
 
@@ -85,7 +96,7 @@ mod tests {
 
     #[test]
     fn test_pin_ruby_creates_file() {
-        let config = test_config().unwrap();
+        let (config, _temp_dir) = test_config().unwrap();
         let version = "3.2.0".to_string();
 
         // Should not panic - basic smoke test
@@ -102,7 +113,7 @@ mod tests {
 
     #[test]
     fn test_pin_ruby_overwrites_existing_file() {
-        let config = test_config().unwrap();
+        let (config, _temp_dir) = test_config().unwrap();
         let first_version = "3.0.0".to_string();
         let second_version = "3.2.0".to_string();
 
@@ -123,7 +134,7 @@ mod tests {
 
     #[test]
     fn test_pin_ruby_with_prerelease_version() {
-        let config = test_config().unwrap();
+        let (config, _temp_dir) = test_config().unwrap();
         let version = "3.3.0-preview1".to_string();
 
         pin(&config, Some(version.clone())).unwrap();
@@ -138,7 +149,7 @@ mod tests {
 
     #[test]
     fn test_pin_ruby_with_patch_version() {
-        let config = test_config().unwrap();
+        let (config, _temp_dir) = test_config().unwrap();
         let version = "1.9.2-p0".to_string();
 
         pin(&config, Some(version.clone())).unwrap();

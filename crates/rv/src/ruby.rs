@@ -888,9 +888,6 @@ mod tests {
 
     #[test]
     fn test_find_active_ruby_version_with_env_vars() {
-        // Test environment variables with rsfs::mem::FS
-        use rsfs::mem::FS;
-
         struct MockEnvWithRubyVersion {
             vars: std::collections::HashMap<String, String>,
         }
@@ -901,7 +898,7 @@ mod tests {
             }
         }
 
-        let fs = FS::new();
+        let fs = rsfs::disk::FS;
 
         // Test RUBY_VERSION environment variable
         let env = MockEnvWithRubyVersion {
@@ -928,33 +925,46 @@ mod tests {
 
     #[test]
     fn test_find_ruby_version_file_with_rsfs() {
-        // Test .ruby-version file detection with rsfs::mem::FS
-        use rsfs::mem::FS;
         use std::io::Write;
+        use tempfile::TempDir;
 
-        let fs = FS::new();
+        let temp_dir = TempDir::new().unwrap();
+        let fs = rsfs::disk::FS;
 
-        // Create a .ruby-version file
-        let mut file = fs.create_file(".ruby-version").unwrap();
+        // Create a .ruby-version file in the temp directory
+        let ruby_version_path = temp_dir.path().join(".ruby-version");
+        let mut file = fs.create_file(&ruby_version_path).unwrap();
         file.write_all(b"3.1.4\n").unwrap();
 
-        // Test the find function
+        // Change to the temp directory and test the find function
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
         let result = find_ruby_version_file_fs(&fs);
+
+        // Restore original directory
+        std::env::set_current_dir(original_dir).unwrap();
+
         assert_eq!(result, Some("3.1.4".to_string()));
 
-        // Test without .ruby-version file
-        let empty_fs = FS::new();
-        let result = find_ruby_version_file_fs(&empty_fs);
+        // Test without .ruby-version file in a different temp directory
+        let empty_temp_dir = TempDir::new().unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(empty_temp_dir.path()).unwrap();
+
+        let result = find_ruby_version_file_fs(&fs);
+
+        // Restore original directory
+        std::env::set_current_dir(original_dir).unwrap();
+
         assert_eq!(result, None);
     }
 
     #[test]
     fn test_find_ruby_version_file_parent_directory() {
-        // Test parent directory traversal for .ruby-version files using rsfs::mem::FS
-        use rsfs::mem::FS;
         use std::io::Write;
 
-        let fs = FS::new();
+        let fs = rsfs::disk::FS;
 
         // Set up a directory structure with .ruby-version in a parent directory
         fs.create_dir_all("test/parent/child").unwrap();
@@ -1061,7 +1071,7 @@ mod tests {
         }
 
         // Test with empty filesystem and no environment variables (PATH fallback will be tested)
-        let empty_fs = rsfs::mem::FS::new();
+        let empty_fs = rsfs::disk::FS;
 
         let env = MockEnvWithPath {
             vars: std::collections::HashMap::new(),

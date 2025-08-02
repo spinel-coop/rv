@@ -1,7 +1,7 @@
 use miette::{IntoDiagnostic, Result};
 use owo_colors::OwoColorize;
-use tracing::{info, warn};
 use rsfs::GenFS;
+use tracing::{info, warn};
 
 use crate::config::Config;
 use crate::ruby::find_active_ruby_version;
@@ -12,7 +12,11 @@ pub enum OutputFormat {
     Json,
 }
 
-pub fn list<F: GenFS>(config: &Config<F>, format: OutputFormat, _installed_only: bool) -> Result<()> {
+pub fn list<F: GenFS>(
+    config: &Config<F>,
+    format: OutputFormat,
+    _installed_only: bool,
+) -> Result<()> {
     let rubies = config.rubies()?;
 
     if rubies.is_empty() {
@@ -78,12 +82,12 @@ fn format_ruby_entry(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rsfs::disk::FS;
     use tempfile::TempDir;
-    use rsfs::mem::FS;
 
     fn test_config() -> Config<FS> {
         let temp_dir = TempDir::new().unwrap();
-        let fs = FS::new();
+        let fs = rsfs::disk::FS;
         let ruby_dirs = vec![temp_dir.path().join("rubies")];
         let current_dir = temp_dir.path().join("project");
 
