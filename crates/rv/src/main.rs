@@ -11,7 +11,6 @@ use vfs::AltrootFS;
 
 pub mod commands;
 pub mod config;
-pub mod dirs;
 pub mod ruby;
 
 use crate::commands::ruby::install::install as ruby_install;

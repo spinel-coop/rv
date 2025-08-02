@@ -536,6 +536,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "etcetera"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26c7b13d0780cb82722fd59f6f57f925e143427e4a75313a6c77243bf5326ae6"
+dependencies = [
+ "cfg-if",
+ "home",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -604,6 +615,15 @@ name = "fs-err"
 version = "2.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "88a41f105fe1d5b6b34b2055e3dc59bb79b46b48b2040b9e6c7b4b5de097aa41"
+dependencies = [
+ "autocfg",
+]
+
+[[package]]
+name = "fs-err"
+version = "3.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "88d7be93788013f265201256d58f04936a8079ad5dc898743aa20525f503b683"
 dependencies = [
  "autocfg",
 ]
@@ -1730,9 +1750,9 @@ dependencies = [
  "clap",
  "clap-verbosity-flag",
  "clap_derive",
- "etcetera",
+ "etcetera 0.8.0",
  "flate2",
- "fs-err",
+ "fs-err 2.11.0",
  "indicatif",
  "indoc",
  "insta",
@@ -1753,6 +1773,18 @@ dependencies = [
  "tracing-indicatif",
  "tracing-subscriber",
  "tracing-test",
+ "vfs",
+]
+
+[[package]]
+name = "rv-dirs"
+version = "0.1.0"
+dependencies = [
+ "assert_fs",
+ "etcetera 0.10.0",
+ "fs-err 3.1.1",
+ "indoc",
+ "tracing",
  "vfs",
 ]
 
@@ -2588,9 +2620,9 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vfs"
-version = "0.12.1"
+version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ec343ec20aa715908fd028a4b8e7c99a349d13143224222e4d61c316d1e7f0a"
+checksum = "9e723b9e1c02a3cf9f9d0de6a4ddb8cdc1df859078902fe0ae0589d615711ae6"
 dependencies = [
  "filetime",
 ]
