@@ -3,6 +3,6 @@ members = [
   "crates/rv", "crates/rv-dirs",
   "crates/rv-gem-package",
   "crates/rv-gem-specification-yaml",
-  "crates/rv-gem-types",
+  "crates/rv-gem-types", "crates/rv-ruby",
 ]
 resolver = "2"

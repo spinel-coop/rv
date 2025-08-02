@@ -1,9 +1,9 @@
 use miette::{IntoDiagnostic, Result};
 use owo_colors::OwoColorize;
+use rv_ruby::find_active_ruby_version;
 use tracing::{info, warn};
 
 use crate::config::Config;
-use crate::ruby::find_active_ruby_version;
 
 #[derive(clap::ValueEnum, Clone, Debug)]
 pub enum OutputFormat {
@@ -45,7 +45,7 @@ pub fn list(config: &Config, format: OutputFormat, _installed_only: bool) -> Res
 
 /// Format a single Ruby entry for text output
 fn format_ruby_entry(
-    ruby: &crate::ruby::Ruby,
+    ruby: &rv_ruby::Ruby,
     active_version: &Option<String>,
     width: usize,
 ) -> String {

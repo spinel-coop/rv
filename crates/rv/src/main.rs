@@ -11,12 +11,11 @@ use vfs::AltrootFS;
 
 pub mod commands;
 pub mod config;
-pub mod ruby;
 
 use crate::commands::ruby::install::install as ruby_install;
 use crate::commands::ruby::list::list as ruby_list;
 use crate::commands::ruby::pin::pin as ruby_pin;
-use commands::ruby::{RubyArgs, RubyCommand};
+use crate::commands::ruby::{RubyArgs, RubyCommand};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]

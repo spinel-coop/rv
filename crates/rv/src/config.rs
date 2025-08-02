@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use tracing::instrument;
 use vfs::VfsPath;
 
-use crate::ruby::Ruby;
+use rv_ruby::Ruby;
 
 #[derive(Debug, thiserror::Error, Diagnostic)]
 pub enum Error {
