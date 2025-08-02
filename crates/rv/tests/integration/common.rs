@@ -8,7 +8,8 @@ pub struct RvTest {
 
 impl RvTest {
     pub fn new() -> Self {
-        let temp_dir = TempDir::new().expect("Failed to create temporary directory");
+        let temp_dir = TempDir::new_in("/Volumes/ramdisk-500mb")
+            .expect("Failed to create temporary directory");
         let test_root = temp_dir.path().to_string_lossy().to_string();
 
         Self {
