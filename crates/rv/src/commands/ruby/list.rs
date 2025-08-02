@@ -76,25 +76,22 @@ fn format_ruby_entry(
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use super::*;
     use tempfile::TempDir;
-    use vfs::{AltrootFS, VfsPath};
 
     fn test_config() -> Config {
         let temp_dir = TempDir::new().unwrap();
-        let physical_fs = vfs::PhysicalFS::new("/");
-        let root = VfsPath::new(physical_fs);
-        let temp_root = root
-            .join(temp_dir.path().to_string_lossy().as_ref())
-            .unwrap();
-        let altroot_fs = AltrootFS::new(temp_root);
-        let vfs_root = VfsPath::new(altroot_fs);
+        let root = PathBuf::from("/tmp/rv_test_root");
+        let rubies_dir = temp_dir.path().join("rubies");
+        let current_dir = temp_dir.path().join("project");
 
         Config {
-            ruby_dirs: vec![vfs_root.join("rubies").unwrap()],
+            ruby_dirs: vec![rubies_dir],
             gemfile: None,
             root,
-            current_dir: vfs_root.join("project").unwrap(),
+            current_dir,
             project_dir: None,
         }
     }
