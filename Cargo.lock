@@ -1836,6 +1836,7 @@ dependencies = [
 name = "rv-ruby"
 version = "0.1.0"
 dependencies = [
+ "assert_fs",
  "regex",
  "serde",
  "serde_with",

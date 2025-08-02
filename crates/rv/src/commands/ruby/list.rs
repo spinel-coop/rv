@@ -64,7 +64,7 @@ fn format_ruby_entry(
         format!(
             "{marker} {key:width$}    {} -> {}",
             path.display().to_string().cyan(),
-            symlink_target.as_str().cyan()
+            symlink_target.to_string_lossy().cyan()
         )
     } else {
         format!(

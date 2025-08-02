@@ -34,7 +34,7 @@ impl Config {
                 for entry in entries {
                     if let Ok(metadata) = entry.metadata()
                         && metadata.file_type == vfs::VfsFileType::Directory
-                        && let Ok(ruby) = Ruby::from_dir(entry)
+                        && let Ok(ruby) = Ruby::from_dir(entry.as_str().into())
                         && ruby.is_valid()
                     {
                         rubies.push(ruby);
