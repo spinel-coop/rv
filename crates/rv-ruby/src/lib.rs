@@ -1047,12 +1047,11 @@ mod tests {
 
         loop {
             let version_file = current.join(".ruby-version");
-            if version_file.exists() {
-                if let Ok(content) = std::fs::read_to_string(&version_file) {
+            if version_file.exists()
+                && let Ok(content) = std::fs::read_to_string(&version_file) {
                     found_version = Some(content.trim().to_string());
                     break;
                 }
-            }
 
             if let Some(parent) = current.parent() {
                 if parent == current {
