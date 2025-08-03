@@ -1,0 +1,13 @@
+#!/bin/bash
+set -euo pipefail
+
+set -x
+
+if [ ! which rustup ]; then
+  brew install rustup
+  rustup install nightly
+fi
+
+brew install cargo-binstall
+
+cargo binstall cargo-nextest
