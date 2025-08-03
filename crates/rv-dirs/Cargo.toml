@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+camino = "1.1.10"
 etcetera = "0.10.0"
 tracing = "0.1.41"
 

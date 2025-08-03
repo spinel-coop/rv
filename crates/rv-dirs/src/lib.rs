@@ -1,9 +1,6 @@
-use std::{
-    env,
-    ffi::OsString,
-    path::{Path, PathBuf},
-};
+use std::{env, ffi::OsString};
 
+use camino::{Utf8Path, Utf8PathBuf};
 use etcetera::BaseStrategy;
 
 /// Returns an appropriate user-level directory for storing executables.
@@ -19,7 +16,7 @@ use etcetera::BaseStrategy;
 ///
 /// Returns `None` if a directory cannot be found, i.e., if `$HOME` cannot be resolved. Does not
 /// check if the directory exists.
-pub fn user_executable_directory(override_variable: Option<&'static str>) -> Option<PathBuf> {
+pub fn user_executable_directory(override_variable: Option<&'static str>) -> Option<Utf8PathBuf> {
     override_variable
         .and_then(std::env::var_os)
         .and_then(parse_path)
@@ -30,15 +27,18 @@ pub fn user_executable_directory(override_variable: Option<&'static str>) -> Opt
                 .map(|path| path.join("../bin"))
         })
         .or_else(|| {
-            let home_dir = etcetera::home_dir().ok();
-            home_dir.map(|path| path.join(".local").join("bin"))
+            etcetera::home_dir()
+                .unwrap()
+                .join(".local/bin")
+                .try_into()
+                .ok()
         })
 }
 
 /// Returns an appropriate user-level directory for storing the cache.
 ///
 /// Corresponds to `$XDG_CACHE_HOME/rv` on Unix.
-pub fn user_cache_dir(root: &Path) -> PathBuf {
+pub fn user_cache_dir(root: &Utf8Path) -> Utf8PathBuf {
     let cache_path = etcetera::base_strategy::choose_base_strategy()
         .ok()
         .map(|dirs| dirs.cache_dir().join("rv"))
@@ -50,7 +50,7 @@ pub fn user_cache_dir(root: &Path) -> PathBuf {
 /// Returns an appropriate user-level directory for storing application state.
 ///
 /// Corresponds to `$XDG_DATA_HOME/rv` on Unix.
-pub fn user_state_dir(root: &Path) -> PathBuf {
+pub fn user_state_dir(root: &Utf8Path) -> Utf8PathBuf {
     let data_path = etcetera::base_strategy::choose_base_strategy()
         .ok()
         .map(|dirs| dirs.data_dir().join("rv"))
@@ -59,9 +59,9 @@ pub fn user_state_dir(root: &Path) -> PathBuf {
     root.join(data_path.to_string_lossy().as_ref())
 }
 
-/// Return a [`PathBuf`] if the given [`OsString`] is an absolute path.
-fn parse_path(path: OsString) -> Option<PathBuf> {
-    let path = PathBuf::from(path);
+/// Return a [`Utf8PathBuf`] if the given [`OsString`] is an absolute path.
+fn parse_path(path: OsString) -> Option<Utf8PathBuf> {
+    let path = Utf8PathBuf::from(path.into_string().unwrap());
     if path.is_absolute() { Some(path) } else { None }
 }
 
@@ -69,13 +69,13 @@ fn parse_path(path: OsString) -> Option<PathBuf> {
 ///
 /// On Windows, use, e.g., C:\Users\Alice\AppData\Roaming
 /// On Linux and macOS, use `XDG_CONFIG_HOME` or $HOME/.config, e.g., /home/alice/.config.
-pub fn user_config_dir() -> Option<PathBuf> {
-    etcetera::choose_base_strategy()
-        .map(|dirs| dirs.config_dir())
-        .ok()
+pub fn user_config_dir() -> Option<Utf8PathBuf> {
+    let base_strategy = etcetera::choose_base_strategy().unwrap();
+    let config_dir = base_strategy.config_dir();
+    Utf8PathBuf::try_from(config_dir).ok()
 }
 
-pub fn user_rv_config_dir() -> Option<PathBuf> {
+pub fn user_rv_config_dir() -> Option<Utf8PathBuf> {
     user_config_dir().map(|mut path| {
         path.push("rv");
         path
@@ -83,15 +83,14 @@ pub fn user_rv_config_dir() -> Option<PathBuf> {
 }
 
 #[cfg(not(windows))]
-fn locate_system_config_xdg(value: Option<&str>) -> Option<PathBuf> {
+fn locate_system_config_xdg(value: Option<&str>) -> Option<Utf8PathBuf> {
     // On Linux and macOS, read the `XDG_CONFIG_DIRS` environment variable.
 
-    use std::path::Path;
     let default = "/etc/xdg";
     let config_dirs = value.filter(|s| !s.is_empty()).unwrap_or(default);
 
     for dir in config_dirs.split(':').take_while(|s| !s.is_empty()) {
-        let rv_toml_path = Path::new(dir).join("rv").join("rv.toml");
+        let rv_toml_path = Utf8Path::new(dir).join("rv").join("rv.toml");
         if rv_toml_path.is_file() {
             return Some(rv_toml_path);
         }
@@ -100,7 +99,7 @@ fn locate_system_config_xdg(value: Option<&str>) -> Option<PathBuf> {
 }
 
 #[cfg(windows)]
-fn locate_system_config_windows(system_drive: impl AsRef<Path>) -> Option<PathBuf> {
+fn locate_system_config_windows(system_drive: impl AsRef<Utf8Path>) -> Option<Utf8PathBuf> {
     // On Windows, use `%SYSTEMDRIVE%\ProgramData\rv\rv.toml` (e.g., `C:\ProgramData`).
     let candidate = system_drive
         .as_ref()
@@ -116,7 +115,7 @@ fn locate_system_config_windows(system_drive: impl AsRef<Path>) -> Option<PathBu
 /// `/etc/xdg/rv/rv.toml` if unset or empty) and then `/etc/rv/rv.toml`
 ///
 /// On Windows, uses `%SYSTEMDRIVE%\ProgramData\rv\rv.toml`.
-pub fn system_config_file() -> Option<PathBuf> {
+pub fn system_config_file() -> Option<Utf8PathBuf> {
     #[cfg(windows)]
     {
         env::var("SYSTEMDRIVE")
@@ -132,7 +131,7 @@ pub fn system_config_file() -> Option<PathBuf> {
 
         // Fallback to `/etc/rv/rv.toml` if `XDG_CONFIG_DIRS` is not set or no valid
         // path is found.
-        let candidate = Path::new("/etc/rv/rv.toml");
+        let candidate = Utf8Path::new("/etc/rv/rv.toml");
         match candidate.try_exists() {
             Ok(true) => Some(candidate.to_path_buf()),
             Ok(false) => None,
