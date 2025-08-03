@@ -1836,6 +1836,7 @@ dependencies = [
  "miette",
  "once_cell",
  "regex",
+ "rv-version",
  "thiserror 1.0.69",
 ]
 
@@ -1850,6 +1851,13 @@ dependencies = [
  "thiserror 2.0.12",
  "tracing",
  "vfs",
+]
+
+[[package]]
+name = "rv-version"
+version = "0.1.0"
+dependencies = [
+ "thiserror 2.0.12",
 ]
 
 [[package]]
