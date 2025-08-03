@@ -69,12 +69,8 @@ pub fn default_ruby_dirs(root: &PathBuf) -> Vec<PathBuf> {
     ]
     .into_iter()
     .filter_map(|path| {
-        let full_path = root.join(path);
-        if full_path.starts_with(root) {
-            Some(full_path)
-        } else {
-            PathBuf::from(path).canonicalize().ok()
-        }
+        let joinable_path = path.strip_prefix("/").unwrap();
+        root.join(joinable_path).canonicalize().ok()
     })
     .collect()
 }
