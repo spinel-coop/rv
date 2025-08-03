@@ -51,16 +51,14 @@ impl Cli {
 
         let current_dir = std::env::current_dir().unwrap();
         let project_dir = Some(current_dir.clone());
+        let ruby_dirs = if self.ruby_dir.is_empty() {
+            config::default_ruby_dirs(&root)
+        } else {
+            self.ruby_dir.iter().map(|path| root.join(path)).collect()
+        };
 
         Config {
-            ruby_dirs: if self.ruby_dir.is_empty() {
-                config::default_ruby_dirs(&root)
-            } else {
-                self.ruby_dir
-                    .iter()
-                    .filter_map(|path| Some(root.join(path)))
-                    .collect()
-            },
+            ruby_dirs,
             gemfile: self.gemfile.clone(),
             root,
             current_dir,

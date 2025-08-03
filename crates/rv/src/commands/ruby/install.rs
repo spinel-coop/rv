@@ -1,7 +1,7 @@
 use crate::config::Config;
 use miette::{IntoDiagnostic, Result};
 use owo_colors::OwoColorize;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 fn rubies_dir(config: &Config) -> &PathBuf {
     config.ruby_dirs.first().unwrap()
@@ -39,7 +39,7 @@ async fn download_ruby_tarball(url: &str, tarball_path: &PathBuf) -> Result<()> 
     Ok(())
 }
 
-async fn extract_ruby_tarball(tarball_path: &PathBuf, rubies_dir: &PathBuf) -> Result<()> {
+async fn extract_ruby_tarball(tarball_path: &Path, rubies_dir: &Path) -> Result<()> {
     let tarball = std::fs::File::open(tarball_path).into_diagnostic()?;
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
     for e in archive.entries().into_diagnostic()? {

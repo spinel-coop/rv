@@ -1,5 +1,5 @@
 use miette::{Diagnostic, Result};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::instrument;
 
 use rv_ruby::Ruby;
@@ -31,14 +31,13 @@ impl Config {
 
             if let Ok(entries) = std::fs::read_dir(ruby_dir) {
                 for entry in entries {
-                    if let Ok(entry) = entry {
-                        if let Ok(metadata) = entry.metadata()
-                            && metadata.is_dir()
-                            && let Ok(ruby) = Ruby::from_dir(entry.path())
-                            && ruby.is_valid()
-                        {
-                            rubies.push(ruby);
-                        }
+                    if let Ok(entry) = entry
+                        && let Ok(metadata) = entry.metadata()
+                        && metadata.is_dir()
+                        && let Ok(ruby) = Ruby::from_dir(entry.path())
+                        && ruby.is_valid()
+                    {
+                        rubies.push(ruby);
                     }
                 }
             }
@@ -61,7 +60,7 @@ impl Config {
 }
 
 /// Default Ruby installation directories
-pub fn default_ruby_dirs(root: &PathBuf) -> Vec<PathBuf> {
+pub fn default_ruby_dirs(root: &Path) -> Vec<PathBuf> {
     vec![
         shellexpand::tilde("~/.rubies").as_ref(),
         "/opt/rubies",

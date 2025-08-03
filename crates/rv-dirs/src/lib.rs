@@ -38,7 +38,7 @@ pub fn user_executable_directory(override_variable: Option<&'static str>) -> Opt
 /// Returns an appropriate user-level directory for storing the cache.
 ///
 /// Corresponds to `$XDG_CACHE_HOME/rv` on Unix.
-pub fn user_cache_dir(root: &PathBuf) -> PathBuf {
+pub fn user_cache_dir(root: &Path) -> PathBuf {
     let cache_path = etcetera::base_strategy::choose_base_strategy()
         .ok()
         .map(|dirs| dirs.cache_dir().join("rv"))
@@ -50,7 +50,7 @@ pub fn user_cache_dir(root: &PathBuf) -> PathBuf {
 /// Returns an appropriate user-level directory for storing application state.
 ///
 /// Corresponds to `$XDG_DATA_HOME/rv` on Unix.
-pub fn user_state_dir(root: &PathBuf) -> PathBuf {
+pub fn user_state_dir(root: &Path) -> PathBuf {
     let data_path = etcetera::base_strategy::choose_base_strategy()
         .ok()
         .map(|dirs| dirs.data_dir().join("rv"))

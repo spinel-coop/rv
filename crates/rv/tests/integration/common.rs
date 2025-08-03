@@ -32,7 +32,7 @@ impl RvTest {
         cmd.args(args);
 
         let output = cmd.output().expect("Failed to execute rv command");
-        RvOutput::new(output)
+        RvOutput::new(&self.test_root, output)
     }
 
     pub fn create_ruby_dir(&self, name: &str) -> std::path::PathBuf {
@@ -62,11 +62,15 @@ impl RvTest {
 
 pub struct RvOutput {
     pub output: std::process::Output,
+    pub test_root: String,
 }
 
 impl RvOutput {
-    fn new(output: std::process::Output) -> Self {
-        Self { output }
+    fn new(test_root: &str, output: std::process::Output) -> Self {
+        Self {
+            output,
+            test_root: test_root.to_string(),
+        }
     }
 
     pub fn success(&self) -> bool {
@@ -91,8 +95,13 @@ impl RvOutput {
             output = output.replace('\\', "/");
         }
 
-        // Remove trailing whitespace and normalize line endings
-        output.to_string()
+        // Remove test root from paths
+        let mut full_test_root = self.test_root.clone();
+        // On macOS, the test root might be prefixed with "/private"
+        if cfg!(target_os = "macos") {
+            full_test_root.insert_str(0, "/private");
+        }
+        output.replace(&full_test_root, "")
     }
 
     /// Normalize stderr for cross-platform snapshot testing
@@ -105,7 +114,6 @@ impl RvOutput {
             output = output.replace('\\', "/");
         }
 
-        // Remove trailing whitespace and normalize line endings
         output.to_string()
     }
 }
