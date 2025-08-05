@@ -1,9 +1,9 @@
 use miette::{IntoDiagnostic, Result};
 use owo_colors::OwoColorize;
+use rv_ruby::find_active_ruby_version;
 use tracing::{info, warn};
 
 use crate::config::Config;
-use crate::ruby::find_active_ruby_version;
 
 #[derive(clap::ValueEnum, Clone, Debug)]
 pub enum OutputFormat {
@@ -45,7 +45,7 @@ pub fn list(config: &Config, format: OutputFormat, _installed_only: bool) -> Res
 
 /// Format a single Ruby entry for text output
 fn format_ruby_entry(
-    ruby: &crate::ruby::Ruby,
+    ruby: &rv_ruby::Ruby,
     active_version: &Option<String>,
     width: usize,
 ) -> String {
@@ -64,7 +64,7 @@ fn format_ruby_entry(
         format!(
             "{marker} {key:width$}    {} -> {}",
             path.display().to_string().cyan(),
-            symlink_target.as_str().cyan()
+            symlink_target.to_string_lossy().cyan()
         )
     } else {
         format!(
@@ -76,25 +76,22 @@ fn format_ruby_entry(
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use super::*;
     use tempfile::TempDir;
-    use vfs::{AltrootFS, VfsPath};
 
     fn test_config() -> Config {
         let temp_dir = TempDir::new().unwrap();
-        let physical_fs = vfs::PhysicalFS::new("/");
-        let root = VfsPath::new(physical_fs);
-        let temp_root = root
-            .join(temp_dir.path().to_string_lossy().as_ref())
-            .unwrap();
-        let altroot_fs = AltrootFS::new(temp_root);
-        let vfs_root = VfsPath::new(altroot_fs);
+        let root = PathBuf::from("/tmp/rv_test_root");
+        let rubies_dir = temp_dir.path().join("rubies");
+        let current_dir = temp_dir.path().join("project");
 
         Config {
-            ruby_dirs: vec![vfs_root.join("rubies").unwrap()],
+            ruby_dirs: vec![rubies_dir],
             gemfile: None,
             root,
-            current_dir: vfs_root.join("project").unwrap(),
+            current_dir,
             project_dir: None,
         }
     }

@@ -1761,6 +1761,7 @@ dependencies = [
  "rayon",
  "regex",
  "reqwest",
+ "rv-ruby",
  "serde",
  "serde_json",
  "serde_with",
@@ -1785,7 +1786,6 @@ dependencies = [
  "fs-err 3.1.1",
  "indoc",
  "tracing",
- "vfs",
 ]
 
 [[package]]
@@ -1830,6 +1830,19 @@ dependencies = [
  "once_cell",
  "regex",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "rv-ruby"
+version = "0.1.0"
+dependencies = [
+ "assert_fs",
+ "regex",
+ "serde",
+ "serde_with",
+ "thiserror 2.0.12",
+ "tracing",
+ "vfs",
 ]
 
 [[package]]
