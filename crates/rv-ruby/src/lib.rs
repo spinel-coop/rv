@@ -534,12 +534,13 @@ fn find_ruby_version_file_fs(root: &PathBuf) -> Option<String> {
         let ruby_version_file = current_dir.join(".ruby-version");
 
         if ruby_version_file.exists()
-            && let Ok(content) = std::fs::read_to_string(&ruby_version_file) {
-                let version = content.trim();
-                if !version.is_empty() {
-                    return Some(version.to_string());
-                }
+            && let Ok(content) = std::fs::read_to_string(&ruby_version_file)
+        {
+            let version = content.trim();
+            if !version.is_empty() {
+                return Some(version.to_string());
             }
+        }
 
         // Move to parent directory
         if let Some(parent) = current_dir.parent() {
