@@ -1,4 +1,6 @@
 pub mod implementation;
+pub mod request;
+
 use regex::Regex;
 use serde::{Deserialize, Serialize, Serializer};
 use serde_with::{DisplayFromStr, serde_as};

@@ -1,7 +1,40 @@
-use crate::config::Config;
 use miette::{IntoDiagnostic, Result};
 use owo_colors::OwoColorize;
 use std::path::{Path, PathBuf};
+
+use crate::config::Config;
+use rv_ruby::request::VersionRequest;
+
+pub async fn install(config: &Config, requested: VersionRequest) -> Result<()> {
+    let rubies_dir = rubies_dir(config);
+
+    if requested.patch.is_none() {
+        return Err(miette::miette!(
+            "Major, minor, and patch version is required for Ruby installation"
+        ));
+    }
+    let url = ruby_url(&requested.to_string());
+    let tarball_path = tarball_path(config, &requested.to_string());
+
+    if tarball_path.exists() {
+        println!(
+            "Tarball {} already exists, skipping download.",
+            tarball_path.to_string_lossy().cyan()
+        );
+    } else {
+        download_ruby_tarball(&url, &tarball_path).await?;
+    }
+
+    extract_ruby_tarball(&tarball_path, rubies_dir).await?;
+
+    println!(
+        "Installed Ruby version {} to {}",
+        requested.to_string().cyan(),
+        rubies_dir.to_string_lossy().cyan()
+    );
+
+    Ok(())
+}
 
 fn rubies_dir(config: &Config) -> &PathBuf {
     config.ruby_dirs.first().unwrap()
@@ -9,7 +42,7 @@ fn rubies_dir(config: &Config) -> &PathBuf {
 
 fn ruby_url(version: &str) -> String {
     format!(
-        "https://github.com/spinel-coop/rv-ruby/releases/download/{version}/portable-ruby-{version}.arm64_sonoma.bottle.tar.gz"
+        "https://github.com/spinel-coop/rv-ruby/releases/download/{version}/{version}.arm64_sonoma.bottle.tar.gz"
     )
 }
 
@@ -53,31 +86,6 @@ async fn extract_ruby_tarball(tarball_path: &Path, rubies_dir: &Path) -> Result<
         let entry_path = rubies_dir.join(path);
         entry.unpack(entry_path).into_diagnostic()?;
     }
-
-    Ok(())
-}
-
-pub async fn install(config: &Config, version: String) -> Result<()> {
-    let rubies_dir = rubies_dir(config);
-    let url = ruby_url(&version);
-    let tarball_path = tarball_path(config, &version);
-
-    if tarball_path.exists() {
-        println!(
-            "Tarball {} already exists, skipping download.",
-            tarball_path.to_string_lossy().cyan()
-        );
-    } else {
-        download_ruby_tarball(&url, &tarball_path).await?;
-    }
-
-    extract_ruby_tarball(&tarball_path, rubies_dir).await?;
-
-    println!(
-        "Installed Ruby version {} to {}",
-        version.cyan(),
-        rubies_dir.to_string_lossy().cyan()
-    );
 
     Ok(())
 }
