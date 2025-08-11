@@ -1782,7 +1782,6 @@ dependencies = [
  "tracing-indicatif",
  "tracing-subscriber",
  "tracing-test",
- "vfs",
 ]
 
 [[package]]
@@ -1852,7 +1851,6 @@ dependencies = [
  "serde_with",
  "thiserror 2.0.12",
  "tracing",
- "vfs",
 ]
 
 [[package]]
@@ -2648,15 +2646,6 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
-
-[[package]]
-name = "vfs"
-version = "0.12.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e723b9e1c02a3cf9f9d0de6a4ddb8cdc1df859078902fe0ae0589d615711ae6"
-dependencies = [
- "filetime",
-]
 
 [[package]]
 name = "vt100"

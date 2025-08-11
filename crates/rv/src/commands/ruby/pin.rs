@@ -1,6 +1,5 @@
 use miette::Diagnostic;
 use owo_colors::OwoColorize;
-use vfs::VfsError;
 
 use crate::config::{self, Config};
 
@@ -8,8 +7,6 @@ use crate::config::{self, Config};
 pub enum Error {
     #[error(transparent)]
     ConfigError(#[from] config::Error),
-    #[error(transparent)]
-    VfsError(#[from] VfsError),
     #[error(transparent)]
     IoError(#[from] std::io::Error),
 }
