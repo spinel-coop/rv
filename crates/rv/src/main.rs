@@ -173,7 +173,10 @@ async fn main() -> Result<()> {
                     installed_only,
                 } => ruby_list(&config, format, installed_only)?,
                 RubyCommand::Pin { version_request } => ruby_pin(&config, version_request)?,
-                RubyCommand::Install { requested } => ruby_install(&config, requested).await?,
+                RubyCommand::Install {
+                    version,
+                    install_dir,
+                } => ruby_install(&config, install_dir, version).await?,
             },
         },
     }

@@ -125,6 +125,7 @@ impl Display for VersionRequest {
         if let Some(ref pre_release) = self.pre_release {
             write!(f, "-{}", pre_release)?;
         };
+
         Ok(())
     }
 }

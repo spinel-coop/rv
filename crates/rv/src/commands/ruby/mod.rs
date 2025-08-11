@@ -25,14 +25,20 @@ pub enum RubyCommand {
         #[arg(long)]
         installed_only: bool,
     },
+
     #[command(about = "Show or set the Ruby version for the current project")]
     Pin {
         /// The Ruby version to pin
         version_request: Option<String>,
     },
+
     #[command(about = "Install a Ruby version")]
     Install {
-        /// The Ruby version to install
-        requested: VersionRequest,
+        /// Directory to install into
+        #[arg(short, long, value_name = "DIR")]
+        install_dir: Option<String>,
+
+        /// Ruby version to install
+        version: VersionRequest,
     },
 }

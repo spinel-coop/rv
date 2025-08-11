@@ -1,4 +1,5 @@
 use camino::{Utf8Path, Utf8PathBuf};
+use core::panic;
 use miette::Diagnostic;
 use owo_colors::OwoColorize;
 use std::path::PathBuf;
@@ -25,8 +26,19 @@ pub enum Error {
 }
 
 type Result<T> = miette::Result<T, Error>;
-pub async fn install(config: &Config, requested: VersionRequest) -> Result<()> {
-    let rubies_dir = rubies_dir(config);
+
+pub async fn install(
+    config: &Config,
+    install_dir: Option<String>,
+    requested: VersionRequest,
+) -> Result<()> {
+    let install_dir = match install_dir {
+        Some(dir) => Utf8PathBuf::from(dir),
+        None => match config.ruby_dirs.first() {
+            Some(dir) => dir.clone(),
+            None => panic!("No Ruby directories to install into"),
+        },
+    };
 
     if requested.patch.is_none() {
         Err(Error::IncompleteVersion(requested.clone()))?;
@@ -43,19 +55,15 @@ pub async fn install(config: &Config, requested: VersionRequest) -> Result<()> {
         download_ruby_tarball(&url, &tarball_path).await?;
     }
 
-    extract_ruby_tarball(&tarball_path, rubies_dir).await?;
+    extract_ruby_tarball(&tarball_path, &install_dir).await?;
 
     println!(
         "Installed Ruby version {} to {}",
         requested.to_string().cyan(),
-        rubies_dir.cyan()
+        install_dir.cyan()
     );
 
     Ok(())
-}
-
-fn rubies_dir(config: &Config) -> &Utf8PathBuf {
-    config.ruby_dirs.first().unwrap()
 }
 
 fn ruby_url(version: &str) -> String {
@@ -82,7 +90,7 @@ async fn download_ruby_tarball(url: &str, tarball_path: &Utf8PathBuf) -> Result<
     Ok(())
 }
 
-async fn extract_ruby_tarball(tarball_path: &Utf8Path, rubies_dir: &Utf8Path) -> Result<()> {
+async fn extract_ruby_tarball(tarball_path: &Utf8Path, dir: &Utf8Path) -> Result<()> {
     let tarball = std::fs::File::open(tarball_path)?;
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
     for e in archive.entries()? {
@@ -92,7 +100,7 @@ async fn extract_ruby_tarball(tarball_path: &Utf8Path, rubies_dir: &Utf8Path) ->
         let path = path
             .to_str()
             .ok_or_else(|| Error::InvalidTarballPath(entry_path.to_path_buf()))?;
-        let entry_path = rubies_dir.join(path);
+        let entry_path = dir.join(path);
         entry.unpack(entry_path)?;
     }
 
