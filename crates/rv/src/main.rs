@@ -1,6 +1,5 @@
-use std::path::PathBuf;
-
 use anstream::stream::IsTerminal;
+use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
 use config::Config;
 use miette::{IntoDiagnostic, Result};
@@ -21,18 +20,18 @@ use crate::commands::ruby::{RubyArgs, RubyCommand};
 struct Cli {
     /// Ruby directories to search for installations
     #[arg(long = "ruby-dir")]
-    ruby_dir: Vec<PathBuf>,
+    ruby_dir: Vec<Utf8PathBuf>,
 
     /// Path to Gemfile
     #[arg(long, env = "BUNDLE_GEMFILE")]
-    gemfile: Option<PathBuf>,
+    gemfile: Option<Utf8PathBuf>,
 
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity<clap_verbosity_flag::InfoLevel>,
 
     /// Root directory for testing (hidden)
     #[arg(long, hide = true, env = "RV_ROOT_DIR")]
-    root_dir: Option<PathBuf>,
+    root_dir: Option<Utf8PathBuf>,
 
     #[arg(long)]
     color: Option<ColorMode>,
@@ -46,10 +45,10 @@ impl Cli {
         let root = if self.root_dir.is_some() {
             self.root_dir.clone().unwrap()
         } else {
-            PathBuf::from("/")
+            Utf8PathBuf::from("/")
         };
 
-        let current_dir = std::env::current_dir().unwrap();
+        let current_dir = Utf8PathBuf::from(std::env::current_dir().unwrap().to_str().unwrap());
         let project_dir = Some(current_dir.clone());
         let ruby_dirs = if self.ruby_dir.is_empty() {
             config::default_ruby_dirs(&root)

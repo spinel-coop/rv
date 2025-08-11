@@ -28,11 +28,7 @@ fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
     let ruby_version_path = project_dir.join(".ruby-version");
     std::fs::write(ruby_version_path, format!("{version}\n"))?;
 
-    println!(
-        "{0} pinned to Ruby {1}",
-        project_dir.to_string_lossy().cyan(),
-        version.cyan()
-    );
+    println!("{0} pinned to Ruby {1}", project_dir.cyan(), version.cyan());
 
     Ok(())
 }
@@ -43,12 +39,7 @@ fn show_pinned_ruby(config: &Config) -> Result<()> {
 
     println!(
         "{0} is pinned to Ruby {1}",
-        config
-            .project_dir
-            .as_ref()
-            .unwrap()
-            .to_string_lossy()
-            .cyan(),
+        config.project_dir.as_ref().unwrap().cyan(),
         ruby_version.cyan()
     );
     Ok(())
@@ -58,9 +49,10 @@ fn show_pinned_ruby(config: &Config) -> Result<()> {
 mod tests {
     use super::*;
     use assert_fs::TempDir;
+    use camino::Utf8PathBuf;
 
     fn test_config() -> Result<Config> {
-        let root = TempDir::new().unwrap().path().to_path_buf();
+        let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
         let ruby_dir = root.join("opt/rubies");
         std::fs::create_dir_all(&ruby_dir)?;
 

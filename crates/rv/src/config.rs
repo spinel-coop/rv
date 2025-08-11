@@ -1,22 +1,22 @@
+use camino::{Utf8Path, Utf8PathBuf};
 use miette::{Diagnostic, Result};
-use std::path::{Path, PathBuf};
 use tracing::instrument;
 
 use rv_ruby::Ruby;
 
 #[derive(Debug, thiserror::Error, Diagnostic)]
 pub enum Error {
-    #[error("No project was found in the parents of {}", current_dir.to_string_lossy())]
-    NoProjectDir { current_dir: PathBuf },
+    #[error("No project was found in the parents of {}", current_dir)]
+    NoProjectDir { current_dir: Utf8PathBuf },
 }
 
 #[derive(Debug)]
 pub struct Config {
-    pub ruby_dirs: Vec<PathBuf>,
-    pub gemfile: Option<PathBuf>,
-    pub root: PathBuf,
-    pub current_dir: PathBuf,
-    pub project_dir: Option<PathBuf>,
+    pub ruby_dirs: Vec<Utf8PathBuf>,
+    pub gemfile: Option<Utf8PathBuf>,
+    pub root: Utf8PathBuf,
+    pub current_dir: Utf8PathBuf,
+    pub project_dir: Option<Utf8PathBuf>,
 }
 
 impl Config {
@@ -49,7 +49,7 @@ impl Config {
         Ok(rubies)
     }
 
-    pub fn get_project_dir(&self) -> Result<&PathBuf, Error> {
+    pub fn get_project_dir(&self) -> Result<&Utf8PathBuf, Error> {
         match self.project_dir {
             None => Err(Error::NoProjectDir {
                 current_dir: self.current_dir.clone(),
@@ -60,7 +60,7 @@ impl Config {
 }
 
 /// Default Ruby installation directories
-pub fn default_ruby_dirs(root: &Path) -> Vec<PathBuf> {
+pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
     vec![
         shellexpand::tilde("~/.rubies").as_ref(),
         "/opt/rubies",
@@ -69,7 +69,7 @@ pub fn default_ruby_dirs(root: &Path) -> Vec<PathBuf> {
     .into_iter()
     .filter_map(|path| {
         let joinable_path = path.strip_prefix("/").unwrap();
-        root.join(joinable_path).canonicalize().ok()
+        root.join(joinable_path).canonicalize_utf8().ok()
     })
     .collect()
 }

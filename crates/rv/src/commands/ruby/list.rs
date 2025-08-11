@@ -76,16 +76,16 @@ fn format_ruby_entry(
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
     use super::*;
+    use camino::Utf8PathBuf;
     use tempfile::TempDir;
 
     fn test_config() -> Config {
         let temp_dir = TempDir::new().unwrap();
-        let root = PathBuf::from("/tmp/rv_test_root");
-        let rubies_dir = temp_dir.path().join("rubies");
-        let current_dir = temp_dir.path().join("project");
+        let temp_path = Utf8PathBuf::from(temp_dir.path().to_str().unwrap());
+        let root = Utf8PathBuf::from("/tmp/rv_test_root");
+        let rubies_dir = temp_path.join("rubies");
+        let current_dir = temp_path.join("project");
 
         Config {
             ruby_dirs: vec![rubies_dir],

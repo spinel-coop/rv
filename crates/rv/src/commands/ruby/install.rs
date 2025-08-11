@@ -1,6 +1,6 @@
+use camino::{Utf8Path, Utf8PathBuf};
 use miette::{IntoDiagnostic, Result};
 use owo_colors::OwoColorize;
-use std::path::{Path, PathBuf};
 use rv_dirs::user_cache_dir;
 
 use crate::config::Config;
@@ -20,7 +20,7 @@ pub async fn install(config: &Config, requested: VersionRequest) -> Result<()> {
     if tarball_path.exists() {
         println!(
             "Tarball {} already exists, skipping download.",
-            tarball_path.to_string_lossy().cyan()
+            tarball_path.cyan()
         );
     } else {
         download_ruby_tarball(&url, &tarball_path).await?;
@@ -31,13 +31,13 @@ pub async fn install(config: &Config, requested: VersionRequest) -> Result<()> {
     println!(
         "Installed Ruby version {} to {}",
         requested.to_string().cyan(),
-        rubies_dir.to_string_lossy().cyan()
+        rubies_dir.cyan()
     );
 
     Ok(())
 }
 
-fn rubies_dir(config: &Config) -> &PathBuf {
+fn rubies_dir(config: &Config) -> &Utf8PathBuf {
     config.ruby_dirs.first().unwrap()
 }
 
@@ -47,11 +47,11 @@ fn ruby_url(version: &str) -> String {
     )
 }
 
-fn tarball_path(config: &Config, version: &str) -> PathBuf {
+fn tarball_path(config: &Config, version: &str) -> Utf8PathBuf {
     user_cache_dir(&config.root).join(format!("rubies/{version}.tar.gz"))
 }
 
-async fn download_ruby_tarball(url: &str, tarball_path: &PathBuf) -> Result<()> {
+async fn download_ruby_tarball(url: &str, tarball_path: &Utf8PathBuf) -> Result<()> {
     let response = reqwest::get(url).await.into_diagnostic()?;
     if !response.status().is_success() {
         return Err(miette::miette!(
@@ -64,16 +64,12 @@ async fn download_ruby_tarball(url: &str, tarball_path: &PathBuf) -> Result<()> 
     // write tarball to tarball_path
     std::fs::write(tarball_path, &tarball).into_diagnostic()?;
 
-    println!(
-        "Downloaded {} to {}",
-        url.cyan(),
-        tarball_path.to_string_lossy().cyan()
-    );
+    println!("Downloaded {} to {}", url.cyan(), tarball_path.cyan());
 
     Ok(())
 }
 
-async fn extract_ruby_tarball(tarball_path: &Path, rubies_dir: &Path) -> Result<()> {
+async fn extract_ruby_tarball(tarball_path: &Utf8Path, rubies_dir: &Utf8Path) -> Result<()> {
     let tarball = std::fs::File::open(tarball_path).into_diagnostic()?;
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
     for e in archive.entries().into_diagnostic()? {

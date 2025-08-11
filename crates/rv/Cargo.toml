@@ -34,6 +34,8 @@ reqwest = { version = "0.12.22" }
 flate2 = "1.1.2"
 tar = "0.4.44"
 rv-ruby = { version = "0.1.0", path = "../rv-ruby" }
+rv-dirs = { version = "0.1.0", path = "../rv-dirs" }
+camino = "1.1.11"
 
 [dev-dependencies]
 insta = "1.40"
