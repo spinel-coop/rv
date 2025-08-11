@@ -1,6 +1,7 @@
 use miette::{IntoDiagnostic, Result};
 use owo_colors::OwoColorize;
 use std::path::{Path, PathBuf};
+use rv_dirs::user_cache_dir;
 
 use crate::config::Config;
 use rv_ruby::request::VersionRequest;
@@ -47,7 +48,7 @@ fn ruby_url(version: &str) -> String {
 }
 
 fn tarball_path(config: &Config, version: &str) -> PathBuf {
-    rubies_dir(config).join(format!("portable-ruby-{version}.tar.gz"))
+    user_cache_dir(&config.root).join(format!("rubies/{version}.tar.gz"))
 }
 
 async fn download_ruby_tarball(url: &str, tarball_path: &PathBuf) -> Result<()> {
