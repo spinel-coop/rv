@@ -71,8 +71,9 @@ pub async fn install(
 }
 
 fn ruby_url(version: &str) -> String {
+    let number = version.strip_prefix("ruby-").unwrap_or(version);
     format!(
-        "https://github.com/spinel-coop/rv-ruby/releases/download/{version}/{version}.arm64_sonoma.bottle.tar.gz"
+        "https://github.com/spinel-coop/rv-ruby/releases/download/{number}/portable-{version}.arm64_sonoma.bottle.tar.gz"
     )
 }
 
