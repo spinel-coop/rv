@@ -96,29 +96,6 @@ impl VersionRequest {
             pre_release: pre,
         })
     }
-
-    pub fn to_string(&self) -> String {
-        let mut version = self.engine.to_string();
-
-        if let Some(major) = self.major {
-            version.push_str(&format!("-{}", major));
-            if let Some(minor) = self.minor {
-                version.push_str(&format!(".{}", minor));
-                if let Some(patch) = self.patch {
-                    version.push_str(&format!(".{}", patch));
-                    if let Some(tiny) = self.tiny {
-                        version.push_str(&format!(".{}", tiny));
-                    }
-                }
-            }
-        }
-
-        if let Some(ref pre_release) = self.pre_release {
-            version.push_str(&format!("-{}", pre_release));
-        }
-
-        version
-    }
 }
 
 impl FromStr for VersionRequest {
@@ -130,7 +107,25 @@ impl FromStr for VersionRequest {
 
 impl Display for VersionRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self.engine)?;
+
+        if let Some(major) = self.major {
+            write!(f, "-{}", major)?;
+            if let Some(minor) = self.minor {
+                write!(f, ".{}", minor)?;
+                if let Some(patch) = self.patch {
+                    write!(f, ".{}", patch)?;
+                    if let Some(tiny) = self.tiny {
+                        write!(f, ".{}", tiny)?;
+                    }
+                }
+            }
+        }
+
+        if let Some(ref pre_release) = self.pre_release {
+            write!(f, "-{}", pre_release)?;
+        };
+        Ok(())
     }
 }
 
