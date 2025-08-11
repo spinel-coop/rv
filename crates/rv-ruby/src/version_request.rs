@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct VersionRequest {
@@ -26,15 +26,13 @@ impl VersionRequest {
             } else {
                 Err(format!("Invalid version format: {}", input))?
             }
+        } else if let Some(pos) = rest.find('-') {
+            (
+                Some(rest[..pos].to_string()),
+                Some(rest[pos + 1..].to_string()),
+            )
         } else {
-            if let Some(pos) = rest.find('-') {
-                (
-                    Some(rest[..pos].to_string()),
-                    Some(rest[pos + 1..].to_string()),
-                )
-            } else {
-                (Some(rest.to_string()), None)
-            }
+            (Some(rest.to_string()), None)
         };
 
         let segments = if let Some(rest) = rest {
@@ -52,7 +50,7 @@ impl VersionRequest {
             ));
         }
 
-        let major = if segments.len() > 0 {
+        let major = if !segments.is_empty() {
             Some(
                 segments[0]
                     .parse::<u32>()
@@ -91,16 +89,16 @@ impl VersionRequest {
 
         Ok(VersionRequest {
             engine: engine.to_string(),
-            major: major,
-            minor: minor,
-            patch: patch,
-            tiny: tiny,
+            major,
+            minor,
+            patch,
+            tiny,
             pre_release: pre,
         })
     }
 
     pub fn to_string(&self) -> String {
-        let mut version = format!("{}", self.engine);
+        let mut version = self.engine.to_string();
 
         if let Some(major) = self.major {
             version.push_str(&format!("-{}", major));
@@ -127,6 +125,12 @@ impl FromStr for VersionRequest {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Self::parse(s)
+    }
+}
+
+impl Display for VersionRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_string())
     }
 }
 

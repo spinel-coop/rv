@@ -1,7 +1,7 @@
 use clap::{Args, Subcommand};
 
 use crate::commands::ruby::list::OutputFormat;
-use rv_ruby::request::VersionRequest;
+use rv_ruby::version_request::VersionRequest;
 
 pub mod install;
 pub mod list;

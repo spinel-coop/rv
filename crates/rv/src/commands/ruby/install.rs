@@ -1,18 +1,35 @@
 use camino::{Utf8Path, Utf8PathBuf};
-use miette::{IntoDiagnostic, Result};
+use miette::Diagnostic;
 use owo_colors::OwoColorize;
+use std::path::PathBuf;
+
 use rv_dirs::user_cache_dir;
+use rv_ruby::version_request::VersionRequest;
 
 use crate::config::Config;
-use rv_ruby::request::VersionRequest;
 
+#[derive(Debug, thiserror::Error, Diagnostic)]
+pub enum Error {
+    #[error(transparent)]
+    ReqwestError(#[from] reqwest::Error),
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
+    #[error(transparent)]
+    StripPrefixError(#[from] std::path::StripPrefixError),
+    #[error("Major, minor, and patch version is required, but got {0}")]
+    IncompleteVersion(VersionRequest),
+    #[error("Download from URL {0} failed with status code {1}")]
+    DownloadFailed(String, reqwest::StatusCode),
+    #[error("Failed to unpack tarball path {0}")]
+    InvalidTarballPath(PathBuf),
+}
+
+type Result<T> = miette::Result<T, Error>;
 pub async fn install(config: &Config, requested: VersionRequest) -> Result<()> {
     let rubies_dir = rubies_dir(config);
 
     if requested.patch.is_none() {
-        return Err(miette::miette!(
-            "Major, minor, and patch version is required for Ruby installation"
-        ));
+        Err(Error::IncompleteVersion(requested.clone()))?;
     }
     let url = ruby_url(&requested.to_string());
     let tarball_path = tarball_path(config, &requested.to_string());
@@ -52,17 +69,13 @@ fn tarball_path(config: &Config, version: &str) -> Utf8PathBuf {
 }
 
 async fn download_ruby_tarball(url: &str, tarball_path: &Utf8PathBuf) -> Result<()> {
-    let response = reqwest::get(url).await.into_diagnostic()?;
+    let response = reqwest::get(url).await?;
     if !response.status().is_success() {
-        return Err(miette::miette!(
-            "Failed to download {} with status {}",
-            url,
-            response.status()
-        ));
+        return Err(Error::DownloadFailed(url.to_string(), response.status()));
     }
-    let tarball = response.bytes().await.into_diagnostic()?;
+    let tarball = response.bytes().await?;
     // write tarball to tarball_path
-    std::fs::write(tarball_path, &tarball).into_diagnostic()?;
+    std::fs::write(tarball_path, &tarball)?;
 
     println!("Downloaded {} to {}", url.cyan(), tarball_path.cyan());
 
@@ -70,18 +83,17 @@ async fn download_ruby_tarball(url: &str, tarball_path: &Utf8PathBuf) -> Result<
 }
 
 async fn extract_ruby_tarball(tarball_path: &Utf8Path, rubies_dir: &Utf8Path) -> Result<()> {
-    let tarball = std::fs::File::open(tarball_path).into_diagnostic()?;
+    let tarball = std::fs::File::open(tarball_path)?;
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
-    for e in archive.entries().into_diagnostic()? {
-        let mut entry = e.into_diagnostic()?;
-        let entry_path = entry.path().into_diagnostic()?;
-        let path = entry_path
-            .strip_prefix("portable-ruby/")
-            .into_diagnostic()?
+    for e in archive.entries()? {
+        let mut entry = e?;
+        let entry_path = entry.path()?;
+        let path = entry_path.strip_prefix("portable-ruby/")?;
+        let path = path
             .to_str()
-            .ok_or(miette::miette!("Invalid path in tarball"))?;
+            .ok_or_else(|| Error::InvalidTarballPath(entry_path.to_path_buf()))?;
         let entry_path = rubies_dir.join(path);
-        entry.unpack(entry_path).into_diagnostic()?;
+        entry.unpack(entry_path)?;
     }
 
     Ok(())
