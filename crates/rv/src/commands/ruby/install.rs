@@ -46,6 +46,10 @@ pub async fn install(
     let url = ruby_url(&requested.to_string());
     let tarball_path = tarball_path(config, &requested.to_string());
 
+    if !tarball_path.parent().unwrap().exists() {
+        std::fs::create_dir_all(tarball_path.parent().unwrap())?;
+    }
+
     if tarball_path.exists() {
         println!(
             "Tarball {} already exists, skipping download.",
