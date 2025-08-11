@@ -1,5 +1,6 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use core::panic;
+use futures_util::StreamExt;
 use miette::Diagnostic;
 use owo_colors::OwoColorize;
 use std::path::PathBuf;
@@ -82,16 +83,20 @@ fn tarball_path(config: &Config, version: &str) -> Utf8PathBuf {
 }
 
 async fn download_ruby_tarball(url: &str, tarball_path: &Utf8PathBuf) -> Result<()> {
+    let mut file = tokio::fs::File::create(tarball_path).await?;
+
     let response = reqwest::get(url).await?;
     if !response.status().is_success() {
         return Err(Error::DownloadFailed(url.to_string(), response.status()));
     }
-    let tarball = response.bytes().await?;
-    // write tarball to tarball_path
-    std::fs::write(tarball_path, &tarball)?;
+
+    let mut stream = response.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk?;
+        tokio::io::copy(&mut chunk.as_ref(), &mut file).await?;
+    }
 
     println!("Downloaded {} to {}", url.cyan(), tarball_path.cyan());
-
     Ok(())
 }
 

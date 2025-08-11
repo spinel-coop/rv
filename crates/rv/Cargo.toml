@@ -16,25 +16,20 @@ serde_json = "1.0"
 serde_with = "3.11"
 shellexpand = "3.1"
 thiserror = "2.0"
-tokio = { version = "1.46.1", features = [
-  "tracing",
-  "macros",
-  "rt-multi-thread",
-  "io-std",
-  "process",
-] }
+tokio = { version = "1.46.1", features = ["tracing", "macros", "rt-multi-thread", "io-std", "process", "fs"] }
 tracing = "0.1.41"
 etcetera = "0.8"
 tracing-indicatif = "0.3.11"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 anstream = "0.6.19"
 clap-verbosity-flag = { version = "3.0.3", features = ["tracing"] }
-reqwest = { version = "0.12.22" }
+reqwest = { version = "0.12.22", features = ["stream"] }
 flate2 = "1.1.2"
 tar = "0.4.44"
 rv-ruby = { version = "0.1.0", path = "../rv-ruby" }
 rv-dirs = { version = "0.1.0", path = "../rv-dirs" }
 camino = "1.1.11"
+futures-util = "0.3.31"
 
 [dev-dependencies]
 insta = "1.40"
