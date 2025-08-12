@@ -101,6 +101,7 @@ async fn download_ruby_tarball(url: &str, tarball_path: &Utf8PathBuf) -> Result<
 }
 
 async fn extract_ruby_tarball(tarball_path: &Utf8Path, dir: &Utf8Path) -> Result<()> {
+    std::fs::create_dir_all(dir)?;
     let tarball = std::fs::File::open(tarball_path)?;
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
     for e in archive.entries()? {
