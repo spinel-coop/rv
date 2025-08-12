@@ -1,5 +1,5 @@
 pub mod implementation;
-pub mod version_request;
+pub mod request;
 
 use regex::Regex;
 use serde::{Deserialize, Serialize, Serializer};

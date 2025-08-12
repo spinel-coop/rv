@@ -1,7 +1,7 @@
 use clap::{Args, Subcommand};
 
 use crate::commands::ruby::list::OutputFormat;
-use rv_ruby::version_request::VersionRequest;
+use rv_ruby::request::RubyRequest;
 
 pub mod install;
 pub mod list;
@@ -39,6 +39,6 @@ pub enum RubyCommand {
         install_dir: Option<String>,
 
         /// Ruby version to install
-        version: VersionRequest,
+        version: RubyRequest,
     },
 }

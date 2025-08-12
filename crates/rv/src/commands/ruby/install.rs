@@ -6,7 +6,7 @@ use owo_colors::OwoColorize;
 use std::path::PathBuf;
 
 use rv_dirs::user_cache_dir;
-use rv_ruby::version_request::VersionRequest;
+use rv_ruby::request::RubyRequest;
 
 use crate::config::Config;
 
@@ -19,7 +19,7 @@ pub enum Error {
     #[error(transparent)]
     StripPrefixError(#[from] std::path::StripPrefixError),
     #[error("Major, minor, and patch version is required, but got {0}")]
-    IncompleteVersion(VersionRequest),
+    IncompleteVersion(RubyRequest),
     #[error("Download from URL {0} failed with status code {1}")]
     DownloadFailed(String, reqwest::StatusCode),
     #[error("Failed to unpack tarball path {0}")]
@@ -31,7 +31,7 @@ type Result<T> = miette::Result<T, Error>;
 pub async fn install(
     config: &Config,
     install_dir: Option<String>,
-    requested: VersionRequest,
+    requested: RubyRequest,
 ) -> Result<()> {
     let install_dir = match install_dir {
         Some(dir) => Utf8PathBuf::from(dir),

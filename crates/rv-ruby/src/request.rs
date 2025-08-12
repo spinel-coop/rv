@@ -1,7 +1,7 @@
 use std::{fmt::Display, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct VersionRequest {
+pub struct RubyRequest {
     pub engine: String,
     pub major: Option<u32>,
     pub minor: Option<u32>,
@@ -10,7 +10,7 @@ pub struct VersionRequest {
     pub pre_release: Option<String>,
 }
 
-impl VersionRequest {
+impl RubyRequest {
     pub fn parse(input: &str) -> Result<Self, String> {
         let first_char = input.chars().next().ok_or("Empty input")?;
         let (engine, rest) = if first_char.is_alphabetic() {
@@ -87,7 +87,7 @@ impl VersionRequest {
             None
         };
 
-        Ok(VersionRequest {
+        Ok(RubyRequest {
             engine: engine.to_string(),
             major,
             minor,
@@ -98,14 +98,14 @@ impl VersionRequest {
     }
 }
 
-impl FromStr for VersionRequest {
+impl FromStr for RubyRequest {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Self::parse(s)
     }
 }
 
-impl Display for VersionRequest {
+impl Display for RubyRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.engine)?;
 
@@ -132,20 +132,20 @@ impl Display for VersionRequest {
 
 #[test]
 fn test_empty_version() {
-    let request = VersionRequest::parse("").expect_err("Expected error for empty version");
+    let request = RubyRequest::parse("").expect_err("Expected error for empty version");
     assert_eq!(request, "Empty input");
 }
 
 #[test]
 fn test_invalid_version_format() {
-    let request = VersionRequest::parse("ruby-invalid")
-        .expect_err("Expected error for invalid version format");
+    let request =
+        RubyRequest::parse("ruby-invalid").expect_err("Expected error for invalid version format");
     assert!(request.contains("Invalid version"));
 }
 
 #[test]
 fn test_adding_ruby_engine() {
-    let request = VersionRequest::parse("3.0.0").expect("Failed to parse version");
+    let request = RubyRequest::parse("3.0.0").expect("Failed to parse version");
     assert_eq!(request.engine, "ruby");
     assert_eq!(request.major, Some(3));
     assert_eq!(request.minor, Some(0));
@@ -156,7 +156,7 @@ fn test_adding_ruby_engine() {
 
 #[test]
 fn test_major_only() {
-    let request = VersionRequest::parse("3").expect("Failed to parse version");
+    let request = RubyRequest::parse("3").expect("Failed to parse version");
     assert_eq!(request.engine, "ruby");
     assert_eq!(request.major, Some(3));
     assert_eq!(request.minor, None);
@@ -292,7 +292,7 @@ fn test_parsing_supported_ruby_versions() {
     ];
 
     for version in versions {
-        let request = VersionRequest::parse(version).expect("Failed to parse version");
+        let request = RubyRequest::parse(version).expect("Failed to parse version");
         let output = request.to_string();
         assert_eq!(
             output, version,
