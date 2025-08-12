@@ -69,7 +69,13 @@ pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
     .into_iter()
     .filter_map(|path| {
         let joinable_path = path.strip_prefix("/").unwrap();
-        root.join(joinable_path).canonicalize_utf8().ok()
+        let joined_path = root.join(joinable_path);
+        // Make sure we always have at least ~/.rubies, even if it doesn't exist yet
+        if joined_path.ends_with(".rubies") {
+            Some(joined_path)
+        } else {
+            joined_path.canonicalize_utf8().ok()
+        }
     })
     .collect()
 }
