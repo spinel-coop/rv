@@ -383,6 +383,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "current_platform"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a74858bcfe44b22016cb49337d7b6f04618c58e5dbfdef61b06b8c434324a0bc"
+
+[[package]]
 name = "darling"
 version = "0.20.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1782,6 +1788,7 @@ dependencies = [
  "clap",
  "clap-verbosity-flag",
  "clap_derive",
+ "current_platform",
  "etcetera 0.8.0",
  "flate2",
  "fs-err 2.11.0",

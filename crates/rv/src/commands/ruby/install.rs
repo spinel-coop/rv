@@ -1,5 +1,6 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use core::panic;
+use current_platform::CURRENT_PLATFORM;
 use futures_util::StreamExt;
 use miette::Diagnostic;
 use owo_colors::OwoColorize;
@@ -73,8 +74,14 @@ pub async fn install(
 
 fn ruby_url(version: &str) -> String {
     let number = version.strip_prefix("ruby-").unwrap_or(version);
+    let arch = match CURRENT_PLATFORM {
+        "aarch64-apple-darwin" => "arm64_sonoma",
+        "x86_64-unknown-linux-gnu" => "x86_64_linux",
+        _ => panic!("rv does not (yet) support {}. Sorry :(", CURRENT_PLATFORM),
+    };
+
     format!(
-        "https://github.com/spinel-coop/rv-ruby/releases/download/{number}/portable-{version}.arm64_sonoma.bottle.tar.gz"
+        "https://github.com/spinel-coop/rv-ruby/releases/download/{number}/portable-{version}.{arch}.bottle.tar.gz"
     )
 }
 
