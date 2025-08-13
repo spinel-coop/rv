@@ -30,6 +30,7 @@ rv-ruby = { version = "0.1.0", path = "../rv-ruby" }
 rv-dirs = { version = "0.1.0", path = "../rv-dirs" }
 camino = "1.1.11"
 futures-util = "0.3.31"
+current_platform = "0.2.0"
 
 [dev-dependencies]
 insta = "1.40"
