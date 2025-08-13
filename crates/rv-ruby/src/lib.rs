@@ -1,16 +1,17 @@
+pub mod implementation;
+pub mod request;
+
 use regex::Regex;
 use serde::{Deserialize, Serialize, Serializer};
 use serde_with::{DisplayFromStr, serde_as};
 use std::env;
-use std::fmt::{self, Display};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
 use std::time::SystemTime;
 use tracing::instrument;
-// Note: We considered using strum::Display, but the Unknown(String) variant
-// makes manual implementation more straightforward
-use vfs::VfsPath;
+
+use crate::implementation::RubyImplementation;
 
 #[serde_as]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -25,16 +26,16 @@ pub struct Ruby {
     #[serde(skip)]
     pub version_parts: VersionParts,
 
-    /// VFS path to the Ruby installation directory
-    #[serde(serialize_with = "serialize_vfs_path")]
-    pub path: VfsPath,
+    /// Path to the Ruby installation directory
+    #[serde(serialize_with = "serialize_path")]
+    pub path: PathBuf,
 
     /// Symlink target if this Ruby is a symlink
     #[serde(
         skip_serializing_if = "Option::is_none",
-        serialize_with = "serialize_optional_vfs_path"
+        serialize_with = "serialize_optional_path"
     )]
-    pub symlink: Option<VfsPath>,
+    pub symlink: Option<PathBuf>,
 
     /// Ruby implementation
     #[serde_as(as = "DisplayFromStr")]
@@ -52,98 +53,6 @@ pub struct Ruby {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum RubyImplementation {
-    /// Standard Ruby (MRI/CRuby)
-    Ruby,
-    /// JRuby (Java implementation)
-    #[serde(rename = "jruby")]
-    JRuby,
-    /// TruffleRuby (GraalVM implementation)
-    #[serde(rename = "truffleruby")]
-    TruffleRuby,
-    /// mruby (minimal Ruby)
-    #[serde(rename = "mruby")]
-    MRuby,
-    /// Artichoke Ruby (Rust implementation)
-    #[serde(rename = "artichoke")]
-    Artichoke,
-    /// Unknown implementation with the original name
-    #[serde(untagged)]
-    Unknown(String),
-}
-
-impl RubyImplementation {
-    /// Get the display name for this implementation
-    pub fn name(&self) -> &str {
-        match self {
-            Self::Ruby => "ruby",
-            Self::JRuby => "jruby",
-            Self::TruffleRuby => "truffleruby",
-            Self::MRuby => "mruby",
-            Self::Artichoke => "artichoke",
-            Self::Unknown(name) => name,
-        }
-    }
-}
-
-impl Display for RubyImplementation {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name())
-    }
-}
-
-impl FromStr for RubyImplementation {
-    type Err = std::convert::Infallible;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let implementation = match s {
-            "ruby" => Self::Ruby,
-            "jruby" => Self::JRuby,
-            "truffleruby" => Self::TruffleRuby,
-            "mruby" => Self::MRuby,
-            "artichoke" => Self::Artichoke,
-            _ => Self::Unknown(s.to_string()),
-        };
-        Ok(implementation)
-    }
-}
-
-impl PartialOrd for RubyImplementation {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for RubyImplementation {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        use std::cmp::Ordering;
-
-        // Get priority for each implementation
-        let self_priority = match self {
-            Self::Ruby => 0, // Ruby always comes first
-            Self::JRuby | Self::TruffleRuby | Self::MRuby | Self::Artichoke => 1, // Known implementations second
-            Self::Unknown(_) => 2, // Unknown implementations last
-        };
-
-        let other_priority = match other {
-            Self::Ruby => 0,
-            Self::JRuby | Self::TruffleRuby | Self::MRuby | Self::Artichoke => 1,
-            Self::Unknown(_) => 2,
-        };
-
-        // First compare by priority
-        match self_priority.cmp(&other_priority) {
-            Ordering::Equal => {
-                // Same priority, sort alphabetically by name
-                self.name().cmp(other.name())
-            }
-            other => other,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VersionParts {
     pub major: u32,
     pub minor: u32,
@@ -152,31 +61,34 @@ pub struct VersionParts {
 }
 
 impl Ruby {
-    /// Create a new Ruby instance from a VFS directory path
-    #[instrument(skip(vfs_dir), fields(dir = %vfs_dir.as_str()))]
-    pub fn from_dir(vfs_dir: VfsPath) -> Result<Self, RubyError> {
-        let dir_name = vfs_dir.filename();
+    /// Create a new Ruby instance from a directory path
+    #[instrument(skip(dir), fields(dir = %dir.display()))]
+    pub fn from_dir(dir: PathBuf) -> Result<Self, RubyError> {
+        let dir_name = dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
+
         if dir_name.is_empty() {
             return Err(RubyError::InvalidPath {
-                path: vfs_dir.as_str().to_string(),
+                path: dir.display().to_string(),
             });
         }
 
         // Parse directory name (e.g., "ruby-3.1.4", "jruby-9.4.0.0")
-        let (implementation_name, version) = parse_ruby_dir_name(&dir_name)?;
+        let (implementation_name, version) = parse_ruby_dir_name(dir_name)?;
         let implementation = RubyImplementation::from_str(&implementation_name).unwrap();
         let version_parts = parse_version(&version)?;
 
         // Check for Ruby executable
-        let ruby_bin = vfs_dir.join("bin")?.join("ruby")?;
-        if !ruby_bin.exists()? {
+        let ruby_bin = dir.join("bin").join("ruby");
+        if !ruby_bin.exists() {
             return Err(RubyError::NoRubyExecutable);
         }
 
         let symlink = find_symlink_target(&ruby_bin);
 
         // Get modification time of the ruby executable for cache invalidation
-        let mtime = ruby_bin.metadata().ok().and_then(|meta| meta.modified);
+        let mtime = std::fs::metadata(&ruby_bin)
+            .ok()
+            .and_then(|meta| meta.modified().ok());
 
         // Extract arch/os from the Ruby executable itself
         let (arch, os) = extract_ruby_platform_info(&ruby_bin)?;
@@ -187,7 +99,7 @@ impl Ruby {
             key,
             version,
             version_parts,
-            path: vfs_dir,
+            path: dir,
             symlink,
             implementation,
             arch,
@@ -198,12 +110,8 @@ impl Ruby {
 
     /// Check if this Ruby installation is valid
     pub fn is_valid(&self) -> bool {
-        // Use VFS to check validity
-        let ruby_bin = self.path.join("bin").and_then(|bin| bin.join("ruby"));
-        match ruby_bin {
-            Ok(bin_path) => bin_path.exists().unwrap_or(false),
-            Err(_) => false,
-        }
+        let ruby_bin = self.path.join("bin").join("ruby");
+        ruby_bin.exists()
     }
 
     /// Get display name for this Ruby
@@ -213,14 +121,7 @@ impl Ruby {
 
     /// Get the path to the Ruby executable for display purposes
     pub fn executable_path(&self) -> PathBuf {
-        PathBuf::from(
-            self.path
-                .join("bin")
-                .unwrap()
-                .join("ruby")
-                .unwrap()
-                .as_str(),
-        )
+        self.path.join("bin").join("ruby")
     }
 
     /// Check if this Ruby matches the active version pattern
@@ -312,8 +213,6 @@ pub enum RubyError {
     InvalidDirectoryName(String),
     #[error("Failed to parse version: {0}")]
     InvalidVersion(String),
-    #[error("VFS error: {0}")]
-    VfsError(#[from] vfs::VfsError),
 }
 
 /// Parse Ruby directory name into implementation and version
@@ -322,6 +221,11 @@ pub enum RubyError {
 ///          "unknown-ruby-1.0.0" -> ("unknown-ruby", "1.0.0")
 fn parse_ruby_dir_name(dir_name: &str) -> Result<(String, String), RubyError> {
     let parts: Vec<&str> = dir_name.splitn(2, '-').collect();
+
+    if parts.len() == 1 && parse_version(parts[0]).is_ok() {
+        return Ok(("ruby".to_string(), parts[0].to_string()));
+    }
+
     if parts.len() != 2 {
         return Err(RubyError::InvalidDirectoryName(dir_name.to_string()));
     }
@@ -369,12 +273,12 @@ fn parse_version(version: &str) -> Result<VersionParts, RubyError> {
 
 /// Extract arch and OS information from a Ruby executable
 #[instrument(skip_all)]
-fn extract_ruby_platform_info(ruby_bin: &VfsPath) -> Result<(String, String), RubyError> {
+fn extract_ruby_platform_info(ruby_bin: &PathBuf) -> Result<(String, String), RubyError> {
     // For VFS compatibility, we need to handle the case where we can't execute the binary
     // In such cases, fall back to the current system's platform info
 
     // Try to get the actual file path for execution
-    let ruby_path = ruby_bin.as_str();
+    let ruby_path = ruby_bin;
 
     // Run ruby -e "puts [RUBY_PLATFORM, RbConfig::CONFIG['host_cpu'], RbConfig::CONFIG['host_os']].join('|')"
     let output = Command::new(ruby_path)
@@ -436,47 +340,29 @@ fn normalize_os(os: &str) -> String {
     }
 }
 
-/// Custom serializer for VfsPath that serializes as the display string
-fn serialize_vfs_path<S>(path: &VfsPath, serializer: S) -> Result<S::Ok, S::Error>
+/// Custom serializer for PathBuf that serializes as the display string
+fn serialize_path<S>(path: &Path, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    serializer.serialize_str(path.as_str())
+    serializer.serialize_str(&path.display().to_string())
 }
 
-/// Custom serializer for Option<VfsPath> that serializes as the display string
-fn serialize_optional_vfs_path<S>(path: &Option<VfsPath>, serializer: S) -> Result<S::Ok, S::Error>
+/// Custom serializer for Option<PathBuf> that serializes as the display string
+fn serialize_optional_path<S>(path: &Option<PathBuf>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
     match path {
-        Some(p) => serializer.serialize_str(p.as_str()),
+        Some(p) => serializer.serialize_str(&p.display().to_string()),
         None => serializer.serialize_none(),
     }
 }
 
-/// Find symlink target for a VFS path, if it exists
-fn find_symlink_target(vfs_path: &VfsPath) -> Option<VfsPath> {
-    if let Ok(metadata) = vfs_path.metadata() {
-        if metadata.file_type == vfs::VfsFileType::File {
-            // For VFS, we need to check if it's a symlink using the underlying filesystem
-            // Since VFS doesn't expose symlink info directly, we'll convert to PathBuf for this check
-            let pathbuf = PathBuf::from(vfs_path.as_str());
-            if pathbuf.is_symlink() {
-                if let Ok(target) = std::fs::read_link(&pathbuf) {
-                    // Convert the symlink target back to VFS path
-                    let fs = vfs::PhysicalFS::new("/");
-                    let root = VfsPath::new(fs);
-                    root.join(target.to_string_lossy().as_ref()).ok()
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        } else {
-            None
-        }
+/// Find symlink target for a path, if it exists
+fn find_symlink_target(path: &PathBuf) -> Option<PathBuf> {
+    if path.is_symlink() {
+        std::fs::read_link(path).ok()
     } else {
         None
     }
@@ -506,13 +392,13 @@ pub fn find_active_ruby_version() -> Option<String> {
 
 /// Find active Ruby version with injectable environment provider (for testing)
 pub fn find_active_ruby_version_with_env(env_provider: &dyn EnvProvider) -> Option<String> {
-    find_active_ruby_version_with_env_and_fs(env_provider, &VfsPath::new(vfs::PhysicalFS::new("/")))
+    find_active_ruby_version_with_env_and_fs(env_provider, &PathBuf::from("/"))
 }
 
-/// Find active Ruby version with injectable environment provider and VFS (for testing)
+/// Find active Ruby version with injectable environment provider and filesystem (for testing)
 pub fn find_active_ruby_version_with_env_and_fs(
     env_provider: &dyn EnvProvider,
-    vfs_root: &VfsPath,
+    root: &PathBuf,
 ) -> Option<String> {
     // 1. Check RUBY_ROOT environment variable
     if let Some(ruby_root) = env_provider.get_var("RUBY_ROOT") {
@@ -525,7 +411,7 @@ pub fn find_active_ruby_version_with_env_and_fs(
     }
 
     // 2. Look for .ruby-version file in current directory and parents
-    if let Some(version) = find_ruby_version_file_vfs(vfs_root) {
+    if let Some(version) = find_ruby_version_file_fs(root) {
         return Some(version);
     }
 
@@ -542,19 +428,23 @@ pub fn find_active_ruby_version_with_env_and_fs(
     None
 }
 
-/// Search for .ruby-version file using VFS (for testing)
-fn find_ruby_version_file_vfs(vfs_root: &VfsPath) -> Option<String> {
+/// Search for .ruby-version file using filesystem (for testing)
+fn find_ruby_version_file_fs(root: &PathBuf) -> Option<String> {
     let mut current_dir = if let Ok(cwd) = env::current_dir() {
-        vfs_root.join(cwd.to_string_lossy().as_ref()).ok()?
+        if root == &PathBuf::from("/") {
+            cwd
+        } else {
+            root.join(cwd.strip_prefix("/").unwrap_or(&cwd))
+        }
     } else {
         return None;
     };
 
     loop {
-        let ruby_version_file = current_dir.join(".ruby-version").ok()?;
+        let ruby_version_file = current_dir.join(".ruby-version");
 
-        if ruby_version_file.exists().unwrap_or(false)
-            && let Ok(content) = ruby_version_file.read_to_string()
+        if ruby_version_file.exists()
+            && let Ok(content) = std::fs::read_to_string(&ruby_version_file)
         {
             let version = content.trim();
             if !version.is_empty() {
@@ -563,11 +453,14 @@ fn find_ruby_version_file_vfs(vfs_root: &VfsPath) -> Option<String> {
         }
 
         // Move to parent directory
-        let parent = current_dir.parent();
-        if parent.as_str() == current_dir.as_str() {
-            break; // Reached VFS root
+        if let Some(parent) = current_dir.parent() {
+            if parent == current_dir {
+                break; // Reached filesystem root
+            }
+            current_dir = parent.to_path_buf();
+        } else {
+            break; // No parent
         }
-        current_dir = parent;
     }
 
     None
@@ -682,6 +575,14 @@ fn extract_ruby_info_from_path(ruby_path: &Path) -> Option<String> {
         }
     }
 
+    if let Ok(re) = Regex::new(r"/([\d.]+[^/]*)/bin/ruby")
+        && let Some(captures) = re.captures(&path_str)
+        && let Some(matched) = captures.get(1)
+    {
+        // If we find a version without an engine prefix, assume it's ruby
+        return Some(format!("ruby-{}", matched.as_str()));
+    }
+
     // If no pattern matches, default to "ruby" (we know it's some Ruby)
     Some("ruby".to_string())
 }
@@ -694,6 +595,11 @@ mod tests {
     fn test_parse_ruby_dir_name() {
         assert_eq!(
             parse_ruby_dir_name("ruby-3.1.4").unwrap(),
+            ("ruby".to_string(), "3.1.4".to_string())
+        );
+
+        assert_eq!(
+            parse_ruby_dir_name("3.1.4").unwrap(),
             ("ruby".to_string(), "3.1.4".to_string())
         );
 
@@ -731,12 +637,8 @@ mod tests {
 
     #[test]
     fn test_ruby_ordering() {
-        use vfs::{PhysicalFS, VfsPath};
-
-        // Create a dummy VFS path for testing
-        let fs = PhysicalFS::new("/");
-        let vfs_root = VfsPath::new(fs);
-        let dummy_vfs_path = vfs_root.join("tmp").unwrap();
+        // Create a dummy path for testing
+        let dummy_path = PathBuf::from("/tmp/test-ruby");
 
         let ruby1 = Ruby {
             key: "ruby-3.1.4-macos-aarch64".to_string(),
@@ -747,7 +649,7 @@ mod tests {
                 patch: 4,
                 pre: None,
             },
-            path: dummy_vfs_path.clone(),
+            path: dummy_path.clone(),
             symlink: None,
             implementation: RubyImplementation::Ruby,
             arch: "aarch64".to_string(),
@@ -764,7 +666,7 @@ mod tests {
                 patch: 0,
                 pre: None,
             },
-            path: dummy_vfs_path.clone(),
+            path: dummy_path.clone(),
             symlink: None,
             implementation: RubyImplementation::Ruby,
             arch: "aarch64".to_string(),
@@ -781,7 +683,7 @@ mod tests {
                 patch: 0,
                 pre: Some("0".to_string()),
             },
-            path: dummy_vfs_path,
+            path: dummy_path,
             symlink: None,
             implementation: RubyImplementation::JRuby,
             arch: "aarch64".to_string(),
@@ -912,7 +814,7 @@ mod tests {
 
     #[test]
     fn test_find_active_ruby_version_with_env_vars() {
-        use vfs::{MemoryFS, VfsPath};
+        use assert_fs::prelude::*;
 
         // Mock environment provider for testing
         struct MockEnv {
@@ -925,9 +827,9 @@ mod tests {
             }
         }
 
-        // Create a memory VFS for testing
-        let fs = MemoryFS::new();
-        let vfs_root = VfsPath::new(fs);
+        // Create a temporary directory for testing
+        let temp_dir = assert_fs::TempDir::new().unwrap();
+        let root = temp_dir.path().to_path_buf();
 
         // Test RUBY_ROOT environment variable
         let env = MockEnv {
@@ -936,18 +838,18 @@ mod tests {
                 .cloned()
                 .collect(),
         };
-        let result = find_active_ruby_version_with_env_and_fs(&env, &vfs_root);
+        let result = find_active_ruby_version_with_env_and_fs(&env, &root);
         assert_eq!(result, Some("ruby-3.2.1".to_string()));
 
         // Test DEFAULT_RUBY_VERSION environment variable (when RUBY_ROOT not set)
-        // No .ruby-version file in empty VFS
+        // No .ruby-version file in empty filesystem
         let env = MockEnv {
             vars: [("DEFAULT_RUBY_VERSION".to_string(), "3.1.4".to_string())]
                 .iter()
                 .cloned()
                 .collect(),
         };
-        let result = find_active_ruby_version_with_env_and_fs(&env, &vfs_root);
+        let result = find_active_ruby_version_with_env_and_fs(&env, &root);
         assert_eq!(result, Some("3.1.4".to_string()));
 
         // Test precedence: RUBY_ROOT should override DEFAULT_RUBY_VERSION
@@ -963,23 +865,12 @@ mod tests {
             .cloned()
             .collect(),
         };
-        let result = find_active_ruby_version_with_env_and_fs(&env, &vfs_root);
+        let result = find_active_ruby_version_with_env_and_fs(&env, &root);
         assert_eq!(result, Some("jruby-9.4.0.0".to_string()));
 
         // Test .ruby-version file precedence over DEFAULT_RUBY_VERSION
-        // First create a .ruby-version file in the VFS
-        let current_path = if let Ok(cwd) = std::env::current_dir() {
-            vfs_root.join(cwd.to_string_lossy().as_ref()).unwrap()
-        } else {
-            vfs_root.join("test_dir").unwrap()
-        };
-        current_path.create_dir_all().unwrap();
-        let ruby_version_file = current_path.join(".ruby-version").unwrap();
-        ruby_version_file
-            .create_file()
-            .unwrap()
-            .write_all(b"2.7.6")
-            .unwrap();
+        // First create a .ruby-version file in the temp directory
+        temp_dir.child(".ruby-version").write_str("2.7.6").unwrap();
 
         let env = MockEnv {
             vars: [("DEFAULT_RUBY_VERSION".to_string(), "3.1.4".to_string())]
@@ -987,16 +878,16 @@ mod tests {
                 .cloned()
                 .collect(),
         };
-        let result = find_active_ruby_version_with_env_and_fs(&env, &vfs_root);
+        let result = find_active_ruby_version_with_env_and_fs(&env, &root);
         assert_eq!(result, Some("2.7.6".to_string()));
 
-        // Test no environment variables set with empty VFS (no .ruby-version, no PATH)
-        let empty_fs = MemoryFS::new();
-        let empty_vfs = VfsPath::new(empty_fs);
+        // Test no environment variables set with empty filesystem (no .ruby-version, no PATH)
+        let empty_temp = assert_fs::TempDir::new().unwrap();
+        let empty_root = empty_temp.path().to_path_buf();
         let env = MockEnv {
             vars: std::collections::HashMap::new(),
         };
-        let result = find_active_ruby_version_with_env_and_fs(&env, &empty_vfs);
+        let result = find_active_ruby_version_with_env_and_fs(&env, &empty_root);
 
         // Result could be None (no version sources) or Some (PATH fallback found Ruby)
         // Both are valid depending on system state - the test verifies it doesn't crash
@@ -1014,79 +905,73 @@ mod tests {
     }
 
     #[test]
-    fn test_find_ruby_version_file_with_vfs() {
-        use vfs::{MemoryFS, VfsPath};
+    fn test_find_ruby_version_file_with_fs() {
+        use assert_fs::prelude::*;
 
-        // Create a memory VFS for testing
-        let fs = MemoryFS::new();
-        let vfs_root = VfsPath::new(fs);
-
-        // Create the test directory structure
-        let current_path = if let Ok(cwd) = std::env::current_dir() {
-            vfs_root.join(cwd.to_string_lossy().as_ref()).unwrap()
-        } else {
-            vfs_root.join("test_dir").unwrap()
-        };
-        current_path.create_dir_all().unwrap();
+        // Create a temporary directory for testing
+        let temp_dir = assert_fs::TempDir::new().unwrap();
+        let root = temp_dir.path().to_path_buf();
 
         // Create a .ruby-version file with whitespace
-        let ruby_version_file = current_path.join(".ruby-version").unwrap();
-        ruby_version_file
-            .create_file()
-            .unwrap()
-            .write_all(b"  3.1.4  \n")
+        temp_dir
+            .child(".ruby-version")
+            .write_str("  3.1.4  \n")
             .unwrap();
 
-        // Test finding the .ruby-version file using VFS
-        let result = find_ruby_version_file_vfs(&vfs_root);
+        // Test finding the .ruby-version file using filesystem
+        let result = find_ruby_version_file_fs(&root);
 
         assert_eq!(result, Some("3.1.4".to_string()));
     }
 
     #[test]
     fn test_find_ruby_version_file_parent_directory() {
-        use vfs::{MemoryFS, VfsPath};
+        use assert_fs::prelude::*;
 
-        // This test requires modifying the VFS traversal function to accept a starting path
-        // For now, let's create a simpler test that verifies the parent directory logic works
+        // This test verifies the parent directory logic works
 
-        // Create a memory VFS for testing
-        let fs = MemoryFS::new();
-        let vfs_root = VfsPath::new(fs);
+        // Create a temporary directory for testing
+        let temp_dir = assert_fs::TempDir::new().unwrap();
+        let _root = temp_dir.path().to_path_buf();
 
         // Set up a directory structure with .ruby-version in a parent directory
-        let base_dir = vfs_root.join("test").unwrap();
-        let parent_dir = base_dir.join("parent").unwrap();
-        let child_dir = parent_dir.join("child").unwrap();
-        child_dir.create_dir_all().unwrap();
+        temp_dir.child("parent").create_dir_all().unwrap();
+        temp_dir
+            .child("parent")
+            .child("child")
+            .create_dir_all()
+            .unwrap();
 
         // Create .ruby-version in parent directory
-        let ruby_version_file = parent_dir.join(".ruby-version").unwrap();
-        ruby_version_file
-            .create_file()
-            .unwrap()
-            .write_all(b"2.7.6\n")
+        temp_dir
+            .child("parent")
+            .child(".ruby-version")
+            .write_str("2.7.6\n")
             .unwrap();
 
         // Test that we can traverse up from child to find .ruby-version
-        let mut current = child_dir;
+        // This test simulates the parent directory traversal logic
+        let child_path = temp_dir.child("parent").child("child").path().to_path_buf();
+        let mut current = child_path;
         let mut found_version = None;
 
         loop {
-            let version_file = current.join(".ruby-version").ok();
-            if let Some(file) = version_file
-                && file.exists().unwrap_or(false)
-                && let Ok(content) = file.read_to_string()
+            let version_file = current.join(".ruby-version");
+            if version_file.exists()
+                && let Ok(content) = std::fs::read_to_string(&version_file)
             {
                 found_version = Some(content.trim().to_string());
                 break;
             }
 
-            let parent = current.parent();
-            if parent.as_str() == current.as_str() {
-                break; // Reached VFS root
+            if let Some(parent) = current.parent() {
+                if parent == current {
+                    break; // Reached filesystem root
+                }
+                current = parent.to_path_buf();
+            } else {
+                break; // No parent
             }
-            current = parent;
         }
 
         assert_eq!(found_version, Some("2.7.6".to_string()));
@@ -1096,6 +981,11 @@ mod tests {
     fn test_extract_ruby_info_from_path() {
         // Test standard Ruby path
         let ruby_path = PathBuf::from("/Users/user/.rubies/ruby-3.1.4/bin/ruby");
+        let result = extract_ruby_info_from_path(&ruby_path);
+        assert_eq!(result, Some("ruby-3.1.4".to_string()));
+
+        // Test no-engine Ruby path
+        let ruby_path = PathBuf::from("/Users/user/.rubies/3.1.4/bin/ruby");
         let result = extract_ruby_info_from_path(&ruby_path);
         assert_eq!(result, Some("ruby-3.1.4".to_string()));
 
@@ -1152,9 +1042,9 @@ mod tests {
             }
         }
 
-        // Test with empty VFS and no environment variables (PATH fallback will be tested)
-        let empty_fs = vfs::MemoryFS::new();
-        let empty_vfs = VfsPath::new(empty_fs);
+        // Test with empty filesystem and no environment variables (PATH fallback will be tested)
+        let empty_temp = assert_fs::TempDir::new().unwrap();
+        let empty_root = empty_temp.path().to_path_buf();
 
         let env = MockEnvWithPath {
             vars: std::collections::HashMap::new(),
@@ -1162,7 +1052,7 @@ mod tests {
 
         // Since we can't easily mock PATH in a test, this will likely return None
         // unless there's a system Ruby in PATH, which is acceptable
-        let result = find_active_ruby_version_with_env_and_fs(&env, &empty_vfs);
+        let result = find_active_ruby_version_with_env_and_fs(&env, &empty_root);
 
         // The result depends on system state, so we just verify it doesn't panic
         // and returns either None or Some valid Ruby version string
@@ -1172,11 +1062,7 @@ mod tests {
     }
 
     fn create_test_ruby(implementation: &str, version: &str) -> Ruby {
-        use vfs::{MemoryFS, VfsPath};
-
-        let fs = MemoryFS::new();
-        let vfs_root = VfsPath::new(fs);
-        let dummy_vfs_path = vfs_root.join("tmp").unwrap();
+        let dummy_path = PathBuf::from("/tmp/test-ruby");
 
         let implementation_enum = RubyImplementation::from_str(implementation).unwrap();
         let version_parts = parse_version(version).unwrap();
@@ -1185,7 +1071,7 @@ mod tests {
             key: format!("{implementation}-{version}-test-arch64"),
             version: version.to_string(),
             version_parts,
-            path: dummy_vfs_path,
+            path: dummy_path,
             symlink: None,
             implementation: implementation_enum,
             arch: "aarch64".to_string(),

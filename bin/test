@@ -1,0 +1,11 @@
+#!/bin/bash
+set -euo pipefail
+
+set -x
+
+cargo nextest run "$@"
+#!/bin/bash
+set -euo pipefail
+set -x
+
+cargo test --all-features

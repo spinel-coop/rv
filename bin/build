@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+set -x
+
+cargo build --release --all-features

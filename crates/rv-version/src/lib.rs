@@ -226,10 +226,10 @@ impl Version {
         }
 
         // Increment the last remaining segment
-        if let Some(last_segment) = segments.last_mut() {
-            if let VersionSegment::Number(num) = last_segment {
-                *last_segment = VersionSegment::Number(*num + 1);
-            }
+        if let Some(last_segment) = segments.last_mut()
+            && let VersionSegment::Number(num) = last_segment
+        {
+            *last_segment = VersionSegment::Number(*num + 1);
         }
 
         Version {

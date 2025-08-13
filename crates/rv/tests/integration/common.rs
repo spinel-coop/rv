@@ -18,23 +18,7 @@ impl RvTest {
     }
 
     pub fn rv_command(&self) -> Command {
-        // Use the binary path from the workspace target directory
-        let binary_path = std::env::var("CARGO_BIN_EXE_rv").unwrap_or_else(|_| {
-            // Fallback to the expected location in the target directory
-            let manifest_dir = env!("CARGO_MANIFEST_DIR");
-            let workspace_root = std::path::Path::new(manifest_dir)
-                .parent()
-                .and_then(|p| p.parent())
-                .expect("Failed to find workspace root");
-            workspace_root
-                .join("target")
-                .join("debug")
-                .join("rv")
-                .to_string_lossy()
-                .to_string()
-        });
-
-        let mut cmd = Command::new(binary_path);
+        let mut cmd = Command::new(env!("CARGO_BIN_EXE_rv"));
         cmd.env("RV_ROOT_DIR", &self.test_root);
         // Set consistent arch/os for cross-platform testing
         cmd.env("RV_TEST_ARCH", "aarch64");
@@ -48,7 +32,7 @@ impl RvTest {
         cmd.args(args);
 
         let output = cmd.output().expect("Failed to execute rv command");
-        RvOutput::new(output)
+        RvOutput::new(&self.test_root, output)
     }
 
     pub fn create_ruby_dir(&self, name: &str) -> std::path::PathBuf {
@@ -78,11 +62,15 @@ impl RvTest {
 
 pub struct RvOutput {
     pub output: std::process::Output,
+    pub test_root: String,
 }
 
 impl RvOutput {
-    fn new(output: std::process::Output) -> Self {
-        Self { output }
+    fn new(test_root: &str, output: std::process::Output) -> Self {
+        Self {
+            output,
+            test_root: test_root.to_string(),
+        }
     }
 
     pub fn success(&self) -> bool {
@@ -107,8 +95,13 @@ impl RvOutput {
             output = output.replace('\\', "/");
         }
 
-        // Remove trailing whitespace and normalize line endings
-        output.to_string()
+        // Remove test root from paths
+        let mut full_test_root = self.test_root.clone();
+        // On macOS, the test root might be prefixed with "/private"
+        if cfg!(target_os = "macos") {
+            full_test_root.insert_str(0, "/private");
+        }
+        output.replace(&full_test_root, "")
     }
 
     /// Normalize stderr for cross-platform snapshot testing
@@ -121,7 +114,6 @@ impl RvOutput {
             output = output.replace('\\', "/");
         }
 
-        // Remove trailing whitespace and normalize line endings
         output.to_string()
     }
 }
