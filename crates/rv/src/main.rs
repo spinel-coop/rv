@@ -15,6 +15,7 @@ use crate::commands::ruby::list::list as ruby_list;
 use crate::commands::ruby::pin::pin as ruby_pin;
 use crate::commands::ruby::{RubyArgs, RubyCommand};
 
+/// Next generation developer tooling for Ruby
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
