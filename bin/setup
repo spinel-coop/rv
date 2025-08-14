@@ -8,12 +8,14 @@ if [[ -z $(which rustup) ]]; then
   rustup install nightly
 fi
 
-
 if [[ -z $(which cargo-binstall) ]]; then
   brew install cargo-binstall
 fi
 
-
 if [[ -z $(which cargo-nextest) ]]; then
   cargo binstall cargo-nextest
+fi
+
+if [[ -z $(which cargo-insta) ]]; then
+  cargo binstall cargo-insta
 fi
