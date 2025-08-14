@@ -1,5 +1,7 @@
 use anstream::stream::IsTerminal;
 use camino::Utf8PathBuf;
+use clap::builder::Styles;
+use clap::builder::styling::AnsiColor;
 use clap::{Parser, Subcommand};
 use config::Config;
 use miette::{IntoDiagnostic, Result};
@@ -15,9 +17,20 @@ use crate::commands::ruby::list::list as ruby_list;
 use crate::commands::ruby::pin::pin as ruby_pin;
 use crate::commands::ruby::{RubyArgs, RubyCommand};
 
+const STYLES: Styles = Styles::styled()
+    .header(AnsiColor::Green.on_default().bold())
+    .usage(AnsiColor::Green.on_default().bold())
+    .literal(AnsiColor::Cyan.on_default().bold())
+    .placeholder(AnsiColor::Cyan.on_default());
+
 /// An extremely fast Ruby version manager.
 #[derive(Parser)]
-#[command(name = "rv", version, about, long_about = None, arg_required_else_help = true)]
+#[command(about)]
+#[command(arg_required_else_help = true)]
+#[command(long_about = None)]
+#[command(name = "rv")]
+#[command(styles=STYLES)]
+#[command(version)]
 struct Cli {
     /// Ruby directories to search for installations
     #[arg(long = "ruby-dir")]
