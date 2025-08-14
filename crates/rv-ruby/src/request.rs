@@ -1,66 +1,80 @@
 use rv_cache::{CacheKey, CacheKeyHasher};
 use std::{fmt::Display, str::FromStr};
 
-#[derive(Debug, Clone, PartialEq)]
+use crate::engine::RubyEngine;
+use serde::{Deserialize, Serialize};
+
+type VersionPart = u32;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RubyRequest {
-    pub engine: String,
-    pub major: Option<u32>,
-    pub minor: Option<u32>,
-    pub patch: Option<u32>,
-    pub tiny: Option<u32>,
-    pub pre_release: Option<String>,
+    pub engine: RubyEngine,
+    pub major: Option<VersionPart>,
+    pub minor: Option<VersionPart>,
+    pub patch: Option<VersionPart>,
+    pub tiny: Option<VersionPart>,
+    pub prerelease: Option<String>,
 }
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum RequestError {
     #[error("Empty input")]
     EmptyInput,
-    #[error("Empty version")]
-    EmptyVersion,
-    #[error("Invalid version format: {0}")]
+    #[error("Could not pars version: {0}")]
     InvalidVersion(String),
-    #[error("Invalid version {0}, no more than 4 numbers are allowed")]
+    #[error("Could not parse version {0}, no more than 4 numbers are allowed")]
     TooManySegments(String),
-    #[error("Invalid {0}: {1}")]
+    #[error("Could not parse {0}: {1}")]
     InvalidPart(&'static str, String),
+}
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub enum MatchError {
+    #[error("Ruby version {0} could not be found")]
+    NotFound(String),
 }
 
 impl RubyRequest {
     pub fn parse(input: &str) -> Result<Self, RequestError> {
         let first_char = input.chars().next().ok_or(RequestError::EmptyInput)?;
-        let (engine, rest) = if first_char.is_alphabetic() {
-            input.split_once('-').unwrap_or(("", input))
+        let (engine, version) = if first_char.is_alphabetic() {
+            input.split_once('-').unwrap_or((input, ""))
         } else {
             ("ruby", input)
         };
+        let mut segments: Vec<String> = vec![];
+        let mut prerelease = None;
 
-        let first_char = rest.chars().next().ok_or(RequestError::EmptyVersion)?;
-        let (rest, pre) = if first_char.is_alphabetic() {
-            if rest == "dev" {
-                (None, Some(rest.to_string()))
+        let first_char = version.chars().next();
+        if let Some(first_char) = first_char {
+            let (numbers, pre) = if first_char.is_alphabetic() {
+                if version == "dev" {
+                    (None, Some(version.to_string()))
+                } else {
+                    Err(RequestError::InvalidVersion(input.to_string()))?
+                }
+            } else if let Some(pos) = version.find('-') {
+                (
+                    Some(version[..pos].to_string()),
+                    Some(version[pos + 1..].to_string()),
+                )
             } else {
-                Err(RequestError::InvalidVersion(input.to_string()))?
+                (Some(version.to_string()), None)
+            };
+
+            segments = if let Some(rest) = numbers {
+                rest.split('.')
+                    .map(|s| s.to_string())
+                    .collect::<Vec<String>>()
+            } else {
+                vec![]
+            };
+
+            if segments.len() > 4 {
+                return Err(RequestError::TooManySegments(input.to_string()));
             }
-        } else if let Some(pos) = rest.find('-') {
-            (
-                Some(rest[..pos].to_string()),
-                Some(rest[pos + 1..].to_string()),
-            )
-        } else {
-            (Some(rest.to_string()), None)
-        };
 
-        let segments = if let Some(rest) = rest {
-            rest.split('.')
-                .map(|s| s.to_string())
-                .collect::<Vec<String>>()
-        } else {
-            vec![]
+            prerelease = pre;
         };
-
-        if segments.len() > 4 {
-            return Err(RequestError::TooManySegments(input.to_string()));
-        }
 
         let major = if !segments.is_empty() {
             Some(
@@ -100,12 +114,12 @@ impl RubyRequest {
         };
 
         Ok(RubyRequest {
-            engine: engine.to_string(),
+            engine: RubyEngine::from_str(engine).unwrap_or(RubyEngine::Unknown(engine.to_string())),
             major,
             minor,
             patch,
             tiny,
-            pre_release: pre,
+            prerelease,
         })
     }
 }
@@ -134,7 +148,7 @@ impl Display for RubyRequest {
             }
         }
 
-        if let Some(ref pre_release) = self.pre_release {
+        if let Some(ref pre_release) = self.prerelease {
             write!(f, "-{pre_release}")?;
         };
 
@@ -170,23 +184,23 @@ fn test_invalid_version_format() {
 #[test]
 fn test_adding_ruby_engine() {
     let request = RubyRequest::parse("3.0.0").expect("Failed to parse version");
-    assert_eq!(request.engine, "ruby");
+    assert_eq!(request.engine, "ruby".into());
     assert_eq!(request.major, Some(3));
     assert_eq!(request.minor, Some(0));
     assert_eq!(request.patch, Some(0));
     assert_eq!(request.tiny, None);
-    assert_eq!(request.pre_release, None);
+    assert_eq!(request.prerelease, None);
 }
 
 #[test]
 fn test_major_only() {
     let request = RubyRequest::parse("3").expect("Failed to parse version");
-    assert_eq!(request.engine, "ruby");
+    assert_eq!(request.engine, "ruby".into());
     assert_eq!(request.major, Some(3));
     assert_eq!(request.minor, None);
     assert_eq!(request.patch, None);
     assert_eq!(request.tiny, None);
-    assert_eq!(request.pre_release, None);
+    assert_eq!(request.prerelease, None);
 }
 
 #[test]
@@ -279,4 +293,38 @@ fn test_parsing_supported_ruby_versions() {
             "Parsed output does not match input for {version}"
         );
     }
+}
+
+#[test]
+fn test_parsing_partial_requests() {
+    let versions = [
+        "ruby-3",
+        "ruby-3.2-preview1",
+        "ruby-3-rc",
+        "jruby-9.4",
+        "truffleruby-24.1",
+        "mruby-3.2",
+        "artichoke",
+        "jruby-9",
+        "jruby",
+    ];
+    for version in versions {
+        let request = RubyRequest::parse(version).expect("Failed to parse version");
+        let output = request.to_string();
+        assert_eq!(
+            output, version,
+            "Parsed output does not match input for {version}"
+        );
+    }
+}
+
+#[test]
+fn test_parsing_engine_without_version() {
+    let request = RubyRequest::parse("jruby-").unwrap();
+    assert_eq!(request.engine, "jruby".into());
+    assert_eq!(request.major, None);
+    assert_eq!(request.minor, None);
+    assert_eq!(request.patch, None);
+    assert_eq!(request.tiny, None);
+    assert_eq!(request.prerelease, None);
 }

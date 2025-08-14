@@ -51,7 +51,7 @@ impl FromStr for RubyEngine {
     type Err = std::convert::Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let implementation = match s {
+        let engine = match s {
             "ruby" => Self::Ruby,
             "jruby" => Self::JRuby,
             "truffleruby" => Self::TruffleRuby,
@@ -59,7 +59,13 @@ impl FromStr for RubyEngine {
             "artichoke" => Self::Artichoke,
             _ => Self::Unknown(s.to_string()),
         };
-        Ok(implementation)
+        Ok(engine)
+    }
+}
+
+impl Into<RubyEngine> for &str {
+    fn into(self) -> RubyEngine {
+        RubyEngine::from_str(&self).unwrap_or(RubyEngine::Unknown(self.to_string()))
     }
 }
 
@@ -73,7 +79,6 @@ impl Ord for RubyEngine {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         use std::cmp::Ordering;
 
-        // Get priority for each implementation
         let self_priority = match self {
             Self::Ruby => 0, // Ruby always comes first
             Self::JRuby | Self::TruffleRuby | Self::MRuby | Self::Artichoke => 1, // Known implementations second
@@ -95,4 +100,53 @@ impl Ord for RubyEngine {
             other => other,
         }
     }
+}
+
+#[test]
+fn test_ruby_engine_from_str() {
+    assert_eq!(RubyEngine::from_str("ruby").unwrap(), RubyEngine::Ruby);
+    assert_eq!(RubyEngine::from_str("jruby").unwrap(), RubyEngine::JRuby);
+    assert_eq!(
+        RubyEngine::from_str("truffleruby").unwrap(),
+        RubyEngine::TruffleRuby
+    );
+    assert_eq!(RubyEngine::from_str("mruby").unwrap(), RubyEngine::MRuby);
+    assert_eq!(
+        RubyEngine::from_str("artichoke").unwrap(),
+        RubyEngine::Artichoke
+    );
+    assert_eq!(
+        RubyEngine::from_str("custom-ruby").unwrap(),
+        RubyEngine::Unknown("custom-ruby".to_string())
+    );
+}
+
+#[test]
+fn test_ruby_engine_name() {
+    assert_eq!(RubyEngine::Ruby.name(), "ruby");
+    assert_eq!(RubyEngine::JRuby.name(), "jruby");
+    assert_eq!(
+        RubyEngine::Unknown("custom-ruby".to_string()).name(),
+        "custom-ruby"
+    );
+}
+
+#[test]
+fn test_engine_ordering() {
+    let ruby = RubyEngine::Ruby;
+    let jruby = RubyEngine::JRuby;
+    let truffleruby = RubyEngine::TruffleRuby;
+    let unknown = RubyEngine::Unknown("custom-ruby".to_string());
+
+    // Ruby comes first
+    assert!(ruby < jruby);
+    assert!(ruby < truffleruby);
+    assert!(ruby < unknown);
+
+    // Known implementations come before unknown
+    assert!(jruby < unknown);
+    assert!(truffleruby < unknown);
+
+    // Known implementations are sorted alphabetically
+    assert!(jruby < truffleruby); // "jruby" < "truffleruby"
 }
