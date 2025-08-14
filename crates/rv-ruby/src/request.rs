@@ -10,21 +10,35 @@ pub struct RubyRequest {
     pub pre_release: Option<String>,
 }
 
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub enum RequestError {
+    #[error("Empty input")]
+    EmptyInput,
+    #[error("Empty version")]
+    EmptyVersion,
+    #[error("Invalid version format: {0}")]
+    InvalidVersion(String),
+    #[error("Invalid version {0}, no more than 4 numbers are allowed")]
+    TooManySegments(String),
+    #[error("Invalid {0}: {1}")]
+    InvalidPart(&'static str, String),
+}
+
 impl RubyRequest {
-    pub fn parse(input: &str) -> Result<Self, String> {
-        let first_char = input.chars().next().ok_or("Empty input")?;
+    pub fn parse(input: &str) -> Result<Self, RequestError> {
+        let first_char = input.chars().next().ok_or(RequestError::EmptyInput)?;
         let (engine, rest) = if first_char.is_alphabetic() {
             input.split_once('-').unwrap_or(("", input))
         } else {
             ("ruby", input)
         };
 
-        let first_char = rest.chars().next().ok_or("Empty version part")?;
+        let first_char = rest.chars().next().ok_or(RequestError::EmptyVersion)?;
         let (rest, pre) = if first_char.is_alphabetic() {
             if rest == "dev" {
                 (None, Some(rest.to_string()))
             } else {
-                Err(format!("Invalid version format: {}", input))?
+                Err(RequestError::InvalidVersion(input.to_string()))?
             }
         } else if let Some(pos) = rest.find('-') {
             (
@@ -44,17 +58,14 @@ impl RubyRequest {
         };
 
         if segments.len() > 4 {
-            return Err(format!(
-                "Invalid version {}, no more than 4 numbers are allowed",
-                input
-            ));
+            return Err(RequestError::TooManySegments(input.to_string()));
         }
 
         let major = if !segments.is_empty() {
             Some(
                 segments[0]
                     .parse::<u32>()
-                    .map_err(|_| format!("Invalid major version in {}", input))?,
+                    .map_err(|_| RequestError::InvalidPart("major version", input.to_string()))?,
             )
         } else {
             None
@@ -63,7 +74,7 @@ impl RubyRequest {
             Some(
                 segments[1]
                     .parse::<u32>()
-                    .map_err(|_| format!("Invalid minor version in {}", input))?,
+                    .map_err(|_| RequestError::InvalidPart("minor version", input.to_string()))?,
             )
         } else {
             None
@@ -72,7 +83,7 @@ impl RubyRequest {
             Some(
                 segments[2]
                     .parse::<u32>()
-                    .map_err(|_| format!("Invalid patch version in {}", input))?,
+                    .map_err(|_| RequestError::InvalidPart("patch version", input.to_string()))?,
             )
         } else {
             None
@@ -81,7 +92,7 @@ impl RubyRequest {
             Some(
                 segments[3]
                     .parse::<u32>()
-                    .map_err(|_| format!("Invalid tiny version in {}", input))?,
+                    .map_err(|_| RequestError::InvalidPart("tiny version", input.to_string()))?,
             )
         } else {
             None
@@ -101,7 +112,7 @@ impl RubyRequest {
 impl FromStr for RubyRequest {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::parse(s)
+        Self::parse(s).map_err(|e| e.to_string())
     }
 }
 
@@ -110,20 +121,20 @@ impl Display for RubyRequest {
         write!(f, "{}", self.engine)?;
 
         if let Some(major) = self.major {
-            write!(f, "-{}", major)?;
+            write!(f, "-{major}")?;
             if let Some(minor) = self.minor {
-                write!(f, ".{}", minor)?;
+                write!(f, ".{minor}")?;
                 if let Some(patch) = self.patch {
-                    write!(f, ".{}", patch)?;
+                    write!(f, ".{patch}")?;
                     if let Some(tiny) = self.tiny {
-                        write!(f, ".{}", tiny)?;
+                        write!(f, ".{tiny}")?;
                     }
                 }
             }
         }
 
         if let Some(ref pre_release) = self.pre_release {
-            write!(f, "-{}", pre_release)?;
+            write!(f, "-{pre_release}")?;
         };
 
         Ok(())
@@ -133,14 +144,14 @@ impl Display for RubyRequest {
 #[test]
 fn test_empty_version() {
     let request = RubyRequest::parse("").expect_err("Expected error for empty version");
-    assert_eq!(request, "Empty input");
+    assert_eq!(request, RequestError::EmptyInput);
 }
 
 #[test]
 fn test_invalid_version_format() {
     let request =
         RubyRequest::parse("ruby-invalid").expect_err("Expected error for invalid version format");
-    assert!(request.contains("Invalid version"));
+    assert_eq!(request, RequestError::InvalidVersion("ruby-invalid".into()));
 }
 
 #[test]
@@ -296,8 +307,7 @@ fn test_parsing_supported_ruby_versions() {
         let output = request.to_string();
         assert_eq!(
             output, version,
-            "Parsed output does not match input for {}",
-            version
+            "Parsed output does not match input for {version}"
         );
     }
 }
