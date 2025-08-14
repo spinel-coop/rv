@@ -17,6 +17,9 @@ use crate::commands::ruby::install::install as ruby_install;
 use crate::commands::ruby::list::list as ruby_list;
 use crate::commands::ruby::pin::pin as ruby_pin;
 use crate::commands::ruby::{RubyArgs, RubyCommand};
+use crate::commands::shell::env::env as shell_env;
+use crate::commands::shell::init::init as shell_init;
+use crate::commands::shell::{ShellArgs, ShellCommand};
 
 const STYLES: Styles = Styles::styled()
     .header(AnsiColor::Green.on_default().bold())
@@ -96,9 +99,7 @@ enum Commands {
     #[command(about = "Manage rv's cache")]
     Cache(CacheCommandArgs),
     #[command(about = "Configure your shell to use rv")]
-    Init,
-    #[command(hide = true)]
-    Env,
+    Shell(ShellArgs),
 }
 
 #[derive(Debug, Copy, Clone, clap::ValueEnum)]
@@ -150,15 +151,19 @@ pub enum Error {
     #[error(transparent)]
     IoError(#[from] std::io::Error),
     #[error(transparent)]
+    ConfigError(#[from] config::Error),
+    #[error(transparent)]
     PinError(#[from] commands::ruby::pin::Error),
     #[error(transparent)]
     ListError(#[from] commands::ruby::list::Error),
     #[error(transparent)]
     InstallError(#[from] commands::ruby::install::Error),
     #[error(transparent)]
-    ConfigError(#[from] config::Error),
-    #[error(transparent)]
     NonUtf8Path(#[from] FromPathBufError),
+    #[error(transparent)]
+    InitError(#[from] commands::shell::init::Error),
+    #[error(transparent)]
+    EnvError(#[from] commands::shell::env::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -215,38 +220,6 @@ async fn main() -> Result<()> {
     match cli.command {
         None => {}
         Some(cmd) => match cmd {
-            Commands::Env => {
-                let ruby = config.rubies().first().cloned();
-                if let Some(ruby) = ruby {
-                    print!(
-                        concat!(
-                            "export PATH={}:$PATH\n",
-                            "export RUBY_ROOT={}\n",
-                            "export RUBY_ENGINE={}\n",
-                            "export RUBY_VERSION={}\n",
-                        ),
-                        ruby.bin_path(),
-                        ruby.path,
-                        ruby.version.engine,
-                        ruby.version,
-                    );
-                } else {
-                    eprintln!("No Ruby installations found.");
-                }
-            }
-            Commands::Init => {
-                print!(
-                    concat!(
-                        "autoload -U add-zsh-hook\n",
-                        "_rv_autoload_hook () {{\n",
-                        "    eval $({} env)\n",
-                        "}}\n",
-                        "add-zsh-hook chpwd _rv_autoload_hook\n",
-                        "_rv_autoload_hook\n",
-                    ),
-                    std::env::current_exe()?.to_str().unwrap()
-                );
-            }
             Commands::Ruby(ruby) => match ruby.command {
                 RubyCommand::List {
                     format,
@@ -261,6 +234,10 @@ async fn main() -> Result<()> {
             Commands::Cache(cache) => match cache.command {
                 CacheCommand::Dir => cache_dir(&config)?,
                 CacheCommand::Clean => cache_clean(&config)?,
+            },
+            Commands::Shell(shell) => match shell.command {
+                ShellCommand::Init => shell_init()?,
+                ShellCommand::Env => shell_env(&config)?,
             },
         },
     }
