@@ -1,5 +1,5 @@
 ---
-source: tests/integration/mod.rs
+source: crates/rv/tests/integration/mod.rs
 expression: output.normalized_stdout()
 ---
 [
@@ -7,7 +7,7 @@ expression: output.normalized_stdout()
     "key": "ruby-3.2.0-macos-aarch64",
     "version": "3.2.0",
     "path": "/opt/rubies/ruby-3.2.0",
-    "implementation": "ruby",
+    "engine": "ruby",
     "arch": "aarch64",
     "os": "macos"
   },
@@ -15,7 +15,7 @@ expression: output.normalized_stdout()
     "key": "ruby-3.1.4-macos-aarch64",
     "version": "3.1.4",
     "path": "/opt/rubies/ruby-3.1.4",
-    "implementation": "ruby",
+    "engine": "ruby",
     "arch": "aarch64",
     "os": "macos"
   }

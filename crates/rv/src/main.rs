@@ -1,8 +1,9 @@
 use anstream::stream::IsTerminal;
 use camino::Utf8PathBuf;
+use clap::builder::Styles;
+use clap::builder::styling::AnsiColor;
 use clap::{Parser, Subcommand};
 use config::Config;
-use miette::{IntoDiagnostic, Result};
 use tokio::main;
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
@@ -15,8 +16,20 @@ use crate::commands::ruby::list::list as ruby_list;
 use crate::commands::ruby::pin::pin as ruby_pin;
 use crate::commands::ruby::{RubyArgs, RubyCommand};
 
+const STYLES: Styles = Styles::styled()
+    .header(AnsiColor::Green.on_default().bold())
+    .usage(AnsiColor::Green.on_default().bold())
+    .literal(AnsiColor::Cyan.on_default().bold())
+    .placeholder(AnsiColor::Cyan.on_default());
+
+/// An extremely fast Ruby version manager.
 #[derive(Parser)]
-#[command(version, about, long_about = None)]
+#[command(about)]
+#[command(arg_required_else_help = true)]
+#[command(long_about = None)]
+#[command(name = "rv")]
+#[command(styles=STYLES)]
+#[command(version)]
 struct Cli {
     /// Ruby directories to search for installations
     #[arg(long = "ruby-dir")]
@@ -114,6 +127,24 @@ impl From<ColorMode> for anstream::ColorChoice {
     }
 }
 
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum Error {
+    #[error(transparent)]
+    FromEnvError(#[from] tracing_subscriber::filter::FromEnvError),
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
+    #[error(transparent)]
+    PinError(#[from] commands::ruby::pin::Error),
+    #[error(transparent)]
+    ListError(#[from] commands::ruby::list::Error),
+    #[error(transparent)]
+    InstallError(#[from] commands::ruby::install::Error),
+    #[error(transparent)]
+    ConfigError(#[from] config::Error),
+}
+
+type Result<T> = miette::Result<T, Error>;
+
 #[main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -147,8 +178,7 @@ async fn main() -> Result<()> {
 
     let filter = EnvFilter::builder()
         .with_default_directive(cli.verbose.tracing_level_filter().into())
-        .from_env()
-        .into_diagnostic()?;
+        .from_env()?;
 
     let reg = tracing_subscriber::registry()
         .with(

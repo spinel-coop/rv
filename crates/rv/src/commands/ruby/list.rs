@@ -1,4 +1,3 @@
-use miette::{IntoDiagnostic, Result};
 use owo_colors::OwoColorize;
 use rv_ruby::find_active_ruby_version;
 use tracing::{info, warn};
@@ -10,6 +9,16 @@ pub enum OutputFormat {
     Text,
     Json,
 }
+
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum Error {
+    #[error(transparent)]
+    SerdeJsonError(#[from] serde_json::Error),
+    #[error(transparent)]
+    ConfigError(#[from] crate::config::Error),
+}
+
+type Result<T> = miette::Result<T, Error>;
 
 pub fn list(config: &Config, format: OutputFormat, _installed_only: bool) -> Result<()> {
     let rubies = config.rubies()?;
@@ -35,7 +44,7 @@ pub fn list(config: &Config, format: OutputFormat, _installed_only: bool) -> Res
             }
         }
         OutputFormat::Json => {
-            let json = serde_json::to_string_pretty(&rubies).into_diagnostic()?;
+            let json = serde_json::to_string_pretty(&rubies)?;
             println!("{json}");
         }
     }
@@ -63,14 +72,11 @@ fn format_ruby_entry(
     if let Some(ref symlink_target) = ruby.symlink {
         format!(
             "{marker} {key:width$}    {} -> {}",
-            path.display().to_string().cyan(),
-            symlink_target.to_string_lossy().cyan()
+            path.cyan(),
+            symlink_target.cyan()
         )
     } else {
-        format!(
-            "{marker} {key:width$}    {}",
-            path.display().to_string().cyan()
-        )
+        format!("{marker} {key:width$}    {}", path.cyan())
     }
 }
 

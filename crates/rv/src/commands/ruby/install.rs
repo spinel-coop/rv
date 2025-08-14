@@ -2,7 +2,6 @@ use camino::{Utf8Path, Utf8PathBuf};
 use core::panic;
 use current_platform::CURRENT_PLATFORM;
 use futures_util::StreamExt;
-use miette::Diagnostic;
 use owo_colors::OwoColorize;
 use std::path::PathBuf;
 
@@ -11,7 +10,7 @@ use rv_ruby::request::RubyRequest;
 
 use crate::config::Config;
 
-#[derive(Debug, thiserror::Error, Diagnostic)]
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),
@@ -114,10 +113,10 @@ async fn extract_ruby_tarball(tarball_path: &Utf8Path, dir: &Utf8Path) -> Result
     for e in archive.entries()? {
         let mut entry = e?;
         let entry_path = entry.path()?;
-        let path = entry_path.strip_prefix("portable-ruby/")?;
-        let path = path
+        let path = entry_path
             .to_str()
-            .ok_or_else(|| Error::InvalidTarballPath(entry_path.to_path_buf()))?;
+            .ok_or_else(|| Error::InvalidTarballPath(entry_path.to_path_buf()))?
+            .replace("portable-ruby/", "ruby-");
         let entry_path = dir.join(path);
         entry.unpack(entry_path)?;
     }
