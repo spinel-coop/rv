@@ -106,8 +106,7 @@ impl Ruby {
 
     /// Check if this Ruby installation is valid
     pub fn is_valid(&self) -> bool {
-        let ruby_bin = self.path.join("bin").join("ruby");
-        ruby_bin.exists()
+        self.executable_path().exists()
     }
 
     /// Get display name for this Ruby
@@ -117,7 +116,11 @@ impl Ruby {
 
     /// Get the path to the Ruby executable for display purposes
     pub fn executable_path(&self) -> Utf8PathBuf {
-        self.path.join("bin").join("ruby")
+        self.bin_path().join("ruby")
+    }
+
+    pub fn bin_path(&self) -> Utf8PathBuf {
+        self.path.join("bin")
     }
 
     /// Check if this Ruby matches the active version pattern
