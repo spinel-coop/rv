@@ -1,6 +1,6 @@
 ---
-source: tests/integration/mod.rs
+source: crates/rv/tests/integration/mod.rs
 expression: output.normalized_stdout()
 ---
-  ruby-3.2.0    [36m/opt/rubies/ruby-3.2.0/bin/ruby[39m
   ruby-3.1.4    [36m/opt/rubies/ruby-3.1.4/bin/ruby[39m
+  ruby-3.2.0    [36m/opt/rubies/ruby-3.2.0/bin/ruby[39m

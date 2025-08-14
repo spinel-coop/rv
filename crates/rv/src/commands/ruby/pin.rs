@@ -64,6 +64,7 @@ mod tests {
             root,
             project_dir: Some(project_dir),
             current_dir,
+            cache: rv_cache::Cache::temp().unwrap(),
         };
 
         Ok(config)

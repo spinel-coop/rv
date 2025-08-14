@@ -1,9 +1,10 @@
 use anstream::stream::IsTerminal;
-use camino::Utf8PathBuf;
+use camino::{FromPathBufError, Utf8PathBuf};
 use clap::builder::Styles;
 use clap::builder::styling::AnsiColor;
 use clap::{Parser, Subcommand};
 use config::Config;
+use rv_cache::CacheArgs;
 use tokio::main;
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
@@ -49,33 +50,41 @@ struct Cli {
     #[arg(long)]
     color: Option<ColorMode>,
 
+    #[command(flatten)]
+    cache_args: CacheArgs,
+
     #[command(subcommand)]
     command: Option<Commands>,
 }
 
 impl Cli {
-    fn config(&self) -> Config {
+    fn config(&self) -> Result<Config> {
         let root = if self.root_dir.is_some() {
             self.root_dir.clone().unwrap()
         } else {
             Utf8PathBuf::from("/")
         };
 
-        let current_dir = Utf8PathBuf::from(std::env::current_dir().unwrap().to_str().unwrap());
+        let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
         let project_dir = Some(current_dir.clone());
         let ruby_dirs = if self.ruby_dir.is_empty() {
             config::default_ruby_dirs(&root)
         } else {
-            self.ruby_dir.iter().map(|path| root.join(path)).collect()
+            self.ruby_dir
+                .iter()
+                .map(|path: &Utf8PathBuf| root.join(path))
+                .collect()
         };
+        let cache = self.cache_args.to_cache()?;
 
-        Config {
+        Ok(Config {
             ruby_dirs,
             gemfile: self.gemfile.clone(),
             root,
             current_dir,
             project_dir,
-        }
+            cache,
+        })
     }
 }
 
@@ -141,6 +150,8 @@ pub enum Error {
     InstallError(#[from] commands::ruby::install::Error),
     #[error(transparent)]
     ConfigError(#[from] config::Error),
+    #[error(transparent)]
+    NonUtf8Path(#[from] FromPathBufError),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -192,7 +203,7 @@ async fn main() -> Result<()> {
 
     reg.with(indicatif_layer).init();
 
-    let config = cli.config();
+    let config = cli.config()?;
 
     match cli.command {
         None => {}

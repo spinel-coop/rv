@@ -3,10 +3,14 @@ use tracing::instrument;
 
 use rv_ruby::Ruby;
 
+mod ruby_cache;
+
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error("No project was found in the parents of {}", current_dir)]
     NoProjectDir { current_dir: Utf8PathBuf },
+    #[error("Ruby cache miss or invalid cache for {}", ruby_path)]
+    RubyCacheMiss { ruby_path: Utf8PathBuf },
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -18,36 +22,13 @@ pub struct Config {
     pub root: Utf8PathBuf,
     pub current_dir: Utf8PathBuf,
     pub project_dir: Option<Utf8PathBuf>,
+    pub cache: rv_cache::Cache,
 }
 
 impl Config {
     #[instrument(skip_all)]
-    pub fn rubies(&self) -> Result<Vec<Ruby>> {
-        let mut rubies = Vec::new();
-
-        for ruby_dir in &self.ruby_dirs {
-            if !ruby_dir.exists() {
-                continue;
-            }
-
-            if let Ok(entries) = ruby_dir.read_dir_utf8() {
-                for entry in entries {
-                    if let Ok(entry) = entry
-                        && let Ok(metadata) = entry.metadata()
-                        && metadata.is_dir()
-                        && let Ok(ruby) = Ruby::from_dir(entry.into_path())
-                        && ruby.is_valid()
-                    {
-                        rubies.push(ruby);
-                    }
-                }
-            }
-        }
-
-        // Sort rubies by implementation and version
-        rubies.sort();
-
-        Ok(rubies)
+    pub fn rubies(&self) -> Vec<Ruby> {
+        self.discover_rubies()
     }
 
     pub fn get_project_dir(&self) -> Result<&Utf8PathBuf> {

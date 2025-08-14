@@ -1,3 +1,4 @@
+use rv_cache::{CacheKey, CacheKeyHasher};
 use std::{fmt::Display, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -138,6 +139,18 @@ impl Display for RubyRequest {
         };
 
         Ok(())
+    }
+}
+
+impl CacheKey for RubyRequest {
+    fn cache_key(&self, state: &mut CacheKeyHasher) {
+        // Cache key includes all version components that define a unique Ruby request
+        self.engine.cache_key(state);
+        self.major.cache_key(state);
+        self.minor.cache_key(state);
+        self.patch.cache_key(state);
+        self.tiny.cache_key(state);
+        self.pre_release.cache_key(state);
     }
 }
 
