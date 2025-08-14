@@ -3,6 +3,7 @@ use std::{
     str::FromStr,
 };
 
+use rv_cache::{CacheKey, CacheKeyHasher};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -99,6 +100,12 @@ impl Ord for RubyEngine {
             }
             other => other,
         }
+    }
+}
+
+impl CacheKey for RubyEngine {
+    fn cache_key(&self, state: &mut CacheKeyHasher) {
+        self.name().cache_key(state);
     }
 }
 

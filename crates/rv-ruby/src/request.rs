@@ -164,7 +164,7 @@ impl CacheKey for RubyRequest {
         self.minor.cache_key(state);
         self.patch.cache_key(state);
         self.tiny.cache_key(state);
-        self.pre_release.cache_key(state);
+        self.prerelease.cache_key(state);
     }
 }
 

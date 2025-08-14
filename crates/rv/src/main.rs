@@ -216,7 +216,7 @@ async fn main() -> Result<()> {
         None => {}
         Some(cmd) => match cmd {
             Commands::Env => {
-                let ruby = config.rubies()?.first().cloned();
+                let ruby = config.rubies().first().cloned();
                 if let Some(ruby) = ruby {
                     print!(
                         concat!(
