@@ -29,12 +29,12 @@ impl Config {
                 continue;
             }
 
-            if let Ok(entries) = std::fs::read_dir(ruby_dir) {
+            if let Ok(entries) = ruby_dir.read_dir_utf8() {
                 for entry in entries {
                     if let Ok(entry) = entry
                         && let Ok(metadata) = entry.metadata()
                         && metadata.is_dir()
-                        && let Ok(ruby) = Ruby::from_dir(entry.path())
+                        && let Ok(ruby) = Ruby::from_dir(entry.into_path())
                         && ruby.is_valid()
                     {
                         rubies.push(ruby);

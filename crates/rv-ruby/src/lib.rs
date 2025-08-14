@@ -1,11 +1,11 @@
 pub mod engine;
 pub mod request;
 
+use camino::{Utf8Path, Utf8PathBuf};
 use regex::Regex;
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
 use std::env;
-use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
 use std::time::SystemTime;
@@ -27,15 +27,11 @@ pub struct Ruby {
     pub version_parts: VersionParts,
 
     /// Path to the Ruby installation directory
-    #[serde(serialize_with = "serialize_path")]
-    pub path: PathBuf,
+    pub path: Utf8PathBuf,
 
     /// Symlink target if this Ruby is a symlink
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        serialize_with = "serialize_optional_path"
-    )]
-    pub symlink: Option<PathBuf>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub symlink: Option<Utf8PathBuf>,
 
     /// Ruby engine (e.g., Ruby, JRuby, TruffleRuby)
     #[serde_as(as = "DisplayFromStr")]
@@ -62,13 +58,13 @@ pub struct VersionParts {
 
 impl Ruby {
     /// Create a new Ruby instance from a directory path
-    #[instrument(skip(dir), fields(dir = %dir.display()))]
-    pub fn from_dir(dir: PathBuf) -> Result<Self, RubyError> {
-        let dir_name = dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
+    #[instrument(skip(dir), fields(dir = %dir.to_string()))]
+    pub fn from_dir(dir: Utf8PathBuf) -> Result<Self, RubyError> {
+        let dir_name = dir.file_name().unwrap_or("");
 
         if dir_name.is_empty() {
             return Err(RubyError::InvalidPath {
-                path: dir.display().to_string(),
+                path: dir.to_string(),
             });
         }
 
@@ -120,7 +116,7 @@ impl Ruby {
     }
 
     /// Get the path to the Ruby executable for display purposes
-    pub fn executable_path(&self) -> PathBuf {
+    pub fn executable_path(&self) -> Utf8PathBuf {
         self.path.join("bin").join("ruby")
     }
 
@@ -273,10 +269,7 @@ fn parse_version(version: &str) -> Result<VersionParts, RubyError> {
 
 /// Extract arch and OS information from a Ruby executable
 #[instrument(skip_all)]
-fn extract_ruby_platform_info(ruby_bin: &PathBuf) -> Result<(String, String), RubyError> {
-    // For VFS compatibility, we need to handle the case where we can't execute the binary
-    // In such cases, fall back to the current system's platform info
-
+fn extract_ruby_platform_info(ruby_bin: &Utf8PathBuf) -> Result<(String, String), RubyError> {
     // Try to get the actual file path for execution
     let ruby_path = ruby_bin;
 
@@ -307,7 +300,6 @@ fn extract_ruby_platform_info(ruby_bin: &PathBuf) -> Result<(String, String), Ru
         }
     }
 
-    // Fallback to current system's platform info
     // In tests, allow overriding via environment variables
     let arch = std::env::var("RV_TEST_ARCH").unwrap_or_else(|_| std::env::consts::ARCH.to_string());
     let os = std::env::var("RV_TEST_OS").unwrap_or_else(|_| std::env::consts::OS.to_string());
@@ -340,29 +332,10 @@ fn normalize_os(os: &str) -> String {
     }
 }
 
-/// Custom serializer for PathBuf that serializes as the display string
-fn serialize_path<S>(path: &Path, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    serializer.serialize_str(&path.display().to_string())
-}
-
-/// Custom serializer for Option<PathBuf> that serializes as the display string
-fn serialize_optional_path<S>(path: &Option<PathBuf>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    match path {
-        Some(p) => serializer.serialize_str(&p.display().to_string()),
-        None => serializer.serialize_none(),
-    }
-}
-
 /// Find symlink target for a path, if it exists
-fn find_symlink_target(path: &PathBuf) -> Option<PathBuf> {
+fn find_symlink_target(path: &Utf8PathBuf) -> Option<Utf8PathBuf> {
     if path.is_symlink() {
-        std::fs::read_link(path).ok()
+        path.read_link_utf8().ok()
     } else {
         None
     }
@@ -392,21 +365,19 @@ pub fn find_active_ruby_version() -> Option<String> {
 
 /// Find active Ruby version with injectable environment provider (for testing)
 pub fn find_active_ruby_version_with_env(env_provider: &dyn EnvProvider) -> Option<String> {
-    find_active_ruby_version_with_env_and_fs(env_provider, &PathBuf::from("/"))
+    find_active_ruby_version_with_env_and_fs(env_provider, &Utf8PathBuf::from("/"))
 }
 
 /// Find active Ruby version with injectable environment provider and filesystem (for testing)
 pub fn find_active_ruby_version_with_env_and_fs(
     env_provider: &dyn EnvProvider,
-    root: &PathBuf,
+    root: &Utf8PathBuf,
 ) -> Option<String> {
     // 1. Check RUBY_ROOT environment variable
     if let Some(ruby_root) = env_provider.get_var("RUBY_ROOT") {
         // Extract version from RUBY_ROOT path (e.g., "/path/to/ruby-3.1.4" -> "ruby-3.1.4")
-        if let Some(dirname) = PathBuf::from(&ruby_root).file_name()
-            && let Some(dirname_str) = dirname.to_str()
-        {
-            return Some(dirname_str.to_string());
+        if let Some(dirname) = Utf8PathBuf::from(&ruby_root).file_name() {
+            return Some(dirname.to_string());
         }
     }
 
@@ -429,9 +400,10 @@ pub fn find_active_ruby_version_with_env_and_fs(
 }
 
 /// Search for .ruby-version file using filesystem (for testing)
-fn find_ruby_version_file_fs(root: &PathBuf) -> Option<String> {
+fn find_ruby_version_file_fs(root: &Utf8PathBuf) -> Option<String> {
     let mut current_dir = if let Ok(cwd) = env::current_dir() {
-        if root == &PathBuf::from("/") {
+        let cwd = Utf8PathBuf::from(cwd.to_str()?);
+        if root == &Utf8PathBuf::from("/") {
             cwd
         } else {
             root.join(cwd.strip_prefix("/").unwrap_or(&cwd))
@@ -477,10 +449,10 @@ fn find_ruby_in_path() -> Option<String> {
 }
 
 /// Find an executable in PATH
-fn find_executable_in_path(executable: &str) -> Option<PathBuf> {
+fn find_executable_in_path(executable: &str) -> Option<Utf8PathBuf> {
     if let Ok(path_var) = env::var("PATH") {
         for path_dir in env::split_paths(&path_var) {
-            let executable_path = path_dir.join(executable);
+            let executable_path = Utf8PathBuf::from(path_dir.join(executable).to_str()?);
 
             // Check for executable with and without .exe extension (Windows support)
             if executable_path.is_file() && is_executable(&executable_path) {
@@ -502,7 +474,7 @@ fn find_executable_in_path(executable: &str) -> Option<PathBuf> {
 }
 
 /// Check if a file is executable
-fn is_executable(path: &Path) -> bool {
+fn is_executable(path: &Utf8Path) -> bool {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -528,7 +500,7 @@ fn is_executable(path: &Path) -> bool {
 
 /// Extract Ruby engine and version information from an executable
 /// Uses the same approach as chrb - execute Ruby to get accurate information
-fn extract_ruby_info_from_executable(ruby_path: &PathBuf) -> Option<String> {
+fn extract_ruby_info_from_executable(ruby_path: &Utf8PathBuf) -> Option<String> {
     // Execute Ruby to get engine and version information
     // This mirrors chrb's ExecFindEnv function
     let output = Command::new(ruby_path)
@@ -554,10 +526,9 @@ fn extract_ruby_info_from_executable(ruby_path: &PathBuf) -> Option<String> {
 
 /// Fallback method to extract Ruby information from the executable path
 /// This looks for patterns in the path like /path/to/ruby-3.1.4/bin/ruby
-fn extract_ruby_info_from_path(ruby_path: &Path) -> Option<String> {
+fn extract_ruby_info_from_path(ruby_path: &Utf8Path) -> Option<String> {
     // Look for Ruby installation directory in path
     // e.g., /Users/user/.rubies/ruby-3.1.4/bin/ruby -> ruby-3.1.4
-    let path_str = ruby_path.to_string_lossy();
 
     // Common Ruby installation patterns
     let patterns = [
@@ -568,7 +539,7 @@ fn extract_ruby_info_from_path(ruby_path: &Path) -> Option<String> {
 
     for pattern in &patterns {
         if let Ok(re) = Regex::new(pattern)
-            && let Some(captures) = re.captures(&path_str)
+            && let Some(captures) = re.captures(ruby_path.as_str())
             && let Some(matched) = captures.get(1)
         {
             return Some(matched.as_str().to_string());
@@ -576,7 +547,7 @@ fn extract_ruby_info_from_path(ruby_path: &Path) -> Option<String> {
     }
 
     if let Ok(re) = Regex::new(r"/([\d.]+[^/]*)/bin/ruby")
-        && let Some(captures) = re.captures(&path_str)
+        && let Some(captures) = re.captures(ruby_path.as_str())
         && let Some(matched) = captures.get(1)
     {
         // If we find a version without an engine prefix, assume it's ruby
@@ -638,7 +609,7 @@ mod tests {
     #[test]
     fn test_ruby_ordering() {
         // Create a dummy path for testing
-        let dummy_path = PathBuf::from("/tmp/test-ruby");
+        let dummy_path = Utf8PathBuf::from("/tmp/test-ruby");
 
         let ruby1 = Ruby {
             key: "ruby-3.1.4-macos-aarch64".to_string(),
@@ -820,7 +791,7 @@ mod tests {
 
         // Create a temporary directory for testing
         let temp_dir = assert_fs::TempDir::new().unwrap();
-        let root = temp_dir.path().to_path_buf();
+        let root = Utf8PathBuf::from(temp_dir.path().to_path_buf().to_str().unwrap());
 
         // Test RUBY_ROOT environment variable
         let env = MockEnv {
@@ -874,7 +845,7 @@ mod tests {
 
         // Test no environment variables set with empty filesystem (no .ruby-version, no PATH)
         let empty_temp = assert_fs::TempDir::new().unwrap();
-        let empty_root = empty_temp.path().to_path_buf();
+        let empty_root = Utf8PathBuf::from(empty_temp.path().to_path_buf().to_str().unwrap());
         let env = MockEnv {
             vars: std::collections::HashMap::new(),
         };
@@ -901,7 +872,7 @@ mod tests {
 
         // Create a temporary directory for testing
         let temp_dir = assert_fs::TempDir::new().unwrap();
-        let root = temp_dir.path().to_path_buf();
+        let root = Utf8PathBuf::from(temp_dir.path().to_path_buf().to_str().unwrap());
 
         // Create a .ruby-version file with whitespace
         temp_dir
@@ -971,27 +942,27 @@ mod tests {
     #[test]
     fn test_extract_ruby_info_from_path() {
         // Test standard Ruby path
-        let ruby_path = PathBuf::from("/Users/user/.rubies/ruby-3.1.4/bin/ruby");
+        let ruby_path = Utf8PathBuf::from("/Users/user/.rubies/ruby-3.1.4/bin/ruby");
         let result = extract_ruby_info_from_path(&ruby_path);
         assert_eq!(result, Some("ruby-3.1.4".to_string()));
 
         // Test no-engine Ruby path
-        let ruby_path = PathBuf::from("/Users/user/.rubies/3.1.4/bin/ruby");
+        let ruby_path = Utf8PathBuf::from("/Users/user/.rubies/3.1.4/bin/ruby");
         let result = extract_ruby_info_from_path(&ruby_path);
         assert_eq!(result, Some("ruby-3.1.4".to_string()));
 
         // Test JRuby path
-        let jruby_path = PathBuf::from("/opt/rubies/jruby-9.4.0.0/bin/ruby");
+        let jruby_path = Utf8PathBuf::from("/opt/rubies/jruby-9.4.0.0/bin/ruby");
         let result = extract_ruby_info_from_path(&jruby_path);
         assert_eq!(result, Some("jruby-9.4.0.0".to_string()));
 
         // Test TruffleRuby path
-        let truffle_path = PathBuf::from("/home/user/.rubies/truffleruby-23.1.1/bin/ruby");
+        let truffle_path = Utf8PathBuf::from("/home/user/.rubies/truffleruby-23.1.1/bin/ruby");
         let result = extract_ruby_info_from_path(&truffle_path);
         assert_eq!(result, Some("truffleruby-23.1.1".to_string()));
 
         // Test system Ruby (no version pattern)
-        let system_path = PathBuf::from("/usr/bin/ruby");
+        let system_path = Utf8PathBuf::from("/usr/bin/ruby");
         let result = extract_ruby_info_from_path(&system_path);
         assert_eq!(result, Some("ruby".to_string()));
     }
@@ -1035,7 +1006,7 @@ mod tests {
 
         // Test with empty filesystem and no environment variables (PATH fallback will be tested)
         let empty_temp = assert_fs::TempDir::new().unwrap();
-        let empty_root = empty_temp.path().to_path_buf();
+        let empty_root = Utf8PathBuf::from(empty_temp.path().to_path_buf().to_str().unwrap());
 
         let env = MockEnvWithPath {
             vars: std::collections::HashMap::new(),
@@ -1053,7 +1024,7 @@ mod tests {
     }
 
     fn create_test_ruby(implementation: &str, version: &str) -> Ruby {
-        let dummy_path = PathBuf::from("/tmp/test-ruby");
+        let dummy_path = Utf8PathBuf::from("/tmp/test-ruby");
 
         let implementation_enum = RubyEngine::from_str(implementation).unwrap();
         let version_parts = parse_version(version).unwrap();

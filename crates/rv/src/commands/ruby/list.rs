@@ -63,14 +63,11 @@ fn format_ruby_entry(
     if let Some(ref symlink_target) = ruby.symlink {
         format!(
             "{marker} {key:width$}    {} -> {}",
-            path.display().to_string().cyan(),
-            symlink_target.to_string_lossy().cyan()
+            path.cyan(),
+            symlink_target.cyan()
         )
     } else {
-        format!(
-            "{marker} {key:width$}    {}",
-            path.display().to_string().cyan()
-        )
+        format!("{marker} {key:width$}    {}", path.cyan())
     }
 }
 
