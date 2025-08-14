@@ -227,7 +227,7 @@ async fn main() -> Result<()> {
                         ),
                         ruby.bin_path(),
                         ruby.path,
-                        ruby.engine,
+                        ruby.version.engine,
                         ruby.version,
                     );
                 } else {

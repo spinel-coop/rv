@@ -1,7 +1,7 @@
 use rv_cache::{CacheKey, CacheKeyHasher};
 use std::{fmt::Display, str::FromStr};
 
-use crate::engine::RubyEngine;
+use crate::{Ruby, engine::RubyEngine, version::RubyVersion};
 use serde::{Deserialize, Serialize};
 
 type VersionPart = u32;
@@ -122,12 +122,48 @@ impl RubyRequest {
             prerelease,
         })
     }
+
+    pub fn find_match_in(self, rubies: &[Ruby]) -> Result<&Ruby, MatchError> {
+        rubies
+            .iter()
+            .find(|r| self.satisfied_by(&r.version).unwrap_or(false))
+            .ok_or(MatchError::NotFound(self.to_string()))
+    }
+
+    pub fn satisfied_by(&self, version: &RubyVersion) -> Result<bool, RequestError> {
+        if self.engine != version.engine {
+            return Ok(false);
+        }
+        if self.major.is_some() && self.major != version.major {
+            return Ok(false);
+        }
+        if self.minor.is_some() && self.minor != version.minor {
+            return Ok(false);
+        }
+        if self.patch.is_some() && self.patch != version.patch {
+            return Ok(false);
+        }
+        if self.tiny.is_some() && self.tiny != version.tiny {
+            return Ok(false);
+        }
+        if self.prerelease.is_some() && self.prerelease != version.prerelease {
+            return Ok(false);
+        }
+
+        Ok(true)
+    }
 }
 
 impl FromStr for RubyRequest {
-    type Err = String;
+    type Err = RequestError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::parse(s).map_err(|e| e.to_string())
+        Self::parse(s)
+    }
+}
+
+impl Into<RubyRequest> for String {
+    fn into(self) -> RubyRequest {
+        RubyRequest::parse(&self).expect("Failed to parse RubyRequest from String")
     }
 }
 
@@ -153,6 +189,33 @@ impl Display for RubyRequest {
         };
 
         Ok(())
+    }
+}
+
+impl PartialOrd for RubyRequest {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for RubyRequest {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        ((
+            &self.engine,
+            &self.major,
+            &self.minor,
+            &self.patch,
+            &self.tiny,
+            &self.prerelease,
+        ))
+            .cmp(&(
+                &other.engine,
+                &other.major,
+                &other.minor,
+                &other.patch,
+                &other.tiny,
+                &other.prerelease,
+            ))
     }
 }
 
