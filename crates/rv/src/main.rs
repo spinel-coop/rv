@@ -95,6 +95,10 @@ enum Commands {
     Ruby(RubyArgs),
     #[command(about = "Manage rv's cache")]
     Cache(CacheCommandArgs),
+    #[command(about = "Configure your shell to use rv")]
+    Init,
+    #[command(hide = true)]
+    Env,
 }
 
 #[derive(Debug, Copy, Clone, clap::ValueEnum)]
@@ -211,6 +215,38 @@ async fn main() -> Result<()> {
     match cli.command {
         None => {}
         Some(cmd) => match cmd {
+            Commands::Env => {
+                let ruby = config.rubies()?.first().cloned();
+                if let Some(ruby) = ruby {
+                    print!(
+                        concat!(
+                            "export PATH={}:$PATH\n",
+                            "export RUBY_ROOT={}\n",
+                            "export RUBY_ENGINE={}\n",
+                            "export RUBY_VERSION={}\n",
+                        ),
+                        ruby.bin_path(),
+                        ruby.path,
+                        ruby.engine,
+                        ruby.version,
+                    );
+                } else {
+                    eprintln!("No Ruby installations found.");
+                }
+            }
+            Commands::Init => {
+                print!(
+                    concat!(
+                        "autoload -U add-zsh-hook\n",
+                        "_rv_autoload_hook () {{\n",
+                        "    eval $({} env)\n",
+                        "}}\n",
+                        "add-zsh-hook chpwd _rv_autoload_hook\n",
+                        "_rv_autoload_hook\n",
+                    ),
+                    std::env::current_exe()?.to_str().unwrap()
+                );
+            }
             Commands::Ruby(ruby) => match ruby.command {
                 RubyCommand::List {
                     format,
