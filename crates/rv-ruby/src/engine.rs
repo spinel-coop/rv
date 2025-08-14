@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum RubyImplementation {
+pub enum RubyEngine {
     /// Standard Ruby (MRI/CRuby)
     Ruby,
     /// JRuby (Java implementation)
@@ -27,7 +27,7 @@ pub enum RubyImplementation {
     Unknown(String),
 }
 
-impl RubyImplementation {
+impl RubyEngine {
     /// Get the display name for this implementation
     pub fn name(&self) -> &str {
         match self {
@@ -41,13 +41,13 @@ impl RubyImplementation {
     }
 }
 
-impl Display for RubyImplementation {
+impl Display for RubyEngine {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name())
     }
 }
 
-impl FromStr for RubyImplementation {
+impl FromStr for RubyEngine {
     type Err = std::convert::Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -63,13 +63,13 @@ impl FromStr for RubyImplementation {
     }
 }
 
-impl PartialOrd for RubyImplementation {
+impl PartialOrd for RubyEngine {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for RubyImplementation {
+impl Ord for RubyEngine {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         use std::cmp::Ordering;
 

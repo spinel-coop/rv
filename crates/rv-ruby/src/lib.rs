@@ -1,4 +1,4 @@
-pub mod implementation;
+pub mod engine;
 pub mod request;
 
 use regex::Regex;
@@ -11,7 +11,7 @@ use std::str::FromStr;
 use std::time::SystemTime;
 use tracing::instrument;
 
-use crate::implementation::RubyImplementation;
+use crate::engine::RubyEngine;
 
 #[serde_as]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -37,9 +37,9 @@ pub struct Ruby {
     )]
     pub symlink: Option<PathBuf>,
 
-    /// Ruby implementation
+    /// Ruby engine (e.g., Ruby, JRuby, TruffleRuby)
     #[serde_as(as = "DisplayFromStr")]
-    pub implementation: RubyImplementation,
+    pub engine: RubyEngine,
 
     /// System architecture (aarch64, x86_64, etc.)
     pub arch: String,
@@ -73,8 +73,8 @@ impl Ruby {
         }
 
         // Parse directory name (e.g., "ruby-3.1.4", "jruby-9.4.0.0")
-        let (implementation_name, version) = parse_ruby_dir_name(dir_name)?;
-        let implementation = RubyImplementation::from_str(&implementation_name).unwrap();
+        let (engine_name, version) = parse_ruby_dir_name(dir_name)?;
+        let engine = RubyEngine::from_str(&engine_name).unwrap();
         let version_parts = parse_version(&version)?;
 
         // Check for Ruby executable
@@ -93,7 +93,7 @@ impl Ruby {
         // Extract arch/os from the Ruby executable itself
         let (arch, os) = extract_ruby_platform_info(&ruby_bin)?;
 
-        let key = format!("{}-{}-{}-{}", implementation.name(), version, os, arch);
+        let key = format!("{}-{}-{}-{}", engine.name(), version, os, arch);
 
         Ok(Ruby {
             key,
@@ -101,7 +101,7 @@ impl Ruby {
             version_parts,
             path: dir,
             symlink,
-            implementation,
+            engine,
             arch,
             os,
             mtime,
@@ -116,7 +116,7 @@ impl Ruby {
 
     /// Get display name for this Ruby
     pub fn display_name(&self) -> String {
-        format!("{}-{}", self.implementation.name(), self.version)
+        format!("{}-{}", self.engine.name(), self.version)
     }
 
     /// Get the path to the Ruby executable for display purposes
@@ -164,7 +164,7 @@ impl Ruby {
 
             // Check engine-only matching: "ruby-" matches "ruby-3.1.4"
             if let Some(engine) = active_version.strip_suffix('-')
-                && self.implementation.name() == engine
+                && self.engine.name() == engine
             {
                 return true;
             }
@@ -183,7 +183,7 @@ impl PartialOrd for Ruby {
 impl Ord for Ruby {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // Sort by implementation first
-        match self.implementation.cmp(&other.implementation) {
+        match self.engine.cmp(&other.engine) {
             std::cmp::Ordering::Equal => {
                 // Same implementation, compare versions: major.minor.patch (descending order)
                 match other.version_parts.major.cmp(&self.version_parts.major) {
@@ -651,7 +651,7 @@ mod tests {
             },
             path: dummy_path.clone(),
             symlink: None,
-            implementation: RubyImplementation::Ruby,
+            engine: RubyEngine::Ruby,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
             mtime: None,
@@ -668,7 +668,7 @@ mod tests {
             },
             path: dummy_path.clone(),
             symlink: None,
-            implementation: RubyImplementation::Ruby,
+            engine: RubyEngine::Ruby,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
             mtime: None,
@@ -685,7 +685,7 @@ mod tests {
             },
             path: dummy_path,
             symlink: None,
-            implementation: RubyImplementation::JRuby,
+            engine: RubyEngine::JRuby,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
             mtime: None,
@@ -701,10 +701,10 @@ mod tests {
 
     #[test]
     fn test_implementation_ordering() {
-        let ruby = RubyImplementation::Ruby;
-        let jruby = RubyImplementation::JRuby;
-        let truffleruby = RubyImplementation::TruffleRuby;
-        let unknown = RubyImplementation::Unknown("custom-ruby".to_string());
+        let ruby = RubyEngine::Ruby;
+        let jruby = RubyEngine::JRuby;
+        let truffleruby = RubyEngine::TruffleRuby;
+        let unknown = RubyEngine::Unknown("custom-ruby".to_string());
 
         // Ruby comes first
         assert!(ruby < jruby);
@@ -721,38 +721,29 @@ mod tests {
 
     #[test]
     fn test_ruby_implementation_from_str() {
+        assert_eq!(RubyEngine::from_str("ruby").unwrap(), RubyEngine::Ruby);
+        assert_eq!(RubyEngine::from_str("jruby").unwrap(), RubyEngine::JRuby);
         assert_eq!(
-            RubyImplementation::from_str("ruby").unwrap(),
-            RubyImplementation::Ruby
+            RubyEngine::from_str("truffleruby").unwrap(),
+            RubyEngine::TruffleRuby
+        );
+        assert_eq!(RubyEngine::from_str("mruby").unwrap(), RubyEngine::MRuby);
+        assert_eq!(
+            RubyEngine::from_str("artichoke").unwrap(),
+            RubyEngine::Artichoke
         );
         assert_eq!(
-            RubyImplementation::from_str("jruby").unwrap(),
-            RubyImplementation::JRuby
-        );
-        assert_eq!(
-            RubyImplementation::from_str("truffleruby").unwrap(),
-            RubyImplementation::TruffleRuby
-        );
-        assert_eq!(
-            RubyImplementation::from_str("mruby").unwrap(),
-            RubyImplementation::MRuby
-        );
-        assert_eq!(
-            RubyImplementation::from_str("artichoke").unwrap(),
-            RubyImplementation::Artichoke
-        );
-        assert_eq!(
-            RubyImplementation::from_str("custom-ruby").unwrap(),
-            RubyImplementation::Unknown("custom-ruby".to_string())
+            RubyEngine::from_str("custom-ruby").unwrap(),
+            RubyEngine::Unknown("custom-ruby".to_string())
         );
     }
 
     #[test]
     fn test_ruby_implementation_name() {
-        assert_eq!(RubyImplementation::Ruby.name(), "ruby");
-        assert_eq!(RubyImplementation::JRuby.name(), "jruby");
+        assert_eq!(RubyEngine::Ruby.name(), "ruby");
+        assert_eq!(RubyEngine::JRuby.name(), "jruby");
         assert_eq!(
-            RubyImplementation::Unknown("custom-ruby".to_string()).name(),
+            RubyEngine::Unknown("custom-ruby".to_string()).name(),
             "custom-ruby"
         );
     }
@@ -1064,7 +1055,7 @@ mod tests {
     fn create_test_ruby(implementation: &str, version: &str) -> Ruby {
         let dummy_path = PathBuf::from("/tmp/test-ruby");
 
-        let implementation_enum = RubyImplementation::from_str(implementation).unwrap();
+        let implementation_enum = RubyEngine::from_str(implementation).unwrap();
         let version_parts = parse_version(version).unwrap();
 
         Ruby {
@@ -1073,7 +1064,7 @@ mod tests {
             version_parts,
             path: dummy_path,
             symlink: None,
-            implementation: implementation_enum,
+            engine: implementation_enum,
             arch: "aarch64".to_string(),
             os: "test".to_string(),
             mtime: None,
