@@ -455,17 +455,16 @@ fn find_ruby_in_path() -> Option<String> {
 fn find_executable_in_path(executable: &str) -> Option<Utf8PathBuf> {
     if let Ok(path_var) = env::var("PATH") {
         for path_dir in env::split_paths(&path_var) {
-            let executable_path = Utf8PathBuf::from(path_dir.join(executable).to_str()?);
+            let path_dir = Utf8PathBuf::from(path_dir.to_str()?);
 
-            // Check for executable with and without .exe extension (Windows support)
+            let executable_path = path_dir.join(executable);
             if executable_path.is_file() && is_executable(&executable_path) {
                 return Some(executable_path);
             }
 
-            // Windows support - check for .exe extension
             #[cfg(windows)]
             {
-                let exe_path = path_dir.join(format!("{}.exe", executable));
+                let exe_path = path_dir.join(format!("{}.exe", executable_path));
                 if exe_path.is_file() && is_executable(&exe_path) {
                     return Some(exe_path);
                 }
