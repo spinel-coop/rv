@@ -17,7 +17,7 @@ use crate::commands::ruby::{RubyArgs, RubyCommand};
 
 /// Next generation developer tooling for Ruby
 #[derive(Parser)]
-#[command(version, about, long_about = None)]
+#[command(name = "rv", version, about, long_about = None, arg_required_else_help = true)]
 struct Cli {
     /// Ruby directories to search for installations
     #[arg(long = "ruby-dir")]
