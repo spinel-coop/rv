@@ -161,9 +161,9 @@ impl FromStr for RubyRequest {
     }
 }
 
-impl Into<RubyRequest> for String {
-    fn into(self) -> RubyRequest {
-        RubyRequest::parse(&self).expect("Failed to parse RubyRequest from String")
+impl From<String> for RubyRequest {
+    fn from(val: String) -> Self {
+        RubyRequest::parse(&val).expect("Failed to parse RubyRequest from String")
     }
 }
 

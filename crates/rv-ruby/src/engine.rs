@@ -64,9 +64,9 @@ impl FromStr for RubyEngine {
     }
 }
 
-impl Into<RubyEngine> for &str {
-    fn into(self) -> RubyEngine {
-        RubyEngine::from_str(&self).unwrap_or(RubyEngine::Unknown(self.to_string()))
+impl From<&str> for RubyEngine {
+    fn from(val: &str) -> Self {
+        RubyEngine::from_str(val).unwrap_or(RubyEngine::Unknown(val.to_string()))
     }
 }
 
