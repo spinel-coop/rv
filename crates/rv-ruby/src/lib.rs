@@ -1,10 +1,10 @@
 pub mod engine;
 pub mod request;
+pub mod version;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use rv_cache::{CacheKey, CacheKeyHasher};
 use serde::{Deserialize, Serialize};
-use serde_with::{DisplayFromStr, serde_as};
 use std::env;
 use std::fmt::{Display, Write};
 use std::process::{Command, ExitStatus};
@@ -12,16 +12,16 @@ use std::str::FromStr;
 use tracing::instrument;
 
 use crate::engine::RubyEngine;
+use crate::request::RubyRequest;
+use crate::version::RubyVersion;
 
-#[serde_as]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Ruby {
     /// Unique identifier for this Ruby installation
     pub key: String,
 
     /// Ruby version (e.g., "3.1.4", "9.4.0.0")
-    #[serde_as(as = "DisplayFromStr")]
-    pub version: VersionParts,
+    pub version: RubyVersion,
 
     /// Path to the Ruby installation directory
     pub path: Utf8PathBuf,
@@ -29,10 +29,6 @@ pub struct Ruby {
     /// Symlink target if this Ruby is a symlink
     #[serde(skip_serializing_if = "Option::is_none")]
     pub symlink: Option<Utf8PathBuf>,
-
-    /// Ruby engine (e.g., Ruby, JRuby, TruffleRuby)
-    #[serde_as(as = "DisplayFromStr")]
-    pub engine: RubyEngine,
 
     /// System architecture (aarch64, x86_64, etc.)
     pub arch: String,
@@ -131,7 +127,7 @@ impl Ruby {
 
     /// Get display name for this Ruby
     pub fn display_name(&self) -> String {
-        format!("{}-{}", self.engine.name(), self.version)
+        self.version.to_string()
     }
 
     /// Get the path to the Ruby executable for display purposes
@@ -143,53 +139,11 @@ impl Ruby {
         self.path.join("bin")
     }
 
-    /// Check if this Ruby matches the active version pattern
-    /// This implements chrb's pattern matching logic
     pub fn is_active(&self, active_version: &str) -> bool {
-        let ruby_name = self.display_name();
-
-        // Exact match: "ruby-3.1.4" == "ruby-3.1.4"
-        if ruby_name == active_version {
-            return true;
-        }
-
-        // Check if active_version is just a version (no engine prefix)
-        // e.g., "3.1.4" should match "ruby-3.1.4"
-        if !active_version.contains('-') {
-            // Split ruby_name into engine and version
-            if let Some((engine, version)) = ruby_name.split_once('-') {
-                // Version-only matching should only work for "ruby" engine by default
-                if engine == "ruby" {
-                    if version == active_version {
-                        return true;
-                    }
-
-                    // Also check for prefix matching: "3.1" matches "3.1.4"
-                    if version.starts_with(active_version)
-                        && version.chars().nth(active_version.len()) == Some('.')
-                    {
-                        return true;
-                    }
-                }
-            }
-        } else {
-            // Engine-version format, check for prefix matching
-            // e.g., "ruby-3.1" should match "ruby-3.1.4"
-            if ruby_name.starts_with(active_version)
-                && ruby_name.chars().nth(active_version.len()) == Some('.')
-            {
-                return true;
-            }
-
-            // Check engine-only matching: "ruby-" matches "ruby-3.1.4"
-            if let Some(engine) = active_version.strip_suffix('-')
-                && self.engine.name() == engine
-            {
-                return true;
-            }
-        }
-
-        false
+        RubyRequest::parse(active_version)
+            .map(|request| request.satisfied_by(&self.version))
+            .unwrap_or(Ok(false))
+            .unwrap_or(false)
     }
 }
 
@@ -201,7 +155,7 @@ impl PartialOrd for Ruby {
 
 impl Ord for Ruby {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        (&self.engine, &self.version, &self.path).cmp(&(&other.engine, &other.version, &self.path))
+        ((&self.version, &self.path)).cmp(&(&other.version, &self.path))
     }
 }
 
@@ -231,6 +185,8 @@ pub enum RubyError {
     InvalidDirectoryName(String),
     #[error("Failed to parse version: {0}")]
     InvalidVersion(String),
+    #[error(transparent)]
+    RequestError(#[from] crate::request::RequestError),
 }
 
 /// Extract all Ruby information from the executable in a single call
@@ -296,7 +252,6 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
     Ok(Ruby {
         key,
         version,
-        engine,
         arch,
         os,
         gem_root,
@@ -583,15 +538,9 @@ mod tests {
 
         let ruby1 = Ruby {
             key: "ruby-3.1.4-macos-aarch64".to_string(),
-            version: VersionParts {
-                major: 3,
-                minor: 1,
-                patch: 4,
-                pre: None,
-            },
+            version: RubyVersion::parse("3.1.4").unwrap(),
             path: dummy_path.clone(),
             symlink: None,
-            engine: RubyEngine::Ruby,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
             gem_root: None,
@@ -599,15 +548,9 @@ mod tests {
 
         let ruby2 = Ruby {
             key: "ruby-3.2.0-macos-aarch64".to_string(),
-            version: VersionParts {
-                major: 3,
-                minor: 2,
-                patch: 0,
-                pre: None,
-            },
+            version: RubyVersion::parse("ruby-3.2.0").unwrap(),
             path: dummy_path.clone(),
             symlink: None,
-            engine: RubyEngine::Ruby,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
             gem_root: None,
@@ -615,15 +558,9 @@ mod tests {
 
         let jruby = Ruby {
             key: "jruby-9.4.0.0-macos-aarch64".to_string(),
-            version: VersionParts {
-                major: 9,
-                minor: 4,
-                patch: 0,
-                pre: Some("0".to_string()),
-            },
+            version: RubyVersion::parse("jruby-9.4.0.0").unwrap(),
             path: dummy_path,
             symlink: None,
-            engine: RubyEngine::JRuby,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
             gem_root: None,
@@ -638,57 +575,8 @@ mod tests {
     }
 
     #[test]
-    fn test_implementation_ordering() {
-        let ruby = RubyEngine::Ruby;
-        let jruby = RubyEngine::JRuby;
-        let truffleruby = RubyEngine::TruffleRuby;
-        let unknown = RubyEngine::Unknown("custom-ruby".to_string());
-
-        // Ruby comes first
-        assert!(ruby < jruby);
-        assert!(ruby < truffleruby);
-        assert!(ruby < unknown);
-
-        // Known implementations come before unknown
-        assert!(jruby < unknown);
-        assert!(truffleruby < unknown);
-
-        // Known implementations are sorted alphabetically
-        assert!(jruby < truffleruby); // "jruby" < "truffleruby"
-    }
-
-    #[test]
-    fn test_ruby_implementation_from_str() {
-        assert_eq!(RubyEngine::from_str("ruby").unwrap(), RubyEngine::Ruby);
-        assert_eq!(RubyEngine::from_str("jruby").unwrap(), RubyEngine::JRuby);
-        assert_eq!(
-            RubyEngine::from_str("truffleruby").unwrap(),
-            RubyEngine::TruffleRuby
-        );
-        assert_eq!(RubyEngine::from_str("mruby").unwrap(), RubyEngine::MRuby);
-        assert_eq!(
-            RubyEngine::from_str("artichoke").unwrap(),
-            RubyEngine::Artichoke
-        );
-        assert_eq!(
-            RubyEngine::from_str("custom-ruby").unwrap(),
-            RubyEngine::Unknown("custom-ruby".to_string())
-        );
-    }
-
-    #[test]
-    fn test_ruby_implementation_name() {
-        assert_eq!(RubyEngine::Ruby.name(), "ruby");
-        assert_eq!(RubyEngine::JRuby.name(), "jruby");
-        assert_eq!(
-            RubyEngine::Unknown("custom-ruby".to_string()).name(),
-            "custom-ruby"
-        );
-    }
-
-    #[test]
     fn test_is_active_exact_match() {
-        let ruby = create_test_ruby("ruby", "3.1.4");
+        let ruby = create_test_ruby("ruby-3.1.4");
 
         // Exact match
         assert!(ruby.is_active("ruby-3.1.4"));
@@ -698,7 +586,7 @@ mod tests {
 
     #[test]
     fn test_is_active_version_only() {
-        let ruby = create_test_ruby("ruby", "3.1.4");
+        let ruby = create_test_ruby("ruby-3.1.4");
 
         // Version-only matching (should match ruby engine by default)
         assert!(ruby.is_active("3.1.4"));
@@ -712,7 +600,7 @@ mod tests {
 
     #[test]
     fn test_is_active_prefix_matching() {
-        let ruby = create_test_ruby("ruby", "3.1.4");
+        let ruby = create_test_ruby("ruby-3.1.4");
 
         // Engine-version prefix matching
         assert!(ruby.is_active("ruby-3.1"));
@@ -722,16 +610,18 @@ mod tests {
 
     #[test]
     fn test_is_active_engine_only() {
-        let ruby = create_test_ruby("jruby", "9.4.0.0");
+        let ruby = create_test_ruby("jruby-9.4.0.0");
 
         // Engine-only matching (should match any version of that engine)
+        assert!(ruby.is_active("jruby"));
         assert!(ruby.is_active("jruby-"));
+        assert!(!ruby.is_active("ruby"));
         assert!(!ruby.is_active("ruby-"));
     }
 
     #[test]
     fn test_is_active_jruby() {
-        let jruby = create_test_ruby("jruby", "9.4.0.0");
+        let jruby = create_test_ruby("jruby-9.4.0.0");
 
         // JRuby-specific tests
         assert!(jruby.is_active("jruby-9.4.0.0"));
@@ -962,21 +852,19 @@ mod tests {
         }
     }
 
-    fn create_test_ruby(implementation: &str, version: &str) -> Ruby {
+    fn create_test_ruby(version: &str) -> Ruby {
         let dummy_path = Utf8PathBuf::from("/tmp/test-ruby");
 
-        let implementation_enum = RubyEngine::from_str(implementation).unwrap();
         let version = version.parse().unwrap();
 
         Ruby {
-            key: format!("{implementation}-{version}-test-arch64"),
-            version,
+            key: format!("{}-test-arch64", &version),
             path: dummy_path,
             symlink: None,
-            engine: implementation_enum,
             arch: "aarch64".to_string(),
             os: "test".to_string(),
             gem_root: None,
+            version,
         }
     }
 }

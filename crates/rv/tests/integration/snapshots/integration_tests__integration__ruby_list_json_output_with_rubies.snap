@@ -14,11 +14,24 @@ expression: output.normalized_stdout()
   },
   {
     "key": "ruby-3.2.0-macos-aarch64",
-    "version": "3.2.0",
+    "version": {
+      "engine": "ruby",
+      "major": 3,
+      "minor": 2,
+      "patch": 0,
+      "tiny": null,
+      "prerelease": null
+    },
     "path": "/opt/rubies/ruby-3.2.0",
+    "arch": "aarch64",
+    "os": "macos"
+  },
+  {
+    "key": "ruby-3.1.4-macos-aarch64",
+    "version": "3.1.4",
+    "path": "/opt/rubies/ruby-3.1.4",
     "engine": "ruby",
     "arch": "aarch64",
-    "os": "macos",
-    "gem_root": null
+    "os": "macos"
   }
 ]
