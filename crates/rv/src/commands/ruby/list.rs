@@ -1,4 +1,3 @@
-use miette::{IntoDiagnostic, Result};
 use owo_colors::OwoColorize;
 use rv_ruby::find_active_ruby_version;
 use tracing::{info, warn};
@@ -10,6 +9,16 @@ pub enum OutputFormat {
     Text,
     Json,
 }
+
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum Error {
+    #[error(transparent)]
+    SerdeJsonError(#[from] serde_json::Error),
+    #[error(transparent)]
+    ConfigError(#[from] crate::config::Error),
+}
+
+type Result<T> = miette::Result<T, Error>;
 
 pub fn list(config: &Config, format: OutputFormat, _installed_only: bool) -> Result<()> {
     let rubies = config.rubies()?;
@@ -35,7 +44,7 @@ pub fn list(config: &Config, format: OutputFormat, _installed_only: bool) -> Res
             }
         }
         OutputFormat::Json => {
-            let json = serde_json::to_string_pretty(&rubies).into_diagnostic()?;
+            let json = serde_json::to_string_pretty(&rubies)?;
             println!("{json}");
         }
     }

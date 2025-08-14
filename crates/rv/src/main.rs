@@ -4,7 +4,6 @@ use clap::builder::Styles;
 use clap::builder::styling::AnsiColor;
 use clap::{Parser, Subcommand};
 use config::Config;
-use miette::{IntoDiagnostic, Result};
 use tokio::main;
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
@@ -128,6 +127,24 @@ impl From<ColorMode> for anstream::ColorChoice {
     }
 }
 
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum Error {
+    #[error(transparent)]
+    FromEnvError(#[from] tracing_subscriber::filter::FromEnvError),
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
+    #[error(transparent)]
+    PinError(#[from] commands::ruby::pin::Error),
+    #[error(transparent)]
+    ListError(#[from] commands::ruby::list::Error),
+    #[error(transparent)]
+    InstallError(#[from] commands::ruby::install::Error),
+    #[error(transparent)]
+    ConfigError(#[from] config::Error),
+}
+
+type Result<T> = miette::Result<T, Error>;
+
 #[main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -161,8 +178,7 @@ async fn main() -> Result<()> {
 
     let filter = EnvFilter::builder()
         .with_default_directive(cli.verbose.tracing_level_filter().into())
-        .from_env()
-        .into_diagnostic()?;
+        .from_env()?;
 
     let reg = tracing_subscriber::registry()
         .with(

@@ -2,7 +2,6 @@ use camino::{Utf8Path, Utf8PathBuf};
 use core::panic;
 use current_platform::CURRENT_PLATFORM;
 use futures_util::StreamExt;
-use miette::Diagnostic;
 use owo_colors::OwoColorize;
 use std::path::PathBuf;
 
@@ -11,7 +10,7 @@ use rv_ruby::request::RubyRequest;
 
 use crate::config::Config;
 
-#[derive(Debug, thiserror::Error, Diagnostic)]
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),

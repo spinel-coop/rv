@@ -1,14 +1,15 @@
 use camino::{Utf8Path, Utf8PathBuf};
-use miette::{Diagnostic, Result};
 use tracing::instrument;
 
 use rv_ruby::Ruby;
 
-#[derive(Debug, thiserror::Error, Diagnostic)]
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error("No project was found in the parents of {}", current_dir)]
     NoProjectDir { current_dir: Utf8PathBuf },
 }
+
+type Result<T> = miette::Result<T, Error>;
 
 #[derive(Debug)]
 pub struct Config {
@@ -49,7 +50,7 @@ impl Config {
         Ok(rubies)
     }
 
-    pub fn get_project_dir(&self) -> Result<&Utf8PathBuf, Error> {
+    pub fn get_project_dir(&self) -> Result<&Utf8PathBuf> {
         match self.project_dir {
             None => Err(Error::NoProjectDir {
                 current_dir: self.current_dir.clone(),
