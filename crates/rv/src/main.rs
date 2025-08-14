@@ -15,7 +15,7 @@ use crate::commands::ruby::list::list as ruby_list;
 use crate::commands::ruby::pin::pin as ruby_pin;
 use crate::commands::ruby::{RubyArgs, RubyCommand};
 
-/// Next generation developer tooling for Ruby
+/// An extremely fast Ruby version manager.
 #[derive(Parser)]
 #[command(name = "rv", version, about, long_about = None, arg_required_else_help = true)]
 struct Cli {
