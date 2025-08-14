@@ -1730,6 +1730,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "989e6739f80c4ad5b13e0fd7fe89531180375b18520cc8c82080e4dc4035b84f"
 
 [[package]]
+name = "rustc-hash"
+version = "2.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "357703d41365b4b27c590e3ed91eabb1b663f07c4c084095e60cbed4362dff0d"
+
+[[package]]
 name = "rustix"
 version = "1.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1804,12 +1810,14 @@ dependencies = [
  "rayon",
  "regex",
  "reqwest",
+ "rv-cache",
  "rv-dirs",
  "rv-ruby",
  "serde",
  "serde_json",
  "serde_with",
  "shellexpand",
+ "sys-info",
  "tar",
  "tempfile",
  "thiserror 2.0.12",
@@ -1818,6 +1826,24 @@ dependencies = [
  "tracing-indicatif",
  "tracing-subscriber",
  "tracing-test",
+]
+
+[[package]]
+name = "rv-cache"
+version = "0.1.0"
+dependencies = [
+ "assert_fs",
+ "camino",
+ "clap",
+ "fs-err 2.11.0",
+ "rustc-hash",
+ "rv-dirs",
+ "seahash",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.12",
+ "tracing",
 ]
 
 [[package]]
@@ -1884,6 +1910,7 @@ dependencies = [
  "assert_fs",
  "camino",
  "regex",
+ "rv-cache",
  "serde",
  "serde_with",
  "thiserror 2.0.12",
@@ -1968,6 +1995,12 @@ dependencies = [
  "serde",
  "serde_json",
 ]
+
+[[package]]
+name = "seahash"
+version = "4.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c107b6f4780854c8b126e228ea8869f4d7b71260f962fefb57b996b8959ba6b"
 
 [[package]]
 name = "security-framework"
@@ -2229,6 +2262,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "sys-info"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b3a0d0aba8bf96a0e1ddfdc352fc53b3df7f39318c71854910c3c4b024ae52c"
+dependencies = [
+ "cc",
+ "libc",
 ]
 
 [[package]]

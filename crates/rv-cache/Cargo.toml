@@ -1,0 +1,25 @@
+[package]
+name = "rv-cache"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+camino = "1.1.11"
+clap = { version = "4.5.41", features = ["derive", "env"], optional = true }
+fs-err = "2.11.0"
+rustc-hash = "2.1.0"
+rv-dirs = { version = "0.1.0", path = "../rv-dirs" }
+seahash = "4.1.0"
+serde = { version = "1.0", features = ["derive"] }
+tempfile = "3.0"
+thiserror = "2.0"
+tracing = "0.1.41"
+
+[dev-dependencies]
+assert_fs = "1.0"
+serde_json = "1.0"
+tempfile = "3.0"
+
+[features]
+default = []
+clap = ["dep:clap"]

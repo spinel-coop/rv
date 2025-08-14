@@ -5,7 +5,6 @@ use futures_util::StreamExt;
 use owo_colors::OwoColorize;
 use std::path::PathBuf;
 
-use rv_dirs::user_cache_dir;
 use rv_ruby::request::RubyRequest;
 
 use crate::config::Config;
@@ -45,7 +44,7 @@ pub async fn install(
         Err(Error::IncompleteVersion(requested.clone()))?;
     }
     let url = ruby_url(&requested.to_string());
-    let tarball_path = tarball_path(config, &requested.to_string());
+    let tarball_path = tarball_path(config, &url);
 
     if !tarball_path.parent().unwrap().exists() {
         std::fs::create_dir_all(tarball_path.parent().unwrap())?;
@@ -84,8 +83,13 @@ fn ruby_url(version: &str) -> String {
     )
 }
 
-fn tarball_path(config: &Config, version: &str) -> Utf8PathBuf {
-    user_cache_dir(&config.root).join(format!("rubies/{version}.tar.gz"))
+fn tarball_path(config: &Config, url: impl AsRef<str>) -> Utf8PathBuf {
+    let cache_key = rv_cache::cache_digest(url.as_ref());
+    config
+        .cache
+        .shard(rv_cache::CacheBucket::Ruby, "tarballs")
+        .into_path_buf()
+        .join(format!("{cache_key}.tar.gz"))
 }
 
 async fn download_ruby_tarball(url: &str, tarball_path: &Utf8PathBuf) -> Result<()> {

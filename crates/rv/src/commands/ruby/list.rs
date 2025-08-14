@@ -21,7 +21,7 @@ pub enum Error {
 type Result<T> = miette::Result<T, Error>;
 
 pub fn list(config: &Config, format: OutputFormat, _installed_only: bool) -> Result<()> {
-    let rubies = config.rubies()?;
+    let rubies = config.rubies();
 
     if rubies.is_empty() {
         warn!("No Ruby installations found.");
@@ -84,6 +84,7 @@ fn format_ruby_entry(
 mod tests {
     use super::*;
     use camino::Utf8PathBuf;
+    use rv_cache::Cache;
     use tempfile::TempDir;
 
     fn test_config() -> Config {
@@ -99,18 +100,19 @@ mod tests {
             root,
             current_dir,
             project_dir: None,
+            cache: Cache::temp().unwrap(),
         }
     }
 
-    #[test]
-    fn test_ruby_list_text_output() {
+    #[tokio::test]
+    async fn test_ruby_list_text_output() {
         let config = test_config();
         // Should not panic - basic smoke test
         list(&config, OutputFormat::Text, false).unwrap();
     }
 
-    #[test]
-    fn test_ruby_list_json_output() {
+    #[tokio::test]
+    async fn test_ruby_list_json_output() {
         let config = test_config();
         // Should not panic - basic smoke test
         list(&config, OutputFormat::Json, false).unwrap();

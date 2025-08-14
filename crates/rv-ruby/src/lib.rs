@@ -2,29 +2,26 @@ pub mod engine;
 pub mod request;
 
 use camino::{Utf8Path, Utf8PathBuf};
-use regex::Regex;
+use rv_cache::{CacheKey, CacheKeyHasher};
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
 use std::env;
-use std::process::Command;
+use std::fmt::{Display, Write};
+use std::process::{Command, ExitStatus};
 use std::str::FromStr;
-use std::time::SystemTime;
 use tracing::instrument;
 
 use crate::engine::RubyEngine;
 
 #[serde_as]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Ruby {
     /// Unique identifier for this Ruby installation
     pub key: String,
 
     /// Ruby version (e.g., "3.1.4", "9.4.0.0")
-    pub version: String,
-
-    /// Parsed version components
-    #[serde(skip)]
-    pub version_parts: VersionParts,
+    #[serde_as(as = "DisplayFromStr")]
+    pub version: VersionParts,
 
     /// Path to the Ruby installation directory
     pub path: Utf8PathBuf,
@@ -43,12 +40,10 @@ pub struct Ruby {
     /// Operating system (macos, linux, windows, etc.)
     pub os: String,
 
-    /// Modification time of the ruby executable (for cache invalidation)
-    #[serde(skip)]
-    pub mtime: Option<SystemTime>,
+    pub gem_root: Option<Utf8PathBuf>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, PartialOrd, Ord)]
 pub struct VersionParts {
     pub major: u32,
     pub minor: u32,
@@ -56,23 +51,62 @@ pub struct VersionParts {
     pub pre: Option<String>,
 }
 
-impl Ruby {
-    /// Create a new Ruby instance from a directory path
-    #[instrument(skip(dir), fields(dir = %dir.to_string()))]
-    pub fn from_dir(dir: Utf8PathBuf) -> Result<Self, RubyError> {
-        let dir_name = dir.file_name().unwrap_or("");
+impl Display for VersionParts {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}.{}.{}", self.major, self.minor, self.patch))?;
+        if let Some(pre) = self.pre.as_ref() {
+            f.write_char('.')?;
+            f.write_str(pre)?;
+        }
+        Ok(())
+    }
+}
 
-        if dir_name.is_empty() {
-            return Err(RubyError::InvalidPath {
-                path: dir.to_string(),
-            });
+impl FromStr for VersionParts {
+    type Err = RubyError;
+
+    fn from_str(version: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = version.split('.').collect();
+        if parts.len() < 2 {
+            return Err(RubyError::InvalidVersion(version.to_string()));
         }
 
-        // Parse directory name (e.g., "ruby-3.1.4", "jruby-9.4.0.0")
-        let (engine_name, version) = parse_ruby_dir_name(dir_name)?;
-        let engine = RubyEngine::from_str(&engine_name).unwrap();
-        let version_parts = parse_version(&version)?;
+        let major = parts[0]
+            .parse()
+            .map_err(|_| RubyError::InvalidVersion(version.to_string()))?;
+        let minor = parts[1]
+            .parse()
+            .map_err(|_| RubyError::InvalidVersion(version.to_string()))?;
 
+        // Handle cases where patch version is missing (like mruby "3.3")
+        let patch = if parts.len() >= 3 {
+            parts[2]
+                .parse()
+                .map_err(|_| RubyError::InvalidVersion(version.to_string()))?
+        } else {
+            0
+        };
+
+        // Handle additional version parts (like JRuby's 4th component)
+        let pre = if parts.len() > 3 {
+            Some(parts[3..].join("."))
+        } else {
+            None
+        };
+
+        Ok(VersionParts {
+            major,
+            minor,
+            patch,
+            pre,
+        })
+    }
+}
+
+impl Ruby {
+    /// Create a new Ruby instance from a directory path
+    #[instrument(skip(dir), fields(dir = %dir.as_str()))]
+    pub fn from_dir(dir: Utf8PathBuf) -> Result<Self, RubyError> {
         // Check for Ruby executable
         let ruby_bin = dir.join("bin").join("ruby");
         if !ruby_bin.exists() {
@@ -81,27 +115,13 @@ impl Ruby {
 
         let symlink = find_symlink_target(&ruby_bin);
 
-        // Get modification time of the ruby executable for cache invalidation
-        let mtime = std::fs::metadata(&ruby_bin)
-            .ok()
-            .and_then(|meta| meta.modified().ok());
+        // Extract all information from the Ruby executable itself
+        let mut ruby = extract_ruby_info(&ruby_bin)?;
 
-        // Extract arch/os from the Ruby executable itself
-        let (arch, os) = extract_ruby_platform_info(&ruby_bin)?;
+        ruby.path = dir;
+        ruby.symlink = symlink;
 
-        let key = format!("{}-{}-{}-{}", engine.name(), version, os, arch);
-
-        Ok(Ruby {
-            key,
-            version,
-            version_parts,
-            path: dir,
-            symlink,
-            engine,
-            arch,
-            os,
-            mtime,
-        })
+        Ok(ruby)
     }
 
     /// Check if this Ruby installation is valid
@@ -181,24 +201,21 @@ impl PartialOrd for Ruby {
 
 impl Ord for Ruby {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // Sort by implementation first
-        match self.engine.cmp(&other.engine) {
-            std::cmp::Ordering::Equal => {
-                // Same implementation, compare versions: major.minor.patch (descending order)
-                match other.version_parts.major.cmp(&self.version_parts.major) {
-                    std::cmp::Ordering::Equal => {
-                        match other.version_parts.minor.cmp(&self.version_parts.minor) {
-                            std::cmp::Ordering::Equal => {
-                                other.version_parts.patch.cmp(&self.version_parts.patch)
-                            }
-                            other => other,
-                        }
-                    }
-                    other => other,
-                }
-            }
-            other => other,
-        }
+        (&self.engine, &self.version, &self.path).cmp(&(&other.engine, &other.version, &self.path))
+    }
+}
+
+impl CacheKey for Ruby {
+    fn cache_key(&self, state: &mut CacheKeyHasher) {
+        // Use key as the primary cache identifier since it contains:
+        // implementation-version-os-arch (e.g., "ruby-3.3.0-macos-aarch64")
+        self.key.cache_key(state);
+
+        // Include path for uniqueness in case of path-based installations
+        self.path.cache_key(state);
+
+        // Include symlink information if present
+        self.symlink.cache_key(state);
     }
 }
 
@@ -208,106 +225,111 @@ pub enum RubyError {
     InvalidPath { path: String },
     #[error("No ruby executable found in bin/ directory")]
     NoRubyExecutable,
+    #[error("Running ruby failed with status {0}:\n{1}")]
+    RubyFailed(ExitStatus, String),
     #[error("Failed to parse Ruby directory name: {0}")]
     InvalidDirectoryName(String),
     #[error("Failed to parse version: {0}")]
     InvalidVersion(String),
 }
 
-/// Parse Ruby directory name into implementation and version
-/// Examples: "ruby-3.1.4" -> ("ruby", "3.1.4")
-///          "jruby-9.4.0.0" -> ("jruby", "9.4.0.0")
-///          "unknown-ruby-1.0.0" -> ("unknown-ruby", "1.0.0")
-fn parse_ruby_dir_name(dir_name: &str) -> Result<(String, String), RubyError> {
-    let parts: Vec<&str> = dir_name.splitn(2, '-').collect();
+/// Extract all Ruby information from the executable in a single call
+#[instrument(skip_all)]
+fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
+    // First try the full script with all features (works for most Ruby implementations)
+    let full_script = r#"
+        puts(Object.const_defined?(:RUBY_ENGINE) ? RUBY_ENGINE : 'ruby')
+        puts(RUBY_VERSION)
+        puts(Object.const_defined?(:RUBY_PLATFORM) ? RUBY_PLATFORM : 'unknown')
+        puts(Object.const_defined?(:RbConfig) && RbConfig::CONFIG['host_cpu'] ? RbConfig::CONFIG['host_cpu'] : 'unknown')
+        puts(Object.const_defined?(:RbConfig) && RbConfig::CONFIG['host_os'] ? RbConfig::CONFIG['host_os'] : 'unknown')
+        puts(begin; require 'rubygems'; puts "export GEM_ROOT=#{Gem.default_dir.inspect};"; rescue ScriptError, NoMethodError; end)
+    "#;
 
-    if parts.len() == 1 && parse_version(parts[0]).is_ok() {
-        return Ok(("ruby".to_string(), parts[0].to_string()));
+    let output = Command::new(ruby_bin)
+        .args(["-e", full_script])
+        .output()
+        .map_err(|_| RubyError::NoRubyExecutable)?;
+
+    if !output.status.success() {
+        return Err(RubyError::RubyFailed(
+            output.status,
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        ));
     }
 
-    if parts.len() != 2 {
-        return Err(RubyError::InvalidDirectoryName(dir_name.to_string()));
-    }
+    let info = String::from_utf8(output.stdout).unwrap();
+    let mut lines = info.trim().lines();
 
-    let implementation = parts[0].to_string();
-    let version = parts[1].to_string();
+    let ruby_engine = lines.next().unwrap_or("ruby");
+    let ruby_version = lines.next().unwrap_or_default();
+    let ruby_platform = lines.next().unwrap_or("unknown");
+    let host_cpu = lines.next().unwrap_or("unknown");
+    let host_os = lines.next().unwrap_or("unknown");
+    let gem_root = lines.next().unwrap_or_default();
 
-    // Accept any implementation name - the enum will handle unknown ones
-    Ok((implementation, version))
-}
-
-/// Parse version string into VersionParts
-/// Examples: "3.1.4" -> VersionParts { major: 3, minor: 1, patch: 4, pre: None }
-///          "9.4.0.0" -> VersionParts { major: 9, minor: 4, patch: 0, pre: Some("0") }
-fn parse_version(version: &str) -> Result<VersionParts, RubyError> {
-    let parts: Vec<&str> = version.split('.').collect();
-    if parts.len() < 3 {
-        return Err(RubyError::InvalidVersion(version.to_string()));
-    }
-
-    let major = parts[0]
-        .parse()
-        .map_err(|_| RubyError::InvalidVersion(version.to_string()))?;
-    let minor = parts[1]
-        .parse()
-        .map_err(|_| RubyError::InvalidVersion(version.to_string()))?;
-    let patch = parts[2]
-        .parse()
-        .map_err(|_| RubyError::InvalidVersion(version.to_string()))?;
-
-    // Handle additional version parts (like JRuby's 4th component)
-    let pre = if parts.len() > 3 {
-        Some(parts[3..].join("."))
+    let host_cpu = if host_cpu != "unknown" {
+        host_cpu.to_string()
     } else {
-        None
+        extract_arch_from_platform(ruby_platform)
+    };
+    let host_os = if host_os != "unknown" {
+        host_os.to_string()
+    } else {
+        extract_os_from_platform(ruby_platform)
     };
 
-    Ok(VersionParts {
-        major,
-        minor,
-        patch,
-        pre,
+    // Normalize architecture and OS names to match common conventions
+    let arch = normalize_arch(&host_cpu);
+    let os = normalize_os(&host_os);
+
+    let engine: RubyEngine = ruby_engine.parse().unwrap();
+    let version = ruby_version.parse()?;
+    let gem_root = if gem_root.is_empty() {
+        None
+    } else {
+        Some(Utf8PathBuf::from(gem_root))
+    };
+
+    let key = format!("{}-{}-{}-{}", engine.name(), version, os, arch);
+
+    Ok(Ruby {
+        key,
+        version,
+        engine,
+        arch,
+        os,
+        gem_root,
+        // path and symlink are replaced in the caller
+        path: Default::default(),
+        symlink: Default::default(),
     })
 }
 
-/// Extract arch and OS information from a Ruby executable
-#[instrument(skip_all)]
-fn extract_ruby_platform_info(ruby_bin: &Utf8PathBuf) -> Result<(String, String), RubyError> {
-    // Try to get the actual file path for execution
-    let ruby_path = ruby_bin;
-
-    // Run ruby -e "puts [RUBY_PLATFORM, RbConfig::CONFIG['host_cpu'], RbConfig::CONFIG['host_os']].join('|')"
-    let output = Command::new(ruby_path)
-        .args(["-e", "puts [RUBY_PLATFORM, RbConfig::CONFIG['host_cpu'], RbConfig::CONFIG['host_os']].join('|')"])
-        .output();
-
-    match output {
-        Ok(output) if output.status.success() => {
-            let platform_info = String::from_utf8_lossy(&output.stdout);
-            let parts: Vec<&str> = platform_info.trim().split('|').collect();
-
-            if parts.len() >= 3 {
-                let host_cpu = parts[1].to_string();
-                let host_os = parts[2].to_string();
-
-                // Normalize architecture names to match common conventions
-                let arch = normalize_arch(&host_cpu);
-                let os = normalize_os(&host_os);
-
-                return Ok((arch, os));
-            }
-        }
-        _ => {
-            // Fall back to system platform info if we can't execute Ruby
-            // This happens in test environments or when Ruby is not functional
-        }
+/// Extract architecture from RUBY_PLATFORM string
+fn extract_arch_from_platform(platform: &str) -> String {
+    if platform.contains("aarch64") || platform.contains("arm64") {
+        "aarch64".to_string()
+    } else if platform.contains("x86_64") || platform.contains("amd64") {
+        "x86_64".to_string()
+    } else if platform.contains("i386") || platform.contains("i686") {
+        "x86".to_string()
+    } else {
+        "unknown".to_string()
     }
+}
 
-    // In tests, allow overriding via environment variables
-    let arch = std::env::var("RV_TEST_ARCH").unwrap_or_else(|_| std::env::consts::ARCH.to_string());
-    let os = std::env::var("RV_TEST_OS").unwrap_or_else(|_| std::env::consts::OS.to_string());
-
-    Ok((arch, os))
+/// Extract OS from RUBY_PLATFORM string
+fn extract_os_from_platform(platform: &str) -> String {
+    if platform.contains("darwin") {
+        "darwin".to_string()
+    } else if platform.contains("linux") {
+        "linux".to_string()
+    } else if platform.contains("mingw") || platform.contains("mswin") {
+        "windows".to_string()
+    } else {
+        "unknown".to_string()
+    }
 }
 
 /// Normalize architecture names to match common conventions
@@ -522,42 +544,7 @@ fn extract_ruby_info_from_executable(ruby_path: &Utf8PathBuf) -> Option<String> 
         }
     }
 
-    // Fallback: try to extract from path if execution failed
-    extract_ruby_info_from_path(ruby_path)
-}
-
-/// Fallback method to extract Ruby information from the executable path
-/// This looks for patterns in the path like /path/to/ruby-3.1.4/bin/ruby
-fn extract_ruby_info_from_path(ruby_path: &Utf8Path) -> Option<String> {
-    // Look for Ruby installation directory in path
-    // e.g., /Users/user/.rubies/ruby-3.1.4/bin/ruby -> ruby-3.1.4
-
-    // Common Ruby installation patterns
-    let patterns = [
-        r"/(ruby-[\d.]+[^/]*)/bin/ruby",        // /path/ruby-3.1.4/bin/ruby
-        r"/(jruby-[\d.]+[^/]*)/bin/ruby",       // /path/jruby-9.4.0.0/bin/ruby
-        r"/(truffleruby-[\d.]+[^/]*)/bin/ruby", // /path/truffleruby-23.1.1/bin/ruby
-    ];
-
-    for pattern in &patterns {
-        if let Ok(re) = Regex::new(pattern)
-            && let Some(captures) = re.captures(ruby_path.as_str())
-            && let Some(matched) = captures.get(1)
-        {
-            return Some(matched.as_str().to_string());
-        }
-    }
-
-    if let Ok(re) = Regex::new(r"/([\d.]+[^/]*)/bin/ruby")
-        && let Some(captures) = re.captures(ruby_path.as_str())
-        && let Some(matched) = captures.get(1)
-    {
-        // If we find a version without an engine prefix, assume it's ruby
-        return Some(format!("ruby-{}", matched.as_str()));
-    }
-
-    // If no pattern matches, default to "ruby" (we know it's some Ruby)
-    Some("ruby".to_string())
+    None
 }
 
 #[cfg(test)]
@@ -565,47 +552,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_ruby_dir_name() {
-        assert_eq!(
-            parse_ruby_dir_name("ruby-3.1.4").unwrap(),
-            ("ruby".to_string(), "3.1.4".to_string())
-        );
-
-        assert_eq!(
-            parse_ruby_dir_name("3.1.4").unwrap(),
-            ("ruby".to_string(), "3.1.4".to_string())
-        );
-
-        assert_eq!(
-            parse_ruby_dir_name("jruby-9.4.0.0").unwrap(),
-            ("jruby".to_string(), "9.4.0.0".to_string())
-        );
-
-        assert!(parse_ruby_dir_name("invalid").is_err());
-
-        // Unknown implementations should be accepted now
-        assert_eq!(
-            parse_ruby_dir_name("unknown-1.0.0").unwrap(),
-            ("unknown".to_string(), "1.0.0".to_string())
-        );
-    }
-
-    #[test]
     fn test_parse_version() {
-        let version = parse_version("3.1.4").unwrap();
+        let version = VersionParts::from_str("3.1.4").unwrap();
         assert_eq!(version.major, 3);
         assert_eq!(version.minor, 1);
         assert_eq!(version.patch, 4);
         assert_eq!(version.pre, None);
 
-        let version = parse_version("9.4.0.0").unwrap();
+        let version = VersionParts::from_str("9.4.0.0").unwrap();
         assert_eq!(version.major, 9);
         assert_eq!(version.minor, 4);
         assert_eq!(version.patch, 0);
         assert_eq!(version.pre, Some("0".to_string()));
 
-        assert!(parse_version("1.2").is_err());
-        assert!(parse_version("invalid").is_err());
+        // Test 2-part version (now supported for mruby)
+        let version = VersionParts::from_str("1.2").unwrap();
+        assert_eq!(version.major, 1);
+        assert_eq!(version.minor, 2);
+        assert_eq!(version.patch, 0);
+        assert_eq!(version.pre, None);
+
+        assert!(VersionParts::from_str("1").is_err());
+        assert!(VersionParts::from_str("invalid").is_err());
     }
 
     #[test]
@@ -615,8 +583,7 @@ mod tests {
 
         let ruby1 = Ruby {
             key: "ruby-3.1.4-macos-aarch64".to_string(),
-            version: "3.1.4".to_string(),
-            version_parts: VersionParts {
+            version: VersionParts {
                 major: 3,
                 minor: 1,
                 patch: 4,
@@ -627,13 +594,12 @@ mod tests {
             engine: RubyEngine::Ruby,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
-            mtime: None,
+            gem_root: None,
         };
 
         let ruby2 = Ruby {
             key: "ruby-3.2.0-macos-aarch64".to_string(),
-            version: "3.2.0".to_string(),
-            version_parts: VersionParts {
+            version: VersionParts {
                 major: 3,
                 minor: 2,
                 patch: 0,
@@ -644,13 +610,12 @@ mod tests {
             engine: RubyEngine::Ruby,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
-            mtime: None,
+            gem_root: None,
         };
 
         let jruby = Ruby {
             key: "jruby-9.4.0.0-macos-aarch64".to_string(),
-            version: "9.4.0.0".to_string(),
-            version_parts: VersionParts {
+            version: VersionParts {
                 major: 9,
                 minor: 4,
                 patch: 0,
@@ -661,11 +626,11 @@ mod tests {
             engine: RubyEngine::JRuby,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
-            mtime: None,
+            gem_root: None,
         };
 
-        // Test version ordering within same implementation (higher versions first)
-        assert!(ruby2 < ruby1); // 3.2.0 comes before 3.1.4
+        // Test version ordering within same implementation (higher versions last)
+        assert!(ruby1 < ruby2); // 3.1.4 comes before 3.2.0
 
         // Test implementation priority: ruby comes before jruby
         assert!(ruby1 < jruby);
@@ -942,34 +907,6 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_ruby_info_from_path() {
-        // Test standard Ruby path
-        let ruby_path = Utf8PathBuf::from("/Users/user/.rubies/ruby-3.1.4/bin/ruby");
-        let result = extract_ruby_info_from_path(&ruby_path);
-        assert_eq!(result, Some("ruby-3.1.4".to_string()));
-
-        // Test no-engine Ruby path
-        let ruby_path = Utf8PathBuf::from("/Users/user/.rubies/3.1.4/bin/ruby");
-        let result = extract_ruby_info_from_path(&ruby_path);
-        assert_eq!(result, Some("ruby-3.1.4".to_string()));
-
-        // Test JRuby path
-        let jruby_path = Utf8PathBuf::from("/opt/rubies/jruby-9.4.0.0/bin/ruby");
-        let result = extract_ruby_info_from_path(&jruby_path);
-        assert_eq!(result, Some("jruby-9.4.0.0".to_string()));
-
-        // Test TruffleRuby path
-        let truffle_path = Utf8PathBuf::from("/home/user/.rubies/truffleruby-23.1.1/bin/ruby");
-        let result = extract_ruby_info_from_path(&truffle_path);
-        assert_eq!(result, Some("truffleruby-23.1.1".to_string()));
-
-        // Test system Ruby (no version pattern)
-        let system_path = Utf8PathBuf::from("/usr/bin/ruby");
-        let result = extract_ruby_info_from_path(&system_path);
-        assert_eq!(result, Some("ruby".to_string()));
-    }
-
-    #[test]
     fn test_find_executable_in_path() {
         // This test is simplified to avoid unsafe env::set_var operations
         // Instead, we test the PATH parsing logic with a known system path
@@ -1029,18 +966,17 @@ mod tests {
         let dummy_path = Utf8PathBuf::from("/tmp/test-ruby");
 
         let implementation_enum = RubyEngine::from_str(implementation).unwrap();
-        let version_parts = parse_version(version).unwrap();
+        let version = version.parse().unwrap();
 
         Ruby {
             key: format!("{implementation}-{version}-test-arch64"),
-            version: version.to_string(),
-            version_parts,
+            version,
             path: dummy_path,
             symlink: None,
             engine: implementation_enum,
             arch: "aarch64".to_string(),
             os: "test".to_string(),
-            mtime: None,
+            gem_root: None,
         }
     }
 }

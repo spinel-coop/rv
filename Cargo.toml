@@ -1,8 +1,12 @@
 [workspace]
 members = [
-  "crates/rv", "crates/rv-dirs",
+  "crates/rv",
+  "crates/rv-cache",
+  "crates/rv-dirs",
   "crates/rv-gem-package",
   "crates/rv-gem-specification-yaml",
-  "crates/rv-gem-types", "crates/rv-ruby", "crates/rv-version",
+  "crates/rv-gem-types",
+  "crates/rv-ruby",
+  "crates/rv-version",
 ]
 resolver = "2"
