@@ -12,6 +12,7 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberI
 pub mod commands;
 pub mod config;
 
+use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir};
 use crate::commands::ruby::install::install as ruby_install;
 use crate::commands::ruby::list::list as ruby_list;
 use crate::commands::ruby::pin::pin as ruby_pin;
@@ -92,6 +93,8 @@ impl Cli {
 enum Commands {
     #[command(about = "Manage Ruby versions and installations")]
     Ruby(RubyArgs),
+    #[command(about = "Manage rv's cache")]
+    Cache(CacheCommandArgs),
 }
 
 #[derive(Debug, Copy, Clone, clap::ValueEnum)]
@@ -218,6 +221,10 @@ async fn main() -> Result<()> {
                     version,
                     install_dir,
                 } => ruby_install(&config, install_dir, version).await?,
+            },
+            Commands::Cache(cache) => match cache.command {
+                CacheCommand::Dir => cache_dir(&config)?,
+                CacheCommand::Clean => cache_clean(&config)?,
             },
         },
     }
