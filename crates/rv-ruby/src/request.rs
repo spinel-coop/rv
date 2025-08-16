@@ -126,31 +126,31 @@ impl RubyRequest {
     pub fn find_match_in(self, rubies: &[Ruby]) -> Result<&Ruby, MatchError> {
         rubies
             .iter()
-            .find(|r| self.satisfied_by(&r.version).unwrap_or(false))
+            .find(|r| self.satisfied_by(&r.version))
             .ok_or(MatchError::NotFound(self.to_string()))
     }
 
-    pub fn satisfied_by(&self, version: &RubyVersion) -> Result<bool, RequestError> {
+    pub fn satisfied_by(&self, version: &RubyVersion) -> bool {
         if self.engine != version.engine {
-            return Ok(false);
+            return false;
         }
         if self.major.is_some() && self.major != version.major {
-            return Ok(false);
+            return false;
         }
         if self.minor.is_some() && self.minor != version.minor {
-            return Ok(false);
+            return false;
         }
         if self.patch.is_some() && self.patch != version.patch {
-            return Ok(false);
+            return false;
         }
         if self.tiny.is_some() && self.tiny != version.tiny {
-            return Ok(false);
+            return false;
         }
         if self.prerelease.is_some() && self.prerelease != version.prerelease {
-            return Ok(false);
+            return false;
         }
 
-        Ok(true)
+        true
     }
 }
 
