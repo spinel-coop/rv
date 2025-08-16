@@ -40,6 +40,9 @@ struct Cli {
     #[arg(long = "ruby-dir")]
     ruby_dir: Vec<Utf8PathBuf>,
 
+    #[arg(long = "project-dir")]
+    project_dir: Option<Utf8PathBuf>,
+
     /// Path to Gemfile
     #[arg(long, env = "BUNDLE_GEMFILE")]
     gemfile: Option<Utf8PathBuf>,
@@ -66,11 +69,15 @@ impl Cli {
         let root = if self.root_dir.is_some() {
             self.root_dir.clone().unwrap()
         } else {
-            Utf8PathBuf::from("/")
+            "/".into()
         };
 
         let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
-        let project_dir = Some(current_dir.clone());
+        let project_dir = if let Some(project_dir) = &self.project_dir {
+            Some(project_dir.clone())
+        } else {
+            config::find_project_dir(current_dir.clone(), root.clone())
+        };
         let ruby_dirs = if self.ruby_dir.is_empty() {
             config::default_ruby_dirs(&root)
         } else {

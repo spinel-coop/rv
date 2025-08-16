@@ -21,7 +21,11 @@ pub fn pin(config: &Config, version: Option<String>) -> Result<()> {
 }
 
 fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
-    let project_dir = config.get_project_dir()?;
+    let project_dir = config.project_dir.as_ref().ok_or_else(|| {
+        Error::ConfigError(config::Error::NoProjectDir {
+            current_dir: config.current_dir.clone(),
+        })
+    })?;
     let ruby_version_path = project_dir.join(".ruby-version");
     std::fs::write(ruby_version_path, format!("{version}\n"))?;
 

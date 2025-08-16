@@ -1,5 +1,5 @@
 use camino::{Utf8Path, Utf8PathBuf};
-use tracing::{info, instrument};
+use tracing::{debug, instrument};
 
 use rv_ruby::{Ruby, request::RubyRequest};
 
@@ -33,25 +33,18 @@ impl Config {
         self.discover_rubies()
     }
 
-    pub fn get_project_dir(&self) -> Result<&Utf8PathBuf> {
-        match self.project_dir {
-            None => Err(Error::NoProjectDir {
-                current_dir: self.current_dir.clone(),
-            }),
-            Some(ref dir) => Ok(dir),
-        }
-    }
-
     pub fn requested_ruby(&self) -> Result<RubyRequest> {
-        let project_dir = self.get_project_dir()?;
-        let rv_file = project_dir.join(".ruby-version");
-        let request = if rv_file.exists() {
-            Ok(std::fs::read_to_string(&rv_file)?.into())
+        if let Some(project_dir) = &self.project_dir {
+            let rv_file = project_dir.join(".ruby-version");
+            
+            if rv_file.exists() {
+                Ok(std::fs::read_to_string(&rv_file)?.into())
+            } else {
+                Ok(RubyRequest::default())
+            }
         } else {
             Ok(RubyRequest::default())
-        };
-        info!("Requested Ruby: {:?}", request);
-        request
+        }
     }
 }
 
@@ -74,4 +67,18 @@ pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
         }
     })
     .collect()
+}
+pub fn find_project_dir(current_dir: Utf8PathBuf, root: Utf8PathBuf) -> Option<Utf8PathBuf> {
+    debug!("Searching for project directory in {}", current_dir);
+    let mut project_dir = current_dir.clone();
+    while project_dir != root {
+        let ruby_version = project_dir.join(".ruby-version");
+        if ruby_version.exists() {
+            debug!("Found project directory {}", project_dir);
+            return Some(project_dir);
+        }
+        project_dir = project_dir.parent().unwrap_or_else(|| &root).into();
+    }
+    debug!("No project directory found in parents of {}", current_dir);
+    None
 }
