@@ -11,7 +11,7 @@ pub fn init() -> Result<()> {
         concat!(
             "autoload -U add-zsh-hook\n",
             "_rv_autoload_hook () {{\n",
-            "    eval $({} env)\n",
+            "    eval $({} shell env)\n",
             "}}\n",
             "add-zsh-hook chpwd _rv_autoload_hook\n",
             "_rv_autoload_hook\n",
