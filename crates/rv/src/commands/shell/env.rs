@@ -13,7 +13,6 @@ pub enum Error {
 type Result<T> = miette::Result<T, Error>;
 
 pub fn env(config: &config::Config) -> Result<()> {
-    let ruby = config.rubies().first().cloned();
     // 1. Remove $RUBY_ROOT/bin from PATH
     // 2. Remove $GEM_ROOT/bin from PATH
     // 3. Remove $GEM_HOME/bin from PATH
@@ -32,7 +31,7 @@ pub fn env(config: &config::Config) -> Result<()> {
     // 	export PATH="$GEM_HOME/bin:$PATH"
     //  export GEM_ROOT={ruby.gem_root}
 
-    let ruby = config.rubies()?.first().cloned();
+    let ruby = config.rubies().first().cloned();
     if let Some(ruby) = ruby {
         print!(
             concat!(

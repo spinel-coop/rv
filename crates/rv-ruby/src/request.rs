@@ -2,11 +2,11 @@ use rv_cache::{CacheKey, CacheKeyHasher};
 use std::{fmt::Display, str::FromStr};
 
 use crate::{Ruby, engine::RubyEngine, version::RubyVersion};
-use serde::{Deserialize, Serialize};
+use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 type VersionPart = u32;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay)]
 pub struct RubyRequest {
     pub engine: RubyEngine,
     pub major: Option<VersionPart>,
