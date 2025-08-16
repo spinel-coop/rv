@@ -13,7 +13,6 @@ pub enum Error {
 type Result<T> = miette::Result<T, Error>;
 
 pub fn env(config: &config::Config) -> Result<()> {
-    let request = config.requested_ruby()?;
     // Remove $RUBY_ROOT/bin from PATH
     // Remove $GEM_ROOT/bin from PATH
     // Remove $GEM_HOME/bin from PATH

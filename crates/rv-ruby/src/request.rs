@@ -47,7 +47,42 @@ impl Default for RubyRequest {
 }
 
 impl RubyRequest {
-    pub fn parse(input: &str) -> Result<Self, RequestError> {
+    pub fn find_match_in(self, rubies: &[Ruby]) -> Result<&Ruby, MatchError> {
+        rubies
+            .iter()
+            .find(|r| self.satisfied_by(r))
+            .ok_or(MatchError::NotFound(self.to_string()))
+    }
+
+    pub fn satisfied_by(&self, ruby: &Ruby) -> bool {
+        let version = &ruby.version;
+
+        if self.engine != version.engine {
+            return false;
+        }
+        if self.major.is_some() && self.major != version.major {
+            return false;
+        }
+        if self.minor.is_some() && self.minor != version.minor {
+            return false;
+        }
+        if self.patch.is_some() && self.patch != version.patch {
+            return false;
+        }
+        if self.tiny.is_some() && self.tiny != version.tiny {
+            return false;
+        }
+        if self.prerelease.is_some() && self.prerelease != version.prerelease {
+            return false;
+        }
+
+        true
+    }
+}
+
+impl FromStr for RubyRequest {
+    type Err = RequestError;
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
         let input = input.trim();
         let first_char = input.chars().next().ok_or(RequestError::EmptyInput)?;
         let (engine, version) = if first_char.is_alphabetic() {
@@ -136,50 +171,17 @@ impl RubyRequest {
             prerelease,
         })
     }
-
-    pub fn find_match_in(self, rubies: &[Ruby]) -> Result<&Ruby, MatchError> {
-        rubies
-            .iter()
-            .find(|r| self.satisfied_by(r))
-            .ok_or(MatchError::NotFound(self.to_string()))
-    }
-
-    pub fn satisfied_by(&self, ruby: &Ruby) -> bool {
-        let version = &ruby.version;
-
-        if self.engine != version.engine {
-            return false;
-        }
-        if self.major.is_some() && self.major != version.major {
-            return false;
-        }
-        if self.minor.is_some() && self.minor != version.minor {
-            return false;
-        }
-        if self.patch.is_some() && self.patch != version.patch {
-            return false;
-        }
-        if self.tiny.is_some() && self.tiny != version.tiny {
-            return false;
-        }
-        if self.prerelease.is_some() && self.prerelease != version.prerelease {
-            return false;
-        }
-
-        true
-    }
-}
-
-impl FromStr for RubyRequest {
-    type Err = RequestError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::parse(s)
-    }
 }
 
 impl From<String> for RubyRequest {
     fn from(val: String) -> Self {
         Self::from_str(&val).expect("Failed to parse string: {val}")
+    }
+}
+
+impl From<&str> for RubyRequest {
+    fn from(val: &str) -> Self {
+        Self::from_str(val).expect("Failed to parse string: {val}")
     }
 }
 
@@ -249,20 +251,20 @@ impl CacheKey for RubyRequest {
 
 #[test]
 fn test_empty_version() {
-    let request = RubyRequest::parse("").expect_err("Expected error for empty version");
+    let request = RubyRequest::from_str("").expect_err("Expected error for empty version");
     assert_eq!(request, RequestError::EmptyInput);
 }
 
 #[test]
 fn test_invalid_version_format() {
-    let request =
-        RubyRequest::parse("ruby-invalid").expect_err("Expected error for invalid version format");
+    let request = RubyRequest::from_str("ruby-invalid")
+        .expect_err("Expected error for invalid version format");
     assert_eq!(request, RequestError::InvalidVersion("ruby-invalid".into()));
 }
 
 #[test]
 fn test_adding_ruby_engine() {
-    let request = RubyRequest::parse("3.0.0").expect("Failed to parse version");
+    let request = RubyRequest::from_str("3.0.0").expect("Failed to parse version");
     assert_eq!(request.engine, "ruby".into());
     assert_eq!(request.major, Some(3));
     assert_eq!(request.minor, Some(0));
@@ -273,7 +275,7 @@ fn test_adding_ruby_engine() {
 
 #[test]
 fn test_major_only() {
-    let request = RubyRequest::parse("3").expect("Failed to parse version");
+    let request = RubyRequest::from_str("3").expect("Failed to parse version");
     assert_eq!(request.engine, "ruby".into());
     assert_eq!(request.major, Some(3));
     assert_eq!(request.minor, None);
@@ -365,7 +367,7 @@ fn test_parsing_supported_ruby_versions() {
     ];
 
     for version in versions {
-        let request = RubyRequest::parse(version).expect("Failed to parse version");
+        let request = RubyRequest::from_str(version).expect("Failed to parse version");
         let output = request.to_string();
         assert_eq!(
             output, version,
@@ -388,7 +390,7 @@ fn test_parsing_partial_requests() {
         "jruby",
     ];
     for version in versions {
-        let request = RubyRequest::parse(version).expect("Failed to parse version");
+        let request = RubyRequest::from_str(version).expect("Failed to parse version");
         let output = request.to_string();
         assert_eq!(
             output, version,
@@ -399,7 +401,7 @@ fn test_parsing_partial_requests() {
 
 #[test]
 fn test_parsing_engine_without_version() {
-    let request = RubyRequest::parse("jruby-").unwrap();
+    let request = RubyRequest::from_str("jruby-").unwrap();
     assert_eq!(request.engine, "jruby".into());
     assert_eq!(request.major, None);
     assert_eq!(request.minor, None);
@@ -424,7 +426,7 @@ fn test_parsing_ruby_version_files() {
         "truffleruby+graalvm-24.1.0\n",
     ];
     for version in versions {
-        let request = RubyRequest::parse(version).expect("Failed to parse version");
+        let request = RubyRequest::from_str(version).expect("Failed to parse version");
         let output = request.to_string();
         assert_eq!(
             output,
@@ -438,7 +440,7 @@ fn test_parsing_ruby_version_files() {
 fn test_parsing_ruby_version_files_without_engine() {
     let versions = ["3\n", "3.4\n", "3.4.5\n", "3.4.5-rc1\n", "3.4-dev\n"];
     for version in versions {
-        let request = RubyRequest::parse(version).expect("Failed to parse version");
+        let request = RubyRequest::from_str(version).expect("Failed to parse version");
         let output = request.to_string();
         assert_eq!(
             output,

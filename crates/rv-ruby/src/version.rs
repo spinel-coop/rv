@@ -4,6 +4,8 @@ pub type RubyVersion = RubyRequest;
 
 #[test]
 fn test_parsing_supported_ruby_versions() {
+    use std::str::FromStr as _;
+
     let versions = [
         "ruby-3.2-dev",
         "ruby-3.2.0",
@@ -85,7 +87,7 @@ fn test_parsing_supported_ruby_versions() {
     ];
 
     for version in versions {
-        let request = RubyVersion::parse(version).expect("Failed to parse version");
+        let request = RubyVersion::from_str(version).expect("Failed to parse version");
         let output = request.to_string();
         assert_eq!(
             output, version,
