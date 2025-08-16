@@ -140,7 +140,7 @@ impl Ruby {
     }
 
     pub fn is_active(&self, active_version: &str) -> bool {
-        RubyRequest::parse(active_version).is_ok_and(|request| request.satisfied_by(&self.version))
+        RubyRequest::parse(active_version).is_ok_and(|request| request.satisfied_by(&self))
     }
 }
 

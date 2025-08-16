@@ -1,7 +1,7 @@
 use rv_cache::{CacheKey, CacheKeyHasher};
 use std::{fmt::Display, str::FromStr};
 
-use crate::{Ruby, engine::RubyEngine, version::RubyVersion};
+use crate::{Ruby, engine::RubyEngine};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 type VersionPart = u32;
@@ -34,6 +34,17 @@ pub enum MatchError {
 }
 
 impl RubyRequest {
+    pub fn default() -> Self {
+        Self {
+            engine: RubyEngine::Ruby,
+            major: None,
+            minor: None,
+            patch: None,
+            tiny: None,
+            prerelease: None,
+        }
+    }
+
     pub fn parse(input: &str) -> Result<Self, RequestError> {
         let first_char = input.chars().next().ok_or(RequestError::EmptyInput)?;
         let (engine, version) = if first_char.is_alphabetic() {
@@ -126,11 +137,13 @@ impl RubyRequest {
     pub fn find_match_in(self, rubies: &[Ruby]) -> Result<&Ruby, MatchError> {
         rubies
             .iter()
-            .find(|r| self.satisfied_by(&r.version))
+            .find(|r| self.satisfied_by(&r))
             .ok_or(MatchError::NotFound(self.to_string()))
     }
 
-    pub fn satisfied_by(&self, version: &RubyVersion) -> bool {
+    pub fn satisfied_by(&self, ruby: &Ruby) -> bool {
+        let version = &ruby.version;
+
         if self.engine != version.engine {
             return false;
         }
