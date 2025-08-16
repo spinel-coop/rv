@@ -20,7 +20,7 @@ pub struct RubyRequest {
 pub enum RequestError {
     #[error("Empty input")]
     EmptyInput,
-    #[error("Could not pars version: {0}")]
+    #[error("Could not parse version: {0}")]
     InvalidVersion(String),
     #[error("Could not parse version {0}, no more than 4 numbers are allowed")]
     TooManySegments(String),
@@ -114,7 +114,7 @@ impl RubyRequest {
         };
 
         Ok(RubyRequest {
-            engine: RubyEngine::from_str(engine).unwrap_or(RubyEngine::Unknown(engine.to_string())),
+            engine: engine.into(),
             major,
             minor,
             patch,
@@ -163,7 +163,7 @@ impl FromStr for RubyRequest {
 
 impl From<String> for RubyRequest {
     fn from(val: String) -> Self {
-        RubyRequest::parse(&val).expect("Failed to parse RubyRequest from String")
+        Self::from_str(&val).expect("Failed to parse string: {val}")
     }
 }
 
