@@ -31,20 +31,15 @@ pub fn env(config: &config::Config) -> Result<()> {
     // 	export PATH="$GEM_HOME/bin:$PATH"
     //  export GEM_ROOT={ruby.gem_root}
 
-    let ruby = config.rubies().first().cloned();
+    let request = config.requested_ruby()?;
+    let rubies = config.rubies();
+    let ruby = rubies.iter().find(|ruby| request.satisfied_by(ruby));
     if let Some(ruby) = ruby {
-        print!(
-            concat!(
-                "export PATH={}:$PATH\n",
-                "export RUBY_ROOT={}\n",
-                "export RUBY_ENGINE={}\n",
-                "export RUBY_VERSION={}\n",
-            ),
-            ruby.bin_path(),
-            ruby.path,
-            ruby.version.engine,
-            ruby.version,
-        );
+        let path = std::env::var("PATH").unwrap_or_default();
+        println!("export PATH={}:{}", ruby.bin_path(), path);
+        println!("export RUBY_ROOT={}", ruby.path);
+        println!("export RUBY_ENGINE={}", ruby.version.engine);
+        println!("export RUBY_VERSION={}", ruby.version);
         Ok(())
     } else {
         Err(Error::NoRubyFound)

@@ -1,7 +1,7 @@
 use camino::{Utf8Path, Utf8PathBuf};
-use tracing::instrument;
+use tracing::{info, instrument};
 
-use rv_ruby::Ruby;
+use rv_ruby::{Ruby, request::RubyRequest};
 
 mod ruby_cache;
 
@@ -11,6 +11,8 @@ pub enum Error {
     NoProjectDir { current_dir: Utf8PathBuf },
     #[error("Ruby cache miss or invalid cache for {}", ruby_path)]
     RubyCacheMiss { ruby_path: Utf8PathBuf },
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -38,6 +40,18 @@ impl Config {
             }),
             Some(ref dir) => Ok(dir),
         }
+    }
+
+    pub fn requested_ruby(&self) -> Result<RubyRequest> {
+        let project_dir = self.get_project_dir()?;
+        let rv_file = project_dir.join(".ruby-version");
+        let request = if rv_file.exists() {
+            Ok(std::fs::read_to_string(&rv_file)?.into())
+        } else {
+            Ok(RubyRequest::default())
+        };
+        info!("Requested Ruby: {:?}", request);
+        request
     }
 }
 
