@@ -33,9 +33,9 @@ pub enum MatchError {
     NotFound(String),
 }
 
-impl RubyRequest {
-    pub fn default() -> Self {
-        Self {
+impl Default for RubyRequest {
+    fn default() -> Self {
+        RubyRequest {
             engine: RubyEngine::Ruby,
             major: None,
             minor: None,
@@ -44,7 +44,9 @@ impl RubyRequest {
             prerelease: None,
         }
     }
+}
 
+impl RubyRequest {
     pub fn parse(input: &str) -> Result<Self, RequestError> {
         let input = input.trim();
         let first_char = input.chars().next().ok_or(RequestError::EmptyInput)?;
@@ -138,7 +140,7 @@ impl RubyRequest {
     pub fn find_match_in(self, rubies: &[Ruby]) -> Result<&Ruby, MatchError> {
         rubies
             .iter()
-            .find(|r| self.satisfied_by(&r))
+            .find(|r| self.satisfied_by(r))
             .ok_or(MatchError::NotFound(self.to_string()))
     }
 
@@ -214,14 +216,14 @@ impl PartialOrd for RubyRequest {
 
 impl Ord for RubyRequest {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        ((
+        (
             &self.engine,
             &self.major,
             &self.minor,
             &self.patch,
             &self.tiny,
             &self.prerelease,
-        ))
+        )
             .cmp(&(
                 &other.engine,
                 &other.major,
