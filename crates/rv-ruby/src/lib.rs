@@ -6,7 +6,6 @@ use camino::{Utf8Path, Utf8PathBuf};
 use rv_cache::{CacheKey, CacheKeyHasher};
 use serde::{Deserialize, Serialize};
 use std::env;
-use std::fmt::{Display, Write};
 use std::process::{Command, ExitStatus};
 use std::str::FromStr;
 use tracing::instrument;
@@ -39,70 +38,18 @@ pub struct Ruby {
     pub gem_root: Option<Utf8PathBuf>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, PartialOrd, Ord)]
-pub struct VersionParts {
-    pub major: u32,
-    pub minor: u32,
-    pub patch: u32,
-    pub pre: Option<String>,
-}
-
-impl Display for VersionParts {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{}.{}.{}", self.major, self.minor, self.patch))?;
-        if let Some(pre) = self.pre.as_ref() {
-            f.write_char('.')?;
-            f.write_str(pre)?;
-        }
-        Ok(())
-    }
-}
-
-impl FromStr for VersionParts {
-    type Err = RubyError;
-
-    fn from_str(version: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<&str> = version.split('.').collect();
-        if parts.len() < 2 {
-            return Err(RubyError::InvalidVersion(version.to_string()));
-        }
-
-        let major = parts[0]
-            .parse()
-            .map_err(|_| RubyError::InvalidVersion(version.to_string()))?;
-        let minor = parts[1]
-            .parse()
-            .map_err(|_| RubyError::InvalidVersion(version.to_string()))?;
-
-        // Handle cases where patch version is missing (like mruby "3.3")
-        let patch = if parts.len() >= 3 {
-            parts[2]
-                .parse()
-                .map_err(|_| RubyError::InvalidVersion(version.to_string()))?
-        } else {
-            0
-        };
-
-        // Handle additional version parts (like JRuby's 4th component)
-        let pre = if parts.len() > 3 {
-            Some(parts[3..].join("."))
-        } else {
-            None
-        };
-
-        Ok(VersionParts {
-            major,
-            minor,
-            patch,
-            pre,
-        })
-    }
-}
-
 impl Ruby {
     /// Create a new Ruby instance from a directory path
     #[instrument(skip(dir), fields(dir = %dir.as_str()))]
     pub fn from_dir(dir: Utf8PathBuf) -> Result<Self, RubyError> {
+        let dir_name = dir.file_name().unwrap_or("");
+
+        if dir_name.is_empty() {
+            return Err(RubyError::InvalidPath {
+                path: dir.to_string(),
+            });
+        }
+
         // Check for Ruby executable
         let ruby_bin = dir.join("bin").join("ruby");
         if !ruby_bin.exists() {
@@ -140,7 +87,7 @@ impl Ruby {
     }
 
     pub fn is_active(&self, active_version: &str) -> bool {
-        RubyRequest::parse(active_version).is_ok_and(|request| request.satisfied_by(self))
+        RubyRequest::from_str(active_version).is_ok_and(|request| request.satisfied_by(self))
     }
 }
 
@@ -501,32 +448,9 @@ fn extract_ruby_info_from_executable(ruby_path: &Utf8PathBuf) -> Option<String> 
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
-
-    #[test]
-    fn test_parse_version() {
-        let version = VersionParts::from_str("3.1.4").unwrap();
-        assert_eq!(version.major, 3);
-        assert_eq!(version.minor, 1);
-        assert_eq!(version.patch, 4);
-        assert_eq!(version.pre, None);
-
-        let version = VersionParts::from_str("9.4.0.0").unwrap();
-        assert_eq!(version.major, 9);
-        assert_eq!(version.minor, 4);
-        assert_eq!(version.patch, 0);
-        assert_eq!(version.pre, Some("0".to_string()));
-
-        // Test 2-part version (now supported for mruby)
-        let version = VersionParts::from_str("1.2").unwrap();
-        assert_eq!(version.major, 1);
-        assert_eq!(version.minor, 2);
-        assert_eq!(version.patch, 0);
-        assert_eq!(version.pre, None);
-
-        assert!(VersionParts::from_str("1").is_err());
-        assert!(VersionParts::from_str("invalid").is_err());
-    }
 
     #[test]
     fn test_ruby_ordering() {
@@ -535,7 +459,7 @@ mod tests {
 
         let ruby1 = Ruby {
             key: "ruby-3.1.4-macos-aarch64".to_string(),
-            version: RubyVersion::parse("3.1.4").unwrap(),
+            version: RubyVersion::from_str("3.1.4").unwrap(),
             path: dummy_path.clone(),
             symlink: None,
             arch: "aarch64".to_string(),
@@ -545,7 +469,7 @@ mod tests {
 
         let ruby2 = Ruby {
             key: "ruby-3.2.0-macos-aarch64".to_string(),
-            version: RubyVersion::parse("ruby-3.2.0").unwrap(),
+            version: RubyVersion::from_str("ruby-3.2.0").unwrap(),
             path: dummy_path.clone(),
             symlink: None,
             arch: "aarch64".to_string(),
@@ -555,7 +479,7 @@ mod tests {
 
         let jruby = Ruby {
             key: "jruby-9.4.0.0-macos-aarch64".to_string(),
-            version: RubyVersion::parse("jruby-9.4.0.0").unwrap(),
+            version: RubyVersion::from_str("jruby-9.4.0.0").unwrap(),
             path: dummy_path,
             symlink: None,
             arch: "aarch64".to_string(),
@@ -851,8 +775,7 @@ mod tests {
 
     fn create_test_ruby(version: &str) -> Ruby {
         let dummy_path = Utf8PathBuf::from("/tmp/test-ruby");
-
-        let version = version.parse().unwrap();
+        let version = version.into();
 
         Ruby {
             key: format!("{}-test-arch64", &version),
