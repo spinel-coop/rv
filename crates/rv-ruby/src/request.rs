@@ -46,6 +46,7 @@ impl RubyRequest {
     }
 
     pub fn parse(input: &str) -> Result<Self, RequestError> {
+        let input = input.trim();
         let first_char = input.chars().next().ok_or(RequestError::EmptyInput)?;
         let (engine, version) = if first_char.is_alphabetic() {
             input.split_once('-').unwrap_or((input, ""))
@@ -403,4 +404,44 @@ fn test_parsing_engine_without_version() {
     assert_eq!(request.patch, None);
     assert_eq!(request.tiny, None);
     assert_eq!(request.prerelease, None);
+}
+
+#[test]
+fn test_parsing_ruby_version_files() {
+    let versions = [
+        "ruby\n",
+        "ruby-3\n",
+        "ruby-3.2-preview1\n",
+        "ruby-3-rc\n",
+        "jruby-9.4\n",
+        "truffleruby-24.1\n",
+        "mruby-3.2\n",
+        "artichoke\n",
+        "jruby-9\n",
+        "jruby\n",
+        "truffleruby+graalvm-24.1.0\n",
+    ];
+    for version in versions {
+        let request = RubyRequest::parse(version).expect("Failed to parse version");
+        let output = request.to_string();
+        assert_eq!(
+            output,
+            version.trim(),
+            "Parsed output does not match input for {version}"
+        );
+    }
+}
+
+#[test]
+fn test_parsing_ruby_version_files_without_engine() {
+    let versions = ["3\n", "3.4\n", "3.4.5\n", "3.4.5-rc1\n", "3.4-dev\n"];
+    for version in versions {
+        let request = RubyRequest::parse(version).expect("Failed to parse version");
+        let output = request.to_string();
+        assert_eq!(
+            output,
+            format!("ruby-{}", version.trim()),
+            "Parsed output does not match input for {version}"
+        );
+    }
 }
