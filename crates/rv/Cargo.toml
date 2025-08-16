@@ -4,19 +4,19 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-clap = { version = "4.5.41", features = ["derive", "env"] }
-clap_derive = "4.5.41"
-indicatif = "0.18.0"
-miette = { version = "7.6.0", features = ["fancy"] }
-owo-colors = "4.1.0"
-rayon = "1.10.0"
-regex = "1.11.1"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde_with = "3.11"
-shellexpand = "3.1"
-thiserror = "2.0"
-tokio = { version = "1.46.1", features = [
+clap = { workspace = true, features = ["derive", "env"] }
+clap_derive = { workspace = true }
+indicatif = { workspace = true }
+miette = { workspace = true, features = ["fancy"] }
+owo-colors = { workspace = true }
+rayon = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde_with = { workspace = true }
+shellexpand = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = [
   "tracing",
   "macros",
   "rt-multi-thread",
@@ -24,29 +24,29 @@ tokio = { version = "1.46.1", features = [
   "process",
   "fs",
 ] }
-tracing = "0.1.41"
-etcetera = "0.8"
-tracing-indicatif = "0.3.11"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-anstream = "0.6.19"
-clap-verbosity-flag = { version = "3.0.3", features = ["tracing"] }
-reqwest = { version = "0.12.22", features = ["stream"] }
-flate2 = "1.1.2"
-tar = "0.4.44"
-rv-cache = { version = "0.1.0", path = "../rv-cache", features = ["clap"] }
-rv-ruby = { version = "0.1.0", path = "../rv-ruby" }
-rv-dirs = { version = "0.1.0", path = "../rv-dirs" }
-camino = "1.1.11"
-futures-util = "0.3.31"
-current_platform = "0.2.0"
-sys-info = "0.9.1"
-fs-err = "2.11.0"
-bytesize = "2.0.1"
+tracing = { workspace = true }
+etcetera = { workspace = true }
+tracing-indicatif = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+anstream = { workspace = true }
+clap-verbosity-flag = { workspace = true, features = ["tracing"] }
+reqwest = { workspace = true, features = ["stream"] }
+flate2 = { workspace = true }
+tar = { workspace = true }
+rv-cache = { workspace = true, features = ["clap"] }
+rv-ruby = { workspace = true }
+rv-dirs = { workspace = true }
+camino = { workspace = true }
+futures-util = { workspace = true }
+current_platform = { workspace = true }
+sys-info = { workspace = true }
+fs-err = { workspace = true }
+bytesize = { workspace = true }
 
 [dev-dependencies]
-insta = "1.40"
-tracing-test = "0.2"
-tempfile = "3.0"
-assert_fs = "1.0"
-indoc = "2.0"
-fs-err = "2.0"
+insta = { workspace = true }
+tracing-test = { workspace = true }
+tempfile = { workspace = true }
+assert_fs = { workspace = true }
+indoc = { workspace = true }
+fs-err = { workspace = true }
