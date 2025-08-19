@@ -78,6 +78,32 @@ impl RubyRequest {
 
         true
     }
+
+    pub fn number(&self) -> String {
+        let mut version = String::new();
+        if let Some(major) = self.major {
+            version.push_str(&major.to_string());
+        }
+        if let Some(minor) = self.minor {
+            version.push('.');
+            version.push_str(&minor.to_string());
+        }
+        if let Some(patch) = self.patch {
+            version.push('.');
+            version.push_str(&patch.to_string());
+        }
+        if let Some(tiny) = self.tiny {
+            version.push('.');
+            version.push_str(&tiny.to_string());
+        }
+        if let Some(ref prerelease) = self.prerelease {
+            if self.major.is_some() {
+                version.push('-');
+            }
+            version.push_str(prerelease);
+        }
+        version
+    }
 }
 
 impl FromStr for RubyRequest {

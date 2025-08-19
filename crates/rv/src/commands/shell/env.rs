@@ -1,6 +1,6 @@
 use std::{
     borrow::Cow,
-    env::{join_paths, split_paths},
+    env::{JoinPathsError, join_paths, split_paths},
 };
 
 use crate::config;
@@ -16,7 +16,7 @@ pub enum Error {
     #[error(transparent)]
     EnvError(#[from] std::env::VarError),
     #[error(transparent)]
-    JoinPathsError(#[from] std::env::JoinPathsError),
+    JoinPathsError(#[from] JoinPathsError),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -31,25 +31,40 @@ pub fn env(config: &config::Config) -> Result<()> {
     ]
     .map(|p| std::path::Path::new(p).join("bin"));
     let old_gem_paths = std::env::var("GEM_PATH").map(|p| split_paths(&p).collect::<Vec<_>>())?;
+
+    // Remove old Ruby and Gem paths from the PATH
     paths.retain(|p| !old_ruby_paths.contains(p) && !old_gem_paths.contains(p));
 
     let request = config.requested_ruby()?;
     let rubies = config.rubies();
     let ruby = rubies.iter().find(|ruby| request.satisfied_by(ruby));
+    let mut gem_paths = vec![];
 
     println!("unset RUBY_ROOT RUBY_ENGINE RUBY_VERSION RUBYOPT GEM_ROOT GEM_HOME GEM_PATH");
 
     if let Some(ruby) = ruby {
         paths.insert(0, ruby.bin_path().into());
-        let path = join_paths(paths)?;
-
-        println!("export PATH={}", escape(&path.to_string_lossy()));
         println!("export RUBY_ROOT={}", escape(&ruby.path));
         println!("export RUBY_ENGINE={}", escape(&ruby.version.engine.name()));
         println!("export RUBY_VERSION={}", escape(&ruby.version.to_string()));
-        // println!("export GEM_HOME={}", escape(&ruby.gem_home()));
-        // println!("export GEM_ROOT={}", escape(&ruby.gem_root()));
-        // println!("export GEM_PATH={}", escape(&join_paths(ruby.gem_paths())));
+        if let Some(gem_home) = ruby.gem_home() {
+            paths.insert(0, gem_home.join("bin").into());
+            gem_paths.insert(0, gem_home.join("bin"));
+            println!("export GEM_HOME={}", escape(&gem_home));
+        }
+        if let Some(gem_root) = ruby.gem_root() {
+            paths.insert(0, gem_root.join("bin").into());
+            gem_paths.insert(0, gem_root.join("bin"));
+            println!("export GEM_ROOT={}", escape(&gem_root));
+        }
+        let gem_path = join_paths(gem_paths)?;
+        if let Some(gem_path) = gem_path.to_str() {
+            println!("export GEM_PATH={}", escape(&gem_path));
+        }
+        let path = join_paths(paths)?;
+        if let Some(path) = path.to_str() {
+            println!("export PATH={}", escape(&path));
+        }
     }
 
     println!("hash -r");
