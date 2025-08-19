@@ -25,7 +25,7 @@ pub fn env(config: &config::Config) -> Result<()> {
     let rubies = config.rubies();
     let ruby = rubies.iter().find(|ruby| request.satisfied_by(ruby));
     if let Some(ruby) = ruby {
-        println!("export PATH={}:\"$PATH\"", escape(&ruby.bin_path()));
+        println!("export PATH={}:$PATH", escape(&ruby.bin_path()));
         println!("export RUBY_ROOT={}", escape(&ruby.path));
         println!("export RUBY_ENGINE={}", escape(&ruby.version.engine.name()));
         println!("export RUBY_VERSION={}", escape(&ruby.version.to_string()));
