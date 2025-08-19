@@ -1,4 +1,7 @@
-use std::borrow::Cow;
+use std::{
+    borrow::Cow,
+    env::{join_paths, split_paths},
+};
 
 use crate::config;
 
@@ -10,31 +13,45 @@ pub enum Error {
     ConfigError(#[from] crate::config::Error),
     #[error("No Ruby installations found in configuration.")]
     NoRubyFound,
+    #[error(transparent)]
+    EnvError(#[from] std::env::VarError),
+    #[error(transparent)]
+    JoinPathsError(#[from] std::env::JoinPathsError),
 }
 
 type Result<T> = miette::Result<T, Error>;
 
 pub fn env(config: &config::Config) -> Result<()> {
-    // Remove $RUBY_ROOT/bin from PATH
-    // Remove $GEM_ROOT/bin from PATH
-    // Remove $GEM_HOME/bin from PATH
-    // Remove : from start and end of PATH
-    println!("unset RUBY_ROOT RUBY_ENGINE RUBY_VERSION RUBYOPT GEM_ROOT GEM_HOME GEM_PATH");
+    let mut paths = std::env::var("PATH").map(|p| split_paths(&p).collect::<Vec<_>>())?;
+
+    let old_ruby_paths = [
+        std::env::var("RUBY_ROOT")?.as_str(),
+        std::env::var("GEM_ROOT")?.as_str(),
+        std::env::var("GEM_HOME")?.as_str(),
+    ]
+    .map(|p| std::path::Path::new(p).join("bin"));
+    let old_gem_paths = std::env::var("GEM_PATH").map(|p| split_paths(&p).collect::<Vec<_>>())?;
+    paths.retain(|p| !old_ruby_paths.contains(p) && !old_gem_paths.contains(p));
 
     let request = config.requested_ruby()?;
     let rubies = config.rubies();
     let ruby = rubies.iter().find(|ruby| request.satisfied_by(ruby));
+
+    println!("unset RUBY_ROOT RUBY_ENGINE RUBY_VERSION RUBYOPT GEM_ROOT GEM_HOME GEM_PATH");
+
     if let Some(ruby) = ruby {
-        println!("export PATH={}:$PATH", escape(&ruby.bin_path()));
+        paths.insert(0, ruby.bin_path().into());
+        let path = join_paths(paths)?;
+
+        println!("export PATH={}", escape(&path.to_string_lossy()));
         println!("export RUBY_ROOT={}", escape(&ruby.path));
         println!("export RUBY_ENGINE={}", escape(&ruby.version.engine.name()));
         println!("export RUBY_VERSION={}", escape(&ruby.version.to_string()));
-        // export GEM_HOME="$HOME/.gem/$RUBY_ENGINE/$RUBY_VERSION"
-        // export PATH="$GEM_HOME/bin:$PATH"
-        // export GEM_PATH="$GEM_HOME${GEM_ROOT:+:$GEM_ROOT}${GEM_PATH:+:$GEM_PATH}"
-        // export GEM_ROOT={ruby.gem_root}
-        // export PATH="${GEM_ROOT:+$GEM_ROOT/bin:}$PATH"
+        // println!("export GEM_HOME={}", escape(&ruby.gem_home()));
+        // println!("export GEM_ROOT={}", escape(&ruby.gem_root()));
+        // println!("export GEM_PATH={}", escape(&join_paths(ruby.gem_paths())));
     }
+
     println!("hash -r");
     Ok(())
 }
