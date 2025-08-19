@@ -5,7 +5,7 @@ pub mod version;
 use camino::{Utf8Path, Utf8PathBuf};
 use rv_cache::{CacheKey, CacheKeyHasher};
 use serde::{Deserialize, Serialize};
-use std::env;
+use std::env::{self, home_dir};
 use std::process::{Command, ExitStatus};
 use std::str::FromStr;
 use tracing::instrument;
@@ -88,6 +88,24 @@ impl Ruby {
 
     pub fn is_active(&self, active_version: &str) -> bool {
         RubyRequest::from_str(active_version).is_ok_and(|request| request.satisfied_by(self))
+    }
+
+    pub fn gem_root(&self) -> Option<Utf8PathBuf> {
+        self.gem_root.clone()
+    }
+
+    pub fn gem_home(&self) -> Option<Utf8PathBuf> {
+        if let Some(home) = home_dir() {
+            Some(
+                home.join(".gem")
+                    .join(self.version.engine.name())
+                    .join(self.version.number())
+                    .to_str()
+                    .map(Utf8PathBuf::from)?,
+            )
+        } else {
+            None
+        }
     }
 }
 
