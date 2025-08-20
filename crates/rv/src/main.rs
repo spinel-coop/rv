@@ -13,6 +13,7 @@ pub mod commands;
 pub mod config;
 
 use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir};
+use crate::commands::ruby::find::find as ruby_find;
 use crate::commands::ruby::install::install as ruby_install;
 use crate::commands::ruby::list::list as ruby_list;
 use crate::commands::ruby::pin::pin as ruby_pin;
@@ -160,6 +161,8 @@ pub enum Error {
     #[error(transparent)]
     ConfigError(#[from] config::Error),
     #[error(transparent)]
+    FindError(#[from] commands::ruby::find::Error),
+    #[error(transparent)]
     PinError(#[from] commands::ruby::pin::Error),
     #[error(transparent)]
     ListError(#[from] commands::ruby::list::Error),
@@ -228,6 +231,7 @@ async fn main() -> Result<()> {
         None => {}
         Some(cmd) => match cmd {
             Commands::Ruby(ruby) => match ruby.command {
+                RubyCommand::Find { request } => ruby_find(&config, &request)?,
                 RubyCommand::List {
                     format,
                     installed_only,

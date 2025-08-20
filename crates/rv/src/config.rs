@@ -38,13 +38,17 @@ impl Config {
         self.discover_rubies()
     }
 
+    pub fn matching_ruby(&self, request: &RubyRequest) -> Option<Ruby> {
+        let rubies = self.rubies();
+        rubies
+            .into_iter()
+            .rev()
+            .find(|ruby| request.satisfied_by(ruby))
+    }
+
     pub fn project_ruby(&self) -> Option<Ruby> {
         if let Ok(request) = self.ruby_request() {
-            let rubies = self.rubies();
-            rubies
-                .iter()
-                .find(|ruby| request.satisfied_by(ruby))
-                .cloned()
+            self.matching_ruby(&request)
         } else {
             None
         }

@@ -1,32 +1,41 @@
-use std::process::Command;
-use tempfile::TempDir;
+use camino::Utf8PathBuf;
+use camino_tempfile_ext::camino_tempfile::Utf8TempDir;
+use std::{collections::HashMap, process::Command};
 
 pub struct RvTest {
-    pub temp_dir: TempDir,
-    pub test_root: String,
+    pub temp_dir: Utf8TempDir,
+    pub cwd: Utf8PathBuf,
+    pub env: HashMap<String, String>,
 }
 
 impl RvTest {
     pub fn new() -> Self {
-        let temp_dir = TempDir::new().expect("Failed to create temporary directory");
-        let test_root = temp_dir.path().to_string_lossy().to_string();
+        let temp_dir = Utf8TempDir::new().expect("Failed to create temporary directory");
+        let cwd = temp_dir.path().into();
 
-        Self {
+        let mut test = Self {
             temp_dir,
-            test_root,
-        }
+            cwd,
+            env: HashMap::new(),
+        };
+
+        test.env
+            .insert("RV_ROOT_DIR".into(), test.temp_dir.path().as_str().into());
+        // Set consistent arch/os for cross-platform testing
+        test.env.insert("RV_TEST_ARCH".into(), "aarch64".into());
+        test.env.insert("RV_TEST_OS".into(), "macos".into());
+
+        test
     }
 
     pub fn rv_command(&self) -> Command {
         let mut cmd = Command::new(env!("CARGO_BIN_EXE_rv"));
-        cmd.env("RV_ROOT_DIR", &self.test_root);
-        // Set consistent arch/os for cross-platform testing
-        cmd.env("RV_TEST_ARCH", "aarch64");
-        cmd.env("RV_TEST_OS", "macos");
+        cmd.current_dir(&self.cwd);
+        cmd.env_clear().envs(&self.env);
         cmd
     }
 
-    pub fn create_ruby_dir(&self, name: &str) -> std::path::PathBuf {
+    pub fn create_ruby_dir(&self, name: &str) -> Utf8PathBuf {
         let ruby_dir = self.temp_dir.path().join("opt").join("rubies").join(name);
         std::fs::create_dir_all(&ruby_dir).expect("Failed to create ruby directory");
 
@@ -105,12 +114,32 @@ impl RvOutput {
     pub fn new(test_root: &str, output: std::process::Output) -> Self {
         Self {
             output,
-            test_root: test_root.to_string(),
+            test_root: test_root.into(),
         }
     }
 
     pub fn success(&self) -> bool {
         self.output.status.success()
+    }
+
+    #[track_caller]
+    pub fn assert_success(&self) -> &Self {
+        assert!(
+            self.success(),
+            "Expected command to succeeed, got {:#?}",
+            self.output
+        );
+        self
+    }
+
+    #[track_caller]
+    pub fn assert_failure(&self) -> &Self {
+        assert!(
+            !self.success(),
+            "Expected command to fail, got {:#?}",
+            self.output
+        );
+        self
     }
 
     pub fn stdout(&self) -> String {

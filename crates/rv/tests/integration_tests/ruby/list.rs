@@ -8,7 +8,7 @@ impl RvTest {
         cmd.args(args);
 
         let output = cmd.output().expect("Failed to execute rv command");
-        RvOutput::new(&self.test_root, output)
+        RvOutput::new(self.temp_dir.path().as_str(), output)
     }
 }
 
@@ -67,4 +67,49 @@ fn test_ruby_list_json_output_with_rubies() {
     let _: serde_json::Value = serde_json::from_str(&stdout).expect("Output should be valid JSON");
 
     assert_snapshot!(output.normalized_stdout());
+}
+
+#[test]
+fn test_ruby_list_multiple_matching_rubies() {
+    let mut test = RvTest::new();
+
+    let project_dir = test.temp_dir.path().join("project");
+    std::fs::create_dir_all(project_dir.as_path()).unwrap();
+    std::fs::write(project_dir.join(".ruby-version"), b"3").unwrap();
+    test.cwd = project_dir;
+
+    // Create some mock Ruby installations
+    test.create_ruby_dir("ruby-3.1.4");
+    test.create_ruby_dir("ruby-3.2.0");
+    test.create_ruby_dir("3.1.4");
+
+    let output = test.ruby_list(&[]);
+    assert!(output.success());
+    assert_snapshot!(output.normalized_stdout(), @r"
+      ruby-3.1.4    [36m/opt/rubies/3.1.4/bin/ruby[39m
+      ruby-3.1.4    [36m/opt/rubies/ruby-3.1.4/bin/ruby[39m
+    * ruby-3.2.0    [36m/opt/rubies/ruby-3.2.0/bin/ruby[39m
+    ");
+
+    test.create_ruby_dir("3.2.0");
+    let output = test.ruby_list(&[]);
+    assert!(output.success());
+    assert_snapshot!(output.normalized_stdout(), @r"
+      ruby-3.1.4    [36m/opt/rubies/3.1.4/bin/ruby[39m
+      ruby-3.1.4    [36m/opt/rubies/ruby-3.1.4/bin/ruby[39m
+      ruby-3.2.0    [36m/opt/rubies/3.2.0/bin/ruby[39m
+    * ruby-3.2.0    [36m/opt/rubies/ruby-3.2.0/bin/ruby[39m
+    ");
+
+    test.env
+        .insert("PATH".into(), "/opt/rubies/3.1.4/bin".into());
+
+    let output = test.ruby_list(&[]);
+    assert!(output.success());
+    assert_snapshot!(output.normalized_stdout(), @r"
+      ruby-3.1.4    [36m/opt/rubies/3.1.4/bin/ruby[39m
+      ruby-3.1.4    [36m/opt/rubies/ruby-3.1.4/bin/ruby[39m
+      ruby-3.2.0    [36m/opt/rubies/3.2.0/bin/ruby[39m
+    * ruby-3.2.0    [36m/opt/rubies/ruby-3.2.0/bin/ruby[39m
+    ");
 }
