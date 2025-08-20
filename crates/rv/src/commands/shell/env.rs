@@ -25,15 +25,11 @@ type Result<T> = miette::Result<T, Error>;
 pub fn env(config: &config::Config) -> Result<()> {
     let mut paths = std::env::var("PATH").map(|p| split_paths(&p).collect::<Vec<_>>())?;
 
-    let old_ruby_paths: Vec<PathBuf> = [
-        std::env::var("RUBY_ROOT").ok(),
-        std::env::var("GEM_ROOT").ok(),
-        std::env::var("GEM_HOME").ok(),
-    ]
-    .iter()
-    .filter(|p| p.is_some())
-    .map(|p| std::path::Path::new(p.as_ref().unwrap()).join("bin"))
-    .collect();
+    let old_ruby_paths: Vec<PathBuf> = ["RUBY_ROOT", "GEM_ROOT", "GEM_HOME"]
+        .iter()
+        .filter_map(|var| std::env::var(var).ok())
+        .map(|p| std::path::Path::new(&p).join("bin"))
+        .collect();
 
     let old_gem_paths: Vec<PathBuf> =
         std::env::var("GEM_PATH").map_or_else(|_| vec![], |p| split_paths(&p).collect::<Vec<_>>());
