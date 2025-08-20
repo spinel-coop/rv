@@ -15,18 +15,19 @@ rv combines several things that have previously been separate tools:
 
 ## configuration
 
-rv can be configured globally, per user, and per project, as well as via ENV.
+rv can be configured globally, per user, and per project, as well as via ENV. configuration files use the [KDL](https://kdl.dev) document format.
 
 settings we know we want to support include:
 
-- ruby install location (default /opt/rubies, ~/.rubies)
+- ruby location(s)
+- ruby installation location
 - default ruby version
 
 ## projects
 
 Projects are libraries, or packages, or applications. The required file indicating a project root is a `Gemfile`, but a project with a `Gemfile` might still be inside a workspace that aggregates together several projects.
 
-A project root may be indicated by a `Gemfile`, an `rv.toml` config file, a `.git` directory, a `.jj` directory, or other files to be added in the future.
+A project root may be indicated by a `Gemfile`, an `rbproject.kdl` config file, a `.git` directory, a `.jj` directory, or other files to be added in the future.
 
 Most `rv` commands (like `add,` `remove,` `install,` and `lock`) are scoped to a project and that project's dependencies. Some commands also interact with the user or global state, like `ruby install`, `tool install`, etc.
 
@@ -53,6 +54,8 @@ Supporting workspaces means commands like `rv add` are scoped to a single projec
 A ruby version file (named `.ruby-version`) indicates the desired/locked Ruby version for a specific project or workspace. Any project intended to be usable by itself, outside of a workspace context, should declare a Ruby version.
 
 The ruby version can also be provided by a [`.tool-versions` file](https://asdf-vm.com/manage/configuration.html#tool-versions), shared by tools like asdf and mise.
+
+Finally, the ruby version can also be provided by `rbproject.kdl`, although tools other than `rv` may not be able to read that.
 
 ## ruby locations
 
@@ -102,10 +105,6 @@ The tool subcommand manages binaries available on the PATH, ensuring that a usab
 
 ## open questions
 
-1. Should configuration use KDL instead of TOML?
-    TOML is more popular, has wider ecosystem support, and has more packages and tooling already available.
-    On the other hand, KDL handles nesting dramatically better, composes multiple files together better, and TOML's creator [has some issues](https://en.wikipedia.org/wiki/Tom_Preston-Werner#Resignation_from_GitHub).
+1. Should we build support for an `rbproject.kdl` or similar file to configure projects? It could potentially replace `Gemfile`, `.gemspec`, `.ruby-versions`, `.bundle/config`, `Rakefile`, `.rubocop.yaml`, and any other dependency, package, linter, or script configurations. It would be nice to end the reign of the Filefile, and it would provide a place for arbitrary machine-formatted data that tooling could use. It would also provide a location to configure future multi-project workspaces.
 
-2. Should we build support for an `rbproject.toml` or similar file to configure projects? It could potentially replace `Gemfile`, `.gemspec`, `.ruby-versions`, `.bundle/config`, `Rakefile`, `.rubocop.yaml`, and any other dependency, package, linter, or script configurations. It would be nice to end the reign of the Filefile, and it would provide a place for arbitrary machine-formatted data that tooling could use. It would also provide a location to configure future multi-project workspaces.
-
-3. Should we match the python and node naming convention and switch to `rv run NAME` to run a command from inside the bundle, reserving `rv exec NAME` for installing and running commands from gems that are not in the bundle? I (André) think we probably should do this, because it has become a standard in tooling for two other languages that are both numerically more popular than Ruby, but I might be missing something.
+2. Should we match the python and node naming convention and switch to `rv run NAME` to run a command from inside the bundle, reserving `rv exec NAME` for installing and running commands from gems that are not in the bundle? I (André) think we probably should do this, because it has become a standard in tooling for two other languages that are both numerically more popular than Ruby, but I might be missing something.
