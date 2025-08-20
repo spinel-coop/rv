@@ -1,5 +1,6 @@
+use std::io;
+
 use owo_colors::OwoColorize;
-use rv_ruby::find_active_ruby_version;
 use tracing::{info, warn};
 
 use crate::config::Config;
@@ -22,6 +23,7 @@ type Result<T> = miette::Result<T, Error>;
 
 pub fn list(config: &Config, format: OutputFormat, _installed_only: bool) -> Result<()> {
     let rubies = config.rubies();
+    let active = config.project_ruby();
 
     if rubies.is_empty() {
         warn!("No Ruby installations found.");
@@ -30,22 +32,20 @@ pub fn list(config: &Config, format: OutputFormat, _installed_only: bool) -> Res
 
     match format {
         OutputFormat::Text => {
-            // Find the active Ruby version for marking
-            let active_version = find_active_ruby_version();
-
             // Calculate the maximum width for the name column to align output
             let width = rubies
                 .iter()
-                .fold(0usize, |acc, ruby| acc.max(ruby.display_name().len()));
+                .map(|ruby| ruby.display_name().len())
+                .max()
+                .unwrap_or_default();
 
             for ruby in &rubies {
-                let entry = format_ruby_entry(ruby, &active_version, width);
+                let entry = format_ruby_entry(ruby, &active, width);
                 println!("{entry}");
             }
         }
         OutputFormat::Json => {
-            let json = serde_json::to_string_pretty(&rubies)?;
-            println!("{json}");
+            serde_json::to_writer_pretty(io::stdout(), &rubies)?;
         }
     }
 
@@ -53,17 +53,13 @@ pub fn list(config: &Config, format: OutputFormat, _installed_only: bool) -> Res
 }
 
 /// Format a single Ruby entry for text output
-fn format_ruby_entry(
-    ruby: &rv_ruby::Ruby,
-    active_version: &Option<String>,
-    width: usize,
-) -> String {
+fn format_ruby_entry(ruby: &rv_ruby::Ruby, active: &Option<rv_ruby::Ruby>, width: usize) -> String {
     let key = ruby.display_name();
     let path = ruby.executable_path();
 
     // Check if this Ruby is active and add marker
-    let marker = if let Some(active) = active_version {
-        if ruby.is_active(active) { "*" } else { " " }
+    let marker = if active.as_ref().is_some_and(|a| a == ruby) {
+        "*"
     } else {
         " "
     };

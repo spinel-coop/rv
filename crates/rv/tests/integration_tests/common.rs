@@ -70,10 +70,6 @@ if [[ "$1" == "-e" ]]; then
             echo "darwin23"
             echo ""
             ;;
-        *defined*RUBY_ENGINE*RUBY_VERSION*)
-            # This is the simpler script from extract_ruby_info_from_executable
-            echo "$engine-$version"
-            ;;
         *)
             # Unknown script, return something reasonable
             echo "$engine-$version"
