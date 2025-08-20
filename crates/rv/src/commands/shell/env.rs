@@ -35,9 +35,7 @@ pub fn env(config: &config::Config) -> Result<()> {
     // Remove old Ruby and Gem paths from the PATH
     paths.retain(|p| !old_ruby_paths.contains(p) && !old_gem_paths.contains(p));
 
-    let request = config.requested_ruby()?;
-    let rubies = config.rubies();
-    let ruby = rubies.iter().find(|ruby| request.satisfied_by(ruby));
+    let ruby = config.project_ruby();
     let mut gem_paths = vec![];
 
     println!("unset RUBY_ROOT RUBY_ENGINE RUBY_VERSION RUBYOPT GEM_ROOT GEM_HOME GEM_PATH");
