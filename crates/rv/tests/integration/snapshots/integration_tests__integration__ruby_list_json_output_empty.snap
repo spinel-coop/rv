@@ -1,5 +1,0 @@
----
-source: tests/integration/mod.rs
-expression: output.normalized_stdout()
----
-[]

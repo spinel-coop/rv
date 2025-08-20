@@ -1,7 +1,16 @@
-pub mod common;
-
-use common::RvTest;
+use crate::common::{RvOutput, RvTest};
 use insta::assert_snapshot;
+
+impl RvTest {
+    pub fn ruby_list(&self, args: &[&str]) -> RvOutput {
+        let mut cmd = self.rv_command();
+        cmd.args(["ruby", "list"]);
+        cmd.args(args);
+
+        let output = cmd.output().expect("Failed to execute rv command");
+        RvOutput::new(&self.test_root, output)
+    }
+}
 
 #[test]
 fn test_ruby_list_text_output_empty() {

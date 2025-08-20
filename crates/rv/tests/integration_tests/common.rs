@@ -26,15 +26,6 @@ impl RvTest {
         cmd
     }
 
-    pub fn ruby_list(&self, args: &[&str]) -> RvOutput {
-        let mut cmd = self.rv_command();
-        cmd.args(["ruby", "list"]);
-        cmd.args(args);
-
-        let output = cmd.output().expect("Failed to execute rv command");
-        RvOutput::new(&self.test_root, output)
-    }
-
     pub fn create_ruby_dir(&self, name: &str) -> std::path::PathBuf {
         let ruby_dir = self.temp_dir.path().join("opt").join("rubies").join(name);
         std::fs::create_dir_all(&ruby_dir).expect("Failed to create ruby directory");
@@ -62,7 +53,7 @@ fi
 # Mock the Ruby script that rv-ruby expects
 # The script should output:
 # 1. RUBY_ENGINE (or 'ruby' if not defined)
-# 2. RUBY_VERSION  
+# 2. RUBY_VERSION
 # 3. RUBY_PLATFORM (or 'unknown' if not defined)
 # 4. host_cpu from RbConfig (or 'unknown' if not available)
 # 5. host_os from RbConfig (or 'unknown' if not available)
@@ -115,7 +106,7 @@ pub struct RvOutput {
 }
 
 impl RvOutput {
-    fn new(test_root: &str, output: std::process::Output) -> Self {
+    pub fn new(test_root: &str, output: std::process::Output) -> Self {
         Self {
             output,
             test_root: test_root.to_string(),
