@@ -200,8 +200,6 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
     // Normalize architecture and OS names to match common conventions
     let arch = normalize_arch(&host_cpu);
     let os = normalize_os(&host_os);
-
-    let engine: RubyEngine = ruby_engine.parse().unwrap();
     let version = ruby_version.parse()?;
     let gem_root = if gem_root.is_empty() {
         None
@@ -209,7 +207,7 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
         Some(Utf8PathBuf::from(gem_root))
     };
 
-    let key = format!("{}-{}-{}-{}", engine.name(), version, os, arch);
+    let key = format!("{}-{}-{}", version, os, arch);
 
     Ok(Ruby {
         key,
