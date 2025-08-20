@@ -1,6 +1,7 @@
 use std::{
     borrow::Cow,
     env::{JoinPathsError, join_paths, split_paths},
+    path::PathBuf,
 };
 
 use crate::config;
@@ -24,13 +25,17 @@ type Result<T> = miette::Result<T, Error>;
 pub fn env(config: &config::Config) -> Result<()> {
     let mut paths = std::env::var("PATH").map(|p| split_paths(&p).collect::<Vec<_>>())?;
 
-    let old_ruby_paths = [
-        std::env::var("RUBY_ROOT")?.as_str(),
-        std::env::var("GEM_ROOT")?.as_str(),
-        std::env::var("GEM_HOME")?.as_str(),
+    let old_ruby_paths: Vec<PathBuf> = [
+        std::env::var("RUBY_ROOT").ok(),
+        std::env::var("GEM_ROOT").ok(),
+        std::env::var("GEM_HOME").ok(),
     ]
-    .map(|p| std::path::Path::new(p).join("bin"));
-    let old_gem_paths = std::env::var("GEM_PATH").map(|p| split_paths(&p).collect::<Vec<_>>())?;
+    .iter()
+    .filter(|p| p.is_some())
+    .map(|p| std::path::Path::new(p.as_ref().unwrap()).join("bin"))
+    .collect();
+    let old_gem_paths: Vec<PathBuf> =
+        std::env::var("GEM_PATH").map(|p| split_paths(&p).collect::<Vec<_>>())?;
 
     // Remove old Ruby and Gem paths from the PATH
     paths.retain(|p| !old_ruby_paths.contains(p) && !old_gem_paths.contains(p));
