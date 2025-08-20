@@ -38,7 +38,19 @@ impl Config {
         self.discover_rubies()
     }
 
-    pub fn requested_ruby(&self) -> Result<RubyRequest> {
+    pub fn project_ruby(&self) -> Option<Ruby> {
+        if let Ok(request) = self.ruby_request() {
+            let rubies = self.rubies();
+            rubies
+                .iter()
+                .find(|ruby| request.satisfied_by(ruby))
+                .cloned()
+        } else {
+            None
+        }
+    }
+
+    pub fn ruby_request(&self) -> Result<RubyRequest> {
         if let Some(project_dir) = &self.project_dir {
             let rv_file = project_dir.join(".ruby-version");
 
