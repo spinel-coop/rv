@@ -10,7 +10,6 @@ use std::process::{Command, ExitStatus};
 use std::str::FromStr;
 use tracing::instrument;
 
-use crate::engine::RubyEngine;
 use crate::request::RubyRequest;
 use crate::version::RubyVersion;
 
@@ -200,7 +199,7 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
     // Normalize architecture and OS names to match common conventions
     let arch = normalize_arch(&host_cpu);
     let os = normalize_os(&host_os);
-    let version = ruby_version.parse()?;
+    let version = format!("{}-{}", ruby_engine, ruby_version).parse()?;
     let gem_root = if gem_root.is_empty() {
         None
     } else {
