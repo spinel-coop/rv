@@ -81,6 +81,20 @@ This is roughly the equivalent of `cargo install` or `go install`, but taking ca
 
 Notes about the functionality and implementation of each command.
 
+### run
+
+The `run` command does (at least) three separate things:
+
+1. Dynamically changes the ruby version for just one command. For example `rv run --ruby 3.4.2 -- ruby` will run ruby 3.4.2 regardless of which ruby version is currently activated by the environment and the current project.
+
+2. Runs executables provided by dependencies of the current project. For example, if you run `rv add gist` and then `rv run gist`, you will get the `gist` executable provided by the gist package that is a dependency of the current project. If you want to run `gist` without making it a dependency of the current project, you should use `rv exec gist` instead.
+
+3. Runs scripts that contain their own required ruby versions and rubygems dependencies, installing the ruby and gems as needed. For example, if you run `rv run myscript.rb`, if that script has configuration comments setting a required ruby version or depending on gems, rv will install that ruby version and those gems and then execute the script on that ruby with those gems available.
+
+### exec
+
+The `exec` command works the same way as `npm exec`, `uv exec`, and `gem exec`: find a package with that name, install it, and run the executable inside that package with the same name. For example, `rv exec rails new .` will install ruby if needed, install rails if needed, and then run `rails new .`. Similar to npm and uv, `rv exec rails@latest new .` will check for the newest version of Rails and make sure that is what gets run. Without the `@latest` included at the end of the package name, `exec` will prioritize speed and run an already-installed rails if it exists.
+
 ### ruby
 
 The `ruby` subcommand manages ruby versions, using subcommands `install`, `uninstall`, `pin`, and `find`.
@@ -122,5 +136,3 @@ The tool subcommand manages binaries available on the PATH, ensuring that a usab
 ## open questions
 
 1. Should we build support for an `rbproject.kdl` or similar file to configure projects? It could potentially replace `Gemfile`, `.gemspec`, `.ruby-versions`, `.bundle/config`, `Rakefile`, `.rubocop.yaml`, and any other dependency, package, linter, or script configurations. It would be nice to end the reign of the Filefile, and it would provide a place for arbitrary machine-formatted data that tooling could use. It would also provide a location to configure future multi-project workspaces.
-
-2. Should we match the python and node naming convention and switch to `rv run NAME` to run a command from inside the bundle, reserving `rv exec NAME` for installing and running commands from gems that are not in the bundle? I (André) think we probably should do this, because it has become a standard in tooling for two other languages that are both numerically more popular than Ruby, but I might be missing something.
