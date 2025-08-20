@@ -1,21 +1,53 @@
 #!/bin/bash
 set -euo pipefail
 
-set -x
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  set -x
 
-if [[ -z $(which rustup) ]]; then
-  brew install rustup
-  rustup install nightly
-fi
+  if [[ -z $(which brew) ]]; then
+    echo "Homebrew is not installed. Please install Homebrew first."
+    exit 1
+  fi
 
-if [[ -z $(which cargo-binstall) ]]; then
-  brew install cargo-binstall
-fi
+  if [[ -z $(which rustup) ]]; then
+    brew install rustup
+    rustup install stable
+  fi
 
-if [[ -z $(which cargo-nextest) ]]; then
-  cargo binstall cargo-nextest
-fi
+  if [[ -z $(which cargo-binstall) ]]; then
+    brew install cargo-binstall -y
+  fi
 
-if [[ -z $(which cargo-insta) ]]; then
-  cargo binstall cargo-insta
+  if [[ -z $(which cargo-nextest) ]]; then
+    cargo binstall cargo-nextest -y
+  fi
+
+  if [[ -z $(which cargo-insta) ]]; then
+    cargo binstall cargo-insta -y
+  fi
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  set -x
+
+  apt update
+  apt install -y curl pkg-config git gcc libssl-dev
+
+  if [[ -z $(which rustup) ]]; then
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    . "$HOME/.cargo/env"
+  fi
+
+  if [[ -z $(which cargo-binstall) ]]; then
+    cargo install cargo-binstall
+  fi
+
+  if [[ -z $(which cargo-nextest) ]]; then
+    cargo binstall cargo-nextest -y
+  fi
+
+  if [[ -z $(which cargo-insta) ]]; then
+    cargo binstall cargo-insta -y
+  fi
+else
+  echo "We don't support automatic setup on $OSTYPE yet, sorry."
+  exit 1
 fi
