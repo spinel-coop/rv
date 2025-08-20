@@ -25,6 +25,10 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   if [[ -z $(which cargo-insta) ]]; then
     cargo binstall cargo-insta -y
   fi
+
+  if [[ -z $(which cargo-dist) ]]; then
+    cargo binstall cargo-dist -y
+  fi
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
   set -x
 
