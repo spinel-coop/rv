@@ -34,10 +34,11 @@ pub fn env(config: &config::Config) -> Result<()> {
     .filter(|p| p.is_some())
     .map(|p| std::path::Path::new(p.as_ref().unwrap()).join("bin"))
     .collect();
-    let old_gem_paths: Vec<PathBuf> =
-        std::env::var("GEM_PATH").map(|p| split_paths(&p).collect::<Vec<_>>())?;
 
-    // Remove old Ruby and Gem paths from the PATH
+    let old_gem_paths: Vec<PathBuf> =
+        std::env::var("GEM_PATH").map_or_else(|_| vec![], |p| split_paths(&p).collect::<Vec<_>>());
+
+    // Remove old Ruby and Gem paths from PATH
     paths.retain(|p| !old_ruby_paths.contains(p) && !old_gem_paths.contains(p));
 
     let ruby = config.project_ruby();
