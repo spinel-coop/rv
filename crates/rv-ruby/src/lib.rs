@@ -199,14 +199,14 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
     // Normalize architecture and OS names to match common conventions
     let arch = normalize_arch(&host_cpu);
     let os = normalize_os(&host_os);
-    let version = format!("{}-{}", ruby_engine, ruby_version).parse()?;
+    let version = format!("{ruby_engine}-{ruby_version}").parse()?;
     let gem_root = if gem_root.is_empty() {
         None
     } else {
         Some(Utf8PathBuf::from(gem_root))
     };
 
-    let key = format!("{}-{}-{}", version, os, arch);
+    let key = format!("{version}-{os}-{arch}");
 
     Ok(Ruby {
         key,
