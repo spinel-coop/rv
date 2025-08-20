@@ -50,7 +50,7 @@ pub fn env(config: &config::Config) -> Result<()> {
         paths.insert(0, ruby.bin_path().into());
         println!("export RUBY_ROOT={}", escape(&ruby.path));
         println!("export RUBY_ENGINE={}", escape(&ruby.version.engine.name()));
-        println!("export RUBY_VERSION={}", escape(&ruby.version.to_string()));
+        println!("export RUBY_VERSION={}", escape(&ruby.version.number()));
         if let Some(gem_home) = ruby.gem_home() {
             paths.insert(0, gem_home.join("bin").into());
             gem_paths.insert(0, gem_home.join("bin"));
