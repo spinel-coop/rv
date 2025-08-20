@@ -1,4 +1,57 @@
-# rv notes
+# `rv` plans
+
+## commands
+
+### Ruby versions
+
+- [x] `rv ruby list`
+- [x] `rv ruby pin`
+- [ ] `rv ruby install`
+  - [ ] `rv ruby install 3.2.x`
+  - [ ] `rv ruby install 3.3.x`
+  - [x] `rv ruby install 3.4.x`
+  - [ ] `rv ruby install jruby 10`
+  - [ ] `rv ruby install truffleruby 24`
+  - [ ] `rv ruby install truffleruby+graalvm 24`
+  - [ ] `rv ruby install mruby 3.3`
+- [ ] `rv ruby uninstall`
+
+### Gem CLI tools
+
+- [ ] `rvx` / `rv exec` / `rv tool run`
+- [ ] `rv tool install`
+- [ ] `rv tool uninstall`
+
+### Ruby scripts
+
+- [ ] `rvr` / `rv run`
+- [ ] `rv add --script`
+- [ ] `rv remove --script`
+
+### Projects
+
+- [ ] `rv install`
+- [ ] `rv run`
+- [ ] `rv list`
+- [ ] `rv init`
+- [ ] `rv upgrade`
+- [ ] `rv add`
+- [ ] `rv remove`
+- [ ] `rv tree`
+
+### Gems
+
+- [ ] `rv gem`
+- [ ] `rv build`
+- [ ] `rv publish`
+
+### Shell integration
+
+- [ ] `rv shell init`
+  - [x] `rv shell init zsh`
+  - [ ] `rv shell init bash`
+- [x] `rv shell env`
+- [ ] `rv shell completions`
 
 ## functionality
 
