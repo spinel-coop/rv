@@ -51,3 +51,4 @@ tempfile = { workspace = true }
 assert_fs = { workspace = true }
 indoc = { workspace = true }
 fs-err = { workspace = true }
+camino-tempfile-ext = { workspace = true }

@@ -213,6 +213,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "camino-tempfile"
+version = "1.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64308c4c82a5c38679945ddf88738dc1483dcc563bbb5780755ae9f8497d2b20"
+dependencies = [
+ "camino",
+ "tempfile",
+]
+
+[[package]]
+name = "camino-tempfile-ext"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b7b17f16012d633d3e2bd2f8929c176963ba2cbb88cfff867c39ee49288447b"
+dependencies = [
+ "camino",
+ "camino-tempfile",
+ "globwalk",
+]
+
+[[package]]
 name = "cc"
 version = "1.2.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1781,6 +1802,7 @@ dependencies = [
  "assert_fs",
  "bytesize",
  "camino",
+ "camino-tempfile-ext",
  "clap",
  "clap-verbosity-flag",
  "clap_derive",

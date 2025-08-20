@@ -116,7 +116,7 @@ impl PartialOrd for Ruby {
 
 impl Ord for Ruby {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        (&self.version, &self.path).cmp(&(&other.version, &self.path))
+        (&self.version, &self.path).cmp(&(&other.version, &other.path))
     }
 }
 
