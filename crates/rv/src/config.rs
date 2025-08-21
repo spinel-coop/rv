@@ -87,6 +87,7 @@ pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
     })
     .collect()
 }
+
 pub fn find_project_dir(current_dir: Utf8PathBuf, root: Utf8PathBuf) -> Option<Utf8PathBuf> {
     debug!("Searching for project directory in {}", current_dir);
     let mut project_dir = current_dir.clone();
@@ -97,10 +98,20 @@ pub fn find_project_dir(current_dir: Utf8PathBuf, root: Utf8PathBuf) -> Option<U
             debug!("Found project directory {}", project_dir);
             return Some(project_dir);
         }
+
         if project_dir == root {
-            debug!("No project directory found in parents of {}", current_dir);
+            debug!("Reached root {} without finding a project directory", root);
             return None;
         }
-        project_dir = project_dir.parent().unwrap_or_else(|| &root).into();
+
+        if let Some(parent_dir) = project_dir.parent() {
+            project_dir = parent_dir.to_owned();
+        } else {
+            debug!(
+                "Ran out of parents of {} without finding a project directory",
+                project_dir
+            );
+            return None;
+        }
     }
 }
