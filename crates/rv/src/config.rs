@@ -149,7 +149,8 @@ pub fn env_for(ruby: &Option<Ruby>) -> Result<(Vec<&'static str>, Vec<(&'static 
         set.push((var, val));
     };
 
-    let mut paths = std::env::var("PATH").map(|p| split_paths(&p).collect::<Vec<_>>())?;
+    let pathstr = std::env::var("PATH").unwrap_or_else(|_| String::new());
+    let mut paths = split_paths(&pathstr).collect::<Vec<_>>();
 
     let old_ruby_paths: Vec<PathBuf> = ["RUBY_ROOT", "GEM_ROOT", "GEM_HOME"]
         .iter()
