@@ -90,14 +90,17 @@ pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
 pub fn find_project_dir(current_dir: Utf8PathBuf, root: Utf8PathBuf) -> Option<Utf8PathBuf> {
     debug!("Searching for project directory in {}", current_dir);
     let mut project_dir = current_dir.clone();
-    while project_dir.ancestors().any(|p| p == root) || project_dir == root {
+
+    loop {
         let ruby_version = project_dir.join(".ruby-version");
         if ruby_version.exists() {
             debug!("Found project directory {}", project_dir);
             return Some(project_dir);
         }
+        if project_dir == root {
+            debug!("No project directory found in parents of {}", current_dir);
+            return None;
+        }
         project_dir = project_dir.parent().unwrap_or_else(|| &root).into();
     }
-    debug!("No project directory found in parents of {}", current_dir);
-    None
 }
