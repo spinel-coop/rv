@@ -2,6 +2,9 @@
 name = "rv"
 version = "0.1.0"
 edition = "2024"
+repository = "https://github.com/spinel-coop/rv"
+description = "Ruby version management, but fast"
+homepage = "https://spinel.coop/rv"
 
 [dependencies]
 clap = { workspace = true, features = ["derive", "env"] }

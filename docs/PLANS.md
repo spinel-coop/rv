@@ -1,4 +1,57 @@
-# rv notes
+# `rv` plans
+
+## commands
+
+### Ruby versions
+
+- [x] `rv ruby list`
+- [x] `rv ruby pin`
+- [ ] `rv ruby install`
+  - [ ] `rv ruby install 3.2.x`
+  - [ ] `rv ruby install 3.3.x`
+  - [x] `rv ruby install 3.4.x`
+  - [ ] `rv ruby install jruby 10`
+  - [ ] `rv ruby install truffleruby 24`
+  - [ ] `rv ruby install truffleruby+graalvm 24`
+  - [ ] `rv ruby install mruby 3.3`
+- [ ] `rv ruby uninstall`
+
+### Gem CLI tools
+
+- [ ] `rvx` / `rv exec` / `rv tool run`
+- [ ] `rv tool install`
+- [ ] `rv tool uninstall`
+
+### Ruby scripts
+
+- [ ] `rvr` / `rv run`
+- [ ] `rv add --script`
+- [ ] `rv remove --script`
+
+### Projects
+
+- [ ] `rv install`
+- [ ] `rv run`
+- [ ] `rv list`
+- [ ] `rv init`
+- [ ] `rv upgrade`
+- [ ] `rv add`
+- [ ] `rv remove`
+- [ ] `rv tree`
+
+### Gems
+
+- [ ] `rv gem`
+- [ ] `rv build`
+- [ ] `rv publish`
+
+### Shell integration
+
+- [ ] `rv shell init`
+  - [x] `rv shell init zsh`
+  - [ ] `rv shell init bash`
+- [x] `rv shell env`
+- [ ] `rv shell completions`
 
 ## functionality
 
@@ -15,18 +68,19 @@ rv combines several things that have previously been separate tools:
 
 ## configuration
 
-rv can be configured globally, per user, and per project, as well as via ENV.
+rv can be configured globally, per user, and per project, as well as via ENV. configuration files use the [KDL](https://kdl.dev) document format.
 
 settings we know we want to support include:
 
-- ruby install location (default /opt/rubies, ~/.rubies)
+- ruby location(s)
+- ruby installation location
 - default ruby version
 
 ## projects
 
 Projects are libraries, or packages, or applications. The required file indicating a project root is a `Gemfile`, but a project with a `Gemfile` might still be inside a workspace that aggregates together several projects.
 
-A project root may be indicated by a `Gemfile`, an `rv.toml` config file, a `.git` directory, a `.jj` directory, or other files to be added in the future.
+A project root may be indicated by a `Gemfile`, an `rbproject.kdl` config file, a `.git` directory, a `.jj` directory, or other files to be added in the future.
 
 Most `rv` commands (like `add,` `remove,` `install,` and `lock`) are scoped to a project and that project's dependencies. Some commands also interact with the user or global state, like `ruby install`, `tool install`, etc.
 
@@ -54,6 +108,8 @@ A ruby version file (named `.ruby-version`) indicates the desired/locked Ruby ve
 
 The ruby version can also be provided by a [`.tool-versions` file](https://asdf-vm.com/manage/configuration.html#tool-versions), shared by tools like asdf and mise.
 
+Finally, the ruby version can also be provided by `rbproject.kdl`, although tools other than `rv` may not be able to read that.
+
 ## ruby locations
 
 By default, we look for rubies in ~/.rubies, /opt/rubies, /opt/homebrew/bin/ruby, /usr/bin/ruby, and /usr/local/bin/ruby.
@@ -78,6 +134,20 @@ This is roughly the equivalent of `cargo install` or `go install`, but taking ca
 
 Notes about the functionality and implementation of each command.
 
+### run
+
+The `run` command does (at least) three separate things:
+
+1. Dynamically changes the ruby version for just one command. For example `rv run --ruby 3.4.2 -- ruby` will run ruby 3.4.2 regardless of which ruby version is currently activated by the environment and the current project.
+
+2. Runs executables provided by dependencies of the current project. For example, if you run `rv add gist` and then `rv run gist`, you will get the `gist` executable provided by the gist package that is a dependency of the current project. If you want to run `gist` without making it a dependency of the current project, you should use `rv exec gist` instead.
+
+3. Runs scripts that contain their own required ruby versions and rubygems dependencies, installing the ruby and gems as needed. For example, if you run `rv run myscript.rb`, if that script has configuration comments setting a required ruby version or depending on gems, rv will install that ruby version and those gems and then execute the script on that ruby with those gems available.
+
+### exec
+
+The `exec` command works the same way as `npm exec`, `uv exec`, and `gem exec`: find a package with that name, install it, and run the executable inside that package with the same name. For example, `rv exec rails new .` will install ruby if needed, install rails if needed, and then run `rails new .`. Similar to npm and uv, `rv exec rails@latest new .` will check for the newest version of Rails and make sure that is what gets run. Without the `@latest` included at the end of the package name, `exec` will prioritize speed and run an already-installed rails if it exists.
+
 ### ruby
 
 The `ruby` subcommand manages ruby versions, using subcommands `install`, `uninstall`, `pin`, and `find`.
@@ -96,16 +166,26 @@ Pin with a version argument tries to set that version for the current project, v
 
 The `ruby find` subcommand returns the full path to the currently chosen Ruby interpreter. If passed an argument, it interprets that argument as a version request and prints the full path to a Ruby interpreter that satisfies the version request.
 
+### shell
+
+The `shell` subcommand handles integration with the user's shell, including automatic ruby version switching and completions for rv commands.
+
+#### init
+
+The `init` command prints out shellscript that sets up automatic version switching, and is intended to be used like `eval "$(rv shell init zsh)"` to set up zsh to then automatically run `eval "$(rv shell env)"` every time the user changes directories, which provides automatic version switching.
+
+#### env
+
+The `env` command prints out the env vars that need to be set for the currently-desired ruby version, like `RUBY_VERSION` and `PATH`. The output is expected to be `eval`ed by the shell to change the installation that will run as `ruby`.
+
+#### completions
+
+The `completions` command prints out shell-specific output that can be `eval`ed to set up tab-completion for subcommands and arguments to commands.
+
 ### tool
 
 The tool subcommand manages binaries available on the PATH, ensuring that a usable Ruby is installed, the gem and all of its dependencies are installed, and a binary is created and put somewhere in the PATH. The binary needs to ignore the currently chosen ruby version, the current bundle environment, and anything else necessary to ensure that when it is invoked it will run completely independently.
 
 ## open questions
 
-1. Should configuration use KDL instead of TOML?
-    TOML is more popular, has wider ecosystem support, and has more packages and tooling already available.
-    On the other hand, KDL handles nesting dramatically better, composes multiple files together better, and TOML's creator [has some issues](https://en.wikipedia.org/wiki/Tom_Preston-Werner#Resignation_from_GitHub).
-
-2. Should we build support for an `rbproject.toml` or similar file to configure projects? It could potentially replace `Gemfile`, `.gemspec`, `.ruby-versions`, `.bundle/config`, `Rakefile`, `.rubocop.yaml`, and any other dependency, package, linter, or script configurations. It would be nice to end the reign of the Filefile, and it would provide a place for arbitrary machine-formatted data that tooling could use. It would also provide a location to configure future multi-project workspaces.
-
-3. Should we match the python and node naming convention and switch to `rv run NAME` to run a command from inside the bundle, reserving `rv exec NAME` for installing and running commands from gems that are not in the bundle? I (André) think we probably should do this, because it has become a standard in tooling for two other languages that are both numerically more popular than Ruby, but I might be missing something.
+1. Should we build support for an `rbproject.kdl` or similar file to configure projects? It could potentially replace `Gemfile`, `.gemspec`, `.ruby-versions`, `.bundle/config`, `Rakefile`, `.rubocop.yaml`, and any other dependency, package, linter, or script configurations. It would be nice to end the reign of the Filefile, and it would provide a place for arbitrary machine-formatted data that tooling could use. It would also provide a location to configure future multi-project workspaces.

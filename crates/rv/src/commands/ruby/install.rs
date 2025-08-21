@@ -75,6 +75,7 @@ fn ruby_url(version: &str) -> String {
     let arch = match CURRENT_PLATFORM {
         "aarch64-apple-darwin" => "arm64_sonoma",
         "x86_64-unknown-linux-gnu" => "x86_64_linux",
+        "aarch64-unknown-linux-gnu" => "arm64_linux",
         _ => panic!("rv does not (yet) support {}. Sorry :(", CURRENT_PLATFORM),
     };
 

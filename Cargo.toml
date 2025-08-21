@@ -69,3 +69,8 @@ rv-gem-specification-yaml = { version = "0.1.0", path = "crates/rv-gem-specifica
 rv-gem-types = { version = "0.1.0", path = "crates/rv-gem-types" }
 rv-ruby = { version = "0.1.0", path = "crates/rv-ruby" }
 rv-version = { version = "0.1.0", path = "crates/rv-version" }
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
