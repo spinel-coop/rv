@@ -1,0 +1,10 @@
+---
+source: crates/rv/tests/integration_tests/shell/init.rs
+expression: output.normalized_stdout()
+---
+autoload -U add-zsh-hook
+_rv_autoload_hook () {
+    eval "$(/tmp/bin/rv shell env)"
+}
+add-zsh-hook chpwd _rv_autoload_hook
+_rv_autoload_hook

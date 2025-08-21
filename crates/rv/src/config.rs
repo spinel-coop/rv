@@ -39,6 +39,7 @@ pub struct Config {
     pub current_dir: Utf8PathBuf,
     pub project_dir: Option<Utf8PathBuf>,
     pub cache: rv_cache::Cache,
+    pub current_exe: Utf8PathBuf,
 }
 
 impl Config {

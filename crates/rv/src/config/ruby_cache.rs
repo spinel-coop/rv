@@ -172,6 +172,7 @@ mod tests {
             current_dir: root.clone(),
             project_dir: None,
             cache: Cache::temp().unwrap(),
+            current_exe: root.join("bin").join("rv"),
         };
 
         (config, temp_dir)

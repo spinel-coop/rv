@@ -1,3 +1,5 @@
+use crate::config::Config;
+
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error(transparent)]
@@ -6,7 +8,7 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
-pub fn init() -> Result<()> {
+pub fn init(config: &Config) -> Result<()> {
     print!(
         concat!(
             "autoload -U add-zsh-hook\n",
@@ -16,7 +18,7 @@ pub fn init() -> Result<()> {
             "add-zsh-hook chpwd _rv_autoload_hook\n",
             "_rv_autoload_hook\n",
         ),
-        std::env::current_exe()?.to_str().unwrap()
+        config.current_exe
     );
     Ok(())
 }

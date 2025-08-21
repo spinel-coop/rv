@@ -1,2 +1,2 @@
-mod env;
-mod init;
+mod env_test;
+mod init_test;
