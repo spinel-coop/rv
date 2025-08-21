@@ -1,5 +1,5 @@
 ---
-source: crates/rv/tests/integration_tests/shell/init.rs
+source: crates/rv/tests/integration_tests/shell/init_test.rs
 expression: output.normalized_stdout()
 ---
 autoload -U add-zsh-hook
