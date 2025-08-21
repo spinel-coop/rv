@@ -28,6 +28,14 @@ impl RvTest {
         test
     }
 
+    pub fn rv(&self, args: &[&str]) -> RvOutput {
+        let mut cmd = self.rv_command();
+        cmd.args(args);
+
+        let output = cmd.output().expect("Failed to execute rv command");
+        RvOutput::new(self.temp_dir.path().as_str(), output)
+    }
+
     pub fn rv_command(&self) -> Command {
         let mut cmd = Command::new(env!("CARGO_BIN_EXE_rv"));
         cmd.current_dir(&self.cwd);
