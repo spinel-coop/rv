@@ -1139,6 +1139,7 @@ checksum = "70a646d946d06bedbbc4cac4c218acf4bbf2d87757a784857025f4d447e4e1cd"
 dependencies = [
  "console 0.16.0",
  "portable-atomic",
+ "rayon",
  "unicode-width 0.2.1",
  "unit-prefix",
  "vt100",
