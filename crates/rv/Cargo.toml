@@ -42,7 +42,6 @@ rv-dirs = { workspace = true }
 camino = { workspace = true }
 futures-util = { workspace = true }
 current_platform = { workspace = true }
-sys-info = { workspace = true }
 fs-err = { workspace = true }
 bytesize = { workspace = true }
 shell-escape = { workspace = true }
