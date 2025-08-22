@@ -116,8 +116,10 @@ impl RvOutput {
     pub fn assert_success(&self) -> &Self {
         assert!(
             self.success(),
-            "Expected command to succeeed, got {:#?}",
-            self.output
+            "Expected command to succeeed, got:\n\n# STDERR\n{}\n# STDOUT\n{}\n# STATUS {:?}",
+            str::from_utf8(&self.output.stderr).unwrap(),
+            str::from_utf8(&self.output.stdout).unwrap(),
+            self.output.status
         );
         self
     }
@@ -126,8 +128,9 @@ impl RvOutput {
     pub fn assert_failure(&self) -> &Self {
         assert!(
             !self.success(),
-            "Expected command to fail, got {:#?}",
-            self.output
+            "Expected command to fail, got:\n\n# STDERR\n{}\n# STDOUT\n{}",
+            str::from_utf8(&self.output.stderr).unwrap(),
+            str::from_utf8(&self.output.stdout).unwrap(),
         );
         self
     }
