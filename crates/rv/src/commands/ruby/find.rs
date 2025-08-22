@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use anstream::println;
 use owo_colors::OwoColorize;
 use rv_ruby::request::RubyRequest;
 

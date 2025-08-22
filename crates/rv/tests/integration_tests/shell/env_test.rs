@@ -68,7 +68,7 @@ fn test_shell_env_with_ruby() {
     );
 
     let output = test.rv(&["shell", "env"]);
+    output.assert_success();
 
     assert_snapshot!(output.normalized_stdout());
-    assert!(output.success());
 }

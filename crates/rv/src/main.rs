@@ -51,7 +51,7 @@ struct Cli {
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity<clap_verbosity_flag::InfoLevel>,
 
-    #[arg(long)]
+    #[arg(long, env = "RV_COLOR")]
     color: Option<ColorMode>,
 
     #[command(flatten)]

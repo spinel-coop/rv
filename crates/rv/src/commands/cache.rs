@@ -1,5 +1,6 @@
 use std::io;
 
+use anstream::println;
 use bytesize::ByteSize;
 use clap::{Args, Subcommand};
 use owo_colors::OwoColorize;

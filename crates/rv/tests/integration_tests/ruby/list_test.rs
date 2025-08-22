@@ -84,16 +84,16 @@ fn test_ruby_list_multiple_matching_rubies() {
     test.create_ruby_dir("3.1.4");
 
     let output = test.ruby_list(&[]);
-    assert!(output.success());
+    output.assert_success();
     assert_snapshot!(output.normalized_stdout(), @r"
-      ruby-3.1.4    [36m/opt/rubies/3.1.4/bin/ruby[39m
-      ruby-3.1.4    [36m/opt/rubies/ruby-3.1.4/bin/ruby[39m
-    * ruby-3.2.0    [36m/opt/rubies/ruby-3.2.0/bin/ruby[39m
+      ruby-3.1.4    /opt/rubies/3.1.4/bin/ruby
+      ruby-3.1.4    /opt/rubies/ruby-3.1.4/bin/ruby
+    * ruby-3.2.0    /opt/rubies/ruby-3.2.0/bin/ruby
     ");
 
     test.create_ruby_dir("3.2.0");
     let output = test.ruby_list(&[]);
-    assert!(output.success());
+    output.assert_success();
     assert_snapshot!(output.normalized_stdout(), @r"
       ruby-3.1.4    [36m/opt/rubies/3.1.4/bin/ruby[39m
       ruby-3.1.4    [36m/opt/rubies/ruby-3.1.4/bin/ruby[39m
@@ -105,7 +105,7 @@ fn test_ruby_list_multiple_matching_rubies() {
         .insert("PATH".into(), "/opt/rubies/3.1.4/bin".into());
 
     let output = test.ruby_list(&[]);
-    assert!(output.success());
+    output.assert_success();
     assert_snapshot!(output.normalized_stdout(), @r"
       ruby-3.1.4    [36m/opt/rubies/3.1.4/bin/ruby[39m
       ruby-3.1.4    [36m/opt/rubies/ruby-3.1.4/bin/ruby[39m

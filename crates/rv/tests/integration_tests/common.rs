@@ -25,6 +25,7 @@ impl RvTest {
         test.env.insert("RV_TEST_ARCH".into(), "aarch64".into());
         test.env.insert("RV_TEST_OS".into(), "macos".into());
         test.env.insert("RV_TEST_EXE".into(), "/tmp/bin/rv".into());
+        test.env.insert("HOME".into(), "/home".into());
 
         test
     }
@@ -51,54 +52,34 @@ impl RvTest {
         let bin_dir = ruby_dir.join("bin");
         std::fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
 
+        // Extract Ruby information from directory name
+        // Extract version from directory name: ruby-3.1.4 -> 3.1.4
+        let version = if let Some(dash_pos) = name.find('-') {
+            &name[dash_pos + 1..]
+        } else {
+            name
+        };
+
+        // Extract engine from directory name: ruby-3.1.4 -> ruby, jruby-9.4.0.0 -> jruby
+        let engine = if let Some(dash_pos) = name.find('-') {
+            &name[..dash_pos]
+        } else {
+            "ruby"
+        };
+
         // Create a mock ruby executable that outputs the expected format for rv-ruby
         let ruby_exe = bin_dir.join("ruby");
-        let mock_script = r#"#!/bin/bash
-# Extract Ruby information from directory name
-dir_name=$(basename $(dirname $(dirname $0)))
+        let mock_script = format!(
+            r#"#!/bin/bash
 
-# Extract version from directory name: ruby-3.1.4 -> 3.1.4
-version=$(echo "$dir_name" | sed 's/^[^-]*-//')
-
-# Extract engine from directory name: ruby-3.1.4 -> ruby, jruby-9.4.0.0 -> jruby
-engine=$(echo "$dir_name" | sed 's/-.*$//')
-
-# If engine equals version, it means no engine prefix, so default to ruby
-if [[ "$engine" == "$version" ]]; then
-    engine="ruby"
-fi
-
-# Mock the Ruby script that rv-ruby expects
-# The script should output:
-# 1. RUBY_ENGINE (or 'ruby' if not defined)
-# 2. RUBY_VERSION
-# 3. RUBY_PLATFORM (or 'unknown' if not defined)
-# 4. host_cpu from RbConfig (or 'unknown' if not available)
-# 5. host_os from RbConfig (or 'unknown' if not available)
-# 6. GEM_ROOT export line (empty if rubygems not available)
-
-if [[ "$1" == "-e" ]]; then
-    case "$2" in
-        *RUBY_ENGINE*RUBY_VERSION*RUBY_PLATFORM*RbConfig*host_cpu*host_os*rubygems*)
-            # This is the full script from extract_ruby_info
-            echo "$engine"
-            echo "$version"
-            echo "aarch64-darwin23"
-            echo "aarch64"
-            echo "darwin23"
-            echo ""
-            ;;
-        *)
-            # Unknown script, return something reasonable
-            echo "$engine-$version"
-            ;;
-    esac
-else
-    # If not -e, just output version info
-    echo "$engine $version"
-fi
+echo "{engine}"
+echo "{version}"
+echo "aarch64-darwin23"
+echo "aarch64"
+echo "darwin23"
+echo ""
 "#
-        .to_string();
+        );
         std::fs::write(&ruby_exe, mock_script).expect("Failed to create ruby executable");
 
         // Make it executable on Unix systems

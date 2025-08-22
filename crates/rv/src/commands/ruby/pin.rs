@@ -1,3 +1,4 @@
+use anstream::println;
 use miette::Diagnostic;
 use owo_colors::OwoColorize;
 

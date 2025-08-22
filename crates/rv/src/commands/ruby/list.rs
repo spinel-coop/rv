@@ -1,5 +1,6 @@
 use std::io;
 
+use anstream::println;
 use owo_colors::OwoColorize;
 use tracing::{info, warn};
 

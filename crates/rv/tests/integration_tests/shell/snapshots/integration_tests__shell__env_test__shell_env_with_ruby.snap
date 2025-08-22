@@ -5,8 +5,8 @@ expression: output.normalized_stdout()
 unset RUBYOPT GEM_ROOT
 export RUBY_ROOT=/opt/rubies/ruby-3.3.5
 export RUBY_ENGINE=ruby
-export RUBY_VERSION=''
-export GEM_HOME=/Users/andre/.gem/ruby/
-export GEM_PATH=/Users/andre/.gem/ruby/bin
-export PATH='/Users/andre/.gem/ruby/bin:/opt/rubies/ruby-3.3.5/bin:/tmp/bin'
+export RUBY_VERSION=3.3.5
+export GEM_HOME=/home/.gem/ruby/3.3.5
+export GEM_PATH=/home/.gem/ruby/3.3.5/bin
+export PATH='/home/.gem/ruby/3.3.5/bin:/opt/rubies/ruby-3.3.5/bin:/tmp/bin'
 hash -r
