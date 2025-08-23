@@ -1,9 +1,8 @@
 pub mod env;
 pub mod init;
 
-use std::str::FromStr;
-
 use clap::{Args, Subcommand};
+use serde::Serialize;
 
 #[derive(Args)]
 pub struct ShellArgs {
@@ -15,43 +14,18 @@ pub struct ShellArgs {
 pub enum ShellCommand {
     #[command(about = "Configure your shell to use rv")]
     Init {
-        /// The shell to initialize
+        /// The shell to initialize (only zsh so far)
         shell: Shell,
     },
     #[command(hide = true)]
-    Env,
+    Env {
+        /// The shell to configure (only zsh so far)
+        shell: Shell,
+    },
 }
 
-#[derive(Debug, Clone)]
+#[derive(clap::ValueEnum, Clone, Default, Debug, Serialize)]
 pub enum Shell {
+    #[default]
     Zsh,
-    Bash,
-    Fish,
-    Nushell,
-    Powershell,
-    Unknown { name: String },
-}
-
-impl FromStr for Shell {
-    type Err = std::convert::Infallible;
-
-    fn from_str(s: &str) -> std::result::Result<Self, std::convert::Infallible> {
-        let shell = match s {
-            "zsh" => Shell::Zsh,
-            "bash" => Shell::Bash,
-            "fish" => Shell::Fish,
-            "nushell" => Shell::Nushell,
-            "powershell" => Shell::Powershell,
-            _ => Shell::Unknown {
-                name: s.to_string(),
-            },
-        };
-        Ok(shell)
-    }
-}
-
-impl From<&str> for Shell {
-    fn from(val: &str) -> Self {
-        Shell::from_str(val).unwrap()
-    }
 }
