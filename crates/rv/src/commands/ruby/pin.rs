@@ -1,3 +1,4 @@
+use anstream::println;
 use miette::Diagnostic;
 use owo_colors::OwoColorize;
 
@@ -65,10 +66,11 @@ mod tests {
         let config = Config {
             ruby_dirs: vec![ruby_dir],
             gemfile: None,
-            root,
+            current_exe: root.join("bin").join("rv"),
             project_dir: Some(project_dir),
             current_dir,
             cache: rv_cache::Cache::temp().unwrap(),
+            root,
         };
 
         Ok(config)

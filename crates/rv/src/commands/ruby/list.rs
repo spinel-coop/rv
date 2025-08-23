@@ -1,5 +1,6 @@
 use std::io;
 
+use anstream::println;
 use owo_colors::OwoColorize;
 use tracing::{info, warn};
 
@@ -89,6 +90,7 @@ mod tests {
         let root = Utf8PathBuf::from("/tmp/rv_test_root");
         let rubies_dir = temp_path.join("rubies");
         let current_dir = temp_path.join("project");
+        let current_exe = root.join("bin").join("rv");
 
         Config {
             ruby_dirs: vec![rubies_dir],
@@ -97,6 +99,7 @@ mod tests {
             current_dir,
             project_dir: None,
             cache: Cache::temp().unwrap(),
+            current_exe,
         }
     }
 

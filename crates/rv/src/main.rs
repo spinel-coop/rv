@@ -51,11 +51,7 @@ struct Cli {
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity<clap_verbosity_flag::InfoLevel>,
 
-    /// Root directory for testing (hidden)
-    #[arg(long, hide = true, env = "RV_ROOT_DIR")]
-    root_dir: Option<Utf8PathBuf>,
-
-    #[arg(long)]
+    #[arg(long, env = "RV_COLOR")]
     color: Option<ColorMode>,
 
     #[command(flatten)]
@@ -63,6 +59,14 @@ struct Cli {
 
     #[command(subcommand)]
     command: Option<Commands>,
+
+    /// Root directory for testing (hidden)
+    #[arg(long, hide = true, env = "RV_ROOT_DIR")]
+    root_dir: Option<Utf8PathBuf>,
+
+    /// Executable path for testing (hidden)
+    #[arg(long, hide = true, env = "RV_TEST_EXE")]
+    current_exe: Option<Utf8PathBuf>,
 }
 
 impl Cli {
@@ -88,6 +92,11 @@ impl Cli {
                 .collect()
         };
         let cache = self.cache_args.to_cache()?;
+        let current_exe = if let Some(exe) = self.current_exe.clone() {
+            exe
+        } else {
+            std::env::current_exe()?.to_str().unwrap().into()
+        };
 
         Ok(Config {
             ruby_dirs,
@@ -96,6 +105,7 @@ impl Cli {
             current_dir,
             project_dir,
             cache,
+            current_exe,
         })
     }
 }
@@ -247,7 +257,7 @@ async fn main() -> Result<()> {
                 CacheCommand::Clean => cache_clean(&config)?,
             },
             Commands::Shell(shell) => match shell.command {
-                ShellCommand::Init => shell_init()?,
+                ShellCommand::Init => shell_init(&config)?,
                 ShellCommand::Env => shell_env(&config)?,
             },
         },

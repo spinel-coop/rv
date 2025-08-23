@@ -1,0 +1,7 @@
+---
+source: crates/rv/tests/integration_tests/shell/env_test.rs
+expression: output.normalized_stdout()
+---
+unset RUBY_ROOT RUBY_ENGINE RUBY_VERSION RUBYOPT GEM_ROOT GEM_HOME GEM_PATH
+export PATH=/tmp/bin
+hash -r

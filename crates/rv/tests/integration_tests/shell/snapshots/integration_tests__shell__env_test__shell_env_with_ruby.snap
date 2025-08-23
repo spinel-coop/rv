@@ -1,0 +1,12 @@
+---
+source: crates/rv/tests/integration_tests/shell/env_test.rs
+expression: output.normalized_stdout()
+---
+unset RUBYOPT GEM_ROOT
+export RUBY_ROOT=/opt/rubies/ruby-3.3.5
+export RUBY_ENGINE=ruby
+export RUBY_VERSION=3.3.5
+export GEM_HOME=/tmp/home/.gem/ruby/3.3.5
+export GEM_PATH=/tmp/home/.gem/ruby/3.3.5/bin
+export PATH='/tmp/home/.gem/ruby/3.3.5/bin:/opt/rubies/ruby-3.3.5/bin:/tmp/bin'
+hash -r

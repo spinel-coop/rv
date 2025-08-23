@@ -9,7 +9,7 @@ homepage = "https://spinel.coop/rv"
 [dependencies]
 clap = { workspace = true, features = ["derive", "env"] }
 clap_derive = { workspace = true }
-indicatif = { workspace = true }
+indicatif = { workspace = true, features = ["rayon"] }
 miette = { workspace = true, features = ["fancy"] }
 owo-colors = { workspace = true }
 rayon = { workspace = true }

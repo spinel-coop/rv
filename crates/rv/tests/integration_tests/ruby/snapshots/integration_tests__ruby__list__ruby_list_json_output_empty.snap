@@ -1,5 +1,0 @@
----
-source: crates/rv/tests/integration_tests/ruby/list.rs
-expression: output.normalized_stdout()
----
-[]
