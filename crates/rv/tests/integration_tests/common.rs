@@ -25,7 +25,7 @@ impl RvTest {
         test.env.insert("RV_TEST_ARCH".into(), "aarch64".into());
         test.env.insert("RV_TEST_OS".into(), "macos".into());
         test.env.insert("RV_TEST_EXE".into(), "/tmp/bin/rv".into());
-        test.env.insert("HOME".into(), "/home".into());
+        test.env.insert("HOME".into(), "/tmp/home".into());
 
         test
     }

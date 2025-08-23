@@ -95,10 +95,10 @@ fn test_ruby_list_multiple_matching_rubies() {
     let output = test.ruby_list(&[]);
     output.assert_success();
     assert_snapshot!(output.normalized_stdout(), @r"
-      ruby-3.1.4    [36m/opt/rubies/3.1.4/bin/ruby[39m
-      ruby-3.1.4    [36m/opt/rubies/ruby-3.1.4/bin/ruby[39m
-      ruby-3.2.0    [36m/opt/rubies/3.2.0/bin/ruby[39m
-    * ruby-3.2.0    [36m/opt/rubies/ruby-3.2.0/bin/ruby[39m
+      ruby-3.1.4    /opt/rubies/3.1.4/bin/ruby
+      ruby-3.1.4    /opt/rubies/ruby-3.1.4/bin/ruby
+      ruby-3.2.0    /opt/rubies/3.2.0/bin/ruby
+    * ruby-3.2.0    /opt/rubies/ruby-3.2.0/bin/ruby
     ");
 
     test.env
@@ -107,9 +107,9 @@ fn test_ruby_list_multiple_matching_rubies() {
     let output = test.ruby_list(&[]);
     output.assert_success();
     assert_snapshot!(output.normalized_stdout(), @r"
-      ruby-3.1.4    [36m/opt/rubies/3.1.4/bin/ruby[39m
-      ruby-3.1.4    [36m/opt/rubies/ruby-3.1.4/bin/ruby[39m
-      ruby-3.2.0    [36m/opt/rubies/3.2.0/bin/ruby[39m
-    * ruby-3.2.0    [36m/opt/rubies/ruby-3.2.0/bin/ruby[39m
+      ruby-3.1.4    /opt/rubies/3.1.4/bin/ruby
+      ruby-3.1.4    /opt/rubies/ruby-3.1.4/bin/ruby
+      ruby-3.2.0    /opt/rubies/3.2.0/bin/ruby
+    * ruby-3.2.0    /opt/rubies/ruby-3.2.0/bin/ruby
     ");
 }
