@@ -265,7 +265,7 @@ async fn main() -> Result<()> {
             },
             Commands::Shell(shell) => match shell.command {
                 ShellCommand::Init { shell } => shell_init(&config, shell)?,
-                ShellCommand::Env => shell_env(&config)?,
+                ShellCommand::Env { shell } => shell_env(&config, shell)?,
             },
         },
     }

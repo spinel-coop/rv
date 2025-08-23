@@ -4,7 +4,7 @@ expression: output.normalized_stdout()
 ---
 autoload -U add-zsh-hook
 _rv_autoload_hook () {
-    eval "$(/tmp/bin/rv shell env)"
+    eval "$(/tmp/bin/rv shell env zsh)"
 }
 add-zsh-hook chpwd _rv_autoload_hook
 _rv_autoload_hook

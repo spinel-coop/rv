@@ -4,7 +4,7 @@ use insta::assert_snapshot;
 #[test]
 fn test_shell_env_succeeds() {
     let test = RvTest::new();
-    let output = test.rv(&["shell", "env"]);
+    let output = test.rv(&["shell", "env", "zsh"]);
 
     assert_snapshot!(output.normalized_stdout());
     assert!(output.success());
@@ -14,7 +14,7 @@ fn test_shell_env_succeeds() {
 fn test_shell_env_with_path() {
     let mut test = RvTest::new();
     test.env.insert("PATH".into(), "/tmp/bin".into());
-    let output = test.rv(&["shell", "env"]);
+    let output = test.rv(&["shell", "env", "zsh"]);
 
     assert_snapshot!(output.normalized_stdout());
     assert!(output.success());
@@ -28,7 +28,7 @@ fn test_shell_env_clears_ruby_vars() {
     test.env.insert("RUBY_ENGINE".into(), "ruby".into());
     test.env.insert("RUBY_VERSION".into(), "3.4.5".into());
     test.env.insert("RUBYOPT".into(), "--verbose".into());
-    let output = test.rv(&["shell", "env"]);
+    let output = test.rv(&["shell", "env", "zsh"]);
 
     assert_snapshot!(output.normalized_stdout());
     assert!(output.success());
@@ -44,7 +44,7 @@ fn test_shell_env_clear_gem_vars() {
         "GEM_PATH".into(),
         "/tmp/root/.gems/bin:/tmp/ruby/gems".into(),
     );
-    let output = test.rv(&["shell", "env"]);
+    let output = test.rv(&["shell", "env", "zsh"]);
 
     assert_snapshot!(output.normalized_stdout());
     assert!(output.success());
@@ -67,7 +67,7 @@ fn test_shell_env_with_ruby() {
         "/tmp/root/.gems/bin:/tmp/ruby/gems".into(),
     );
 
-    let output = test.rv(&["shell", "env"]);
+    let output = test.rv(&["shell", "env", "zsh"]);
     output.assert_success();
 
     assert_snapshot!(output.normalized_stdout());
