@@ -3,7 +3,7 @@ pub mod init;
 
 use clap::{Args, Subcommand};
 
-use crate::commands::shell::init::Shell;
+use init::Shell;
 
 #[derive(Args)]
 pub struct ShellArgs {
