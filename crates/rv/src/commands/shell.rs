@@ -3,6 +3,8 @@ pub mod init;
 
 use clap::{Args, Subcommand};
 
+use crate::commands::shell::init::Shell;
+
 #[derive(Args)]
 pub struct ShellArgs {
     #[command(subcommand)]
@@ -12,7 +14,10 @@ pub struct ShellArgs {
 #[derive(Subcommand)]
 pub enum ShellCommand {
     #[command(about = "Configure your shell to use rv")]
-    Init,
+    Init {
+        /// The shell to initialize
+        shell: Shell,
+    },
     #[command(hide = true)]
     Env,
 }
