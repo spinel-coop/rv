@@ -264,8 +264,8 @@ async fn main() -> Result<()> {
                 CacheCommand::Clean => cache_clean(&config)?,
             },
             Commands::Shell(shell) => match shell.command {
-                ShellCommand::Init => shell_init(&config)?,
-                ShellCommand::Env => shell_env(&config)?,
+                ShellCommand::Init { shell } => shell_init(&config, shell)?,
+                ShellCommand::Env { shell } => shell_env(&config, shell)?,
             },
         },
     }

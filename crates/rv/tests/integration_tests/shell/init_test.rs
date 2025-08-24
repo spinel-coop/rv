@@ -4,8 +4,17 @@ use insta::assert_snapshot;
 #[test]
 fn test_shell_init_succeeds() {
     let test = RvTest::new();
-    let output = test.rv(&["shell", "init"]);
+    let output = test.rv(&["shell", "init", "zsh"]);
+    output.assert_success();
 
     assert_snapshot!(output.normalized_stdout());
-    assert!(output.success());
+}
+
+#[test]
+fn test_shell_init_fails_without_shell() {
+    let test = RvTest::new();
+    let output = test.rv(&["shell", "init"]);
+    output.assert_failure();
+
+    assert_eq!(output.normalized_stdout(), "");
 }

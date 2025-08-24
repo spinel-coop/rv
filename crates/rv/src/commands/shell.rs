@@ -2,6 +2,7 @@ pub mod env;
 pub mod init;
 
 use clap::{Args, Subcommand};
+use serde::Serialize;
 
 #[derive(Args)]
 pub struct ShellArgs {
@@ -12,7 +13,19 @@ pub struct ShellArgs {
 #[derive(Subcommand)]
 pub enum ShellCommand {
     #[command(about = "Configure your shell to use rv")]
-    Init,
+    Init {
+        /// The shell to initialize (only zsh so far)
+        shell: Shell,
+    },
     #[command(hide = true)]
-    Env,
+    Env {
+        /// The shell to configure (only zsh so far)
+        shell: Shell,
+    },
+}
+
+#[derive(clap::ValueEnum, Clone, Default, Debug, Serialize)]
+pub enum Shell {
+    #[default]
+    Zsh,
 }
