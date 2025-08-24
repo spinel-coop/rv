@@ -17,6 +17,8 @@ use crate::commands::ruby::find::find as ruby_find;
 use crate::commands::ruby::install::install as ruby_install;
 use crate::commands::ruby::list::list as ruby_list;
 use crate::commands::ruby::pin::pin as ruby_pin;
+#[cfg(unix)]
+use crate::commands::ruby::run::run as ruby_run;
 use crate::commands::ruby::{RubyArgs, RubyCommand};
 use crate::commands::shell::env::env as shell_env;
 use crate::commands::shell::init::init as shell_init;
@@ -178,6 +180,9 @@ pub enum Error {
     ListError(#[from] commands::ruby::list::Error),
     #[error(transparent)]
     InstallError(#[from] commands::ruby::install::Error),
+    #[cfg(unix)]
+    #[error(transparent)]
+    RunError(#[from] commands::ruby::run::Error),
     #[error(transparent)]
     NonUtf8Path(#[from] FromPathBufError),
     #[error(transparent)]
@@ -251,6 +256,8 @@ async fn main() -> Result<()> {
                     version,
                     install_dir,
                 } => ruby_install(&config, install_dir, version).await?,
+                #[cfg(unix)]
+                RubyCommand::Run { version, args } => ruby_run(&config, &version, &args)?,
             },
             Commands::Cache(cache) => match cache.command {
                 CacheCommand::Dir => cache_dir(&config)?,

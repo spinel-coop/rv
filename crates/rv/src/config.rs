@@ -137,7 +137,7 @@ const ENV_VARS: [&str; 7] = [
 ];
 
 #[allow(clippy::type_complexity)]
-pub fn env_for(ruby: &Option<Ruby>) -> Result<(Vec<&'static str>, Vec<(&'static str, String)>)> {
+pub fn env_for(ruby: Option<&Ruby>) -> Result<(Vec<&'static str>, Vec<(&'static str, String)>)> {
     let mut unset: Vec<_> = ENV_VARS.into();
     let mut set: Vec<(&'static str, String)> = vec![];
 

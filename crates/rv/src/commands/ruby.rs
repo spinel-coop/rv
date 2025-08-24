@@ -7,6 +7,8 @@ pub mod find;
 pub mod install;
 pub mod list;
 pub mod pin;
+#[cfg(unix)]
+pub mod run;
 
 #[derive(Args)]
 pub struct RubyArgs {
@@ -47,5 +49,16 @@ pub enum RubyCommand {
 
         /// Ruby version to install
         version: RubyRequest,
+    },
+
+    #[cfg(unix)]
+    #[command(about = "Run a specific Ruby", dont_delimit_trailing_values = true)]
+    Run {
+        /// Ruby version to run
+        version: RubyRequest,
+
+        /// Arguments passed to the `ruby` invocation
+        #[arg(last = true, allow_hyphen_values = true)]
+        args: Vec<String>,
     },
 }

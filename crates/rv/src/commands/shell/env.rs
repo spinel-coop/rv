@@ -15,7 +15,7 @@ type Result<T> = miette::Result<T, Error>;
 pub fn env(config: &config::Config) -> Result<()> {
     let ruby = config.project_ruby();
 
-    let (unset, set) = config::env_for(&ruby)?;
+    let (unset, set) = config::env_for(ruby.as_ref())?;
 
     if !unset.is_empty() {
         println!("unset {}", unset.join(" "));
