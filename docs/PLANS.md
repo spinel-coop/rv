@@ -1,5 +1,20 @@
 # `rv` plans
 
+All-in-one tooling for Ruby developers.
+
+- Manage Ruby versions, gems, applications, tools, and scripts, effortlessly.
+- Get rid of `rvm`, `rbenv`, `chruby`, `asdf`, `mise`, `ruby-build`, `ruby-install`, `bundler`, and `rubygems`, all at once.
+- Install Ruby and all your gems in seconds, without having to compile anything ever again.
+
+## features
+
+- Run any gem command instantly, like `rvx rails new`.
+- Run any script, installing all needed gems, like `rv run script.rb`.
+- Install gem CLIs with any needed rubies with `rv tool install`.
+- Install precompiled Ruby versions in seconds with `rv ruby install`.
+- Manage project gems with `rv install`, `rv add`, and `rv remove`.
+- Create gems with `rv gem`, and publish them with `rv publish`.
+
 ## commands
 
 ### Ruby versions
