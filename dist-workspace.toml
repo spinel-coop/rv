@@ -23,6 +23,8 @@ install-path = "CARGO_HOME"
 publish-jobs = ["homebrew"]
 # Whether to install an updater program
 install-updater = false
+# Only build the crates we are releasing, skip unused
+precise-builds = true
 # Which actions to run on pull requests
 pr-run-mode = "upload"
 
