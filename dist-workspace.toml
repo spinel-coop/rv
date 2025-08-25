@@ -21,3 +21,6 @@ publish-jobs = ["homebrew"]
 install-updater = false
 # Which actions to run on pull requests
 pr-run-mode = "upload"
+
+[dist.dependencies.apt]
+libssl-dev = { targets = ["aarch64-unknown-linux-gnu"] }
