@@ -12,7 +12,11 @@ installers = ["shell", "homebrew"]
 # A GitHub repo to push Homebrew formulas to
 tap = "spinel-coop/homebrew-tap"
 # Target platforms to build apps for (Rust target-triple syntax)
-targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-unknown-linux-gnu"]
+targets = [
+    "aarch64-apple-darwin",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-unknown-linux-gnu",
+]
 # Path that installers should place binaries in
 install-path = "CARGO_HOME"
 # Publish jobs to run in CI
@@ -22,5 +26,7 @@ install-updater = false
 # Which actions to run on pull requests
 pr-run-mode = "upload"
 
-[dist.dependencies.apt]
-libssl-dev = { targets = ["aarch64-unknown-linux-gnu"] }
+[dist.github-custom-runners]
+aarch64-apple-darwin = "macos-14"
+aarch64-unknown-linux-gnu = "ubuntu-24.04-arm"
+x86_64-unknown-linux-gnu = "ubuntu-24.04"
