@@ -19,3 +19,5 @@ install-path = "CARGO_HOME"
 publish-jobs = ["homebrew"]
 # Whether to install an updater program
 install-updater = false
+# Which actions to run on pull requests
+pr-run-mode = "upload"
