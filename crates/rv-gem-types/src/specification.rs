@@ -485,9 +485,11 @@ mod tests {
         // Empty summary should fail validation
         let result = spec.validate();
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains(&"summary is required".to_string()));
+        assert!(
+            result
+                .unwrap_err()
+                .contains(&"summary is required".to_string())
+        );
 
         // With summary should pass
         spec.summary = "Test summary".to_string();
@@ -497,19 +499,23 @@ mod tests {
         spec.name = "invalid name with spaces".to_string();
         let result = spec.validate();
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains(&"name contains invalid characters".to_string()));
+        assert!(
+            result
+                .unwrap_err()
+                .contains(&"name contains invalid characters".to_string())
+        );
 
         // Long metadata should fail
         spec.name = "test".to_string();
         spec.metadata.insert("x".repeat(129), "value".to_string());
         let result = spec.validate();
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .iter()
-            .any(|e| e.contains("metadata key") && e.contains("too long")));
+        assert!(
+            result
+                .unwrap_err()
+                .iter()
+                .any(|e| e.contains("metadata key") && e.contains("too long"))
+        );
     }
 
     #[test]

@@ -107,9 +107,9 @@ fn test_gem_missing_metadata() {
 /// Test checksum mismatch by modifying gem content
 #[test]
 fn test_checksum_mismatch() {
+    use flate2::Compression;
     use flate2::read::GzDecoder;
     use flate2::write::GzEncoder;
-    use flate2::Compression;
     use std::io::Read;
     use tar::{Archive, Builder, Header};
 
