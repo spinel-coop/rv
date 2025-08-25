@@ -1,6 +1,7 @@
 [package]
 name = "rv"
 version = "0.1.0"
+rust-version = "1.88.0"
 edition = "2024"
 repository = "https://github.com/spinel-coop/rv"
 description = "Ruby version management, but fast"
