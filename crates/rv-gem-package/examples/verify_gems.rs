@@ -1,5 +1,5 @@
-use miette::{miette, Result};
 use miette::{Context, IntoDiagnostic};
+use miette::{Result, miette};
 use rv_gem_package::{Error, Package};
 use std::env;
 use std::fs;
@@ -55,14 +55,13 @@ fn main() -> Result<()> {
                     if e.chain().any(|e| {
                         e.downcast_ref::<rv_gem_package::Error>()
                             .is_some_and(|e| matches!(e, Error::YamlParsing(_)))
-                    }) {
-                        if let Err(extract_err) = extract_failing_gem_metadata(&gem_file) {
-                            eprintln!(
-                                "Failed to extract metadata from {}: {}",
-                                gem_file.display(),
-                                extract_err
-                            );
-                        }
+                    }) && let Err(extract_err) = extract_failing_gem_metadata(&gem_file)
+                    {
+                        eprintln!(
+                            "Failed to extract metadata from {}: {}",
+                            gem_file.display(),
+                            extract_err
+                        );
                     }
                     errors.push(error_msg);
                 }

@@ -56,7 +56,7 @@ impl Entry {
                 return Err(Error::tar_unsupported_entry_type(format!(
                     "{:?}",
                     header.entry_type()
-                )))
+                )));
             }
         };
 

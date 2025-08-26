@@ -22,7 +22,10 @@ version: 1.0.0
 
     // Check that it's the expected error type with appropriate message
     let error_msg = format!("{err}");
-    assert_eq!("Expected `ruby/object:Gem::Specification`, found mapping start with tag 'ruby/object:Gem::Version'", error_msg);
+    assert_eq!(
+        "Expected `ruby/object:Gem::Specification`, found mapping start with tag 'ruby/object:Gem::Version'",
+        error_msg
+    );
 }
 
 #[test]
@@ -40,7 +43,10 @@ version: !ruby/object:Gem::Requirement
 
     // Check that it's the expected error for wrong version tag
     let error_msg = format!("{err}");
-    assert_eq!("Expected `ruby/object:Gem::Version`, found mapping start with tag 'ruby/object:Gem::Requirement'", error_msg);
+    assert_eq!(
+        "Expected `ruby/object:Gem::Version`, found mapping start with tag 'ruby/object:Gem::Requirement'",
+        error_msg
+    );
 }
 
 #[test]

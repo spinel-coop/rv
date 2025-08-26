@@ -1,8 +1,8 @@
 use crate::{
+    Error, Result,
     checksum::{ChecksumAlgorithm, Checksums},
     entry::DataReader,
     source::PackageSource,
-    Error, Result,
 };
 use flate2::read::GzDecoder;
 use rv_gem_types::Specification;
@@ -115,15 +115,14 @@ impl<S: PackageSource> Package<S> {
 
                             if let Some(expected) =
                                 checksums.get_checksum(algorithm_name, file_path)
+                                && calculated != expected
                             {
-                                if calculated != expected {
-                                    return Err(Error::checksum_mismatch(
-                                        file_path,
-                                        algorithm_name,
-                                        expected,
-                                        calculated,
-                                    ));
-                                }
+                                return Err(Error::checksum_mismatch(
+                                    file_path,
+                                    algorithm_name,
+                                    expected,
+                                    calculated,
+                                ));
                             }
                             break;
                         }

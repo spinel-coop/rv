@@ -830,8 +830,7 @@ fn get_error_details(
         }
     };
 
-    let (found, span_start, span_length) = if let Some((ref event, span)) = remaining_input.first()
-    {
+    let (found, span_start, span_length) = if let Some((event, span)) = remaining_input.first() {
         let start_idx = span.start.index();
         let end_idx = span.end.index();
         let length = if end_idx > start_idx {
