@@ -69,6 +69,12 @@ See [PLANS.md](docs/PLANS.md) for more on our future plans.
 
 "arr vee", the names of the two letters, spelled out.
 
+## Contributing
+
+Install dependencies on macOS or Ubuntu with `bin/setup`. Make changes, and then run the development binary with `bin/rv`, or install the development binary to your system with `bin/install`.
+
+When you're done, make sure to run the tests with `bin/test`, and the linter with `bin/lint`. Then, send us a pull request! We love pull requests.
+
 ## Acknowledgements
 
 `rv` is (as you might guess from the name) heavily inspired by [`uv`](https://github.com/astral-sh/uv).
@@ -82,8 +88,3 @@ We'd also like to thank everyone who has ever worked on a package manager in the
 `rv` is licensed under either [Apache-2.0](/LICENSE-APACHE) or [MIT](/LICENSE-MIT), at your option.
 
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion by you, as defined in the Apache-2.0 license, shall be dually licensed as above, without any additional terms or conditions.
-
-## Development instructions
-
-```bash
-cargo build
