@@ -15,14 +15,18 @@ Eventually, you'll be able to manage all your Rubies, tools, gems, and packages,
 
 - **Operating Systems**: macOS 14 and up, Ubuntu 24.04 and up
 - **Ruby Versions**: Ruby 3.4.1 and up
-- **Shells**: zsh
+- **Shells**: zsh, bash
 
 ## Quickstart
 
 ```bash
 brew install rv
+# zsh
 echo 'eval "$(rv shell init zsh)"' >> ~/.zshrc
 eval "$(rv shell init zsh)"
+# bash
+echo 'eval "$(rv shell init bash)"' >> ~/.bashrc
+eval "$(rv shell init bash)"
 ```
 
 ## Usage
@@ -57,11 +61,11 @@ See [PLANS.md](docs/PLANS.md) for more on our future plans.
 
 ## FAQ
 
-**Why are you doing this**
+**Why are you doing this?**
 
 [@indirect](https://github.com/indirect) wrote [a blog post about his motivation to create `rv`](https://andre.arko.net/2025/08/25/rv-a-new-kind-of-ruby-management-tool/).
 
-**How do you pronounce rv**
+**How do you pronounce rv?**
 
 "arr vee", the names of the two letters, spelled out.
 
@@ -78,3 +82,8 @@ We'd also like to thank everyone who has ever worked on a package manager in the
 `rv` is licensed under either [Apache-2.0](/LICENSE-APACHE) or [MIT](/LICENSE-MIT), at your option.
 
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion by you, as defined in the Apache-2.0 license, shall be dually licensed as above, without any additional terms or conditions.
+
+## Development instructions
+
+```bash
+cargo build
