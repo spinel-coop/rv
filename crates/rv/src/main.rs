@@ -4,11 +4,11 @@ use clap::builder::Styles;
 use clap::builder::styling::AnsiColor;
 use clap::{Parser, Subcommand};
 use config::Config;
+use miette::Report;
 use rv_cache::CacheArgs;
 use tokio::main;
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
-use miette::Report;
 
 pub mod commands;
 pub mod config;

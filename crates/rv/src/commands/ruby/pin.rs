@@ -22,10 +22,7 @@ pub fn pin(config: &Config, version: Option<String>) -> Result<()> {
 }
 
 fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
-    let project_dir = config
-        .project_dir
-        .as_ref()
-        .unwrap_or(&config.current_dir);
+    let project_dir = config.project_dir.as_ref().unwrap_or(&config.current_dir);
 
     let ruby_version_path = project_dir.join(".ruby-version");
     std::fs::write(ruby_version_path, format!("{version}\n"))?;
