@@ -65,7 +65,6 @@ See [PLANS.md](docs/PLANS.md) for more on our future plans.
 
 "arr vee", the names of the two letters, spelled out.
 
-
 ## Acknowledgements
 
 `rv` is (as you might guess from the name) heavily inspired by [`uv`](https://github.com/astral-sh/uv).
@@ -73,3 +72,9 @@ See [PLANS.md](docs/PLANS.md) for more on our future plans.
 It also takes inspiration, features, and approaches from [Bundler](https://bundler.io), [Frum](https://github.com/TaKO8Ki/frum), [Homebrew](https://brew.sh), [npm](https://npmjs.com), [Cargo](https://github.com/rust-lang/cargo), and [Orogene](https://github.com/orogene/orogene).
 
 We'd also like to thank everyone who has ever worked on a package manager in the past for helping get all of us to where we are today.
+
+## License
+
+`rv` is licensed under either [Apache-2.0](/LICENSE-APACHE) or [MIT](/LICENSE-MIT), at your option.
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion by you, as defined in the Apache-2.0 license, shall be dually licensed as above, without any additional terms or conditions.
