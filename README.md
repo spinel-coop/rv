@@ -6,6 +6,11 @@ Today, you can install Ruby in one second flat.
 
 Eventually, you'll be able to manage all your Rubies, tools, gems, and packages, faster than you would believe is possible.
 
+## Testimonials
+
+"what the heckie that just installed a ruby version for me in .22 seconds???"
+ &mdash; <a href="https://bsky.app/profile/veryroundbird.house/post/3lxdwtsbwp22o">c. ruiyi smallbird</a>
+
 ## Requirements
 
 - **Operating Systems**: macOS 14 and up, Ubuntu 24.04 and up
