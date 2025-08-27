@@ -16,7 +16,7 @@ Eventually, you'll be able to manage all your Rubies, tools, gems, and packages,
 
 ```bash
 brew install spinel-coop/tap/rv
-echo 'eval "$(rv shell init zsh)"' >> ~/.zshrc
+echo 'eval "$(rv shell init zsh)"' >> ${ZDOTDIR:-$HOME}/.zshrc
 eval "$(rv shell init zsh)"
 ```
 
