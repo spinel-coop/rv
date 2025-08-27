@@ -15,14 +15,18 @@ Eventually, you'll be able to manage all your Rubies, tools, gems, and packages,
 
 - **Operating Systems**: macOS 14 and up, Ubuntu 24.04 and up
 - **Ruby Versions**: Ruby 3.4.1 and up
-- **Shells**: zsh
+- **Shells**: zsh, bash
 
 ## Quickstart
 
 ```bash
 brew install rv
+# zsh
 echo 'eval "$(rv shell init zsh)"' >> ~/.zshrc
 eval "$(rv shell init zsh)"
+# bash
+echo 'eval "$(rv shell init bash)"' >> ~/.bashrc
+eval "$(rv shell init bash)"
 ```
 
 ## Usage
@@ -57,13 +61,19 @@ See [PLANS.md](docs/PLANS.md) for more on our future plans.
 
 ## FAQ
 
-**Why are you doing this**
+**Why are you doing this?**
 
 [@indirect](https://github.com/indirect) wrote [a blog post about his motivation to create `rv`](https://andre.arko.net/2025/08/25/rv-a-new-kind-of-ruby-management-tool/).
 
-**How do you pronounce rv**
+**How do you pronounce rv?**
 
 "arr vee", the names of the two letters, spelled out.
+
+## Contributing
+
+Install dependencies on macOS or Ubuntu with `bin/setup`. Make changes, and then run the development binary with `bin/rv`, or install the development binary to your system with `bin/install`.
+
+When you're done, make sure to run the tests with `bin/test`, and the linter with `bin/lint`. Then, send us a pull request! We love pull requests.
 
 ## Acknowledgements
 

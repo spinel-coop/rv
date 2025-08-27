@@ -18,7 +18,7 @@ pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
     let (unset, set) = config::env_for(ruby.as_ref())?;
 
     match shell {
-        Shell::Zsh => {
+        Shell::Zsh | Shell::Bash => {
             if !unset.is_empty() {
                 println!("unset {}", unset.join(" "));
             }

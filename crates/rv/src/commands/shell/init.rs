@@ -25,5 +25,25 @@ pub fn init(config: &Config, shell: Shell) -> Result<()> {
             );
             Ok(())
         }
+        Shell::Bash => {
+            print!(
+                concat!(
+                    "_rv_autoload_hook() {{\n",
+                    "    eval \"$({} shell env bash)\"\n",
+                    "}}\n",
+                    "_rv_autoload_hook\n",
+                    "_chpwd_hook() {{\n",
+                    "    if [[ \"$PWD\" != \"$_OLDPWD\" ]]; then\n",
+                    "        _rv_autoload_hook\n",
+                    "        _OLDPWD=\"$PWD\"\n",
+                    "    fi\n",
+                    "}}\n",
+                    "_OLDPWD=\"$PWD\"\n",
+                    "PROMPT_COMMAND=\"_chpwd_hook${{PROMPT_COMMAND:+; $PROMPT_COMMAND}}\"\n",
+                ),
+                config.current_exe
+            );
+            Ok(())
+        }
     }
 }
