@@ -54,3 +54,14 @@ All-in-one tooling for Ruby developers.
 - Create gems with `rv gem`, and publish them with `rv publish`.
 
 See [PLANS.md](docs/PLANS.md) for more on our future plans.
+
+## FAQ
+
+**Why are you doing this**
+
+[@indirect](https://github.com/indirect) wrote [a blog post about his motivation to create `rv`](https://andre.arko.net/2025/08/25/rv-a-new-kind-of-ruby-management-tool/).
+
+**How do you pronounce rv**
+
+"arr vee", the names of the two letters, spelled out.
+
