@@ -4,6 +4,7 @@ use clap::builder::Styles;
 use clap::builder::styling::AnsiColor;
 use clap::{Parser, Subcommand};
 use config::Config;
+use miette::Report;
 use rv_cache::CacheArgs;
 use tokio::main;
 use tracing_indicatif::IndicatifLayer;
@@ -194,7 +195,19 @@ pub enum Error {
 type Result<T> = miette::Result<T, Error>;
 
 #[main]
-async fn main() -> Result<()> {
+async fn main() {
+    if let Err(err) = run().await {
+        let is_tty = std::io::stderr().is_terminal();
+        if is_tty {
+            eprintln!("{:?}", Report::new(err));
+        } else {
+            eprintln!("Error: {:?}", err);
+        }
+        std::process::exit(1);
+    }
+}
+
+async fn run() -> Result<()> {
     let cli = Cli::parse();
 
     let indicatif_layer = IndicatifLayer::new();
