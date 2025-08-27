@@ -18,10 +18,15 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     brew install cargo-binstall -y
   fi
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  SUDO=""
+  if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+    SUDO="sudo"
+  fi
+
   set -x
 
-  apt update
-  apt install -y curl pkg-config git gcc libssl-dev
+  $SUDO apt update -qq
+  $SUDO apt install -qq curl pkg-config git gcc libssl-dev
 
   if [[ -z $(which rustup) ]]; then
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
