@@ -20,7 +20,7 @@ Eventually, you'll be able to manage all your Rubies, tools, gems, and packages,
 ## Quickstart
 
 ```bash
-brew install spinel-coop/tap/rv
+brew install rv
 echo 'eval "$(rv shell init zsh)"' >> ~/.zshrc
 eval "$(rv shell init zsh)"
 ```
