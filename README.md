@@ -10,14 +10,18 @@ Eventually, you'll be able to manage all your Rubies, tools, gems, and packages,
 
 - **Operating Systems**: macOS 14 and up, Ubuntu 24.04 and up
 - **Ruby Versions**: Ruby 3.4.1 and up
-- **Shells**: zsh
+- **Shells**: zsh, bash
 
 ## Quickstart
 
 ```bash
 brew install spinel-coop/tap/rv
+# zsh
 echo 'eval "$(rv shell init zsh)"' >> ~/.zshrc
 eval "$(rv shell init zsh)"
+# bash
+echo 'eval "$(rv shell init bash)"' >> ~/.bashrc
+eval "$(rv shell init bash)"
 ```
 
 ## Usage
@@ -49,3 +53,8 @@ All-in-one tooling for Ruby developers.
 - Create gems with `rv gem`, and publish them with `rv publish`.
 
 See [PLANS.md](docs/PLANS.md) for more on our future plans.
+
+## Development instructions
+
+```bash
+cargo build
