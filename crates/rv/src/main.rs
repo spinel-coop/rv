@@ -8,6 +8,7 @@ use rv_cache::CacheArgs;
 use tokio::main;
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
+use miette::Report;
 
 pub mod commands;
 pub mod config;
@@ -194,7 +195,14 @@ pub enum Error {
 type Result<T> = miette::Result<T, Error>;
 
 #[main]
-async fn main() -> Result<()> {
+async fn main() {
+    if let Err(err) = run().await {
+        eprintln!("{:?}", Report::new(err));
+        std::process::exit(1);
+    }
+}
+
+async fn run() -> Result<()> {
     let cli = Cli::parse();
 
     let indicatif_layer = IndicatifLayer::new();
