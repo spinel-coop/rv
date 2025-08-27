@@ -73,4 +73,5 @@ rv-version = { version = "0.1.0", path = "crates/rv-version" }
 # The profile that 'dist' will build with
 [profile.dist]
 inherits = "release"
-lto = "thin"
+codegen-units = 1
+lto = true
