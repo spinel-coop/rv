@@ -250,7 +250,7 @@ async fn main() -> Result<()> {
                 RubyCommand::List {
                     format,
                     installed_only,
-                } => ruby_list(&config, format, installed_only)?,
+                } => ruby_list(&config, format, installed_only).await?,
                 RubyCommand::Pin { version_request } => ruby_pin(&config, version_request)?,
                 RubyCommand::Install {
                     version,
