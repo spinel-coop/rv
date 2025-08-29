@@ -29,4 +29,5 @@ pub enum Shell {
     #[default]
     Zsh,
     Bash,
+    Fish,
 }
