@@ -35,8 +35,7 @@ impl RvTest {
         test.env.insert("HOME".into(), "/tmp/home".into());
 
         // Disable network requests by default
-        test.env
-            .insert("RV_RELEASES_URL".into(), test.server.url());
+        test.env.insert("RV_RELEASES_URL".into(), test.server.url());
 
         // Disable caching for tests by default
         test.env.insert("RV_NO_CACHE".into(), "true".into());

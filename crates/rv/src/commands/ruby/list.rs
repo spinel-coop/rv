@@ -184,9 +184,8 @@ async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Vec<Release>>
     match response.status() {
         reqwest::StatusCode::NOT_MODIFIED => {
             debug!("GitHub API confirmed releases list is unchanged (304 Not Modified).");
-            let mut stale_cache = cached_data.ok_or_else(|| {
-                io::Error::other("304 response without prior cache")
-            })?;
+            let mut stale_cache =
+                cached_data.ok_or_else(|| io::Error::other("304 response without prior cache"))?;
 
             // Update the expiry time based on the latest Cache-Control header
             let max_age = response
