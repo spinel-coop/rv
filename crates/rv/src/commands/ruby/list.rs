@@ -185,7 +185,7 @@ async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Vec<Release>>
         reqwest::StatusCode::NOT_MODIFIED => {
             debug!("GitHub API confirmed releases list is unchanged (304 Not Modified).");
             let mut stale_cache = cached_data.ok_or_else(|| {
-                io::Error::new(io::ErrorKind::Other, "304 response without prior cache")
+                io::Error::other("304 response without prior cache")
             })?;
 
             // Update the expiry time based on the latest Cache-Control header
@@ -336,7 +336,7 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
     // Create entries for output
     let entries: Vec<JsonRubyEntry> = rubies_map
         .into_values()
-        .flat_map(|rubies| rubies)
+        .flatten()
         .map(|ruby| {
             let installed = !ruby.path.as_str().starts_with("http");
             let active = active_ruby.as_ref().is_some_and(|a| a == &ruby);
