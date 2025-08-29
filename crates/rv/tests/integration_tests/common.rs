@@ -116,7 +116,7 @@ impl RvOutput {
     pub fn assert_success(&self) -> &Self {
         assert!(
             self.success(),
-            "Expected command to succeeed, got:\n\n# STDERR\n{}\n# STDOUT\n{}\n# STATUS {:?}",
+            "Expected command to succeed, got:\n\n# STDERR\n{}\n# STDOUT\n{}\n# STATUS {:?}",
             str::from_utf8(&self.output.stderr).unwrap(),
             str::from_utf8(&self.output.stdout).unwrap(),
             self.output.status
