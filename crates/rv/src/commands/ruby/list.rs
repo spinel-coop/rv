@@ -3,9 +3,13 @@ use std::io;
 use std::time::{Duration, SystemTime};
 
 use anstream::println;
+use camino::Utf8PathBuf;
+use current_platform::CURRENT_PLATFORM;
 use fs_err as fs;
+use lazy_static::lazy_static;
 use owo_colors::OwoColorize;
 use regex::Regex;
+use rv_ruby::Ruby;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};
 
@@ -14,7 +18,12 @@ use crate::config::Config;
 // Use GitHub's TTL, but don't re-check more than every 60 seconds.
 const MINIMUM_CACHE_TTL: Duration = Duration::from_secs(60);
 
-#[derive(clap::ValueEnum, Clone, Debug)]
+lazy_static! {
+    static ref ARCH_REGEX: Regex =
+        Regex::new(r"portable-ruby-[\d\.]+\.(?P<arch>[a-zA-Z0-9_]+)\.bottle\.tar\.gz").unwrap();
+}
+
+#[derive(clap::ValueEnum, Clone, Debug, PartialEq, Eq)]
 pub enum OutputFormat {
     Text,
     Json,
@@ -30,6 +39,10 @@ pub enum Error {
     RequestError(#[from] reqwest::Error),
     #[error(transparent)]
     IoError(#[from] std::io::Error),
+    #[error(transparent)]
+    VersionError(#[from] rv_ruby::request::RequestError),
+    #[error(transparent)]
+    RubyError(#[from] rv_ruby::RubyError),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -37,6 +50,13 @@ type Result<T> = miette::Result<T, Error>;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Release {
     name: String,
+    assets: Vec<Asset>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct Asset {
+    name: String,
+    browser_download_url: String,
 }
 
 // Updated struct to hold ETag and calculated expiry time
@@ -45,6 +65,15 @@ struct CachedReleases {
     expires_at: SystemTime,
     etag: Option<String>,
     releases: Vec<Release>,
+}
+
+// Struct for JSON output and maintaing the list of installed/active rubies
+#[derive(Serialize)]
+struct JsonRubyEntry {
+    #[serde(flatten)]
+    details: Ruby,
+    installed: bool,
+    active: bool,
 }
 
 /// Parses the `max-age` value from a `Cache-Control` header.
@@ -56,15 +85,68 @@ fn parse_max_age(header: &str) -> Option<Duration> {
         .map(Duration::from_secs)
 }
 
+/// Parses the OS and architecture from the arch part of the asset name.
+fn parse_arch_str(arch_str: &str) -> (&'static str, &'static str) {
+    match arch_str {
+        "arm64_sonoma" => ("macos", "aarch64"),
+        "x86_64_linux" => ("linux", "x86_64"),
+        "arm64_linux" => ("linux", "aarch64"),
+        _ => ("unknown", "unknown"),
+    }
+}
+
+fn current_platform_arch_str() -> &'static str {
+    let platform =
+        std::env::var("RV_TEST_PLATFORM").unwrap_or_else(|_| CURRENT_PLATFORM.to_string());
+
+    match platform.as_str() {
+        "aarch64-apple-darwin" => "arm64_sonoma",
+        "x86_64-unknown-linux-gnu" => "x86_64_linux",
+        "aarch64-unknown-linux-gnu" => "arm64_linux",
+        _ => "unsupported",
+    }
+}
+
+/// Creates a Rubies info struct from a release asset
+fn ruby_from_release(release: &Release, asset: &Asset) -> Result<Ruby> {
+    let version: rv_ruby::version::RubyVersion = format!("ruby-{}", release.name).parse()?;
+    let display_name = version.to_string();
+
+    let arch_str = ARCH_REGEX
+        .captures(&asset.name)
+        .and_then(|caps| caps.name("arch"))
+        .map_or("unknown", |m| m.as_str());
+
+    let (os, arch) = parse_arch_str(arch_str);
+
+    Ok(Ruby {
+        key: format!("{display_name}-{os}-{arch}"),
+        version,
+        path: Utf8PathBuf::from(&asset.browser_download_url),
+        symlink: None,
+        arch: arch.to_string(),
+        os: os.to_string(),
+        gem_root: None,
+    })
+}
+
 /// Fetches available rubies
-async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Vec<String>> {
+async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Vec<Release>> {
     let cache_entry = cache.entry(
         rv_cache::CacheBucket::Ruby,
         "releases",
         "available_rubies.json",
     );
     let client = reqwest::Client::new();
-    let url = "https://api.github.com/repos/spinel-coop/rv-ruby/releases";
+
+    let api_base =
+        std::env::var("RV_RELEASES_URL").unwrap_or_else(|_| "https://api.github.com".to_string());
+    if api_base == "-" {
+        // Special case to return empty list
+        tracing::debug!("RV_RELEASES_URL is '-', returning empty list without network request.");
+        return Ok(Vec::new());
+    }
+    let url = format!("{}/repos/spinel-coop/rv-ruby/releases", api_base);
 
     // 1. Try to read from the disk cache.
     let cached_data: Option<CachedReleases> =
@@ -78,7 +160,7 @@ async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Vec<String>> 
     if let Some(cache) = &cached_data {
         if SystemTime::now() < cache.expires_at {
             debug!("Using cached list of available rubies.");
-            return Ok(cache.releases.clone().into_iter().map(|r| r.name).collect());
+            return Ok(cache.releases.clone());
         }
         debug!("Cached ruby list is stale, re-validating with server.");
     }
@@ -113,24 +195,27 @@ async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Vec<String>> 
                 .and_then(|v| v.to_str().ok())
                 .and_then(parse_max_age)
                 .unwrap_or(Duration::from_secs(60));
-            
+
             stale_cache.expires_at = SystemTime::now() + max_age.max(MINIMUM_CACHE_TTL);
             fs::write(cache_entry.path(), serde_json::to_string(&stale_cache)?)?;
-
-            Ok(stale_cache.releases.into_iter().map(|r| r.name).collect())
+            Ok(stale_cache.releases)
         }
         reqwest::StatusCode::OK => {
             debug!("Received new releases list from GitHub (200 OK).");
             let headers = response.headers().clone();
-            let new_etag = headers.get("ETag").and_then(|v| v.to_str().ok()).map(String::from);
-            
+            let new_etag = headers
+                .get("ETag")
+                .and_then(|v| v.to_str().ok())
+                .map(String::from);
+
             let max_age = headers
                 .get("Cache-Control")
                 .and_then(|v| v.to_str().ok())
                 .and_then(parse_max_age)
                 .unwrap_or(Duration::from_secs(60)); // Default to 60s if header is missing
-            
+
             let releases: Vec<Release> = response.json().await?;
+            debug!("Fetched {} releases", releases.len());
 
             let new_cache_entry = CachedReleases {
                 expires_at: SystemTime::now() + max_age.max(MINIMUM_CACHE_TTL),
@@ -143,7 +228,7 @@ async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Vec<String>> 
             }
             fs::write(cache_entry.path(), serde_json::to_string(&new_cache_entry)?)?;
 
-            Ok(releases.into_iter().map(|r| r.name).collect())
+            Ok(releases)
         }
         status => {
             warn!("Failed to fetch releases, status: {}", status);
@@ -155,24 +240,37 @@ async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Vec<String>> 
 /// Lists the available and installed rubies.
 pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -> Result<()> {
     let installed_rubies = config.rubies();
-    let active = config.project_ruby();
+    let active_ruby = config.project_ruby();
 
     if installed_only {
-        if installed_rubies.is_empty() {
+        if installed_rubies.is_empty() && format == OutputFormat::Text {
             warn!("No Ruby installations found.");
             info!("Try installing Ruby with 'rv ruby install <version>'");
-        } else {
-            print_rubies(&installed_rubies, &active, format)?;
+            return Ok(());
         }
-        return Ok(());
+
+        let entries: Vec<JsonRubyEntry> = installed_rubies
+            .into_iter()
+            .map(|ruby| {
+                let active = active_ruby.as_ref().is_some_and(|a| a == &ruby);
+                JsonRubyEntry {
+                    installed: true,
+                    active,
+                    details: ruby,
+                }
+            })
+            .collect();
+
+        return print_entries(&entries, format);
     }
 
-    // Pass the cache from the config to the fetch function
-    let available_rubies = match fetch_available_rubies(&config.cache).await {
-        Ok(rubies) => rubies,
+    let all_releases = match fetch_available_rubies(&config.cache).await {
+        Ok(releases) => releases,
         Err(e) => {
-            warn!("Could not fetch or re-validate available Ruby versions: {}", e);
-            // On failure, try to read from a potentially stale cache as a fallback
+            warn!(
+                "Could not fetch or re-validate available Ruby versions: {}",
+                e
+            );
             let cache_entry = config.cache.entry(
                 rv_cache::CacheBucket::Ruby,
                 "releases",
@@ -181,7 +279,7 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
             if let Ok(content) = fs::read_to_string(cache_entry.path()) {
                 if let Ok(cached_data) = serde_json::from_str::<CachedReleases>(&content) {
                     warn!("Displaying stale list of available rubies from cache.");
-                    cached_data.releases.into_iter().map(|r| r.name).collect()
+                    cached_data.releases
                 } else {
                     Vec::new()
                 }
@@ -191,181 +289,99 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
         }
     };
 
-    // Normalize GitHub versions to include the "ruby-" prefix
-    let mut combined: BTreeMap<String, Option<&rv_ruby::Ruby>> = available_rubies
-        .into_iter()
-        .map(|name| (format!("ruby-{}", name), None))
-        .collect();
-
-    for ruby in &installed_rubies {
-        combined.insert(ruby.display_name(), Some(ruby));
+    // Might have multiple installed rubies with the same version (e.g., "ruby-3.2.0" and "mruby-3.2.0").
+    let mut rubies_map: BTreeMap<String, Vec<Ruby>> = BTreeMap::new();
+    for ruby in installed_rubies {
+        rubies_map
+            .entry(ruby.display_name())
+            .or_default()
+            .push(ruby);
     }
 
-    if combined.is_empty() {
-        warn!("No rubies found.");
-        info!("Try installing a ruby with 'rv ruby install <version>'.");
+    // Filter releases+assets for current platform
+    let (desired_os, desired_arch) = parse_arch_str(current_platform_arch_str());
+    let available_rubies: Vec<Ruby> = all_releases
+        .iter()
+        .flat_map(|release| {
+            release
+                .assets
+                .iter()
+                .filter_map(move |asset| ruby_from_release(release, asset).ok())
+        })
+        .filter(|ruby| ruby.os == desired_os && ruby.arch == desired_arch)
+        .collect();
+
+    debug!(
+        "Found {} available rubies for platform {}/{}",
+        available_rubies.len(),
+        desired_os,
+        desired_arch
+    );
+
+    // Merge in installed rubies, replacing any available ones with the installed versions
+    for ruby in available_rubies {
+        if !rubies_map.contains_key(&ruby.display_name()) {
+            rubies_map
+                .entry(ruby.display_name())
+                .or_default()
+                .push(ruby);
+        }
+    }
+
+    if rubies_map.is_empty() && format == OutputFormat::Text {
+        warn!("No rubies found for your platform.");
         return Ok(());
     }
 
-    match format {
-        OutputFormat::Text => {
-            let width = combined
-                .keys()
-                .map(|name| name.len())
-                .max()
-                .unwrap_or_default();
-
-            for (name, maybe_ruby) in &combined {
-                let entry = format_ruby_entry(name, maybe_ruby, &active, width);
-                println!("{entry}");
+    // Create entries for output
+    let entries: Vec<JsonRubyEntry> = rubies_map
+        .into_values()
+        .flat_map(|rubies| rubies)
+        .map(|ruby| {
+            let installed = !ruby.path.as_str().starts_with("http");
+            let active = active_ruby.as_ref().is_some_and(|a| a == &ruby);
+            JsonRubyEntry {
+                installed,
+                active,
+                details: ruby,
             }
-        }
-        OutputFormat::Json => {
-            let json_output: Vec<_> = combined
-                .iter()
-                .map(|(name, maybe_ruby)| {
-                    let (installed, path, symlink) = if let Some(ruby) = maybe_ruby {
-                        (true, Some(ruby.executable_path()), ruby.symlink.clone())
-                    } else {
-                        (false, None, None)
-                    };
-                    let is_active = active.as_ref().is_some_and(|a| a.display_name() == *name);
+        })
+        .collect();
 
-                    serde_json::json!({
-                        "name": name,
-                        "installed": installed,
-                        "active": is_active,
-                        "path": path,
-                        "symlink_target": symlink,
-                    })
-                })
-                .collect();
-            serde_json::to_writer_pretty(io::stdout(), &json_output)?;
-        }
-    }
-
-    Ok(())
+    print_entries(&entries, format)
 }
 
-/// Prints a list of already installed rubies.
-fn print_rubies(rubies: &[rv_ruby::Ruby], active: &Option<rv_ruby::Ruby>, format: OutputFormat) -> Result<()> {
+fn print_entries(entries: &[JsonRubyEntry], format: OutputFormat) -> Result<()> {
     match format {
         OutputFormat::Text => {
-            let width = rubies
+            let width = entries
                 .iter()
-                .map(|ruby| ruby.display_name().len())
+                .map(|e| e.details.display_name().len())
                 .max()
-                .unwrap_or_default();
-
-            for ruby in rubies {
-                let entry = format_installed_ruby_entry(ruby, active, width);
-                println!("{entry}");
+                .unwrap_or(0);
+            for entry in entries {
+                println!("{}", format_ruby_entry(entry, width));
             }
         }
         OutputFormat::Json => {
-            serde_json::to_writer_pretty(io::stdout(), rubies)?;
+            serde_json::to_writer_pretty(io::stdout(), entries)?;
         }
     }
     Ok(())
 }
 
-/// Format a single installed Ruby entry for text output.
-fn format_installed_ruby_entry(
-    ruby: &rv_ruby::Ruby,
-    active: &Option<rv_ruby::Ruby>,
-    width: usize,
-) -> String {
-    let key = ruby.display_name();
-    let path = ruby.executable_path();
-    let marker = if active.as_ref().is_some_and(|a| a == ruby) {
-        "*"
-    } else {
-        " "
-    };
+/// Formats a single entry for text output.
+fn format_ruby_entry(entry: &JsonRubyEntry, width: usize) -> String {
+    let marker = if entry.active { "*" } else { " " };
+    let name = entry.details.display_name();
 
-    if let Some(ref symlink_target) = ruby.symlink {
+    if entry.installed {
         format!(
-            "{marker} {key:width$}    {} -> {}",
-            path.cyan(),
-            symlink_target.cyan()
+            "{marker} {name:width$} {} {}",
+            "[installed]".green(),
+            entry.details.executable_path().cyan()
         )
     } else {
-        format!("{marker} {key:width$}    {}", path.cyan())
-    }
-}
-
-/// Format a single Ruby entry for text output, indicating if it is installed or just available.
-fn format_ruby_entry(
-    name: &str,
-    maybe_ruby: &Option<&rv_ruby::Ruby>,
-    active: &Option<rv_ruby::Ruby>,
-    width: usize,
-) -> String {
-    let marker = if active.as_ref().is_some_and(|a| a.display_name() == name) {
-        "*"
-    } else {
-        " "
-    };
-
-    if let Some(ruby) = maybe_ruby {
-        let path = ruby.executable_path();
-        if let Some(ref symlink_target) = ruby.symlink {
-            format!(
-                "{marker} {name:width$} {} {} -> {}",
-                "[installed]".green(),
-                path.cyan(),
-                symlink_target.cyan()
-            )
-        } else {
-            format!(
-                "{marker} {name:width$} {} {}",
-                "[installed]".green(),
-                path.cyan()
-            )
-        }
-    } else {
         format!("{marker} {name:width$} {}", "[available]".dimmed())
-    }
-}
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use camino::Utf8PathBuf;
-    use rv_cache::Cache;
-    use tempfile::TempDir;
-
-    fn test_config() -> Config {
-        let temp_dir = TempDir::new().unwrap();
-        let temp_path = Utf8PathBuf::from(temp_dir.path().to_str().unwrap());
-        let root = Utf8PathBuf::from("/tmp/rv_test_root");
-        let rubies_dir = temp_path.join("rubies");
-        let current_dir = temp_path.join("project");
-        let current_exe = root.join("bin").join("rv");
-
-        Config {
-            ruby_dirs: vec![rubies_dir],
-            gemfile: None,
-            root,
-            current_dir,
-            project_dir: None,
-            cache: Cache::temp().unwrap(),
-            current_exe,
-        }
-    }
-
-    #[tokio::test]
-    async fn test_ruby_list_text_output() {
-        let config = test_config();
-        // Should not panic - basic smoke test
-        list(&config, OutputFormat::Text, false).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn test_ruby_list_json_output() {
-        let config = test_config();
-        // Should not panic - basic smoke test
-        list(&config, OutputFormat::Json, false).await.unwrap();
     }
 }
