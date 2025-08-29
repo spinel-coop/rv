@@ -45,5 +45,17 @@ pub fn init(config: &Config, shell: Shell) -> Result<()> {
             );
             Ok(())
         }
+        Shell::Fish => {
+            print!(
+                concat!(
+                    "function _rv_autoload_hook --on-variable PWD\n",
+                    "    \"{}\" shell env fish | source\n",
+                    "end\n",
+                    "_rv_autoload_hook\n"
+                ),
+                config.current_exe
+            );
+            Ok(())
+        }
     }
 }
