@@ -30,5 +30,14 @@ pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
             println!("hash -r");
             Ok(())
         }
+        Shell::Fish => {
+            if !unset.is_empty() {
+                println!("set -ge {}", unset.join(" "))
+            }
+            for (var, val) in set {
+                println!("set -gx {var} {}", shell_escape::escape(val.into()))
+            }
+            Ok(())
+        }
     }
 }
