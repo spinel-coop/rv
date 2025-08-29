@@ -1,11 +1,14 @@
 use camino::Utf8PathBuf;
 use camino_tempfile_ext::camino_tempfile::Utf8TempDir;
+use mockito::Mock;
 use std::{collections::HashMap, process::Command};
 
 pub struct RvTest {
     pub temp_dir: Utf8TempDir,
     pub cwd: Utf8PathBuf,
     pub env: HashMap<String, String>,
+    // For mocking the releases json from Github API
+    server: mockito::ServerGuard,
 }
 
 impl RvTest {
@@ -17,15 +20,26 @@ impl RvTest {
             temp_dir,
             cwd,
             env: HashMap::new(),
+            server: mockito::Server::new(),
         };
 
         test.env
             .insert("RV_ROOT_DIR".into(), test.temp_dir.path().as_str().into());
         // Set consistent arch/os for cross-platform testing
+        test.env
+            .insert("RV_TEST_PLATFORM".into(), "aarch64-apple-darwin".into()); // For mocking current_platform::CURRENT_PLATFORM
         test.env.insert("RV_TEST_ARCH".into(), "aarch64".into());
         test.env.insert("RV_TEST_OS".into(), "macos".into());
+
         test.env.insert("RV_TEST_EXE".into(), "/tmp/bin/rv".into());
         test.env.insert("HOME".into(), "/tmp/home".into());
+
+        // Disable network requests by default
+        test.env
+            .insert("RV_RELEASES_URL".into(), test.server.url().into());
+
+        // Disable caching for tests by default
+        test.env.insert("RV_NO_CACHE".into(), "true".into());
 
         test
     }
@@ -43,6 +57,17 @@ impl RvTest {
         cmd.current_dir(&self.cwd);
         cmd.env_clear().envs(&self.env);
         cmd
+    }
+
+    /// Mocks the /releases API endpoint. Returns the mock handle
+    /// so that tests can optionally assert it was called.
+    pub fn mock_releases(&mut self, body: &str) -> Mock {
+        self.server
+            .mock("GET", "/repos/spinel-coop/rv-ruby/releases")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(body)
+            .create()
     }
 
     pub fn create_ruby_dir(&self, name: &str) -> Utf8PathBuf {

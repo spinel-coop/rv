@@ -1,0 +1,6 @@
+---
+source: crates/rv/tests/integration_tests/ruby/list_test.rs
+expression: output.normalized_stdout()
+---
+* ruby-3.1.4 [installed] /opt/rubies/ruby-3.1.4/bin/ruby
+  ruby-3.4.5 [available]
