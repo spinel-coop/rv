@@ -2,7 +2,7 @@ use anstream::stream::IsTerminal;
 use camino::{FromPathBufError, Utf8PathBuf};
 use clap::builder::Styles;
 use clap::builder::styling::AnsiColor;
-use clap::{Parser, Subcommand, ArgAction};
+use clap::{ArgAction, Parser, Subcommand};
 use config::Config;
 use miette::Report;
 use rv_cache::CacheArgs;
