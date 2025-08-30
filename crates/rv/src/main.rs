@@ -251,7 +251,11 @@ async fn run() -> Result<()> {
         )
         .with(filter);
 
-    reg.with(indicatif_layer).init();
+    if !std::env::var("RV_DISABLE_INDICATIF").is_ok() {
+        reg.with(indicatif_layer).init();
+    } else {
+        reg.init();
+    }
 
     let config = cli.config()?;
 

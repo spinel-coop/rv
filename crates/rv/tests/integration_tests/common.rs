@@ -33,6 +33,7 @@ impl RvTest {
 
         test.env.insert("RV_TEST_EXE".into(), "/tmp/bin/rv".into());
         test.env.insert("HOME".into(), "/tmp/home".into());
+        test.env.insert("RV_DISABLE_INDICATIF".into(), "1".into()); // Disable indicatif progress bars in tests due to a bug in tracing-indicatif
 
         // Disable network requests by default
         test.env.insert("RV_RELEASES_URL".into(), test.server.url());
