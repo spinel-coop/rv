@@ -2,7 +2,7 @@ use anstream::stream::IsTerminal;
 use camino::{FromPathBufError, Utf8PathBuf};
 use clap::builder::Styles;
 use clap::builder::styling::AnsiColor;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ArgAction};
 use config::Config;
 use miette::Report;
 use rv_cache::CacheArgs;
@@ -39,6 +39,7 @@ const STYLES: Styles = Styles::styled()
 #[command(name = "rv")]
 #[command(styles=STYLES)]
 #[command(version)]
+#[command(disable_help_flag = true)]
 struct Cli {
     /// Ruby directories to search for installations
     #[arg(long = "ruby-dir")]
@@ -53,6 +54,10 @@ struct Cli {
 
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity<clap_verbosity_flag::InfoLevel>,
+
+    // Override the help flag --help and -h to both show HelpShort
+    #[arg(short = 'h', long = "help", action = ArgAction::HelpShort, global = true)]
+    _help: Option<bool>,
 
     #[arg(long, env = "RV_COLOR")]
     color: Option<ColorMode>,
