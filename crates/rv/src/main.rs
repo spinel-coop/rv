@@ -251,7 +251,7 @@ async fn run() -> Result<()> {
         )
         .with(filter);
 
-    if !std::env::var("RV_DISABLE_INDICATIF").is_ok() {
+    if std::env::var("RV_DISABLE_INDICATIF").is_err() {
         reg.with(indicatif_layer).init();
     } else {
         reg.init();

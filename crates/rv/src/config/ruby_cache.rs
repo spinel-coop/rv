@@ -1,7 +1,7 @@
 use camino::Utf8Path;
 use miette::{IntoDiagnostic, Result};
-use tracing::debug;
 use rayon::prelude::*;
+use tracing::debug;
 
 use rv_ruby::Ruby;
 
