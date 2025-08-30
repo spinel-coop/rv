@@ -35,9 +35,23 @@ pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
                 println!("set -ge {}", unset.join(" "))
             }
             for (var, val) in set {
-                println!("set -gx {var} {}", shell_escape::escape(val.into()))
+                println!("set -gx {var} \"{}\"", backslack_escape(val))
             }
             Ok(())
         }
     }
+}
+
+// From uv's crates/uv-shell/src/lib.rs
+// Assumes strings will be outputed as "str", so escapes any \ or " character
+fn backslack_escape(s: String) -> String {
+    let mut escaped = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '\\' | '"' => escaped.push('\\'),
+            _ => {}
+        }
+        escaped.push(c)
+    }
+    escaped
 }
