@@ -14,12 +14,12 @@ pub struct ShellArgs {
 pub enum ShellCommand {
     #[command(about = "Configure your shell to use rv")]
     Init {
-        /// The shell to initialize (only zsh and bash so far)
+        /// The shell to initialize (zsh, bash and fish so far)
         shell: Shell,
     },
     #[command(hide = true)]
     Env {
-        /// The shell to configure (only zsh and bash so far)
+        /// The shell to configure (zsh, bash and fish so far)
         shell: Shell,
     },
 }
@@ -29,4 +29,5 @@ pub enum Shell {
     #[default]
     Zsh,
     Bash,
+    Fish,
 }
