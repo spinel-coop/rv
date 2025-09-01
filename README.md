@@ -27,6 +27,9 @@ eval "$(rv shell init zsh)"
 # bash
 echo 'eval "$(rv shell init bash)"' >> ~/.bashrc
 eval "$(rv shell init bash)"
+# fish
+echo 'rv shell init fish | source' >> ~/.config/fish/config.fish
+rv shell init fish | source
 ```
 
 ## Usage
