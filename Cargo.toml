@@ -31,11 +31,13 @@ indexmap = "2.0"
 indicatif = "0.18.0"
 indoc = "2.0.6"
 insta = "1.40"
+lazy_static = "1.4.0"
 miette = "7.6.0"
 once_cell = "1.20.1"
 owo-colors = "4.1.0"
 pretty_assertions = "1.4.1"
 rayon = "1.10.0"
+rayon-tracing = { git = "https://github.com/danylaporte/rayon-tracing", version = "0.1.1", rev = "v0.1.1" }
 regex = "1.11.1"
 reqwest = { version = "0.12.22", default-features = false, features = [
   "rustls-tls",

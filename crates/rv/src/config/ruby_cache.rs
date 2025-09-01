@@ -1,6 +1,7 @@
 use camino::Utf8Path;
 use miette::{IntoDiagnostic, Result};
 use rayon::prelude::*;
+use rayon_tracing::TracedIndexedParallelIterator;
 use tracing::debug;
 
 use rv_ruby::Ruby;
@@ -117,6 +118,7 @@ impl Config {
         // Process Ruby paths in parallel for better performance
         let mut rubies: Vec<Ruby> = ruby_paths
             .into_par_iter()
+            .indexed_in_span(tracing::span::Span::current())
             .filter_map(|ruby_path| {
                 // Try to get Ruby from cache first
                 match self.get_cached_ruby(&ruby_path) {
