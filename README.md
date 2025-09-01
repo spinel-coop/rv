@@ -17,10 +17,25 @@ Eventually, you'll be able to manage all your Rubies, tools, gems, and packages,
 - **Ruby Versions**: Ruby 3.4.1 and up
 - **Shells**: zsh, bash, fish
 
-## Quickstart
+## Install
 
-```bash
+```zsh
 brew install rv
+```
+
+If you don't have Homebrew, Linuxbrew, or Cargo, check the [releases page](https://github.com/spinel-coop/rv/releases) for an installer shell script you can run.
+
+## Usage
+
+```zsh
+time rv ruby install 3.4.5
+rv ruby run 3.4.5 -- --version
+```
+
+## Shell setup
+
+```zsh
+echo "3.4.5" > .ruby-version
 # zsh
 echo 'eval "$(rv shell init zsh)"' >> ~/.zshrc
 eval "$(rv shell init zsh)"
@@ -30,13 +45,6 @@ eval "$(rv shell init bash)"
 # fish
 echo 'rv shell init fish | source' >> ~/.config/fish/config.fish
 rv shell init fish | source
-```
-
-## Usage
-
-```bash
-echo "3.4.5" > .ruby-version
-time rv ruby install 3.4.5
 ```
 
 ## Brought to you by Spinel
