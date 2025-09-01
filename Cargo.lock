@@ -1668,6 +1668,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rayon-tracing"
+version = "0.1.1"
+source = "git+https://github.com/danylaporte/rayon-tracing?rev=v0.1.1#fbdaab9d55eabe52f200365b3b42ba58ac5d41d9"
+dependencies = [
+ "rayon",
+ "tracing",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.5.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1898,6 +1907,7 @@ dependencies = [
  "mockito",
  "owo-colors",
  "rayon",
+ "rayon-tracing",
  "regex",
  "reqwest",
  "rv-cache",

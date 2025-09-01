@@ -46,7 +46,8 @@ current_platform = { workspace = true }
 fs-err = { workspace = true }
 bytesize = { workspace = true }
 shell-escape = { workspace = true }
-lazy_static = "1.4.0"
+lazy_static = { workspace = true }
+rayon-tracing = { workspace = true }
 
 [dev-dependencies]
 insta = { workspace = true }
