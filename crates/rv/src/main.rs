@@ -256,7 +256,11 @@ async fn run() -> Result<()> {
         )
         .with(filter);
 
-    reg.with(indicatif_layer).init();
+    if std::env::var("RV_DISABLE_INDICATIF").is_err() {
+        reg.with(indicatif_layer).init();
+    } else {
+        reg.init();
+    }
 
     let config = cli.config()?;
 
@@ -268,7 +272,7 @@ async fn run() -> Result<()> {
                 RubyCommand::List {
                     format,
                     installed_only,
-                } => ruby_list(&config, format, installed_only)?,
+                } => ruby_list(&config, format, installed_only).await?,
                 RubyCommand::Pin { version_request } => ruby_pin(&config, version_request)?,
                 RubyCommand::Install {
                     version,
