@@ -15,7 +15,7 @@ Eventually, you'll be able to manage all your Rubies, tools, gems, and packages,
 
 - **Operating Systems**: macOS 14 and up, Ubuntu 24.04 and up
 - **Ruby Versions**: Ruby 3.4.1 and up
-- **Shells**: zsh, bash
+- **Shells**: zsh, bash, fish
 
 ## Quickstart
 
