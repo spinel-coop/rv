@@ -53,7 +53,11 @@ impl RvTest {
     }
 
     pub fn rv_command(&self) -> Command {
-        let mut cmd = Command::new(env!("CARGO_BIN_EXE_rv"));
+        self.command(env!("CARGO_BIN_EXE_rv"))
+    }
+
+    pub fn command<S: AsRef<std::ffi::OsStr>>(&self, program: S) -> Command {
+        let mut cmd = Command::new(program);
         cmd.current_dir(&self.cwd);
         cmd.env_clear().envs(&self.env);
         cmd
