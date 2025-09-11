@@ -1,3 +1,4 @@
+pub mod completions;
 pub mod env;
 pub mod init;
 
@@ -15,6 +16,11 @@ pub enum ShellCommand {
     #[command(about = "Configure your shell to use rv")]
     Init {
         /// The shell to initialize (zsh, bash and fish so far)
+        shell: Shell,
+    },
+    #[command()]
+    Completions {
+        /// The shell to print completions for (zsh, bash and fish so far)
         shell: Shell,
     },
     #[command(hide = true)]
