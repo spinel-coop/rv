@@ -2,7 +2,7 @@ use anstream::stream::IsTerminal;
 use camino::{FromPathBufError, Utf8PathBuf};
 use clap::builder::Styles;
 use clap::builder::styling::AnsiColor;
-use clap::{ArgAction, Parser, Subcommand};
+use clap::{ArgAction, CommandFactory, Parser, Subcommand};
 use config::Config;
 use miette::Report;
 use rv_cache::CacheArgs;
@@ -21,6 +21,7 @@ use crate::commands::ruby::pin::pin as ruby_pin;
 #[cfg(unix)]
 use crate::commands::ruby::run::run as ruby_run;
 use crate::commands::ruby::{RubyArgs, RubyCommand};
+use crate::commands::shell::completions::shell_completions;
 use crate::commands::shell::env::env as shell_env;
 use crate::commands::shell::init::init as shell_init;
 use crate::commands::shell::{ShellArgs, ShellCommand};
@@ -287,6 +288,9 @@ async fn run() -> Result<()> {
             },
             Commands::Shell(shell) => match shell.command {
                 ShellCommand::Init { shell } => shell_init(&config, shell)?,
+                ShellCommand::Completions { shell } => {
+                    shell_completions(&mut Cli::command(), shell)
+                }
                 ShellCommand::Env { shell } => shell_env(&config, shell)?,
             },
         },
