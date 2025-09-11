@@ -20,10 +20,11 @@ Eventually, you'll be able to manage all your Rubies, tools, gems, and packages,
 ## Install
 
 ```zsh
+# Homebrew or Linuxbrew
 brew install rv
 ```
 
-If you don't have Homebrew, Linuxbrew, or Cargo, check the [releases page](https://github.com/spinel-coop/rv/releases) for an installer shell script you can run.
+Or, visit the [releases page](https://github.com/spinel-coop/rv/releases) for an installer shell script.
 
 ## Usage
 
