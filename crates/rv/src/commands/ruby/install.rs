@@ -57,7 +57,11 @@ pub async fn install(
             tarball_path.cyan()
         );
     } else {
-        download_ruby_tarball(&url, &tarball_path).await?;
+        download_ruby_tarball(&url, &tarball_path)
+            .await
+            .inspect_err(|_| {
+                let _ = std::fs::remove_file(&tarball_path);
+            })?;
     }
 
     extract_ruby_tarball(&tarball_path, &install_dir).await?;
