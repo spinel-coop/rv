@@ -38,9 +38,25 @@ pub struct Config {
     pub gemfile: Option<Utf8PathBuf>,
     pub root: Utf8PathBuf,
     pub current_dir: Utf8PathBuf,
-    pub project_dir: Option<Utf8PathBuf>,
     pub cache: rv_cache::Cache,
     pub current_exe: Utf8PathBuf,
+    pub requested_ruby: Option<(RubyRequest, Source)>,
+}
+
+pub enum Source {
+    DotToolVersions(Utf8PathBuf),
+    DotRubyVersion(Utf8PathBuf),
+    Other,
+}
+
+impl std::fmt::Debug for Source {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::DotToolVersions(arg0) => f.debug_tuple("DotToolVersions").field(arg0).finish(),
+            Self::DotRubyVersion(arg0) => f.debug_tuple("DotRubyVersion").field(arg0).finish(),
+            Self::Other => write!(f, "Other"),
+        }
+    }
 }
 
 impl Config {
