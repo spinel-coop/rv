@@ -12,6 +12,7 @@ default-run = "rv"
 clap = { workspace = true, features = ["derive", "env"] }
 clap_derive = { workspace = true }
 indicatif = { workspace = true, features = ["rayon"] }
+indexmap = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
 owo-colors = { workspace = true }
 rayon = { workspace = true }

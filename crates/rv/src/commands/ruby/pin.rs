@@ -54,6 +54,7 @@ mod tests {
     use super::*;
     use assert_fs::TempDir;
     use camino::Utf8PathBuf;
+    use indexmap::indexset;
 
     fn test_config() -> Result<Config> {
         let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
@@ -66,7 +67,7 @@ mod tests {
         let current_dir = root.join("project");
 
         let config = Config {
-            ruby_dirs: vec![ruby_dir],
+            ruby_dirs: indexset![ruby_dir],
             gemfile: None,
             current_exe: root.join("bin").join("rv"),
             project_dir: Some(project_dir),

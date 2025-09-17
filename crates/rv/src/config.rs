@@ -4,6 +4,7 @@ use std::{
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
+use indexmap::IndexSet;
 use tracing::{debug, instrument};
 
 use rv_ruby::{
@@ -33,7 +34,7 @@ type Result<T> = miette::Result<T, Error>;
 
 #[derive(Debug)]
 pub struct Config {
-    pub ruby_dirs: Vec<Utf8PathBuf>,
+    pub ruby_dirs: IndexSet<Utf8PathBuf>,
     pub gemfile: Option<Utf8PathBuf>,
     pub root: Utf8PathBuf,
     pub current_dir: Utf8PathBuf,

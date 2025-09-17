@@ -4,6 +4,7 @@ use clap::builder::Styles;
 use clap::builder::styling::AnsiColor;
 use clap::{ArgAction, CommandFactory, Parser, Subcommand};
 use config::Config;
+use indexmap::IndexSet;
 use miette::Report;
 use rv_cache::CacheArgs;
 use tokio::main;
@@ -45,7 +46,7 @@ const STYLES: Styles = Styles::styled()
 #[command(disable_help_flag = true)]
 struct Cli {
     /// Ruby directories to search for installations
-    #[arg(long = "ruby-dir")]
+    #[arg(long = "ruby-dir", env = "RUBIES_PATH", value_delimiter = ':')]
     ruby_dir: Vec<Utf8PathBuf>,
 
     #[arg(long = "project-dir")]
@@ -102,6 +103,7 @@ impl Cli {
                 .map(|path: &Utf8PathBuf| root.join(path))
                 .collect()
         };
+        let ruby_dirs: IndexSet<Utf8PathBuf> = ruby_dirs.into_iter().collect();
         let cache = self.cache_args.to_cache()?;
         let current_exe = if let Some(exe) = self.current_exe.clone() {
             exe

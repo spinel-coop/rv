@@ -158,6 +158,7 @@ mod tests {
     use super::*;
     use assert_fs::TempDir;
     use camino::Utf8PathBuf;
+    use indexmap::indexset;
     use rv_cache::Cache;
     use std::fs;
 
@@ -168,7 +169,7 @@ mod tests {
         fs::create_dir_all(&ruby_dir).unwrap();
 
         let config = Config {
-            ruby_dirs: vec![ruby_dir],
+            ruby_dirs: indexset![ruby_dir],
             gemfile: None,
             root: root.clone(),
             current_dir: root.clone(),
