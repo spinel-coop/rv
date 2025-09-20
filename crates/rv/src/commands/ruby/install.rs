@@ -81,7 +81,6 @@ fn ruby_url(base_url: &str, version: &str) -> String {
         _ => panic!("rv does not (yet) support {}. Sorry :(", CURRENT_PLATFORM),
     };
 
-    // Handle both GitHub API URL and direct download URL formats
     let download_base = if base_url.contains("api.github.com") {
         "https://github.com/spinel-coop/rv-ruby/releases"
     } else {
