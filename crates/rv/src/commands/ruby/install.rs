@@ -81,10 +81,10 @@ fn ruby_url(base_url: &str, version: &str) -> String {
         _ => panic!("rv does not (yet) support {}. Sorry :(", CURRENT_PLATFORM),
     };
 
-    let download_base = if base_url.contains("api.github.com") {
-        "https://github.com/spinel-coop/rv-ruby/releases"
-    } else {
+    let download_base = if std::env::var("RV_RELEASES_URL").is_ok() {
         base_url
+    } else {
+        "https://github.com/spinel-coop/rv-ruby/releases"
     };
 
     format!(
