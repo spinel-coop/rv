@@ -44,7 +44,8 @@ pub async fn install(
     if requested.patch.is_none() {
         Err(Error::IncompleteVersion(requested.clone()))?;
     }
-    let url = ruby_url(&requested.to_string());
+    let base_url = std::env::var("RV_RELEASES_URL").unwrap_or_else(|_| "https://github.com/spinel-coop/rv-ruby/releases".to_string());
+    let url = ruby_url(&base_url, &requested.to_string());
     let tarball_path = tarball_path(config, &url);
 
     if !tarball_path.parent().unwrap().exists() {
@@ -57,7 +58,7 @@ pub async fn install(
             tarball_path.cyan()
         );
     } else {
-        download_ruby_tarball(&url, &tarball_path).await?;
+        download_ruby_tarball(config, &url, &tarball_path).await?;
     }
 
     extract_ruby_tarball(&tarball_path, &install_dir).await?;
@@ -71,7 +72,7 @@ pub async fn install(
     Ok(())
 }
 
-fn ruby_url(version: &str) -> String {
+fn ruby_url(base_url: &str, version: &str) -> String {
     let number = version.strip_prefix("ruby-").unwrap_or(version);
     let arch = match CURRENT_PLATFORM {
         "aarch64-apple-darwin" => "arm64_sonoma",
@@ -80,8 +81,16 @@ fn ruby_url(version: &str) -> String {
         _ => panic!("rv does not (yet) support {}. Sorry :(", CURRENT_PLATFORM),
     };
 
+    // Handle both GitHub API URL and direct download URL formats
+    let download_base = if base_url.contains("api.github.com") {
+        "https://github.com/spinel-coop/rv-ruby/releases"
+    } else {
+        base_url
+    };
+
     format!(
-        "https://github.com/spinel-coop/rv-ruby/releases/download/{number}/portable-{version}.{arch}.bottle.tar.gz"
+        "{}/download/{number}/portable-{version}.{arch}.bottle.tar.gz",
+        download_base
     )
 }
 
@@ -94,19 +103,59 @@ fn tarball_path(config: &Config, url: impl AsRef<str>) -> Utf8PathBuf {
         .join(format!("{cache_key}.tar.gz"))
 }
 
-async fn download_ruby_tarball(url: &str, tarball_path: &Utf8PathBuf) -> Result<()> {
-    let mut file = tokio::fs::File::create(tarball_path).await?;
+fn temp_tarball_path(config: &Config, url: impl AsRef<str>) -> Utf8PathBuf {
+    let cache_key = rv_cache::cache_digest(url.as_ref());
+    config
+        .cache
+        .shard(rv_cache::CacheBucket::Ruby, "tarballs")
+        .into_path_buf()
+        .join(format!("{cache_key}.tar.gz.tmp"))
+}
+
+async fn download_ruby_tarball(
+    config: &Config,
+    url: &str,
+    tarball_path: &Utf8PathBuf,
+) -> Result<()> {
+    let temp_path = temp_tarball_path(config, url);
+
+    let mut file = tokio::fs::File::create(&temp_path).await?;
 
     let response = reqwest::get(url).await?;
     if !response.status().is_success() {
+        let _ = tokio::fs::remove_file(&temp_path).await;
         return Err(Error::DownloadFailed(url.to_string(), response.status()));
     }
 
     let mut stream = response.bytes_stream();
     while let Some(chunk) = stream.next().await {
-        let chunk = chunk?;
-        tokio::io::copy(&mut chunk.as_ref(), &mut file).await?;
+        let chunk = chunk.inspect_err(|_| {
+            let temp_path = temp_path.clone();
+            tokio::spawn(async move {
+                let _ = tokio::fs::remove_file(temp_path).await;
+            });
+        })?;
+        tokio::io::copy(&mut chunk.as_ref(), &mut file)
+            .await
+            .inspect_err(|_| {
+                let temp_path = temp_path.clone();
+                tokio::spawn(async move {
+                    let _ = tokio::fs::remove_file(temp_path).await;
+                });
+            })?;
     }
+
+    file.sync_all().await?;
+    drop(file);
+
+    tokio::fs::rename(&temp_path, tarball_path)
+        .await
+        .inspect_err(|_| {
+            let temp_path = temp_path.clone();
+            tokio::spawn(async move {
+                let _ = tokio::fs::remove_file(temp_path).await;
+            });
+        })?;
 
     println!("Downloaded {} to {}", url.cyan(), tarball_path.cyan());
     Ok(())
