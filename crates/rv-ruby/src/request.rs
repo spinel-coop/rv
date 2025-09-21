@@ -6,7 +6,7 @@ use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 type VersionPart = u32;
 
-#[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay)]
+#[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay, PartialOrd, Ord)]
 pub struct RubyRequest {
     pub engine: RubyEngine,
     pub major: Option<VersionPart>,
@@ -233,33 +233,6 @@ impl Display for RubyRequest {
         };
 
         Ok(())
-    }
-}
-
-impl PartialOrd for RubyRequest {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for RubyRequest {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        (
-            &self.engine,
-            &self.major,
-            &self.minor,
-            &self.patch,
-            &self.tiny,
-            &self.prerelease,
-        )
-            .cmp(&(
-                &other.engine,
-                &other.major,
-                &other.minor,
-                &other.patch,
-                &other.tiny,
-                &other.prerelease,
-            ))
     }
 }
 
