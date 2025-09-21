@@ -8,6 +8,7 @@ members = [
   "crates/rv-gem-types",
   "crates/rv-ruby",
   "crates/rv-version",
+  "fuzz",
 ]
 resolver = "2"
 

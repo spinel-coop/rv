@@ -1,0 +1,20 @@
+[package]
+name = "rv-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+rv-gem-specification-yaml = { path = "../crates/rv-gem-specification-yaml"}
+
+
+[[bin]]
+name = "parse_gem_spec_yaml"
+path = "fuzz_targets/parse_gem_spec_yaml.rs"
+test = false
+doc = false
+bench = false
