@@ -27,6 +27,7 @@ pub enum RequestError {
     #[error("Could not parse {0}: {1}")]
     InvalidPart(&'static str, String),
 }
+
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum MatchError {
     #[error("Ruby version {0} could not be found")]
