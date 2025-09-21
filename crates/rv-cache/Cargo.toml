@@ -7,12 +7,10 @@ edition = "2024"
 camino = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"], optional = true }
 fs-err = { workspace = true }
-rustc-hash = { workspace = true }
 rv-dirs = { workspace = true }
 seahash = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 tempfile = { workspace = true }
-thiserror = { workspace = true }
 tracing = { workspace = true }
 
 [dev-dependencies]

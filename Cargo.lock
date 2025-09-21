@@ -1946,13 +1946,11 @@ dependencies = [
  "camino",
  "clap",
  "fs-err",
- "rustc-hash",
  "rv-dirs",
  "seahash",
  "serde",
  "serde_json",
  "tempfile",
- "thiserror",
  "tracing",
 ]
 
@@ -2003,10 +2001,8 @@ dependencies = [
 name = "rv-gem-types"
 version = "0.1.0"
 dependencies = [
- "either",
  "indexmap 2.10.0",
  "insta",
- "miette",
  "once_cell",
  "regex",
  "rv-version",
@@ -2017,9 +2013,7 @@ dependencies = [
 name = "rv-ruby"
 version = "0.1.0"
 dependencies = [
- "assert_fs",
  "camino",
- "regex",
  "rv-cache",
  "serde",
  "serde_with",
@@ -2031,7 +2025,6 @@ dependencies = [
 name = "rv-version"
 version = "0.1.0"
 dependencies = [
- "regex",
  "thiserror",
 ]
 
