@@ -52,4 +52,4 @@ jobs:
       uses: Swatinem/rust-cache@v2
 
     - name: Build
-      run: cargo build --release --all-features
+      run: cargo build --release --all-features --bin rv
