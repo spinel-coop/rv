@@ -15,7 +15,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   fi
 
   if [[ -z $(which cargo-binstall) ]]; then
-    brew install cargo-binstall -y
+    brew install cargo-binstall
   fi
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
   SUDO=""
