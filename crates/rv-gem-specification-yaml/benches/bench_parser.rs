@@ -10,8 +10,7 @@ fn load_fixture(name: &str) -> String {
         .unwrap_or_else(|_| panic!("Failed to read fixture: {fixture_path}"))
 }
 
-fn basic(c: &mut Criterion) {
-    let test_name = "simple_spec";
+fn run_bench(c: &mut Criterion, test_name: &str) {
     let original_yaml = load_fixture(test_name);
     c.bench_function(&format!("Parse {test_name}"), |b| {
         b.iter(|| {
@@ -20,5 +19,32 @@ fn basic(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, basic);
+fn simple_spec(c: &mut Criterion) {
+    run_bench(c, "simple_spec");
+}
+
+fn complex_spec(c: &mut Criterion) {
+    run_bench(c, "complex_spec");
+}
+
+fn version_constraints_spec(c: &mut Criterion) {
+    run_bench(c, "version_constraints_spec");
+}
+
+fn minimal_spec(c: &mut Criterion) {
+    run_bench(c, "minimal_spec");
+}
+
+fn edge_case_spec(c: &mut Criterion) {
+    run_bench(c, "edge_case_spec");
+}
+
+criterion_group!(
+    benches,
+    simple_spec,
+    complex_spec,
+    version_constraints_spec,
+    minimal_spec,
+    edge_case_spec,
+);
 criterion_main!(benches);
