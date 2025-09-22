@@ -82,3 +82,7 @@ rv-version = { version = "0.1.0", path = "crates/rv-version" }
 inherits = "release"
 codegen-units = 1
 lto = true
+
+# The profile that benchmarks, and `cargo-flamegraph` will build with
+[profile.bench]
+debug = true

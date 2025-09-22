@@ -27,6 +27,7 @@ pub enum RequestError {
     #[error("Could not parse {0}: {1}")]
     InvalidPart(&'static str, String),
 }
+
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum MatchError {
     #[error("Ruby version {0} could not be found")]
@@ -80,21 +81,23 @@ impl RubyRequest {
     }
 
     pub fn number(&self) -> String {
+        use std::fmt::Write;
         let mut version = String::new();
+
         if let Some(major) = self.major {
-            version.push_str(&major.to_string());
+            write!(&mut version, "{}", major).unwrap();
         }
         if let Some(minor) = self.minor {
             version.push('.');
-            version.push_str(&minor.to_string());
+            write!(&mut version, "{}", minor).unwrap();
         }
         if let Some(patch) = self.patch {
             version.push('.');
-            version.push_str(&patch.to_string());
+            write!(&mut version, "{}", patch).unwrap();
         }
         if let Some(tiny) = self.tiny {
             version.push('.');
-            version.push_str(&tiny.to_string());
+            write!(&mut version, "{}", tiny).unwrap();
         }
         if let Some(ref prerelease) = self.prerelease {
             if self.major.is_some() {
@@ -116,77 +119,74 @@ impl FromStr for RubyRequest {
         } else {
             ("ruby", input)
         };
-        let mut segments: Vec<String> = vec![];
+        let mut segments: Option<_> = None;
         let mut prerelease = None;
 
         let first_char = version.chars().next();
         if let Some(first_char) = first_char {
             let (numbers, pre) = if first_char.is_alphabetic() {
                 if version == "dev" {
-                    (None, Some(version.to_string()))
+                    (None, Some(version))
                 } else {
                     Err(RequestError::InvalidVersion(input.to_string()))?
                 }
             } else if let Some(pos) = version.find('-') {
-                (
-                    Some(version[..pos].to_string()),
-                    Some(version[pos + 1..].to_string()),
-                )
+                (Some(&version[..pos]), Some(&version[pos + 1..]))
             } else {
-                (Some(version.to_string()), None)
+                (Some(version), None)
             };
 
-            segments = if let Some(rest) = numbers {
-                rest.split('.')
-                    .map(|s| s.to_string())
-                    .collect::<Vec<String>>()
-            } else {
-                vec![]
-            };
-
-            if segments.len() > 4 {
-                return Err(RequestError::TooManySegments(input.to_string()));
-            }
-
+            segments = numbers.map(|rest| rest.split('.'));
             prerelease = pre;
         };
 
-        let major = if !segments.is_empty() {
-            Some(
-                segments[0]
-                    .parse::<u32>()
-                    .map_err(|_| RequestError::InvalidPart("major version", input.to_string()))?,
-            )
-        } else {
-            None
+        let Some(mut segments) = segments else {
+            return Ok(RubyRequest {
+                engine: engine.into(),
+                major: None,
+                minor: None,
+                patch: None,
+                tiny: None,
+                prerelease: prerelease.map(ToString::to_string),
+            });
         };
-        let minor = if segments.len() > 1 {
-            Some(
-                segments[1]
+
+        let major = segments
+            .next()
+            .map(|segment| {
+                segment
                     .parse::<u32>()
-                    .map_err(|_| RequestError::InvalidPart("minor version", input.to_string()))?,
-            )
-        } else {
-            None
-        };
-        let patch = if segments.len() > 2 {
-            Some(
-                segments[2]
+                    .map_err(|_| RequestError::InvalidPart("major version", input.to_string()))
+            })
+            .transpose()?;
+        let minor = segments
+            .next()
+            .map(|segment| {
+                segment
                     .parse::<u32>()
-                    .map_err(|_| RequestError::InvalidPart("patch version", input.to_string()))?,
-            )
-        } else {
-            None
-        };
-        let tiny = if segments.len() > 3 {
-            Some(
-                segments[3]
+                    .map_err(|_| RequestError::InvalidPart("minor version", input.to_string()))
+            })
+            .transpose()?;
+        let patch = segments
+            .next()
+            .map(|segment| {
+                segment
                     .parse::<u32>()
-                    .map_err(|_| RequestError::InvalidPart("tiny version", input.to_string()))?,
-            )
-        } else {
-            None
-        };
+                    .map_err(|_| RequestError::InvalidPart("patch version", input.to_string()))
+            })
+            .transpose()?;
+        let tiny = segments
+            .next()
+            .map(|segment| {
+                segment
+                    .parse::<u32>()
+                    .map_err(|_| RequestError::InvalidPart("tiny version", input.to_string()))
+            })
+            .transpose()?;
+
+        if segments.next().is_some() {
+            return Err(RequestError::TooManySegments(input.to_string()));
+        }
 
         Ok(RubyRequest {
             engine: engine.into(),
@@ -194,7 +194,7 @@ impl FromStr for RubyRequest {
             minor,
             patch,
             tiny,
-            prerelease,
+            prerelease: prerelease.map(ToString::to_string),
         })
     }
 }
