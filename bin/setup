@@ -42,13 +42,13 @@ else
 fi
 
 if [[ -z $(which cargo-nextest) ]]; then
-  cargo binstall cargo-nextest
+  cargo binstall cargo-nextest -y
 fi
 
 if [[ -z $(which cargo-insta) ]]; then
-  cargo binstall cargo-insta
+  cargo binstall cargo-insta -y
 fi
 
 if [[ -z $(which dist) ]]; then
-  cargo binstall cargo-dist
+  cargo binstall cargo-dist -y
 fi
