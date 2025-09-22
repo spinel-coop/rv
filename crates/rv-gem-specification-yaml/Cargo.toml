@@ -15,9 +15,14 @@ indexmap = { workspace = true }
 miette = { workspace = true }
 
 [dev-dependencies]
+criterion = { workspace = true }
 insta = { workspace = true }
 pretty_assertions = { workspace = true, features = ["unstable"] }
 miette = { workspace = true, features = ["fancy"] }
 
 [[example]]
 name = "parse_gem_spec"
+
+[[bench]]
+name = "my_bench"
+harness = false

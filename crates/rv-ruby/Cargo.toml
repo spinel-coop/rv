@@ -12,7 +12,7 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 
 [dev-dependencies]
-criterion = "0.7.0"
+criterion = { workspace = true }
 
 [[bench]]
 name = "my_bench"
