@@ -2153,6 +2153,7 @@ dependencies = [
 name = "rv-gem-specification-yaml"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "indexmap 2.10.0",
  "insta",
  "miette",
