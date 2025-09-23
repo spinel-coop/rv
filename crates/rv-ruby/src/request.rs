@@ -248,203 +248,208 @@ impl CacheKey for RubyRequest {
     }
 }
 
-#[test]
-fn test_empty_version() {
-    let request = RubyRequest::from_str("").expect_err("Expected error for empty version");
-    assert_eq!(request, RequestError::EmptyInput);
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[test]
-fn test_invalid_version_format() {
-    let request = RubyRequest::from_str("ruby-invalid")
-        .expect_err("Expected error for invalid version format");
-    assert_eq!(request, RequestError::InvalidVersion("ruby-invalid".into()));
-}
-
-#[test]
-fn test_adding_ruby_engine() {
-    let request = RubyRequest::from_str("3.0.0").expect("Failed to parse version");
-    assert_eq!(request.engine, "ruby".into());
-    assert_eq!(request.major, Some(3));
-    assert_eq!(request.minor, Some(0));
-    assert_eq!(request.patch, Some(0));
-    assert_eq!(request.tiny, None);
-    assert_eq!(request.prerelease, None);
-}
-
-#[test]
-fn test_major_only() {
-    let request = RubyRequest::from_str("3").expect("Failed to parse version");
-    assert_eq!(request.engine, "ruby".into());
-    assert_eq!(request.major, Some(3));
-    assert_eq!(request.minor, None);
-    assert_eq!(request.patch, None);
-    assert_eq!(request.tiny, None);
-    assert_eq!(request.prerelease, None);
-}
-
-#[test]
-fn test_parsing_supported_ruby_versions() {
-    let versions = [
-        "ruby-3.2-dev",
-        "ruby-3.2.0",
-        "ruby-3.2.0-preview1",
-        "ruby-3.2.0-preview2",
-        "ruby-3.2.0-preview3",
-        "ruby-3.2.0-rc1",
-        "ruby-3.2.1",
-        "ruby-3.2.2",
-        "ruby-3.2.3",
-        "ruby-3.2.4",
-        "ruby-3.2.5",
-        "ruby-3.2.6",
-        "ruby-3.2.7",
-        "ruby-3.2.8",
-        "ruby-3.2.9",
-        "ruby-3.3-dev",
-        "ruby-3.3.0",
-        "ruby-3.3.0-preview1",
-        "ruby-3.3.0-preview2",
-        "ruby-3.3.0-preview3",
-        "ruby-3.3.0-rc1",
-        "ruby-3.3.1",
-        "ruby-3.3.2",
-        "ruby-3.3.3",
-        "ruby-3.3.4",
-        "ruby-3.3.5",
-        "ruby-3.3.6",
-        "ruby-3.3.7",
-        "ruby-3.3.8",
-        "ruby-3.3.9",
-        "ruby-3.4-dev",
-        "ruby-3.4.0",
-        "ruby-3.4.0-preview1",
-        "ruby-3.4.0-preview2",
-        "ruby-3.4.0-rc1",
-        "ruby-3.4.1",
-        "ruby-3.4.2",
-        "ruby-3.4.3",
-        "ruby-3.4.4",
-        "ruby-3.4.5",
-        "ruby-3.5-dev",
-        "ruby-3.5.0-preview1",
-        "artichoke-dev",
-        "jruby-9.4.0.0",
-        "jruby-9.4.1.0",
-        "jruby-9.4.10.0",
-        "jruby-9.4.11.0",
-        "jruby-9.4.12.0",
-        "jruby-9.4.12.1",
-        "jruby-9.4.13.0",
-        "jruby-9.4.2.0",
-        "jruby-9.4.3.0",
-        "jruby-9.4.4.0",
-        "jruby-9.4.5.0",
-        "jruby-9.4.6.0",
-        "jruby-9.4.7.0",
-        "jruby-9.4.8.0",
-        "jruby-9.4.9.0",
-        "jruby-dev",
-        "mruby-3.2.0",
-        "mruby-3.3.0",
-        "mruby-3.4.0",
-        "mruby-dev",
-        "picoruby-3.0.0",
-        "ruby-dev",
-        "truffleruby-24.1.0",
-        "truffleruby-24.1.1",
-        "truffleruby-24.1.2",
-        "truffleruby-24.2.0",
-        "truffleruby-24.2.1",
-        "truffleruby-dev",
-        "truffleruby+graalvm-24.1.0",
-        "truffleruby+graalvm-24.1.1",
-        "truffleruby+graalvm-24.1.2",
-        "truffleruby+graalvm-24.2.0",
-        "truffleruby+graalvm-24.2.1",
-        "truffleruby+graalvm-dev",
-    ];
-
-    for version in versions {
-        let request = RubyRequest::from_str(version).expect("Failed to parse version");
-        let output = request.to_string();
-        assert_eq!(
-            output, version,
-            "Parsed output does not match input for {version}"
-        );
+    #[test]
+    fn test_empty_version() {
+        let request = RubyRequest::from_str("").expect_err("Expected error for empty version");
+        assert_eq!(request, RequestError::EmptyInput);
     }
-}
 
-#[test]
-fn test_parsing_partial_requests() {
-    let versions = [
-        "ruby-3",
-        "ruby-3.2-preview1",
-        "ruby-3-rc",
-        "jruby-9.4",
-        "truffleruby-24.1",
-        "mruby-3.2",
-        "artichoke",
-        "jruby-9",
-        "jruby",
-    ];
-    for version in versions {
-        let request = RubyRequest::from_str(version).expect("Failed to parse version");
-        let output = request.to_string();
-        assert_eq!(
-            output, version,
-            "Parsed output does not match input for {version}"
-        );
+    #[test]
+    fn test_invalid_version_format() {
+        let request = RubyRequest::from_str("ruby-invalid")
+            .expect_err("Expected error for invalid version format");
+        assert_eq!(request, RequestError::InvalidVersion("ruby-invalid".into()));
     }
-}
 
-#[test]
-fn test_parsing_engine_without_version() {
-    let request = RubyRequest::from_str("jruby-").unwrap();
-    assert_eq!(request.engine, "jruby".into());
-    assert_eq!(request.major, None);
-    assert_eq!(request.minor, None);
-    assert_eq!(request.patch, None);
-    assert_eq!(request.tiny, None);
-    assert_eq!(request.prerelease, None);
-}
-
-#[test]
-fn test_parsing_ruby_version_files() {
-    let versions = [
-        "ruby\n",
-        "ruby-3\n",
-        "ruby-3.2-preview1\n",
-        "ruby-3-rc\n",
-        "jruby-9.4\n",
-        "truffleruby-24.1\n",
-        "mruby-3.2\n",
-        "artichoke\n",
-        "jruby-9\n",
-        "jruby\n",
-        "truffleruby+graalvm-24.1.0\n",
-    ];
-    for version in versions {
-        let request = RubyRequest::from_str(version).expect("Failed to parse version");
-        let output = request.to_string();
-        assert_eq!(
-            output,
-            version.trim(),
-            "Parsed output does not match input for {version}"
-        );
+    #[test]
+    fn test_adding_ruby_engine() {
+        let request = RubyRequest::from_str("3.0.0").expect("Failed to parse version");
+        assert_eq!(request.engine, "ruby".into());
+        assert_eq!(request.major, Some(3));
+        assert_eq!(request.minor, Some(0));
+        assert_eq!(request.patch, Some(0));
+        assert_eq!(request.tiny, None);
+        assert_eq!(request.prerelease, None);
     }
-}
 
-#[test]
-fn test_parsing_ruby_version_files_without_engine() {
-    let versions = ["3\n", "3.4\n", "3.4.5\n", "3.4.5-rc1\n", "3.4-dev\n"];
-    for version in versions {
-        let request = RubyRequest::from_str(version).expect("Failed to parse version");
-        let output = request.to_string();
-        assert_eq!(
-            output,
-            format!("ruby-{}", version.trim()),
-            "Parsed output does not match input for {version}"
-        );
+    #[test]
+    fn test_major_only() {
+        let request = RubyRequest::from_str("3").expect("Failed to parse version");
+        assert_eq!(request.engine, "ruby".into());
+        assert_eq!(request.major, Some(3));
+        assert_eq!(request.minor, None);
+        assert_eq!(request.patch, None);
+        assert_eq!(request.tiny, None);
+        assert_eq!(request.prerelease, None);
+    }
+
+    #[test]
+    fn test_parsing_supported_ruby_versions() {
+        let versions = [
+            "ruby-3.2-dev",
+            "ruby-3.2.0",
+            "ruby-3.2.0-preview1",
+            "ruby-3.2.0-preview2",
+            "ruby-3.2.0-preview3",
+            "ruby-3.2.0-rc1",
+            "ruby-3.2.1",
+            "ruby-3.2.2",
+            "ruby-3.2.3",
+            "ruby-3.2.4",
+            "ruby-3.2.5",
+            "ruby-3.2.6",
+            "ruby-3.2.7",
+            "ruby-3.2.8",
+            "ruby-3.2.9",
+            "ruby-3.3-dev",
+            "ruby-3.3.0",
+            "ruby-3.3.0-preview1",
+            "ruby-3.3.0-preview2",
+            "ruby-3.3.0-preview3",
+            "ruby-3.3.0-rc1",
+            "ruby-3.3.1",
+            "ruby-3.3.2",
+            "ruby-3.3.3",
+            "ruby-3.3.4",
+            "ruby-3.3.5",
+            "ruby-3.3.6",
+            "ruby-3.3.7",
+            "ruby-3.3.8",
+            "ruby-3.3.9",
+            "ruby-3.4-dev",
+            "ruby-3.4.0",
+            "ruby-3.4.0-preview1",
+            "ruby-3.4.0-preview2",
+            "ruby-3.4.0-rc1",
+            "ruby-3.4.1",
+            "ruby-3.4.2",
+            "ruby-3.4.3",
+            "ruby-3.4.4",
+            "ruby-3.4.5",
+            "ruby-3.5-dev",
+            "ruby-3.5.0-preview1",
+            "artichoke-dev",
+            "jruby-9.4.0.0",
+            "jruby-9.4.1.0",
+            "jruby-9.4.10.0",
+            "jruby-9.4.11.0",
+            "jruby-9.4.12.0",
+            "jruby-9.4.12.1",
+            "jruby-9.4.13.0",
+            "jruby-9.4.2.0",
+            "jruby-9.4.3.0",
+            "jruby-9.4.4.0",
+            "jruby-9.4.5.0",
+            "jruby-9.4.6.0",
+            "jruby-9.4.7.0",
+            "jruby-9.4.8.0",
+            "jruby-9.4.9.0",
+            "jruby-dev",
+            "mruby-3.2.0",
+            "mruby-3.3.0",
+            "mruby-3.4.0",
+            "mruby-dev",
+            "picoruby-3.0.0",
+            "ruby-dev",
+            "truffleruby-24.1.0",
+            "truffleruby-24.1.1",
+            "truffleruby-24.1.2",
+            "truffleruby-24.2.0",
+            "truffleruby-24.2.1",
+            "truffleruby-dev",
+            "truffleruby+graalvm-24.1.0",
+            "truffleruby+graalvm-24.1.1",
+            "truffleruby+graalvm-24.1.2",
+            "truffleruby+graalvm-24.2.0",
+            "truffleruby+graalvm-24.2.1",
+            "truffleruby+graalvm-dev",
+        ];
+
+        for version in versions {
+            let request = RubyRequest::from_str(version).expect("Failed to parse version");
+            let output = request.to_string();
+            assert_eq!(
+                output, version,
+                "Parsed output does not match input for {version}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_parsing_partial_requests() {
+        let versions = [
+            "ruby-3",
+            "ruby-3.2-preview1",
+            "ruby-3-rc",
+            "jruby-9.4",
+            "truffleruby-24.1",
+            "mruby-3.2",
+            "artichoke",
+            "jruby-9",
+            "jruby",
+        ];
+        for version in versions {
+            let request = RubyRequest::from_str(version).expect("Failed to parse version");
+            let output = request.to_string();
+            assert_eq!(
+                output, version,
+                "Parsed output does not match input for {version}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_parsing_engine_without_version() {
+        let request = RubyRequest::from_str("jruby-").unwrap();
+        assert_eq!(request.engine, "jruby".into());
+        assert_eq!(request.major, None);
+        assert_eq!(request.minor, None);
+        assert_eq!(request.patch, None);
+        assert_eq!(request.tiny, None);
+        assert_eq!(request.prerelease, None);
+    }
+
+    #[test]
+    fn test_parsing_ruby_version_files() {
+        let versions = [
+            "ruby\n",
+            "ruby-3\n",
+            "ruby-3.2-preview1\n",
+            "ruby-3-rc\n",
+            "jruby-9.4\n",
+            "truffleruby-24.1\n",
+            "mruby-3.2\n",
+            "artichoke\n",
+            "jruby-9\n",
+            "jruby\n",
+            "truffleruby+graalvm-24.1.0\n",
+        ];
+        for version in versions {
+            let request = RubyRequest::from_str(version).expect("Failed to parse version");
+            let output = request.to_string();
+            assert_eq!(
+                output,
+                version.trim(),
+                "Parsed output does not match input for {version}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_parsing_ruby_version_files_without_engine() {
+        let versions = ["3\n", "3.4\n", "3.4.5\n", "3.4.5-rc1\n", "3.4-dev\n"];
+        for version in versions {
+            let request = RubyRequest::from_str(version).expect("Failed to parse version");
+            let output = request.to_string();
+            assert_eq!(
+                output,
+                format!("ruby-{}", version.trim()),
+                "Parsed output does not match input for {version}"
+            );
+        }
     }
 }
