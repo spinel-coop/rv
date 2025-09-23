@@ -5,6 +5,7 @@ use current_platform::CURRENT_PLATFORM;
 use futures_util::StreamExt;
 use owo_colors::OwoColorize;
 use std::path::PathBuf;
+use tokio::io::AsyncWriteExt;
 
 use rv_ruby::request::RubyRequest;
 
@@ -62,7 +63,7 @@ pub async fn install(
         download_ruby_tarball(&url, &tarball_path).await?;
     }
 
-    extract_ruby_tarball(&tarball_path, &install_dir).await?;
+    extract_ruby_tarball(&tarball_path, &install_dir)?;
 
     println!(
         "Installed Ruby version {} to {}",
@@ -107,14 +108,14 @@ async fn download_ruby_tarball(url: &str, tarball_path: &Utf8PathBuf) -> Result<
     let mut stream = response.bytes_stream();
     while let Some(chunk) = stream.next().await {
         let chunk = chunk?;
-        tokio::io::copy(&mut chunk.as_ref(), &mut file).await?;
+        file.write_all(&chunk).await?;
     }
 
     println!("Downloaded {} to {}", url.cyan(), tarball_path.cyan());
     Ok(())
 }
 
-async fn extract_ruby_tarball(tarball_path: &Utf8Path, dir: &Utf8Path) -> Result<()> {
+fn extract_ruby_tarball(tarball_path: &Utf8Path, dir: &Utf8Path) -> Result<()> {
     std::fs::create_dir_all(dir)?;
     let tarball = std::fs::File::open(tarball_path)?;
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
