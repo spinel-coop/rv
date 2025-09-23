@@ -24,6 +24,8 @@ pub enum Error {
     DownloadFailed(String, reqwest::StatusCode),
     #[error("Failed to unpack tarball path {0}")]
     InvalidTarballPath(PathBuf),
+    #[error("rv does not (yet) support your platform ({0}). Sorry :(")]
+    UnsupportedPlatform(&'static str),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -44,7 +46,7 @@ pub async fn install(
     if requested.patch.is_none() {
         Err(Error::IncompleteVersion(requested.clone()))?;
     }
-    let url = ruby_url(&requested.to_string());
+    let url = ruby_url(&requested.to_string())?;
     let tarball_path = tarball_path(config, &url);
 
     if !tarball_path.parent().unwrap().exists() {
@@ -71,18 +73,18 @@ pub async fn install(
     Ok(())
 }
 
-fn ruby_url(version: &str) -> String {
+fn ruby_url(version: &str) -> Result<String> {
     let number = version.strip_prefix("ruby-").unwrap_or(version);
     let arch = match CURRENT_PLATFORM {
         "aarch64-apple-darwin" => "arm64_sonoma",
         "x86_64-unknown-linux-gnu" => "x86_64_linux",
         "aarch64-unknown-linux-gnu" => "arm64_linux",
-        _ => panic!("rv does not (yet) support {}. Sorry :(", CURRENT_PLATFORM),
+        _ => return Err(Error::UnsupportedPlatform(CURRENT_PLATFORM)),
     };
 
-    format!(
+    Ok(format!(
         "https://github.com/spinel-coop/rv-ruby/releases/download/{number}/portable-{version}.{arch}.bottle.tar.gz"
-    )
+    ))
 }
 
 fn tarball_path(config: &Config, url: impl AsRef<str>) -> Utf8PathBuf {
