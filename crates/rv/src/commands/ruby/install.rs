@@ -95,14 +95,13 @@ fn tarball_path(config: &Config, url: impl AsRef<str>) -> Utf8PathBuf {
 }
 
 async fn download_ruby_tarball(url: &str, tarball_path: &Utf8PathBuf) -> Result<()> {
-    let mut file = tokio::fs::File::create(tarball_path).await?;
-
     let response = reqwest::get(url).await?;
     if !response.status().is_success() {
         return Err(Error::DownloadFailed(url.to_string(), response.status()));
     }
 
     let mut stream = response.bytes_stream();
+    let mut file = tokio::fs::File::create(tarball_path).await?;
     while let Some(chunk) = stream.next().await {
         let chunk = chunk?;
         tokio::io::copy(&mut chunk.as_ref(), &mut file).await?;
