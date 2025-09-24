@@ -21,8 +21,12 @@ pub enum Error {
     StripPrefixError(#[from] std::path::StripPrefixError),
     #[error("Major, minor, and patch version is required, but got {0}")]
     IncompleteVersion(RubyRequest),
-    #[error("Download from URL {0} failed with status code {1}")]
-    DownloadFailed(String, reqwest::StatusCode),
+    #[error("Download from URL {url} failed with status code {status}. Response body was {body}")]
+    DownloadFailed {
+        url: String,
+        status: reqwest::StatusCode,
+        body: String,
+    },
     #[error("Failed to unpack tarball path {0}")]
     InvalidTarballPath(PathBuf),
 }
@@ -133,9 +137,19 @@ async fn download_ruby_tarball(
     tarball_path: &Utf8PathBuf,
 ) -> Result<()> {
     // Start downloading the tarball.
-    let response = reqwest::get(url).await?;
+    let client = reqwest::Client::builder().http1_only().build().unwrap();
+    let response = client.get(url).send().await?;
     if !response.status().is_success() {
-        return Err(Error::DownloadFailed(url.to_string(), response.status()));
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|e| format!("<error reading body: {e}>"));
+        return Err(Error::DownloadFailed {
+            url: url.to_string(),
+            status,
+            body,
+        });
     }
 
     // Write the tarball bytes to the filesystem.
