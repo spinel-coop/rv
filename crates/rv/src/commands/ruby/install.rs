@@ -5,6 +5,7 @@ use current_platform::CURRENT_PLATFORM;
 use futures_util::StreamExt;
 use owo_colors::OwoColorize;
 use std::path::PathBuf;
+use tokio::io::AsyncWriteExt;
 
 use rv_ruby::request::RubyRequest;
 
@@ -107,50 +108,43 @@ fn temp_tarball_path(config: &Config, url: impl AsRef<str>) -> Utf8PathBuf {
         .join(format!("{cache_key}.tar.gz.tmp"))
 }
 
+/// Write the file from this HTTP `response` to the given `path`.
+/// While the stream is being handled, it'll be written to the given `temp_path`.
+/// Then once the download finishes, the file will be renamed to `path`.
+async fn write_to_filesystem(
+    response: reqwest::Response,
+    temp_path: &Utf8Path,
+    path: &Utf8Path,
+) -> Result<()> {
+    let mut file = tokio::fs::File::create(&temp_path).await?;
+    let mut stream = response.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk?;
+        file.write_all(&chunk).await?;
+    }
+    file.sync_all().await?;
+    tokio::fs::rename(temp_path, path).await?;
+    Ok(())
+}
+
 async fn download_ruby_tarball(
     config: &Config,
     url: &str,
     tarball_path: &Utf8PathBuf,
 ) -> Result<()> {
-    let temp_path = temp_tarball_path(config, url);
-
-    let mut file = tokio::fs::File::create(&temp_path).await?;
-
+    // Start downloading the tarball.
     let response = reqwest::get(url).await?;
     if !response.status().is_success() {
-        let _ = tokio::fs::remove_file(&temp_path).await;
         return Err(Error::DownloadFailed(url.to_string(), response.status()));
     }
 
-    let mut stream = response.bytes_stream();
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.inspect_err(|_| {
-            let temp_path = temp_path.clone();
-            tokio::spawn(async move {
-                let _ = tokio::fs::remove_file(temp_path).await;
-            });
-        })?;
-        tokio::io::copy(&mut chunk.as_ref(), &mut file)
-            .await
-            .inspect_err(|_| {
-                let temp_path = temp_path.clone();
-                tokio::spawn(async move {
-                    let _ = tokio::fs::remove_file(temp_path).await;
-                });
-            })?;
+    // Write the tarball bytes to the filesystem.
+    let temp_path = temp_tarball_path(config, url);
+    if let Err(e) = write_to_filesystem(response, &temp_path, tarball_path).await {
+        // Clean up the temporary file if there was any error.
+        tokio::fs::remove_file(temp_path).await?;
+        return Err(e);
     }
-
-    file.sync_all().await?;
-    drop(file);
-
-    tokio::fs::rename(&temp_path, tarball_path)
-        .await
-        .inspect_err(|_| {
-            let temp_path = temp_path.clone();
-            tokio::spawn(async move {
-                let _ = tokio::fs::remove_file(temp_path).await;
-            });
-        })?;
 
     println!("Downloaded {} to {}", url.cyan(), tarball_path.cyan());
     Ok(())
