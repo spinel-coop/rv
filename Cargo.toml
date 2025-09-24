@@ -8,6 +8,7 @@ members = [
   "crates/rv-gem-types",
   "crates/rv-ruby",
   "crates/rv-version",
+  "fuzz",
 ]
 resolver = "2"
 
@@ -21,6 +22,7 @@ camino-tempfile-ext = "0.3.2"
 clap = "4.5.41"
 clap_derive = "4.5.41"
 clap-verbosity-flag = "3.0.3"
+criterion = "0.7.0"
 current_platform = "0.2.0"
 either = "1.13.0"
 etcetera = "0.10.0"
@@ -81,3 +83,7 @@ rv-version = { version = "0.1.0", path = "crates/rv-version" }
 inherits = "release"
 codegen-units = 1
 lto = true
+
+# The profile that benchmarks, and `cargo-flamegraph` will build with
+[profile.bench]
+debug = true

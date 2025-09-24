@@ -109,51 +109,55 @@ impl CacheKey for RubyEngine {
     }
 }
 
-#[test]
-fn test_ruby_engine_from_str() {
-    assert_eq!(RubyEngine::from_str("ruby").unwrap(), RubyEngine::Ruby);
-    assert_eq!(RubyEngine::from_str("jruby").unwrap(), RubyEngine::JRuby);
-    assert_eq!(
-        RubyEngine::from_str("truffleruby").unwrap(),
-        RubyEngine::TruffleRuby
-    );
-    assert_eq!(RubyEngine::from_str("mruby").unwrap(), RubyEngine::MRuby);
-    assert_eq!(
-        RubyEngine::from_str("artichoke").unwrap(),
-        RubyEngine::Artichoke
-    );
-    assert_eq!(
-        RubyEngine::from_str("custom-ruby").unwrap(),
-        RubyEngine::Unknown("custom-ruby".to_string())
-    );
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_ruby_engine_from_str() {
+        assert_eq!(RubyEngine::from_str("ruby").unwrap(), RubyEngine::Ruby);
+        assert_eq!(RubyEngine::from_str("jruby").unwrap(), RubyEngine::JRuby);
+        assert_eq!(
+            RubyEngine::from_str("truffleruby").unwrap(),
+            RubyEngine::TruffleRuby
+        );
+        assert_eq!(RubyEngine::from_str("mruby").unwrap(), RubyEngine::MRuby);
+        assert_eq!(
+            RubyEngine::from_str("artichoke").unwrap(),
+            RubyEngine::Artichoke
+        );
+        assert_eq!(
+            RubyEngine::from_str("custom-ruby").unwrap(),
+            RubyEngine::Unknown("custom-ruby".to_string())
+        );
+    }
 
-#[test]
-fn test_ruby_engine_name() {
-    assert_eq!(RubyEngine::Ruby.name(), "ruby");
-    assert_eq!(RubyEngine::JRuby.name(), "jruby");
-    assert_eq!(
-        RubyEngine::Unknown("custom-ruby".to_string()).name(),
-        "custom-ruby"
-    );
-}
+    #[test]
+    fn test_ruby_engine_name() {
+        assert_eq!(RubyEngine::Ruby.name(), "ruby");
+        assert_eq!(RubyEngine::JRuby.name(), "jruby");
+        assert_eq!(
+            RubyEngine::Unknown("custom-ruby".to_string()).name(),
+            "custom-ruby"
+        );
+    }
 
-#[test]
-fn test_engine_ordering() {
-    let ruby = RubyEngine::Ruby;
-    let jruby = RubyEngine::JRuby;
-    let truffleruby = RubyEngine::TruffleRuby;
-    let unknown = RubyEngine::Unknown("custom-ruby".to_string());
+    #[test]
+    fn test_engine_ordering() {
+        let ruby = RubyEngine::Ruby;
+        let jruby = RubyEngine::JRuby;
+        let truffleruby = RubyEngine::TruffleRuby;
+        let unknown = RubyEngine::Unknown("custom-ruby".to_string());
 
-    // Ruby comes first
-    assert!(ruby < jruby);
-    assert!(ruby < truffleruby);
-    assert!(ruby < unknown);
+        // Ruby comes first
+        assert!(ruby < jruby);
+        assert!(ruby < truffleruby);
+        assert!(ruby < unknown);
 
-    // Known implementations come before unknown
-    assert!(jruby < unknown);
-    assert!(truffleruby < unknown);
+        // Known implementations come before unknown
+        assert!(jruby < unknown);
+        assert!(truffleruby < unknown);
 
-    // Known implementations are sorted alphabetically
-    assert!(jruby < truffleruby); // "jruby" < "truffleruby"
+        // Known implementations are sorted alphabetically
+        assert!(jruby < truffleruby); // "jruby" < "truffleruby"
+    }
 }
