@@ -22,7 +22,7 @@ fn test_ruby_install_successful_download() {
 
     output.assert_success();
 
-    let cache_key = rv_cache::cache_digest(&format!(
+    let cache_key = rv_cache::cache_digest(format!(
         "{}/download/3.4.5/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz",
         test.server_url()
     ));
@@ -67,7 +67,7 @@ fn test_ruby_install_http_failure_no_empty_file() {
 
     output.assert_failure();
 
-    let cache_key = rv_cache::cache_digest(&format!(
+    let cache_key = rv_cache::cache_digest(format!(
         "{}/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz",
         test.server_url()
     ));
@@ -114,7 +114,7 @@ fn test_ruby_install_interrupted_download_cleanup() {
 
     output.assert_failure();
 
-    let cache_key = rv_cache::cache_digest(&format!(
+    let cache_key = rv_cache::cache_digest(format!(
         "{}/download/3.4.5/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz",
         test.server_url()
     ));
@@ -218,7 +218,7 @@ fn test_ruby_install_atomic_rename_behavior() {
     let output = test.rv(&["ruby", "install", "3.4.5"]);
     output.assert_success();
 
-    let cache_key = rv_cache::cache_digest(&format!(
+    let cache_key = rv_cache::cache_digest(format!(
         "{}/download/3.4.5/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz",
         test.server_url()
     ));
@@ -260,7 +260,7 @@ fn test_ruby_install_temp_file_cleanup_on_extraction_failure() {
 
     output.assert_failure();
 
-    let cache_key = rv_cache::cache_digest(&format!(
+    let cache_key = rv_cache::cache_digest(format!(
         "{}/download/3.4.5/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz",
         test.server_url()
     ));
