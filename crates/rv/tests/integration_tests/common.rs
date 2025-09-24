@@ -8,7 +8,7 @@ pub struct RvTest {
     pub cwd: Utf8PathBuf,
     pub env: HashMap<String, String>,
     // For mocking the releases json from Github API
-    server: mockito::ServerGuard,
+    pub server: mockito::ServerGuard,
 }
 
 impl RvTest {
@@ -68,6 +68,21 @@ impl RvTest {
             .with_header("content-type", "application/json")
             .with_body(body)
             .create()
+    }
+
+    /// Mock a tarball download for testing
+    pub fn mock_tarball_download(&mut self, filename: &str, content: &[u8]) -> Mock {
+        let path = format!("/{}", filename);
+        self.server
+            .mock("GET", path.as_str())
+            .with_status(200)
+            .with_header("content-type", "application/gzip")
+            .with_body(content)
+    }
+
+    /// Get the server URL for constructing download URLs
+    pub fn server_url(&self) -> String {
+        self.server.url()
     }
 
     pub fn create_ruby_dir(&self, name: &str) -> Utf8PathBuf {

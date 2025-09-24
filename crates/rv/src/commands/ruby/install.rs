@@ -21,8 +21,12 @@ pub enum Error {
     StripPrefixError(#[from] std::path::StripPrefixError),
     #[error("Major, minor, and patch version is required, but got {0}")]
     IncompleteVersion(RubyRequest),
-    #[error("Download from URL {0} failed with status code {1}")]
-    DownloadFailed(String, reqwest::StatusCode),
+    #[error("Download from URL {url} failed with status code {status}. Response body was {body}")]
+    DownloadFailed {
+        url: String,
+        status: reqwest::StatusCode,
+        body: String,
+    },
     #[error("Failed to unpack tarball path {0}")]
     InvalidTarballPath(PathBuf),
     #[error("rv does not (yet) support your platform ({0}). Sorry :(")]
@@ -60,7 +64,7 @@ pub async fn install(
             tarball_path.cyan()
         );
     } else {
-        download_ruby_tarball(&url, &tarball_path).await?;
+        download_ruby_tarball(config, &url, &tarball_path).await?;
     }
 
     extract_ruby_tarball(&tarball_path, &install_dir)?;
@@ -97,8 +101,12 @@ fn ruby_url(version: &str) -> Result<String> {
         _ => return Err(Error::UnsupportedPlatform(CURRENT_PLATFORM)),
     };
 
+    let download_base = std::env::var("RV_RELEASES_URL")
+        .unwrap_or("https://github.com/spinel-coop/rv-ruby/releases".to_owned());
+
     Ok(format!(
-        "https://github.com/spinel-coop/rv-ruby/releases/download/{number}/portable-{version}.{arch}.bottle.tar.gz"
+        "{}/download/{number}/portable-{version}.{arch}.bottle.tar.gz",
+        download_base
     ))
 }
 
@@ -111,18 +119,60 @@ fn tarball_path(config: &Config, url: impl AsRef<str>) -> Utf8PathBuf {
         .join(format!("{cache_key}.tar.gz"))
 }
 
-async fn download_ruby_tarball(url: &str, tarball_path: &Utf8PathBuf) -> Result<()> {
-    let mut file = tokio::fs::File::create(tarball_path).await?;
+fn temp_tarball_path(config: &Config, url: impl AsRef<str>) -> Utf8PathBuf {
+    let cache_key = rv_cache::cache_digest(url.as_ref());
+    config
+        .cache
+        .shard(rv_cache::CacheBucket::Ruby, "tarballs")
+        .into_path_buf()
+        .join(format!("{cache_key}.tar.gz.tmp"))
+}
 
-    let response = reqwest::get(url).await?;
-    if !response.status().is_success() {
-        return Err(Error::DownloadFailed(url.to_string(), response.status()));
-    }
-
+/// Write the file from this HTTP `response` to the given `path`.
+/// While the stream is being handled, it'll be written to the given `temp_path`.
+/// Then once the download finishes, the file will be renamed to `path`.
+async fn write_to_filesystem(
+    response: reqwest::Response,
+    temp_path: &Utf8Path,
+    path: &Utf8Path,
+) -> Result<()> {
+    let mut file = tokio::fs::File::create(&temp_path).await?;
     let mut stream = response.bytes_stream();
     while let Some(chunk) = stream.next().await {
         let chunk = chunk?;
         file.write_all(&chunk).await?;
+    }
+    file.sync_all().await?;
+    tokio::fs::rename(temp_path, path).await?;
+    Ok(())
+}
+
+async fn download_ruby_tarball(
+    config: &Config,
+    url: &str,
+    tarball_path: &Utf8PathBuf,
+) -> Result<()> {
+    // Start downloading the tarball.
+    let response = reqwest::get(url).await?;
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|e| format!("<error reading body: {e}>"));
+        return Err(Error::DownloadFailed {
+            url: url.to_string(),
+            status,
+            body,
+        });
+    }
+
+    // Write the tarball bytes to the filesystem.
+    let temp_path = temp_tarball_path(config, url);
+    if let Err(e) = write_to_filesystem(response, &temp_path, tarball_path).await {
+        // Clean up the temporary file if there was any error.
+        tokio::fs::remove_file(temp_path).await?;
+        return Err(e);
     }
 
     println!("Downloaded {} to {}", url.cyan(), tarball_path.cyan());
