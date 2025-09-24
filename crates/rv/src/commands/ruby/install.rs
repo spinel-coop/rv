@@ -58,7 +58,7 @@ pub async fn install(
         std::fs::create_dir_all(tarball_path.parent().unwrap())?;
     }
 
-    if tarball_path.exists() {
+    if valid_tarball_exists(&tarball_path) {
         println!(
             "Tarball {} already exists, skipping download.",
             tarball_path.cyan()
@@ -76,6 +76,20 @@ pub async fn install(
     );
 
     Ok(())
+}
+
+/// Does a usable tarball already exist at this path?
+fn valid_tarball_exists(path: &Utf8Path) -> bool {
+    let Ok(f) = std::fs::File::open(path) else {
+        return false;
+    };
+    let Ok(metadata) = f.metadata() else {
+        return false;
+    };
+    if metadata.len() == 0 {
+        return false;
+    }
+    true
 }
 
 fn ruby_url(version: &str) -> Result<String> {
