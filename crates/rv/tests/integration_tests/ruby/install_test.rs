@@ -1,14 +1,26 @@
+use current_platform::CURRENT_PLATFORM;
+
 use crate::common::RvTest;
 use std::fs;
+
+fn arch() -> &'static str {
+    match CURRENT_PLATFORM {
+        "aarch64-apple-darwin" => "arm64_sonoma",
+        "x86_64-unknown-linux-gnu" => "x86_64_linux",
+        "aarch64-unknown-linux-gnu" => "arm64_linux",
+        other => panic!("Unsupported platform {other}"),
+    }
+}
 
 #[test]
 fn test_ruby_install_successful_download() {
     let mut test = RvTest::new();
 
     let tarball_content = create_mock_tarball();
+    let arch = arch();
     let _mock = test
         .mock_tarball_download(
-            "download/3.4.5/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz",
+            &format!("download/3.4.5/portable-ruby-3.4.5.{arch}.bottle.tar.gz"),
             &tarball_content,
         )
         .create();
@@ -23,7 +35,7 @@ fn test_ruby_install_successful_download() {
     output.assert_success();
 
     let cache_key = rv_cache::cache_digest(format!(
-        "{}/download/3.4.5/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz",
+        "{}/download/3.4.5/portable-ruby-3.4.5.{arch}.bottle.tar.gz",
         test.server_url()
     ));
     let tarball_path = cache_dir
@@ -52,9 +64,14 @@ fn test_ruby_install_successful_download() {
 fn test_ruby_install_http_failure_no_empty_file() {
     let mut test = RvTest::new();
 
-    let _mock = test
-        .server
+    #[cfg(target_os = "macos")]
+    test.server
         .mock("GET", "/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz")
+        .with_status(404)
+        .create();
+    #[cfg(target_os = "linux")]
+    test.server
+        .mock("GET", "/portable-ruby-3.4.5.x86_64_linux.bottle.tar.gz")
         .with_status(404)
         .create();
 
@@ -67,8 +84,9 @@ fn test_ruby_install_http_failure_no_empty_file() {
 
     output.assert_failure();
 
+    let arch = arch();
     let cache_key = rv_cache::cache_digest(format!(
-        "{}/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz",
+        "{}/portable-ruby-3.4.5.{arch}.bottle.tar.gz",
         test.server_url()
     ));
     let tarball_path = cache_dir
@@ -94,11 +112,23 @@ fn test_ruby_install_http_failure_no_empty_file() {
 fn test_ruby_install_interrupted_download_cleanup() {
     let mut test = RvTest::new();
 
+    #[cfg(target_os = "macos")]
     let _mock = test
         .server
         .mock(
             "GET",
             "/download/3.4.5/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz",
+        )
+        .with_status(200)
+        .with_header("content-type", "application/gzip")
+        .with_body("partial")
+        .create();
+    #[cfg(target_os = "linux")]
+    let _mock = test
+        .server
+        .mock(
+            "GET",
+            "/download/3.4.5/portable-ruby-3.4.5.x86_64_linux.bottle.tar.gz",
         )
         .with_status(200)
         .with_header("content-type", "application/gzip")
@@ -114,8 +144,9 @@ fn test_ruby_install_interrupted_download_cleanup() {
 
     output.assert_failure();
 
+    let arch = arch();
     let cache_key = rv_cache::cache_digest(format!(
-        "{}/download/3.4.5/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz",
+        "{}/download/3.4.5/portable-ruby-3.4.5.{arch}.bottle.tar.gz",
         test.server_url()
     ));
     let tarball_path = cache_dir
@@ -142,9 +173,18 @@ fn test_ruby_install_cached_file_reused() {
     let mut test = RvTest::new();
 
     let tarball_content = create_mock_tarball();
+    #[cfg(target_os = "macos")]
     let mock = test
         .mock_tarball_download(
             "download/3.4.5/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz",
+            &tarball_content,
+        )
+        .expect(1)
+        .create();
+    #[cfg(target_os = "linux")]
+    let mock = test
+        .mock_tarball_download(
+            "download/3.4.5/portable-ruby-3.4.5.x86_64_linux.bottle.tar.gz",
             &tarball_content,
         )
         .expect(1)
@@ -203,9 +243,17 @@ fn test_ruby_install_atomic_rename_behavior() {
     let mut test = RvTest::new();
 
     let tarball_content = create_mock_tarball();
+    #[cfg(target_os = "macos")]
     let _mock = test
         .mock_tarball_download(
             "download/3.4.5/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz",
+            &tarball_content,
+        )
+        .create();
+    #[cfg(target_os = "linux")]
+    let _mock = test
+        .mock_tarball_download(
+            "download/3.4.5/portable-ruby-3.4.5.x86_64_linux.bottle.tar.gz",
             &tarball_content,
         )
         .create();
@@ -218,8 +266,9 @@ fn test_ruby_install_atomic_rename_behavior() {
     let output = test.rv(&["ruby", "install", "3.4.5"]);
     output.assert_success();
 
+    let arch = arch();
     let cache_key = rv_cache::cache_digest(format!(
-        "{}/download/3.4.5/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz",
+        "{}/download/3.4.5/portable-ruby-3.4.5.{arch}.bottle.tar.gz",
         test.server_url()
     ));
     let tarball_path = cache_dir
@@ -240,11 +289,24 @@ fn test_ruby_install_atomic_rename_behavior() {
 fn test_ruby_install_temp_file_cleanup_on_extraction_failure() {
     let mut test = RvTest::new();
 
+    #[cfg(target_os = "macos")]
     let _mock = test
         .server
         .mock(
             "GET",
             "/download/3.4.5/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz",
+        )
+        .with_status(200)
+        .with_header("content-type", "application/gzip")
+        .with_body("invalid-tarball-content")
+        .create();
+
+    #[cfg(target_os = "linux")]
+    let _mock = test
+        .server
+        .mock(
+            "GET",
+            "/download/3.4.5/portable-ruby-3.4.5.x86_64_linux.bottle.tar.gz",
         )
         .with_status(200)
         .with_header("content-type", "application/gzip")
@@ -260,8 +322,9 @@ fn test_ruby_install_temp_file_cleanup_on_extraction_failure() {
 
     output.assert_failure();
 
+    let arch = arch();
     let cache_key = rv_cache::cache_digest(format!(
-        "{}/download/3.4.5/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz",
+        "{}/download/3.4.5/portable-ruby-3.4.5.{arch}.bottle.tar.gz",
         test.server_url()
     ));
     let temp_path = cache_dir
