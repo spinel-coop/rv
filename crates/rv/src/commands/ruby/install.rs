@@ -153,8 +153,7 @@ async fn download_ruby_tarball(
     tarball_path: &Utf8PathBuf,
 ) -> Result<()> {
     // Start downloading the tarball.
-    let client = reqwest::Client::builder().http1_only().build().unwrap();
-    let response = client.get(url).send().await?;
+    let response = reqwest::get(url).await?;
     if !response.status().is_success() {
         let status = response.status();
         let body = response
