@@ -44,8 +44,7 @@ pub async fn install(
     if requested.patch.is_none() {
         Err(Error::IncompleteVersion(requested.clone()))?;
     }
-    let base_url = std::env::var("RV_RELEASES_URL").unwrap_or_else(|_| "https://github.com/spinel-coop/rv-ruby/releases".to_string());
-    let url = ruby_url(&base_url, &requested.to_string());
+    let url = ruby_url(&requested.to_string());
     let tarball_path = tarball_path(config, &url);
 
     if !tarball_path.parent().unwrap().exists() {
@@ -72,7 +71,7 @@ pub async fn install(
     Ok(())
 }
 
-fn ruby_url(base_url: &str, version: &str) -> String {
+fn ruby_url(version: &str) -> String {
     let number = version.strip_prefix("ruby-").unwrap_or(version);
     let arch = match CURRENT_PLATFORM {
         "aarch64-apple-darwin" => "arm64_sonoma",
@@ -81,11 +80,8 @@ fn ruby_url(base_url: &str, version: &str) -> String {
         _ => panic!("rv does not (yet) support {}. Sorry :(", CURRENT_PLATFORM),
     };
 
-    let download_base = if std::env::var("RV_RELEASES_URL").is_ok() {
-        base_url
-    } else {
-        "https://github.com/spinel-coop/rv-ruby/releases"
-    };
+    let download_base = std::env::var("RV_RELEASES_URL")
+        .unwrap_or("https://github.com/spinel-coop/rv-ruby/releases".to_owned());
 
     format!(
         "{}/download/{number}/portable-{version}.{arch}.bottle.tar.gz",
