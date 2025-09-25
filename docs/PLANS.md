@@ -137,7 +137,7 @@ While Bundler invented the idea of `bundle exec` to run commands in the context 
 
 ## shortcut binaries
 
-In `uv`, the `run` and `exec` subcommands are both so common that they have their own dedicated binaries: `uvr` and `uxv`. This mirrors the `npm` shortcut for `npm exec`, which is named `npx`. That implies we should provide shortcut binaries named `rvr` and `rvx`.
+In `uv`, the `run` and `exec` subcommands are both so common that they have their own dedicated binaries: `uvr` and `uvx`. This mirrors the `npm` shortcut for `npm exec`, which is named `npx`. That implies we should provide shortcut binaries named `rvr` and `rvx`.
 
 ## what are "tools"?
 
