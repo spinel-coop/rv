@@ -196,3 +196,20 @@ fn extract_ruby_tarball(tarball_path: &Utf8Path, dir: &Utf8Path) -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ruby_url() {
+        let actual = ruby_url("3.4.1").unwrap();
+        #[cfg(target_os = "macos")]
+        let expected = "https://github.com/spinel-coop/rv-ruby/releases/download/3.4.1/portable-3.4.1.arm64_sonoma.bottle.tar.gz";
+        #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+        let expected = "https://github.com/spinel-coop/rv-ruby/releases/download/3.4.1/portable-3.4.1.x86_64_linux.bottle.tar.gz";
+        #[cfg(all(target_os = "linux", target_arch = "arm"))]
+        let expected = "https://github.com/spinel-coop/rv-ruby/releases/download/3.4.1/portable-3.4.1.arm64_linux.bottle.tar.gz";
+        assert_eq!(actual, expected);
+    }
+}
