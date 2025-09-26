@@ -1,0 +1,7 @@
+#!/bin/bash
+set -euo pipefail
+
+set -x
+
+cargo llvm-cov nextest --all-features --workspace --lcov --output-path lcov.info
+
