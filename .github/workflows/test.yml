@@ -1,0 +1,38 @@
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  pull_request:
+permissions: read-all
+name: Test with coverage
+jobs:
+  cargo-test:
+    name: cargo test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run tests with coverage
+        shell: bash
+        run: ./bin/test-cov
+        env:
+          RUST_BACKTRACE: 1
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+          slug: spinel-coop/rv
+          fail_ci_if_error: true
+          flags: unittests
+          verbose: true
+          files: lcov.info
