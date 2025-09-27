@@ -173,12 +173,12 @@ pub fn env_for(ruby: Option<&Ruby>) -> Result<(Vec<&'static str>, Vec<(&'static 
         insert("RUBY_VERSION", ruby.version.number());
         if let Some(gem_home) = ruby.gem_home() {
             paths.insert(0, gem_home.join("bin").into());
-            gem_paths.insert(0, gem_home.join("bin"));
+            gem_paths.insert(0, gem_home.clone());
             insert("GEM_HOME", gem_home.into_string());
         }
         if let Some(gem_root) = ruby.gem_root() {
             paths.insert(0, gem_root.join("bin").into());
-            gem_paths.insert(0, gem_root.join("bin"));
+            gem_paths.insert(0, gem_root.clone());
             insert("GEM_ROOT", gem_root.into_string());
         }
         let gem_path = join_paths(gem_paths)?;
