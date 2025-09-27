@@ -1,9 +1,4 @@
-use crate::{
-    Error, Result,
-    checksum::{ChecksumAlgorithm, Checksums},
-    entry::DataReader,
-    source::PackageSource,
-};
+use crate::{Error, Result, checksum::Checksums, entry::DataReader, source::PackageSource};
 use flate2::read::GzDecoder;
 use rv_gem_types::Specification;
 use saphyr::{LoadableYamlNode, Yaml};
@@ -91,11 +86,8 @@ impl<S: PackageSource> Package<S> {
 
         // Verify checksums for gem's top-level files (metadata.gz, data.tar.gz, etc.)
 
-        for algorithm_name in checksums.algorithms() {
-            let algorithm = ChecksumAlgorithm::from_name(algorithm_name)
-                .ok_or_else(|| Error::unsupported_algorithm(algorithm_name))?;
-
-            if let Some(files) = checksums.files_for_algorithm(algorithm_name) {
+        for algorithm in checksums.algorithms() {
+            if let Some(files) = checksums.files_for_algorithm(algorithm) {
                 for file_path in files {
                     // Reset and find the file in the gem's top-level archive
                     self.source.seek(SeekFrom::Start(0))?;
@@ -113,15 +105,11 @@ impl<S: PackageSource> Package<S> {
                             entry.read_to_end(&mut content)?;
                             let calculated = algorithm.calculate(&content);
 
-                            if let Some(expected) =
-                                checksums.get_checksum(algorithm_name, file_path)
+                            if let Some(expected) = checksums.get_checksum(algorithm, file_path)
                                 && calculated != expected
                             {
                                 return Err(Error::checksum_mismatch(
-                                    file_path,
-                                    algorithm_name,
-                                    expected,
-                                    calculated,
+                                    file_path, algorithm, expected, calculated,
                                 ));
                             }
                             break;
@@ -238,6 +226,7 @@ impl<S: PackageSource> Package<S> {
                 if let (Some(algorithm), Some(files_mapping)) =
                     (algorithm_key.as_str(), files_value.as_mapping())
                 {
+                    let algorithm = algorithm.parse()?;
                     // Iterate over files for this algorithm
                     for (file_key, checksum_value) in files_mapping {
                         if let (Some(file), Some(checksum)) =
