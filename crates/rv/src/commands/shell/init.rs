@@ -57,5 +57,10 @@ pub fn init(config: &Config, shell: Shell) -> Result<()> {
             );
             Ok(())
         }
+        Shell::Nu => {
+            // TODO: Set up the `rv` autoload hook here.
+            // It should change ruby version using `rv` whenever the user changes directory.
+            Ok(())
+        }
     }
 }
