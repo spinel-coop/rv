@@ -39,6 +39,15 @@ pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
             }
             Ok(())
         }
+        Shell::Nu => {
+            for var in unset {
+                println!("hide-env {var}");
+            }
+            for (var, val) in set {
+                println!("$env.{var} = '{val}'");
+            }
+            Ok(())
+        }
     }
 }
 
