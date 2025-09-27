@@ -47,8 +47,21 @@ pub async fn install(
             None => panic!("No Ruby directories to install into"),
         },
     };
+    
+    download_and_extract_remote_tarball(config,&install_dir, &requested).await?;
 
-    if requested.patch.is_none() {
+    println!(
+        "Installed Ruby version {} to {}",
+        requested.to_string().cyan(),
+        install_dir.cyan()
+    );
+
+    Ok(())
+}
+
+// downloads a remote ruby tarball
+async fn download_and_extract_remote_tarball(config: &Config, install_dir: &Utf8PathBuf, requested:&RubyRequest) -> Result<()> {
+     if requested.patch.is_none() {
         Err(Error::IncompleteVersion(requested.clone()))?;
     }
     let url = ruby_url(&requested.to_string())?;
@@ -68,12 +81,6 @@ pub async fn install(
     }
 
     extract_ruby_tarball(&tarball_path, &install_dir)?;
-
-    println!(
-        "Installed Ruby version {} to {}",
-        requested.to_string().cyan(),
-        install_dir.cyan()
-    );
 
     Ok(())
 }
