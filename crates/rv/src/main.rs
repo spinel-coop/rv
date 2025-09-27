@@ -202,6 +202,7 @@ type Result<T> = miette::Result<T, Error>;
 
 #[main]
 async fn main() {
+    println!("Adam: Hello");
     if let Err(err) = run().await {
         let is_tty = std::io::stderr().is_terminal();
         if is_tty {
