@@ -28,7 +28,10 @@ jobs:
       run: cargo fmt --all -- --check
 
     - name: Run clippy
-      run: cargo clippy --all-targets --all-features -- -D warnings
+      run: ./bin/lint
+
+    - name: Run rv
+      run: ./bin/rv --version
 
   build:
     name: Build

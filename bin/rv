@@ -2,4 +2,4 @@
 set -euo pipefail
 set -x
 
-cargo run -- "$@"
+cargo run --bin rv -- "$@"
