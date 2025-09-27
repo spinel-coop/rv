@@ -10,8 +10,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
-    name: Test
+  lint-and-fmt:
+    name: Lint and format
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
