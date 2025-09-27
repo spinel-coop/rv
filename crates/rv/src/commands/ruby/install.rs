@@ -48,7 +48,7 @@ pub async fn install(
         },
     };
 
-    match std::env::var("RV_PACKAGE_PATH") {
+    match std::env::var("RV_TARBALL_PATH") {
         Ok(tarball_path) => extract_local_ruby_tarball(tarball_path, &install_dir).await?,
         Err(_) => download_and_extract_remote_tarball(config, &install_dir, &requested).await?,
     }
