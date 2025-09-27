@@ -2,6 +2,8 @@ use miette::Diagnostic;
 use std::io;
 use thiserror::Error;
 
+use crate::ChecksumAlgorithm;
+
 pub type Result<T> = miette::Result<T, Error>;
 
 #[derive(Error, Debug, Diagnostic)]
@@ -138,13 +140,13 @@ impl Error {
 
     pub fn checksum_mismatch(
         file_path: impl Into<String>,
-        algorithm: impl Into<String>,
+        algorithm: ChecksumAlgorithm,
         expected: impl Into<String>,
         actual: impl Into<String>,
     ) -> Self {
         ChecksumErrorKind::Mismatch {
             file_path: file_path.into(),
-            algorithm: algorithm.into(),
+            algorithm: algorithm.to_string(),
             expected: expected.into(),
             actual: actual.into(),
         }

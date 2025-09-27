@@ -127,14 +127,30 @@ fn test_checksums_loading() {
 
     // Check available algorithms
     let algorithms: Vec<_> = checksums.algorithms().collect();
-    assert!(algorithms.contains(&"SHA256"));
-    assert!(algorithms.contains(&"SHA512"));
+    assert!(algorithms.contains(&ChecksumAlgorithm::Sha256));
+    assert!(algorithms.contains(&ChecksumAlgorithm::Sha512));
 
     // Check specific checksums exist
-    assert!(checksums.get_checksum("SHA256", "metadata.gz").is_some());
-    assert!(checksums.get_checksum("SHA256", "data.tar.gz").is_some());
-    assert!(checksums.get_checksum("SHA512", "metadata.gz").is_some());
-    assert!(checksums.get_checksum("SHA512", "data.tar.gz").is_some());
+    assert!(
+        checksums
+            .get_checksum(ChecksumAlgorithm::Sha256, "metadata.gz")
+            .is_some()
+    );
+    assert!(
+        checksums
+            .get_checksum(ChecksumAlgorithm::Sha256, "data.tar.gz")
+            .is_some()
+    );
+    assert!(
+        checksums
+            .get_checksum(ChecksumAlgorithm::Sha512, "metadata.gz")
+            .is_some()
+    );
+    assert!(
+        checksums
+            .get_checksum(ChecksumAlgorithm::Sha512, "data.tar.gz")
+            .is_some()
+    );
 }
 
 /// Test checksum verification success
