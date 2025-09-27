@@ -19,7 +19,7 @@ fn test_open_valid_gem_from_file() {
 /// Test opening gem from in-memory source
 #[test]
 fn test_open_gem_from_memory() {
-    let gem_path = Path::new("tests/fixtures/test-gem-1.0.0.gem");
+    let gem_path = Path::new("tests/fixtures/test-gem-1.0.9999.gem");
     let gem_data = std::fs::read(gem_path).expect("Failed to read gem file");
     let cursor = Cursor::new(gem_data);
 
