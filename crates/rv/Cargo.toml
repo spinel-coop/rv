@@ -49,6 +49,7 @@ shell-escape = { workspace = true }
 lazy_static = { workspace = true }
 rayon-tracing = { workspace = true }
 clap_complete = "4.5.57"
+clap_complete_nushell = "4.5.8"
 
 [dev-dependencies]
 insta = { workspace = true }

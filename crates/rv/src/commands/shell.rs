@@ -36,4 +36,5 @@ pub enum Shell {
     Zsh,
     Bash,
     Fish,
+    Nu,
 }
