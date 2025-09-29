@@ -73,6 +73,10 @@ See [PLANS.md](docs/PLANS.md) for more on our future plans.
 
 ## FAQ
 
+**Does rv have a website?**
+
+Yes! You're looking at it. You can reach this page with the URL [rv.dev](https://rv.dev).
+
 **Why are you doing this?**
 
 [@indirect](https://github.com/indirect) wrote [a blog post about his motivation to create `rv`](https://andre.arko.net/2025/08/25/rv-a-new-kind-of-ruby-management-tool/).
