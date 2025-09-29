@@ -276,13 +276,11 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
                 "releases",
                 "available_rubies.json",
             );
-            if let Ok(content) = fs::read_to_string(cache_entry.path()) {
-                if let Ok(cached_data) = serde_json::from_str::<CachedReleases>(&content) {
-                    warn!("Displaying stale list of available rubies from cache.");
-                    cached_data.releases
-                } else {
-                    Vec::new()
-                }
+            if let Ok(content) = fs::read_to_string(cache_entry.path())
+                && let Ok(cached_data) = serde_json::from_str::<CachedReleases>(&content)
+            {
+                warn!("Displaying stale list of available rubies from cache.");
+                cached_data.releases
             } else {
                 Vec::new()
             }
