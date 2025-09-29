@@ -9,8 +9,6 @@ pub enum Error {
     ConfigError(#[from] config::Error),
     #[error("No Ruby installations found in configuration.")]
     NoRubyFound,
-    #[error("We don't yet support automatic ruby usage on this shell")]
-    Unsupported,
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -41,10 +39,24 @@ pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
             }
             Ok(())
         }
-        // TODO: Set up the nushell environment, using
-        // the env var set/remove commands from
-        // <https://www.nushell.sh/book/environment.html#env-var-assignment>
-        Shell::Nu => Err(Error::Unsupported),
+        Shell::Nu => {
+            // Emit JSON which will be run by `load-env`.
+            // See <https://www.nushell.sh/commands/docs/load-env.html>
+            // Map from environment variable names to their new values.
+            let mut env_changes = serde_json::Map::with_capacity(set.len() + unset.len());
+            for var in unset {
+                env_changes.insert(
+                    var.to_owned(),
+                    serde_json::Value::Object(Default::default()),
+                );
+            }
+            for (var, val) in set {
+                env_changes.insert(var.to_owned(), serde_json::Value::String(val));
+            }
+            let serialized = serde_json::to_string(&env_changes).expect("serializing JSON");
+            println!("{}", serialized);
+            Ok(())
+        }
     }
 }
 
