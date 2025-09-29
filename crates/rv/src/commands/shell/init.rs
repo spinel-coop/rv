@@ -5,8 +5,6 @@ use crate::config::Config;
 pub enum Error {
     #[error(transparent)]
     IoError(#[from] std::io::Error),
-    #[error("We don't yet support automatic ruby usage on this shell")]
-    Unsupported,
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -60,11 +58,21 @@ pub fn init(config: &Config, shell: Shell) -> Result<()> {
             Ok(())
         }
         Shell::Nu => {
-            // TODO: Set up the `rv` autoload hook here.
-            // It should change ruby version using `rv` whenever the user changes directory.
-            // See their example for a change-of-directory hook:
+            // See Nushell's example for a change-of-directory hook:
             // <https://www.nushell.sh/book/hooks.html#automatically-activating-an-environment-when-entering-a-directory>
-            Err(Error::Unsupported)
+            print!(
+                concat!(
+                    "$env.config = ($env.config | upsert hooks.env_change.PWD {{\n",
+                    "    [\n",
+                    "        {{\n",
+                    "            |_, _| {} shell env nu | from json | load-env\n",
+                    "        }}\n",
+                    "    ]\n",
+                    "}})\n",
+                ),
+                config.current_exe
+            );
+            Ok(())
         }
     }
 }
