@@ -9,6 +9,8 @@ pub enum Error {
     ConfigError(#[from] config::Error),
     #[error("No Ruby installations found in configuration.")]
     NoRubyFound,
+    #[error("We don't yet support automatic ruby usage on this shell")]
+    Unsupported,
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -39,6 +41,10 @@ pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
             }
             Ok(())
         }
+        // TODO: Set up the nushell environment, using
+        // the env var set/remove commands from
+        // <https://www.nushell.sh/book/environment.html#env-var-assignment>
+        Shell::Nu => Err(Error::Unsupported),
     }
 }
 
