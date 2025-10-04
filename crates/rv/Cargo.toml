@@ -46,9 +46,10 @@ current_platform = { workspace = true }
 fs-err = { workspace = true }
 bytesize = { workspace = true }
 shell-escape = { workspace = true }
-lazy_static = { workspace = true }
+once_cell = { workspace = true }
 rayon-tracing = { workspace = true }
 clap_complete = "4.5.57"
+clap_complete_nushell = "4.5.8"
 
 [dev-dependencies]
 insta = { workspace = true }

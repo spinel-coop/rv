@@ -6,7 +6,7 @@ use anstream::println;
 use camino::Utf8PathBuf;
 use current_platform::CURRENT_PLATFORM;
 use fs_err as fs;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use owo_colors::OwoColorize;
 use regex::Regex;
 use rv_ruby::Ruby;
@@ -18,10 +18,11 @@ use crate::config::Config;
 // Use GitHub's TTL, but don't re-check more than every 60 seconds.
 const MINIMUM_CACHE_TTL: Duration = Duration::from_secs(60);
 
-lazy_static! {
-    static ref ARCH_REGEX: Regex =
-        Regex::new(r"portable-ruby-[\d\.]+\.(?P<arch>[a-zA-Z0-9_]+)\.bottle\.tar\.gz").unwrap();
-}
+static ARCH_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"portable-ruby-[\d\.]+\.(?P<arch>[a-zA-Z0-9_]+)\.bottle\.tar\.gz").unwrap()
+});
+
+static PARSE_MAX_AGE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"max-age=(\d+)").unwrap());
 
 #[derive(clap::ValueEnum, Clone, Debug, PartialEq, Eq)]
 pub enum OutputFormat {
@@ -78,8 +79,8 @@ struct JsonRubyEntry {
 
 /// Parses the `max-age` value from a `Cache-Control` header.
 fn parse_max_age(header: &str) -> Option<Duration> {
-    let re = Regex::new(r"max-age=(\d+)").unwrap();
-    re.captures(header)
+    PARSE_MAX_AGE_REGEX
+        .captures(header)
         .and_then(|caps| caps.get(1))
         .and_then(|age| age.as_str().parse::<u64>().ok())
         .map(Duration::from_secs)
@@ -275,13 +276,11 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
                 "releases",
                 "available_rubies.json",
             );
-            if let Ok(content) = fs::read_to_string(cache_entry.path()) {
-                if let Ok(cached_data) = serde_json::from_str::<CachedReleases>(&content) {
-                    warn!("Displaying stale list of available rubies from cache.");
-                    cached_data.releases
-                } else {
-                    Vec::new()
-                }
+            if let Ok(content) = fs::read_to_string(cache_entry.path())
+                && let Ok(cached_data) = serde_json::from_str::<CachedReleases>(&content)
+            {
+                warn!("Displaying stale list of available rubies from cache.");
+                cached_data.releases
             } else {
                 Vec::new()
             }
@@ -382,5 +381,18 @@ fn format_ruby_entry(entry: &JsonRubyEntry, width: usize) -> String {
         )
     } else {
         format!("{marker} {name:width$} {}", "[available]".dimmed())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_cache_header() {
+        let input_header = "Cache-Control: max-age=3600, must-revalidate";
+        let actual = parse_max_age(input_header).unwrap();
+        let expected = Duration::from_secs(3600);
+        assert_eq!(actual, expected);
     }
 }

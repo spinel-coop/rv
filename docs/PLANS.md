@@ -3,7 +3,7 @@
 All-in-one tooling for Ruby developers.
 
 - Manage Ruby versions, gems, applications, tools, and scripts, effortlessly.
-- Get rid of `rvm`, `rbenv`, `chruby`, `asdf`, `mise`, `ruby-build`, `ruby-install`, `bundler`, and `rubygems`, all at once.
+- Handle everything Ruby provided by `rvm`, `rbenv`, `chruby`, `asdf`, `mise`, `ruby-build`, `ruby-install`, `bundler`, and `rubygems`, all at once.
 - Install Ruby and all your gems in seconds, without having to compile anything ever again.
 
 ## features
@@ -62,11 +62,12 @@ All-in-one tooling for Ruby developers.
 
 ### Shell integration
 
-- [ ] `rv shell init`
+- [x] `rv shell init`
   - [x] `rv shell init zsh`
-  - [ ] `rv shell init bash`
+  - [x] `rv shell init bash`
+  - [x] `rv shell init fish`
 - [x] `rv shell env`
-- [ ] `rv shell completions`
+- [x] `rv shell completions`
 
 ## functionality
 

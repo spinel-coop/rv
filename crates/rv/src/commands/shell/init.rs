@@ -57,5 +57,22 @@ pub fn init(config: &Config, shell: Shell) -> Result<()> {
             );
             Ok(())
         }
+        Shell::Nu => {
+            // See Nushell's example for a change-of-directory hook:
+            // <https://www.nushell.sh/book/hooks.html#automatically-activating-an-environment-when-entering-a-directory>
+            print!(
+                concat!(
+                    "$env.config = ($env.config | upsert hooks.env_change.PWD {{\n",
+                    "    [\n",
+                    "        {{\n",
+                    "            |_, _| {} shell env nu | from json | load-env\n",
+                    "        }}\n",
+                    "    ]\n",
+                    "}})\n",
+                ),
+                config.current_exe
+            );
+            Ok(())
+        }
     }
 }
