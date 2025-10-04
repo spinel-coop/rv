@@ -48,6 +48,26 @@ pub async fn install(
         },
     };
 
+    match std::env::var("RV_TARBALL_PATH") {
+        Ok(tarball_path) => extract_local_ruby_tarball(tarball_path, &install_dir).await?,
+        Err(_) => download_and_extract_remote_tarball(config, &install_dir, &requested).await?,
+    }
+
+    println!(
+        "Installed Ruby version {} to {}",
+        requested.to_string().cyan(),
+        install_dir.cyan()
+    );
+
+    Ok(())
+}
+
+// downloads and extracts a remote ruby tarball
+async fn download_and_extract_remote_tarball(
+    config: &Config,
+    install_dir: &Utf8PathBuf,
+    requested: &RubyRequest,
+) -> Result<()> {
     if requested.patch.is_none() {
         Err(Error::IncompleteVersion(requested.clone()))?;
     }
@@ -67,13 +87,14 @@ pub async fn install(
         download_ruby_tarball(config, &url, &tarball_path).await?;
     }
 
-    extract_ruby_tarball(&tarball_path, &install_dir)?;
+    extract_ruby_tarball(&tarball_path, install_dir)?;
 
-    println!(
-        "Installed Ruby version {} to {}",
-        requested.to_string().cyan(),
-        install_dir.cyan()
-    );
+    Ok(())
+}
+
+// extract a local ruby tarball
+async fn extract_local_ruby_tarball(tarball_path: String, install_dir: &Utf8PathBuf) -> Result<()> {
+    extract_ruby_tarball(Utf8Path::new(&tarball_path), install_dir)?;
 
     Ok(())
 }
