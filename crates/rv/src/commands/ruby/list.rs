@@ -18,9 +18,8 @@ use crate::config::Config;
 // Use GitHub's TTL, but don't re-check more than every 60 seconds.
 const MINIMUM_CACHE_TTL: Duration = Duration::from_secs(60);
 
-static ARCH_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"portable-ruby-[\d\.]+\.(?P<arch>[a-zA-Z0-9_]+)\.bottle\.tar\.gz").unwrap()
-});
+static ARCH_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"ruby-[\d\.]+\.(?P<arch>[a-zA-Z0-9_]+)\.tar\.gz").unwrap());
 
 static PARSE_MAX_AGE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"max-age=(\d+)").unwrap());
 
@@ -62,10 +61,10 @@ struct Asset {
 
 // Updated struct to hold ETag and calculated expiry time
 #[derive(Serialize, Deserialize, Debug)]
-struct CachedReleases {
+struct CachedRelease {
     expires_at: SystemTime,
     etag: Option<String>,
-    releases: Vec<Release>,
+    release: Release,
 }
 
 // Struct for JSON output and maintaing the list of installed/active rubies
@@ -108,9 +107,25 @@ fn current_platform_arch_str() -> &'static str {
     }
 }
 
+fn all_suffixes() -> impl IntoIterator<Item = &'static str> {
+    [
+        ".arm64_linux.tar.gz",
+        ".arm64_sonoma.tar.gz",
+        "x86_64_linux.tar.gz",
+        // We follow the Homebrew convention that if there's no arch, it defaults to x86.
+        ".ventura.tar.gz",
+    ]
+}
+
 /// Creates a Rubies info struct from a release asset
-fn ruby_from_release(release: &Release, asset: &Asset) -> Result<Ruby> {
-    let version: rv_ruby::version::RubyVersion = format!("ruby-{}", release.name).parse()?;
+fn ruby_from_asset(asset: &Asset) -> Result<Ruby> {
+    let version: rv_ruby::version::RubyVersion = {
+        let mut curr = asset.name.as_str();
+        for suffix in all_suffixes() {
+            curr = curr.strip_suffix(suffix).unwrap_or(curr);
+        }
+        curr.parse()
+    }?;
     let display_name = version.to_string();
 
     let arch_str = ARCH_REGEX
@@ -132,7 +147,7 @@ fn ruby_from_release(release: &Release, asset: &Asset) -> Result<Ruby> {
 }
 
 /// Fetches available rubies
-async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Vec<Release>> {
+async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Release> {
     let cache_entry = cache.entry(
         rv_cache::CacheBucket::Ruby,
         "releases",
@@ -145,12 +160,15 @@ async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Vec<Release>>
     if api_base == "-" {
         // Special case to return empty list
         tracing::debug!("RV_RELEASES_URL is '-', returning empty list without network request.");
-        return Ok(Vec::new());
+        return Ok(Release {
+            name: "Empty release".to_owned(),
+            assets: Vec::new(),
+        });
     }
-    let url = format!("{}/repos/spinel-coop/rv-ruby/releases", api_base);
+    let url = format!("{}/repos/spinel-coop/rv-ruby/releases/latest", api_base);
 
     // 1. Try to read from the disk cache.
-    let cached_data: Option<CachedReleases> =
+    let cached_data: Option<CachedRelease> =
         if let Ok(content) = fs::read_to_string(cache_entry.path()) {
             serde_json::from_str(&content).ok()
         } else {
@@ -161,7 +179,7 @@ async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Vec<Release>>
     if let Some(cache) = &cached_data {
         if SystemTime::now() < cache.expires_at {
             debug!("Using cached list of available rubies.");
-            return Ok(cache.releases.clone());
+            return Ok(cache.release.clone());
         }
         debug!("Cached ruby list is stale, re-validating with server.");
     }
@@ -198,7 +216,7 @@ async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Vec<Release>>
 
             stale_cache.expires_at = SystemTime::now() + max_age.max(MINIMUM_CACHE_TTL);
             fs::write(cache_entry.path(), serde_json::to_string(&stale_cache)?)?;
-            Ok(stale_cache.releases)
+            Ok(stale_cache.release)
         }
         reqwest::StatusCode::OK => {
             debug!("Received new releases list from GitHub (200 OK).");
@@ -214,13 +232,13 @@ async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Vec<Release>>
                 .and_then(parse_max_age)
                 .unwrap_or(Duration::from_secs(60)); // Default to 60s if header is missing
 
-            let releases: Vec<Release> = response.json().await?;
-            debug!("Fetched {} releases", releases.len());
+            let release: Release = response.json().await?;
+            debug!("Fetched latest release {}", release.name);
 
-            let new_cache_entry = CachedReleases {
+            let new_cache_entry = CachedRelease {
                 expires_at: SystemTime::now() + max_age.max(MINIMUM_CACHE_TTL),
                 etag: new_etag,
-                releases: releases.clone(),
+                release: release.clone(),
             };
 
             if let Some(parent) = cache_entry.path().parent() {
@@ -228,7 +246,7 @@ async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Vec<Release>>
             }
             fs::write(cache_entry.path(), serde_json::to_string(&new_cache_entry)?)?;
 
-            Ok(releases)
+            Ok(release)
         }
         status => {
             warn!("Failed to fetch releases, status: {}", status);
@@ -264,8 +282,8 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
         return print_entries(&entries, format);
     }
 
-    let all_releases = match fetch_available_rubies(&config.cache).await {
-        Ok(releases) => releases,
+    let release = match fetch_available_rubies(&config.cache).await {
+        Ok(release) => release,
         Err(e) => {
             warn!(
                 "Could not fetch or re-validate available Ruby versions: {}",
@@ -277,12 +295,15 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
                 "available_rubies.json",
             );
             if let Ok(content) = fs::read_to_string(cache_entry.path())
-                && let Ok(cached_data) = serde_json::from_str::<CachedReleases>(&content)
+                && let Ok(cached_data) = serde_json::from_str::<CachedRelease>(&content)
             {
                 warn!("Displaying stale list of available rubies from cache.");
-                cached_data.releases
+                cached_data.release
             } else {
-                Vec::new()
+                Release {
+                    name: "Empty".to_owned(),
+                    assets: Vec::new(),
+                }
             }
         }
     };
@@ -298,14 +319,10 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
 
     // Filter releases+assets for current platform
     let (desired_os, desired_arch) = parse_arch_str(current_platform_arch_str());
-    let available_rubies: Vec<Ruby> = all_releases
+    let available_rubies: Vec<Ruby> = release
+        .assets
         .iter()
-        .flat_map(|release| {
-            release
-                .assets
-                .iter()
-                .filter_map(move |asset| ruby_from_release(release, asset).ok())
-        })
+        .filter_map(|asset| ruby_from_asset(asset).ok())
         .filter(|ruby| ruby.os == desired_os && ruby.arch == desired_arch)
         .collect();
 
@@ -394,5 +411,12 @@ mod tests {
         let actual = parse_max_age(input_header).unwrap();
         let expected = Duration::from_secs(3600);
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_deser_release() {
+        let jtxt = std::fs::read_to_string("../../api.json").unwrap();
+        let release: Release = serde_json::from_str(&jtxt).unwrap();
+        dbg!(&release);
     }
 }

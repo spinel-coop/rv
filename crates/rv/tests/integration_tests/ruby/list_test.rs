@@ -119,14 +119,20 @@ fn test_ruby_list_with_available_and_installed() {
     let mut test = RvTest::new();
     test.create_ruby_dir("ruby-3.1.4");
 
-    let releases_body = r#"[
-        { "name": "3.4.5", "assets": [{"name": "portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz", "browser_download_url": "http://..."}]}
-    ]"#;
+    let releases_body = r#"{
+    "name": "3.4.5",
+    "assets": [{
+        "name": "ruby-3.4.5.arm64_sonoma.tar.gz",
+        "browser_download_url": "http://..."}
+    ]}"#;
     let mock = test.mock_releases(releases_body);
     let output = test.rv(&["ruby", "list"]);
 
     mock.assert();
     output.assert_success();
+
+    println!("out: {}", String::from_utf8_lossy(&output.output.stdout));
+    println!("err: {}", String::from_utf8_lossy(&output.output.stderr));
 
     // 3.1.4 and 3.4.5 should be listed, with 3.1.4 marked as installed
     insta::assert_snapshot!(output.normalized_stdout());
