@@ -441,7 +441,7 @@ mod tests {
 
     #[test]
     fn test_deser_release() {
-        let jtxt = std::fs::read_to_string("../../api.json").unwrap();
+        let jtxt = std::fs::read_to_string("../../testdata/api.json").unwrap();
         let release: Release = serde_json::from_str(&jtxt).unwrap();
         dbg!(&release);
     }
