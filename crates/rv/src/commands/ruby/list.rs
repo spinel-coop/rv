@@ -456,6 +456,14 @@ mod tests {
 
     #[test]
     fn test_latest_patch_version() {
-        todo!()
+        struct Test {
+            input: Vec<Ruby>,
+            expected: Vec<Ruby>,
+        }
+        let tests: Vec<Test> = vec![];
+        for Test { input, expected } in tests {
+            let actual = latest_patch_version(input);
+            assert_eq!(actual, expected);
+        }
     }
 }
