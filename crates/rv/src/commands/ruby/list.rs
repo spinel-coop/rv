@@ -11,6 +11,7 @@ use owo_colors::OwoColorize;
 use regex::Regex;
 use rv_ruby::Ruby;
 use rv_ruby::request::RubyRequest;
+use rv_ruby::{Asset, Release};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};
 
@@ -47,18 +48,6 @@ pub enum Error {
 }
 
 type Result<T> = miette::Result<T, Error>;
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub(crate) struct Release {
-    pub(crate) name: String,
-    assets: Vec<Asset>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct Asset {
-    name: String,
-    browser_download_url: String,
-}
 
 // Updated struct to hold ETag and calculated expiry time
 #[derive(Serialize, Deserialize, Debug)]

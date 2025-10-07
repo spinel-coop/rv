@@ -7,12 +7,9 @@ use owo_colors::OwoColorize;
 use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
 
-use rv_ruby::request::RubyRequest;
+use rv_ruby::{Release, request::RubyRequest};
 
-use crate::{
-    commands::ruby::list::{Release, fetch_available_rubies},
-    config::Config,
-};
+use crate::{commands::ruby::list::fetch_available_rubies, config::Config};
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
