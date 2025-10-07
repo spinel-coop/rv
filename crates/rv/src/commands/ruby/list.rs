@@ -438,6 +438,9 @@ fn format_ruby_entry(entry: &JsonRubyEntry, width: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use camino::Utf8PathBuf;
+    use rv_ruby::version::RubyVersion;
+    use std::str::FromStr as _;
 
     #[test]
     fn test_parse_cache_header() {
@@ -457,13 +460,69 @@ mod tests {
     #[test]
     fn test_latest_patch_version() {
         struct Test {
+            name: &'static str,
             input: Vec<Ruby>,
             expected: Vec<Ruby>,
         }
-        let tests: Vec<Test> = vec![];
-        for Test { input, expected } in tests {
+
+        fn ruby(version: &str) -> Ruby {
+            let version = RubyVersion::from_str(version).unwrap();
+            let version_str = version.to_string();
+            Ruby {
+                key: format!("{version_str}-macos-aarch64"),
+                version,
+                path: Utf8PathBuf::from(format!("/tmp/{version_str}")),
+                symlink: None,
+                arch: "aarch64".into(),
+                os: "macos".into(),
+                gem_root: None,
+            }
+        }
+
+        let tests = vec![
+            Test {
+                name: "prefers_highest_patch_per_minor",
+                input: vec![
+                    ruby("ruby-3.2.0"),
+                    ruby("ruby-3.1.5"),
+                    ruby("ruby-3.2.2"),
+                    ruby("ruby-3.1.6"),
+                ],
+                expected: vec![ruby("ruby-3.1.6"), ruby("ruby-3.2.2")],
+            },
+            Test {
+                name: "prefers_latest_prerelease_when_no_final",
+                input: vec![
+                    ruby("ruby-3.2.0-preview1"),
+                    ruby("ruby-3.2.0-rc1"),
+                    ruby("ruby-3.2.0-preview3"),
+                ],
+                expected: vec![ruby("ruby-3.2.0-rc1")],
+            },
+            Test {
+                name: "respects_engine_boundaries",
+                input: vec![
+                    ruby("jruby-9.4.12.0"),
+                    ruby("ruby-3.3.1"),
+                    ruby("jruby-9.4.13.1"),
+                    ruby("jruby-9.4.13.0"),
+                    ruby("ruby-3.3.2"),
+                ],
+                expected: vec![ruby("ruby-3.3.2"), ruby("jruby-9.4.13.1")],
+            },
+        ];
+
+        for Test {
+            name,
+            input,
+            expected,
+        } in tests
+        {
             let actual = latest_patch_version(input);
-            assert_eq!(actual, expected);
+            assert_eq!(
+                actual, expected,
+                "Failed test {name}, got {actual:?} but expected {expected:?}"
+            );
         }
     }
 }
