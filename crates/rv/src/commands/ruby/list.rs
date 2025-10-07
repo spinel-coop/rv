@@ -10,6 +10,7 @@ use once_cell::sync::Lazy;
 use owo_colors::OwoColorize;
 use regex::Regex;
 use rv_ruby::Ruby;
+use rv_ruby::request::RubyRequest;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};
 
@@ -319,12 +320,14 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
 
     // Filter releases+assets for current platform
     let (desired_os, desired_arch) = parse_arch_str(current_platform_arch_str());
-    let available_rubies: Vec<Ruby> = release
+    let rubies_for_this_platform: Vec<Ruby> = release
         .assets
         .iter()
         .filter_map(|asset| ruby_from_asset(asset).ok())
         .filter(|ruby| ruby.os == desired_os && ruby.arch == desired_arch)
         .collect();
+
+    let available_rubies = latest_patch_version(rubies_for_this_platform);
 
     debug!(
         "Found {} available rubies for platform {}/{}",
@@ -364,6 +367,37 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
         .collect();
 
     print_entries(&entries, format)
+}
+
+fn latest_patch_version(rubies_for_this_platform: Vec<Ruby>) -> Vec<Ruby> {
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+    struct NonPatchRelease {
+        engine: rv_ruby::engine::RubyEngine,
+        major: Option<rv_ruby::request::VersionPart>,
+        minor: Option<rv_ruby::request::VersionPart>,
+    }
+
+    impl From<RubyRequest> for NonPatchRelease {
+        fn from(value: RubyRequest) -> Self {
+            Self {
+                engine: value.engine,
+                major: value.major,
+                minor: value.minor,
+            }
+        }
+    }
+    let mut available_rubies: BTreeMap<NonPatchRelease, Ruby> = BTreeMap::new();
+    for ruby in rubies_for_this_platform {
+        let key = NonPatchRelease::from(ruby.version.clone());
+        let skip = available_rubies
+            .get(&key)
+            .map(|other| other.version > ruby.version)
+            .unwrap_or_default();
+        if !skip {
+            available_rubies.insert(key, ruby);
+        }
+    }
+    available_rubies.into_values().collect()
 }
 
 fn print_entries(entries: &[JsonRubyEntry], format: OutputFormat) -> Result<()> {
@@ -418,5 +452,10 @@ mod tests {
         let jtxt = std::fs::read_to_string("../../api.json").unwrap();
         let release: Release = serde_json::from_str(&jtxt).unwrap();
         dbg!(&release);
+    }
+
+    #[test]
+    fn test_latest_patch_version() {
+        todo!()
     }
 }
