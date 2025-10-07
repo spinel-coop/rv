@@ -48,8 +48,8 @@ pub enum Error {
 type Result<T> = miette::Result<T, Error>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct Release {
-    name: String,
+pub(crate) struct Release {
+    pub(crate) name: String,
     assets: Vec<Asset>,
 }
 
@@ -147,7 +147,7 @@ fn ruby_from_asset(asset: &Asset) -> Result<Ruby> {
 }
 
 /// Fetches available rubies
-async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Release> {
+pub(crate) async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Release> {
     let cache_entry = cache.entry(
         rv_cache::CacheBucket::Ruby,
         "releases",
