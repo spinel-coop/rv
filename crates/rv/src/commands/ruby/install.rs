@@ -7,9 +7,9 @@ use owo_colors::OwoColorize;
 use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
 
-use rv_ruby::{Release, request::RubyRequest};
+use rv_ruby::request::RubyRequest;
 
-use crate::{commands::ruby::list::fetch_available_rubies, config::Config};
+use crate::config::Config;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -54,11 +54,7 @@ pub async fn install(
         Err(Error::IncompleteVersion(requested.clone()))?;
     }
 
-    let latest: Release = fetch_available_rubies(&config.cache)
-        .await
-        .map_err(|error| Error::GetLatestReleaseFailed { error })?;
-    let latest_release_tag = latest.name;
-    let url = ruby_url(&requested.to_string(), &latest_release_tag)?;
+    let url = ruby_url(&requested.to_string())?;
     let tarball_path = tarball_path(config, &url);
 
     let new_dir = tarball_path.parent().unwrap();
@@ -100,7 +96,7 @@ fn valid_tarball_exists(path: &Utf8Path) -> bool {
     true
 }
 
-fn ruby_url(version: &str, release_tag: &str) -> Result<String> {
+fn ruby_url(version: &str) -> Result<String> {
     let version = version.strip_prefix("ruby-").unwrap();
     let arch = match CURRENT_PLATFORM {
         "aarch64-apple-darwin" => "arm64_sonoma",
@@ -113,7 +109,7 @@ fn ruby_url(version: &str, release_tag: &str) -> Result<String> {
         .unwrap_or("https://github.com/spinel-coop/rv-ruby/releases".to_owned());
 
     Ok(format!(
-        "{}/download/{release_tag}/ruby-{version}.{arch}.tar.gz",
+        "{}/latest/download/ruby-{version}.{arch}.tar.gz",
         download_base
     ))
 }

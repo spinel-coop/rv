@@ -80,16 +80,6 @@ impl RvTest {
             .with_body(content)
     }
 
-    /// Mock a github release for rv-ruby
-    pub fn mock_rv_ruby_release(&mut self, content: &[u8]) -> Mock {
-        let path = "/repos/spinel-coop/rv-ruby/releases/latest";
-        self.server
-            .mock("GET", path)
-            .with_status(200)
-            .with_header("content-type", "application/gzip")
-            .with_body(content)
-    }
-
     /// Get the server URL for constructing download URLs
     pub fn server_url(&self) -> String {
         self.server.url()
