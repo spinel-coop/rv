@@ -61,3 +61,4 @@ indoc = { workspace = true }
 fs-err = { workspace = true }
 camino-tempfile-ext = { workspace = true }
 mockito = "1.4.0"
+pretty_assertions = { workspace = true }

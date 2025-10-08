@@ -1970,6 +1970,7 @@ dependencies = [
  "mockito",
  "once_cell",
  "owo-colors",
+ "pretty_assertions",
  "rayon",
  "rayon-tracing",
  "regex",
