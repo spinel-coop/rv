@@ -5,10 +5,35 @@ on:
   workflow_dispatch:
   pull_request:
 permissions: read-all
-name: Test with coverage
+name: Test
 jobs:
-  cargo-test:
-    name: cargo test
+  run-tests:
+    name: Run tests
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: 
+        - ubuntu-latest # x86
+        - macos-latest # xarm
+        - ubuntu-24.04-arm #arm
+        - macos-15-intel # x86
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install zsh (if needed)
+        if: matrix.shell == 'zsh' && startsWith(matrix.runs-on, 'ubuntu')
+        run: sudo apt-get update && sudo apt-get install -y zsh
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+      - run: ./bin/test
+
+  run-tests-coverage:
+    name: Run tests with coverage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -100,9 +100,10 @@ fn ruby_url(version: &str) -> Result<String> {
     let version = version.strip_prefix("ruby-").unwrap();
     let arch = match CURRENT_PLATFORM {
         "aarch64-apple-darwin" => "arm64_sonoma",
+        "x86_64-apple-darwin" => "ventura",
         "x86_64-unknown-linux-gnu" => "x86_64_linux",
         "aarch64-unknown-linux-gnu" => "arm64_linux",
-        _ => return Err(Error::UnsupportedPlatform(CURRENT_PLATFORM)),
+        other => return Err(Error::UnsupportedPlatform(other)),
     };
 
     let download_base = std::env::var("RV_RELEASES_URL")

@@ -6,6 +6,7 @@ use std::fs;
 fn arch() -> &'static str {
     match CURRENT_PLATFORM {
         "aarch64-apple-darwin" => "arm64_sonoma",
+        "x86_64-apple-darwin" => "ventura",
         "x86_64-unknown-linux-gnu" => "x86_64_linux",
         "aarch64-unknown-linux-gnu" => "arm64_linux",
         other => panic!("Unsupported platform {other}"),
@@ -58,14 +59,24 @@ fn test_ruby_install_successful_download() {
 fn test_ruby_install_http_failure_no_empty_file() {
     let mut test = RvTest::new();
 
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     test.server
         .mock("GET", "/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz")
         .with_status(404)
         .create();
-    #[cfg(target_os = "linux")]
+    #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+    test.server
+        .mock("GET", "/portable-ruby-3.4.5.ventura.bottle.tar.gz")
+        .with_status(404)
+        .create();
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     test.server
         .mock("GET", "/portable-ruby-3.4.5.x86_64_linux.bottle.tar.gz")
+        .with_status(404)
+        .create();
+    #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+    test.server
+        .mock("GET", "/portable-ruby-3.4.5.arm64_linux.bottle.tar.gz")
         .with_status(404)
         .create();
 
@@ -107,7 +118,7 @@ fn test_ruby_install_interrupted_download_cleanup() {
     let mut test = RvTest::new();
 
     let download_suffix = make_dl_suffix("3.4.5");
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     let _mock = test
         .server
         .mock("GET", "/latest/download/ruby-3.4.5.arm64_sonoma.tar.gz")
@@ -115,10 +126,26 @@ fn test_ruby_install_interrupted_download_cleanup() {
         .with_header("content-type", "application/gzip")
         .with_body("partial")
         .create();
-    #[cfg(target_os = "linux")]
+    #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+    let _mock = test
+        .server
+        .mock("GET", "/latest/download/ruby-3.4.5.ventura.tar.gz")
+        .with_status(200)
+        .with_header("content-type", "application/gzip")
+        .with_body("partial")
+        .create();
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     let _mock = test
         .server
         .mock("GET", "/latest/download/ruby-3.4.5.x86_64_linux.tar.gz")
+        .with_status(200)
+        .with_header("content-type", "application/gzip")
+        .with_body("partial")
+        .create();
+    #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+    let _mock = test
+        .server
+        .mock("GET", "/latest/download/ruby-3.4.5.arm64_linux.tar.gz")
         .with_status(200)
         .with_header("content-type", "application/gzip")
         .with_body("partial")
@@ -163,12 +190,6 @@ fn test_ruby_install_cached_file_reused() {
 
     let tarball_content = create_mock_tarball();
     let download_suffix = make_dl_suffix("3.4.5");
-    #[cfg(target_os = "macos")]
-    let mock = test
-        .mock_tarball_download(&download_suffix, &tarball_content)
-        .expect(1)
-        .create();
-    #[cfg(target_os = "linux")]
     let mock = test
         .mock_tarball_download(&download_suffix, &tarball_content)
         .expect(1)
@@ -223,9 +244,11 @@ fn test_ruby_install_invalid_url() {
 }
 
 fn make_dl_suffix(version: &str) -> String {
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     let suffix = "arm64_sonoma";
-    #[cfg(all(target_os = "linux", target_arch = "arm"))]
+    #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+    let suffix = "ventura";
+    #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
     let suffix = "arm64_linux";
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     let suffix = "x86_64_linux";
@@ -238,11 +261,6 @@ fn test_ruby_install_atomic_rename_behavior() {
 
     let tarball_content = create_mock_tarball();
     let download_suffix = make_dl_suffix("3.4.5");
-    #[cfg(target_os = "macos")]
-    let _mock = test
-        .mock_tarball_download(&download_suffix, &tarball_content)
-        .create();
-    #[cfg(target_os = "linux")]
     let _mock = test
         .mock_tarball_download(&download_suffix, &tarball_content)
         .create();
@@ -274,7 +292,7 @@ fn test_ruby_install_atomic_rename_behavior() {
 fn test_ruby_install_temp_file_cleanup_on_extraction_failure() {
     let mut test = RvTest::new();
 
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     let _mock = test
         .server
         .mock(
@@ -286,12 +304,36 @@ fn test_ruby_install_temp_file_cleanup_on_extraction_failure() {
         .with_body("invalid-tarball-content")
         .create();
 
-    #[cfg(target_os = "linux")]
+    #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+    let _mock = test
+        .server
+        .mock(
+            "GET",
+            "/download/3.4.5/portable-ruby-3.4.5.ventura.bottle.tar.gz",
+        )
+        .with_status(200)
+        .with_header("content-type", "application/gzip")
+        .with_body("invalid-tarball-content")
+        .create();
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     let _mock = test
         .server
         .mock(
             "GET",
             "/download/3.4.5/portable-ruby-3.4.5.x86_64_linux.bottle.tar.gz",
+        )
+        .with_status(200)
+        .with_header("content-type", "application/gzip")
+        .with_body("invalid-tarball-content")
+        .create();
+
+    #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+    let _mock = test
+        .server
+        .mock(
+            "GET",
+            "/download/3.4.5/portable-ruby-3.4.5.arm64_linux.bottle.tar.gz",
         )
         .with_status(200)
         .with_header("content-type", "application/gzip")
