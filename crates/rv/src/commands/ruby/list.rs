@@ -443,7 +443,24 @@ mod tests {
     fn test_deser_release() {
         let jtxt = std::fs::read_to_string("../../testdata/api.json").unwrap();
         let release: Release = serde_json::from_str(&jtxt).unwrap();
-        dbg!(&release);
+        let actual = ruby_from_asset(&release.assets[0]).unwrap();
+        let expected = Ruby {
+            key: "ruby-3.3.0-linux-aarch64".to_owned(),
+            version: RubyRequest {
+                engine: rv_ruby::engine::RubyEngine::Ruby,
+                major: Some(3),
+                minor: Some(3),
+                patch: Some(0),
+                tiny: None,
+                prerelease: None,
+            },
+            path: "https://github.com/spinel-coop/rv-ruby/releases/download/20251006/ruby-3.3.0.arm64_linux.tar.gz".into(),
+            symlink: None,
+            arch: "aarch64".to_owned(),
+            os: "linux".to_owned(),
+            gem_root: None,
+        };
+        assert_eq!(actual, expected);
     }
 
     #[test]
@@ -480,7 +497,7 @@ mod tests {
                 expected: vec![ruby("ruby-3.1.6"), ruby("ruby-3.2.2")],
             },
             Test {
-                name: "prefers_latest_prerelease_when_no_final",
+                name: "prefers_latest_prerelease_when_all_patch_are_the_same",
                 input: vec![
                     ruby("ruby-3.2.0-preview1"),
                     ruby("ruby-3.2.0-rc1"),
