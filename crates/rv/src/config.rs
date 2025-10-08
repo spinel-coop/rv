@@ -1,6 +1,6 @@
 use std::{
-    env::{JoinPathsError, join_paths, split_paths},
-    path::PathBuf,
+    env::{self, JoinPathsError, join_paths, split_paths},
+    path::{Path, PathBuf},
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -77,25 +77,55 @@ impl Config {
     }
 }
 
+fn xdg_env_var_path() -> Option<String> {
+    let xdg_data_home = env::var("XDG_DATA_HOME").ok()?;
+    let path_buf = Path::new(&xdg_data_home).join("rv/rubies");
+    Some(path_buf.to_str()?.to_owned())
+}
+
+struct PathInfo<'a> {
+    path: &'a str,
+    // Always include, even if it doesn't exist yet.
+    always_include: bool,
+}
+
+impl<'a> PathInfo<'a> {
+    pub fn new(path: &'a str, always_include: bool) -> Self {
+        Self {
+            path,
+            always_include,
+        }
+    }
+}
+
 /// Default Ruby installation directories
 pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
-    vec![
-        shellexpand::tilde("~/.rubies").as_ref(),
-        "/opt/rubies",
-        "/usr/local/rubies",
-    ]
-    .into_iter()
-    .filter_map(|path| {
-        let joinable_path = path.strip_prefix("/").unwrap();
-        let joined_path = root.join(joinable_path);
-        // Make sure we always have at least ~/.rubies, even if it doesn't exist yet
-        if joined_path.ends_with(".rubies") {
-            Some(joined_path)
-        } else {
-            joined_path.canonicalize_utf8().ok()
-        }
-    })
-    .collect()
+    let mut paths: Vec<PathInfo> = vec![];
+    let xdg_path = xdg_env_var_path();
+    if let Some(xdg_path) = &xdg_path {
+        paths.push(PathInfo::new(xdg_path, true));
+    }
+    let default_path = shellexpand::tilde("~/.data/rv/rubies");
+    paths.push(PathInfo::new(default_path.as_ref(), true));
+
+    // TODO: The paths below are never used, even if they exist (and the ones above don't).
+    let legacy_default_path = shellexpand::tilde("~/.rubies");
+    paths.push(PathInfo::new(legacy_default_path.as_ref(), false));
+    paths.push(PathInfo::new("/opt/rubies", false));
+    paths.push(PathInfo::new("/usr/local/rubies", false));
+
+    paths
+        .into_iter()
+        .filter_map(|path_info| {
+            let joinable_path = path_info.path.strip_prefix("/").unwrap();
+            let joined_path = root.join(joinable_path);
+            if path_info.always_include {
+                Some(joined_path)
+            } else {
+                joined_path.canonicalize_utf8().ok()
+            }
+        })
+        .collect()
 }
 
 pub fn find_project_dir(current_dir: Utf8PathBuf, root: Utf8PathBuf) -> Option<Utf8PathBuf> {
