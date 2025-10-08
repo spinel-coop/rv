@@ -4,6 +4,8 @@ on:
       - main
   workflow_dispatch:
   pull_request:
+  merge_group:
+    types: [checks_requested]
 permissions: read-all
 name: Test with coverage
 jobs:
