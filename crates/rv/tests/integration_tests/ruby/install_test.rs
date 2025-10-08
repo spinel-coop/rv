@@ -1,5 +1,4 @@
 use current_platform::CURRENT_PLATFORM;
-use rv_ruby::{Asset, Release};
 
 use crate::common::RvTest;
 use std::fs;
@@ -19,20 +18,8 @@ fn test_ruby_install_successful_download() {
 
     let tarball_content = create_mock_tarball();
     let download_suffix = make_dl_suffix("3.4.5");
-    let browser_download_url =
-        format!("https://github.com/spinel-coop/rv-ruby/releases/{download_suffix}");
     let _mock = test
         .mock_tarball_download(&download_suffix, &tarball_content)
-        .create();
-    let release = Release {
-        name: "2025MMDD".to_owned(),
-        assets: vec![Asset {
-            name: "3.4.5".to_owned(),
-            browser_download_url,
-        }],
-    };
-    let _mock_release = test
-        .mock_rv_ruby_release(serde_json::to_string(&release).unwrap().as_bytes())
         .create();
 
     test.env.remove("RV_NO_CACHE");
@@ -120,12 +107,10 @@ fn test_ruby_install_interrupted_download_cleanup() {
     let mut test = RvTest::new();
 
     let download_suffix = make_dl_suffix("3.4.5");
-    let browser_download_url =
-        format!("https://github.com/spinel-coop/rv-ruby/releases/{download_suffix}");
     #[cfg(target_os = "macos")]
     let _mock = test
         .server
-        .mock("GET", "/download/2025MMDD/ruby-3.4.5.arm64_sonoma.tar.gz")
+        .mock("GET", "/latest/download/ruby-3.4.5.arm64_sonoma.tar.gz")
         .with_status(200)
         .with_header("content-type", "application/gzip")
         .with_body("partial")
@@ -133,20 +118,10 @@ fn test_ruby_install_interrupted_download_cleanup() {
     #[cfg(target_os = "linux")]
     let _mock = test
         .server
-        .mock("GET", "/download/2025MMDD/ruby-3.4.5.x86_64_linux.tar.gz")
+        .mock("GET", "/latest/download/ruby-3.4.5.x86_64_linux.tar.gz")
         .with_status(200)
         .with_header("content-type", "application/gzip")
         .with_body("partial")
-        .create();
-    let release = Release {
-        name: "2025MMDD".to_owned(),
-        assets: vec![Asset {
-            name: "3.4.5".to_owned(),
-            browser_download_url,
-        }],
-    };
-    let _mock_release = test
-        .mock_rv_ruby_release(serde_json::to_string(&release).unwrap().as_bytes())
         .create();
 
     test.env.remove("RV_NO_CACHE");
@@ -188,8 +163,6 @@ fn test_ruby_install_cached_file_reused() {
 
     let tarball_content = create_mock_tarball();
     let download_suffix = make_dl_suffix("3.4.5");
-    let browser_download_url =
-        format!("https://github.com/spinel-coop/rv-ruby/releases/{download_suffix}");
     #[cfg(target_os = "macos")]
     let mock = test
         .mock_tarball_download(&download_suffix, &tarball_content)
@@ -199,16 +172,6 @@ fn test_ruby_install_cached_file_reused() {
     let mock = test
         .mock_tarball_download(&download_suffix, &tarball_content)
         .expect(1)
-        .create();
-    let release = Release {
-        name: "2025MMDD".to_owned(),
-        assets: vec![Asset {
-            name: "3.4.5".to_owned(),
-            browser_download_url,
-        }],
-    };
-    let _mock_release = test
-        .mock_rv_ruby_release(serde_json::to_string(&release).unwrap().as_bytes())
         .create();
 
     test.env.remove("RV_NO_CACHE");
@@ -266,7 +229,7 @@ fn make_dl_suffix(version: &str) -> String {
     let suffix = "arm64_linux";
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     let suffix = "x86_64_linux";
-    format!("download/2025MMDD/ruby-{version}.{suffix}.tar.gz")
+    format!("latest/download/ruby-{version}.{suffix}.tar.gz")
 }
 
 #[test]
@@ -275,8 +238,6 @@ fn test_ruby_install_atomic_rename_behavior() {
 
     let tarball_content = create_mock_tarball();
     let download_suffix = make_dl_suffix("3.4.5");
-    let browser_download_url =
-        format!("https://github.com/spinel-coop/rv-ruby/releases/{download_suffix}");
     #[cfg(target_os = "macos")]
     let _mock = test
         .mock_tarball_download(&download_suffix, &tarball_content)
@@ -284,16 +245,6 @@ fn test_ruby_install_atomic_rename_behavior() {
     #[cfg(target_os = "linux")]
     let _mock = test
         .mock_tarball_download(&download_suffix, &tarball_content)
-        .create();
-    let release = Release {
-        name: "2025MMDD".to_owned(),
-        assets: vec![Asset {
-            name: "3.4.5".to_owned(),
-            browser_download_url,
-        }],
-    };
-    let _mock_release = test
-        .mock_rv_ruby_release(serde_json::to_string(&release).unwrap().as_bytes())
         .create();
 
     test.env.remove("RV_NO_CACHE");
