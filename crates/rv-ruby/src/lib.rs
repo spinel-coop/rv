@@ -14,6 +14,18 @@ use crate::request::RubyRequest;
 use crate::version::RubyVersion;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Release {
+    pub name: String,
+    pub assets: Vec<Asset>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Asset {
+    pub name: String,
+    pub browser_download_url: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Ruby {
     /// Unique identifier for this Ruby installation
     pub key: String,

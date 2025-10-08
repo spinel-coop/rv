@@ -63,7 +63,7 @@ impl RvTest {
     /// so that tests can optionally assert it was called.
     pub fn mock_releases(&mut self, body: &str) -> Mock {
         self.server
-            .mock("GET", "/repos/spinel-coop/rv-ruby/releases")
+            .mock("GET", "/repos/spinel-coop/rv-ruby/releases/latest")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(body)
@@ -75,6 +75,16 @@ impl RvTest {
         let path = format!("/{}", filename);
         self.server
             .mock("GET", path.as_str())
+            .with_status(200)
+            .with_header("content-type", "application/gzip")
+            .with_body(content)
+    }
+
+    /// Mock a github release for rv-ruby
+    pub fn mock_rv_ruby_release(&mut self, content: &[u8]) -> Mock {
+        let path = "/repos/spinel-coop/rv-ruby/releases/latest";
+        self.server
+            .mock("GET", path)
             .with_status(200)
             .with_header("content-type", "application/gzip")
             .with_body(content)

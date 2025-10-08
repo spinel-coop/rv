@@ -4,7 +4,7 @@ use std::{fmt::Display, str::FromStr};
 use crate::{Ruby, engine::RubyEngine};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 
-type VersionPart = u32;
+pub type VersionPart = u32;
 
 #[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay, PartialOrd, Ord)]
 pub struct RubyRequest {

@@ -1,4 +1,5 @@
 use current_platform::CURRENT_PLATFORM;
+use rv_ruby::{Asset, Release};
 
 use crate::common::RvTest;
 use std::fs;
@@ -17,12 +18,21 @@ fn test_ruby_install_successful_download() {
     let mut test = RvTest::new();
 
     let tarball_content = create_mock_tarball();
-    let arch = arch();
+    let download_suffix = make_dl_suffix("3.4.5");
+    let browser_download_url =
+        format!("https://github.com/spinel-coop/rv-ruby/releases/{download_suffix}");
     let _mock = test
-        .mock_tarball_download(
-            &format!("download/3.4.5/portable-ruby-3.4.5.{arch}.bottle.tar.gz"),
-            &tarball_content,
-        )
+        .mock_tarball_download(&download_suffix, &tarball_content)
+        .create();
+    let release = Release {
+        name: "2025MMDD".to_owned(),
+        assets: vec![Asset {
+            name: "3.4.5".to_owned(),
+            browser_download_url,
+        }],
+    };
+    let _mock_release = test
+        .mock_rv_ruby_release(serde_json::to_string(&release).unwrap().as_bytes())
         .create();
 
     test.env.remove("RV_NO_CACHE");
@@ -34,10 +44,7 @@ fn test_ruby_install_successful_download() {
 
     output.assert_success();
 
-    let cache_key = rv_cache::cache_digest(format!(
-        "{}/download/3.4.5/portable-ruby-3.4.5.{arch}.bottle.tar.gz",
-        test.server_url()
-    ));
+    let cache_key = rv_cache::cache_digest(format!("{}/{}", test.server_url(), download_suffix));
     let tarball_path = cache_dir
         .join("ruby-v0")
         .join("tarballs")
@@ -112,13 +119,13 @@ fn test_ruby_install_http_failure_no_empty_file() {
 fn test_ruby_install_interrupted_download_cleanup() {
     let mut test = RvTest::new();
 
+    let download_suffix = make_dl_suffix("3.4.5");
+    let browser_download_url =
+        format!("https://github.com/spinel-coop/rv-ruby/releases/{download_suffix}");
     #[cfg(target_os = "macos")]
     let _mock = test
         .server
-        .mock(
-            "GET",
-            "/download/3.4.5/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz",
-        )
+        .mock("GET", "/download/2025MMDD/ruby-3.4.5.arm64_sonoma.tar.gz")
         .with_status(200)
         .with_header("content-type", "application/gzip")
         .with_body("partial")
@@ -126,13 +133,20 @@ fn test_ruby_install_interrupted_download_cleanup() {
     #[cfg(target_os = "linux")]
     let _mock = test
         .server
-        .mock(
-            "GET",
-            "/download/3.4.5/portable-ruby-3.4.5.x86_64_linux.bottle.tar.gz",
-        )
+        .mock("GET", "/download/2025MMDD/ruby-3.4.5.x86_64_linux.tar.gz")
         .with_status(200)
         .with_header("content-type", "application/gzip")
         .with_body("partial")
+        .create();
+    let release = Release {
+        name: "2025MMDD".to_owned(),
+        assets: vec![Asset {
+            name: "3.4.5".to_owned(),
+            browser_download_url,
+        }],
+    };
+    let _mock_release = test
+        .mock_rv_ruby_release(serde_json::to_string(&release).unwrap().as_bytes())
         .create();
 
     test.env.remove("RV_NO_CACHE");
@@ -144,11 +158,9 @@ fn test_ruby_install_interrupted_download_cleanup() {
 
     output.assert_failure();
 
-    let arch = arch();
-    let cache_key = rv_cache::cache_digest(format!(
-        "{}/download/3.4.5/portable-ruby-3.4.5.{arch}.bottle.tar.gz",
-        test.server_url()
-    ));
+    let tarball_name = format!("{}/{}", test.server_url(), download_suffix);
+    dbg!(&tarball_name);
+    let cache_key = rv_cache::cache_digest(tarball_name);
     let tarball_path = cache_dir
         .join("ruby-v0")
         .join("tarballs")
@@ -160,11 +172,13 @@ fn test_ruby_install_interrupted_download_cleanup() {
 
     assert!(
         tarball_path.exists(),
-        "Tarball should exist after successful download"
+        "Tarball should exist at {} after successful download",
+        tarball_path,
     );
     assert!(
         !temp_path.exists(),
-        "No temp file should remain after failure"
+        "No temp file should remain at {} after failure",
+        temp_path,
     );
 }
 
@@ -173,21 +187,28 @@ fn test_ruby_install_cached_file_reused() {
     let mut test = RvTest::new();
 
     let tarball_content = create_mock_tarball();
+    let download_suffix = make_dl_suffix("3.4.5");
+    let browser_download_url =
+        format!("https://github.com/spinel-coop/rv-ruby/releases/{download_suffix}");
     #[cfg(target_os = "macos")]
     let mock = test
-        .mock_tarball_download(
-            "download/3.4.5/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz",
-            &tarball_content,
-        )
+        .mock_tarball_download(&download_suffix, &tarball_content)
         .expect(1)
         .create();
     #[cfg(target_os = "linux")]
     let mock = test
-        .mock_tarball_download(
-            "download/3.4.5/portable-ruby-3.4.5.x86_64_linux.bottle.tar.gz",
-            &tarball_content,
-        )
+        .mock_tarball_download(&download_suffix, &tarball_content)
         .expect(1)
+        .create();
+    let release = Release {
+        name: "2025MMDD".to_owned(),
+        assets: vec![Asset {
+            name: "3.4.5".to_owned(),
+            browser_download_url,
+        }],
+    };
+    let _mock_release = test
+        .mock_rv_ruby_release(serde_json::to_string(&release).unwrap().as_bytes())
         .create();
 
     test.env.remove("RV_NO_CACHE");
@@ -238,24 +259,41 @@ fn test_ruby_install_invalid_url() {
     }
 }
 
+fn make_dl_suffix(version: &str) -> String {
+    #[cfg(target_os = "macos")]
+    let suffix = "arm64_sonoma";
+    #[cfg(all(target_os = "linux", target_arch = "arm"))]
+    let suffix = "arm64_linux";
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    let suffix = "x86_64_linux";
+    format!("download/2025MMDD/ruby-{version}.{suffix}.tar.gz")
+}
+
 #[test]
 fn test_ruby_install_atomic_rename_behavior() {
     let mut test = RvTest::new();
 
     let tarball_content = create_mock_tarball();
+    let download_suffix = make_dl_suffix("3.4.5");
+    let browser_download_url =
+        format!("https://github.com/spinel-coop/rv-ruby/releases/{download_suffix}");
     #[cfg(target_os = "macos")]
     let _mock = test
-        .mock_tarball_download(
-            "download/3.4.5/portable-ruby-3.4.5.arm64_sonoma.bottle.tar.gz",
-            &tarball_content,
-        )
+        .mock_tarball_download(&download_suffix, &tarball_content)
         .create();
     #[cfg(target_os = "linux")]
     let _mock = test
-        .mock_tarball_download(
-            "download/3.4.5/portable-ruby-3.4.5.x86_64_linux.bottle.tar.gz",
-            &tarball_content,
-        )
+        .mock_tarball_download(&download_suffix, &tarball_content)
+        .create();
+    let release = Release {
+        name: "2025MMDD".to_owned(),
+        assets: vec![Asset {
+            name: "3.4.5".to_owned(),
+            browser_download_url,
+        }],
+    };
+    let _mock_release = test
+        .mock_rv_ruby_release(serde_json::to_string(&release).unwrap().as_bytes())
         .create();
 
     test.env.remove("RV_NO_CACHE");
@@ -266,11 +304,7 @@ fn test_ruby_install_atomic_rename_behavior() {
     let output = test.rv(&["ruby", "install", "3.4.5"]);
     output.assert_success();
 
-    let arch = arch();
-    let cache_key = rv_cache::cache_digest(format!(
-        "{}/download/3.4.5/portable-ruby-3.4.5.{arch}.bottle.tar.gz",
-        test.server_url()
-    ));
+    let cache_key = rv_cache::cache_digest(format!("{}/{}", test.server_url(), download_suffix));
     let tarball_path = cache_dir
         .join("ruby-v0")
         .join("tarballs")
