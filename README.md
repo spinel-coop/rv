@@ -14,7 +14,7 @@ Eventually, you'll be able to manage all your Rubies, tools, gems, and packages,
 ## Requirements
 
 - **Operating Systems**: macOS 14 and up, Ubuntu 24.04 and up
-- **Ruby Versions**: Ruby 3.4.1 and up
+- **Ruby Versions**: Ruby 3.3.9 and all versions since 3.4.1
 - **Shells**: zsh, bash, fish
 
 ## Install
