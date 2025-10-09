@@ -9,7 +9,7 @@ Adds x86 macOS as a supported platform, Ruby 3.3, and YJIT for all Rubies. Adds 
 - Test all four platforms (https://github.com/spinel-coop/rv/pull/136, @adamchalmers)
 - Set GEM_PATH to gem location, no bin (https://github.com/spinel-coop/rv/pull/110, @Thomascountz)
 - Default data to `~/.local/share/rv`, respect XDG (https://github.com/spinel-coop/rv/pull/84, @lgarron)
-- Support new rv-ruby release scheme (https://github.com/spinel-coop/rv/pull/132, @adamchalmers)
+- Support Ruby 3.3.x via the new rv-ruby release scheme (https://github.com/spinel-coop/rv/pull/132, @adamchalmers)
 - Support nushell (https://github.com/spinel-coop/rv/pull/123, @adamchalmers)
 - Add code coverage reporting to CI (https://github.com/spinel-coop/rv/pull/112, @adamchalmers)
 - Add benchmarks and fuzz testing for library code (https://github.com/spinel-coop/rv/pull/95, @adamchalmers)
