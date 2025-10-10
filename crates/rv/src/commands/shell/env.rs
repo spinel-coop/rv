@@ -35,7 +35,7 @@ pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
                 println!("set -ge {}", unset.join(" "))
             }
             for (var, val) in set {
-                println!("set -gx {var} \"{}\"", backslack_escape(val))
+                println!("set -gx {var} \"{}\"", fish_var_escape(val))
             }
             Ok(())
         }
@@ -68,7 +68,7 @@ fn nu_env(unset: Vec<&str>, set: Vec<(&str, String)>) -> serde_json::Value {
 
 // From uv's crates/uv-shell/src/lib.rs
 // Assumes strings will be outputed as "str", so escapes any \ or " character
-fn backslack_escape(s: String) -> String {
+fn fish_var_escape(s: String) -> String {
     let mut escaped = String::with_capacity(s.len());
     for c in s.chars() {
         match c {
