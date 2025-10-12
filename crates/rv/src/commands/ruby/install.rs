@@ -41,6 +41,7 @@ pub async fn install(
     config: &Config,
     install_dir: Option<String>,
     requested: RubyRequest,
+    tarball_path: Option<String>,
 ) -> Result<()> {
     let install_dir = match install_dir {
         Some(dir) => Utf8PathBuf::from(dir),
@@ -50,11 +51,11 @@ pub async fn install(
         },
     };
 
-    match std::env::var("RV_TARBALL_PATH") {
-        Ok(tarball_path) => {
+    match tarball_path {
+        Some(tarball_path) => {
             extract_local_ruby_tarball(tarball_path, &install_dir, &requested.number()).await?
         }
-        Err(_) => download_and_extract_remote_tarball(config, &install_dir, &requested).await?,
+        None => download_and_extract_remote_tarball(config, &install_dir, &requested).await?,
     }
 
     println!(
@@ -93,7 +94,7 @@ async fn download_and_extract_remote_tarball(
         download_ruby_tarball(config, &url, &tarball_path).await?;
     }
 
-    extract_ruby_tarball(&tarball_path, &install_dir, &requested.number())?;
+    extract_ruby_tarball(&tarball_path, install_dir, &requested.number())?;
 
     Ok(())
 }

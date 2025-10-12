@@ -278,7 +278,8 @@ async fn run() -> Result<()> {
                 RubyCommand::Install {
                     version,
                     install_dir,
-                } => ruby_install(&config, install_dir, version).await?,
+                    tarball_path,
+                } => ruby_install(&config, install_dir, version, tarball_path).await?,
                 #[cfg(unix)]
                 RubyCommand::Run { version, args } => ruby_run(&config, &version, &args)?,
             },
