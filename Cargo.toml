@@ -42,6 +42,7 @@ rayon-tracing = { git = "https://github.com/danylaporte/rayon-tracing", version 
 regex = "1.11.1"
 reqwest = { version = "0.12.22", default-features = false, features = [
   "rustls-tls",
+  "rustls-tls-native-roots",
   "json",
   "http2",
 ] }

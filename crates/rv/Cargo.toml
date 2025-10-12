@@ -1,11 +1,12 @@
 [package]
 name = "rv"
-version = "0.1.1"
+version = "0.2.0"
 rust-version = "1.88.0"
 edition = "2024"
 repository = "https://github.com/spinel-coop/rv"
 description = "Ruby version management, but fast"
 homepage = "https://spinel.coop/rv"
+default-run = "rv"
 
 [dependencies]
 clap = { workspace = true, features = ["derive", "env"] }
@@ -60,3 +61,4 @@ indoc = { workspace = true }
 fs-err = { workspace = true }
 camino-tempfile-ext = { workspace = true }
 mockito = "1.4.0"
+pretty_assertions = { workspace = true }

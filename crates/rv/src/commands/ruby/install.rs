@@ -27,6 +27,8 @@ pub enum Error {
         status: reqwest::StatusCode,
         body: String,
     },
+    #[error("Could not get latest Ruby release")]
+    GetLatestReleaseFailed { error: super::list::Error },
     #[error("Failed to unpack tarball path {0}")]
     InvalidTarballPath(PathBuf),
     #[error("rv does not (yet) support your platform ({0}). Sorry :(")]
@@ -49,7 +51,9 @@ pub async fn install(
     };
 
     match std::env::var("RV_TARBALL_PATH") {
-        Ok(tarball_path) => extract_local_ruby_tarball(tarball_path, &install_dir).await?,
+        Ok(tarball_path) => {
+            extract_local_ruby_tarball(tarball_path, &install_dir, &requested.number()).await?
+        }
         Err(_) => download_and_extract_remote_tarball(config, &install_dir, &requested).await?,
     }
 
@@ -71,11 +75,13 @@ async fn download_and_extract_remote_tarball(
     if requested.patch.is_none() {
         Err(Error::IncompleteVersion(requested.clone()))?;
     }
+
     let url = ruby_url(&requested.to_string())?;
     let tarball_path = tarball_path(config, &url);
 
-    if !tarball_path.parent().unwrap().exists() {
-        std::fs::create_dir_all(tarball_path.parent().unwrap())?;
+    let new_dir = tarball_path.parent().unwrap();
+    if !new_dir.exists() {
+        std::fs::create_dir_all(new_dir)?;
     }
 
     if valid_tarball_exists(&tarball_path) {
@@ -87,14 +93,18 @@ async fn download_and_extract_remote_tarball(
         download_ruby_tarball(config, &url, &tarball_path).await?;
     }
 
-    extract_ruby_tarball(&tarball_path, install_dir)?;
+    extract_ruby_tarball(&tarball_path, &install_dir, &requested.number())?;
 
     Ok(())
 }
 
 // extract a local ruby tarball
-async fn extract_local_ruby_tarball(tarball_path: String, install_dir: &Utf8PathBuf) -> Result<()> {
-    extract_ruby_tarball(Utf8Path::new(&tarball_path), install_dir)?;
+async fn extract_local_ruby_tarball(
+    tarball_path: String,
+    install_dir: &Utf8PathBuf,
+    version: &str,
+) -> Result<()> {
+    extract_ruby_tarball(Utf8Path::new(&tarball_path), install_dir, version)?;
 
     Ok(())
 }
@@ -114,19 +124,20 @@ fn valid_tarball_exists(path: &Utf8Path) -> bool {
 }
 
 fn ruby_url(version: &str) -> Result<String> {
-    let number = version.strip_prefix("ruby-").unwrap_or(version);
+    let version = version.strip_prefix("ruby-").unwrap();
     let arch = match CURRENT_PLATFORM {
         "aarch64-apple-darwin" => "arm64_sonoma",
+        "x86_64-apple-darwin" => "ventura",
         "x86_64-unknown-linux-gnu" => "x86_64_linux",
         "aarch64-unknown-linux-gnu" => "arm64_linux",
-        _ => return Err(Error::UnsupportedPlatform(CURRENT_PLATFORM)),
+        other => return Err(Error::UnsupportedPlatform(other)),
     };
 
     let download_base = std::env::var("RV_RELEASES_URL")
         .unwrap_or("https://github.com/spinel-coop/rv-ruby/releases".to_owned());
 
     Ok(format!(
-        "{}/download/{number}/portable-{version}.{arch}.bottle.tar.gz",
+        "{}/latest/download/ruby-{version}.{arch}.tar.gz",
         download_base
     ))
 }
@@ -200,8 +211,13 @@ async fn download_ruby_tarball(
     Ok(())
 }
 
-fn extract_ruby_tarball(tarball_path: &Utf8Path, dir: &Utf8Path) -> Result<()> {
-    std::fs::create_dir_all(dir)?;
+fn extract_ruby_tarball(
+    tarball_path: &Utf8Path,
+    rubies_dir: &Utf8Path,
+    version: &str,
+) -> Result<()> {
+    // dbg!(&tarball_path);
+    std::fs::create_dir_all(format!("{rubies_dir}/{version}"))?;
     let tarball = std::fs::File::open(tarball_path)?;
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
     for e in archive.entries()? {
@@ -210,27 +226,14 @@ fn extract_ruby_tarball(tarball_path: &Utf8Path, dir: &Utf8Path) -> Result<()> {
         let path = entry_path
             .to_str()
             .ok_or_else(|| Error::InvalidTarballPath(entry_path.to_path_buf()))?
-            .replace("portable-ruby/", "ruby-");
-        let entry_path = dir.join(path);
-        entry.unpack(entry_path)?;
+            .replace(
+                &format!("rv-ruby@{version}/{version}"),
+                &format!("ruby-{version}"),
+            )
+            .replace('@', "-");
+        let dst = rubies_dir.join(path);
+        entry.unpack(dst)?;
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_ruby_url() {
-        let actual = ruby_url("3.4.1").unwrap();
-        #[cfg(target_os = "macos")]
-        let expected = "https://github.com/spinel-coop/rv-ruby/releases/download/3.4.1/portable-3.4.1.arm64_sonoma.bottle.tar.gz";
-        #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-        let expected = "https://github.com/spinel-coop/rv-ruby/releases/download/3.4.1/portable-3.4.1.x86_64_linux.bottle.tar.gz";
-        #[cfg(all(target_os = "linux", target_arch = "arm"))]
-        let expected = "https://github.com/spinel-coop/rv-ruby/releases/download/3.4.1/portable-3.4.1.arm64_linux.bottle.tar.gz";
-        assert_eq!(actual, expected);
-    }
 }

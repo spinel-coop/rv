@@ -63,7 +63,7 @@ impl RvTest {
     /// so that tests can optionally assert it was called.
     pub fn mock_releases(&mut self, body: &str) -> Mock {
         self.server
-            .mock("GET", "/repos/spinel-coop/rv-ruby/releases")
+            .mock("GET", "/repos/spinel-coop/rv-ruby/releases/latest")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(body)
