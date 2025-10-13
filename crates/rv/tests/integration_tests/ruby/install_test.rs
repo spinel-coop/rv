@@ -2,6 +2,7 @@ use current_platform::CURRENT_PLATFORM;
 
 use crate::common::RvTest;
 use std::fs;
+use std::process::Command;
 
 fn arch() -> &'static str {
     match CURRENT_PLATFORM {
@@ -64,11 +65,17 @@ fn test_ruby_install_from_tarball() {
     let tarball_file = test.mock_tarball_on_disk(&filename, &tarball_content);
 
     let tarball_path = tarball_file.as_str();
-    let output = test.rv(&["ruby", "install", "3.4.5", "--tarball-path", tarball_path]);
+    let output = test.rv(&["ruby", "install", "--tarball-path", tarball_path, "3.4.5"]);
 
     output.assert_success();
 
-    // TODO need to verify that this actually did what we expected?
+    // is the mocked ruby from the tarball actually installed
+    let mocked_ruby_path = test
+        .temp_dir
+        .path()
+        .join("tmp/home/.data/rv/rubies/portable-ruby/bin/ruby");
+    let mut command = Command::new(mocked_ruby_path);
+    command.output().expect("mock ruby");
 }
 
 #[test]
