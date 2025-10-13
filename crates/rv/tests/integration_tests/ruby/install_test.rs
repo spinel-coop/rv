@@ -56,6 +56,22 @@ fn test_ruby_install_successful_download() {
 }
 
 #[test]
+fn test_ruby_install_from_tarball() {
+    let mut test = RvTest::new();
+
+    let tarball_content = create_mock_tarball();
+    let filename = make_tarball_file_name("3.4.5");
+    let tarball_file = test.mock_tarball_on_disk(&filename, &tarball_content);
+
+    let tarball_path = tarball_file.as_str();
+    let output = test.rv(&["ruby", "install", "3.4.5", "--tarball-path", tarball_path]);
+
+    output.assert_success();
+
+    // TODO need to verify that this actually did what we expected?
+}
+
+#[test]
 fn test_ruby_install_http_failure_no_empty_file() {
     let mut test = RvTest::new();
 
@@ -244,6 +260,16 @@ fn test_ruby_install_invalid_url() {
 }
 
 fn make_dl_suffix(version: &str) -> String {
+    let filename = make_tarball_file_name(version);
+    format!("latest/download/{filename}")
+}
+
+fn make_tarball_file_name(version: &str) -> String {
+    let suffix = make_platform_suffix();
+    format!("ruby-{version}.{suffix}.tar.gz")
+}
+
+fn make_platform_suffix() -> String {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     let suffix = "arm64_sonoma";
     #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
@@ -252,7 +278,8 @@ fn make_dl_suffix(version: &str) -> String {
     let suffix = "arm64_linux";
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     let suffix = "x86_64_linux";
-    format!("latest/download/ruby-{version}.{suffix}.tar.gz")
+
+    suffix.to_string()
 }
 
 #[test]
