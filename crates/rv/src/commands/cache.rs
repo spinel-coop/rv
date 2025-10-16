@@ -5,7 +5,6 @@ use bytesize::ByteSize;
 use clap::{Args, Subcommand};
 use owo_colors::OwoColorize;
 use rv_cache::CleanReporter;
-use tracing::info;
 
 use crate::config::Config;
 
@@ -34,10 +33,11 @@ pub fn cache_clean(config: &Config) -> io::Result<()> {
         fn on_complete(&self) {}
     }
     let removal = config.cache.clear(Box::new(Reporter {}))?;
-    info!(
+    let num_bytes_cleaned = ByteSize::b(removal.bytes).display().iec_short();
+    println!(
         "Removed {} directories, totalling {}",
-        removal.dirs.default_color().cyan(),
-        ByteSize::b(removal.bytes).display().iec_short().cyan()
+        removal.dirs.cyan(),
+        num_bytes_cleaned.cyan()
     );
     Ok(())
 }
