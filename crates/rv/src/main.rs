@@ -14,6 +14,7 @@ pub mod commands;
 pub mod config;
 
 use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir};
+use crate::commands::ruby::dir::dir as ruby_dir;
 use crate::commands::ruby::find::find as ruby_find;
 use crate::commands::ruby::install::install as ruby_install;
 use crate::commands::ruby::list::list as ruby_list;
@@ -275,6 +276,7 @@ async fn run() -> Result<()> {
                     installed_only,
                 } => ruby_list(&config, format, installed_only).await?,
                 RubyCommand::Pin { version_request } => ruby_pin(&config, version_request)?,
+                RubyCommand::Dir => ruby_dir(&config),
                 RubyCommand::Install {
                     version,
                     install_dir,

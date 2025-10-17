@@ -3,6 +3,7 @@ use clap::{Args, Subcommand};
 use crate::commands::ruby::list::OutputFormat;
 use rv_ruby::request::RubyRequest;
 
+pub mod dir;
 pub mod find;
 pub mod install;
 pub mod list;
@@ -34,6 +35,9 @@ pub enum RubyCommand {
         /// The Ruby version to pin
         version_request: Option<String>,
     },
+
+    #[command(about = "Show the Ruby installation directory")]
+    Dir,
 
     #[command(about = "Search for a Ruby installation")]
     Find {

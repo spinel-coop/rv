@@ -21,6 +21,7 @@ All-in-one tooling for Ruby developers.
 
 - [x] `rv ruby list`
 - [x] `rv ruby pin`
+- [x] `rv ruby dir`
 - [ ] `rv ruby install`
   - [ ] `rv ruby install 3.2.x`
   - [ ] `rv ruby install 3.3.x`
