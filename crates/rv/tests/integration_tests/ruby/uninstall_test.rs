@@ -14,6 +14,17 @@ impl RvTest {
 #[test]
 fn test_ruby_uninstall_no_rubies() {
     let test = RvTest::new();
+    let uninstall = test.ruby_uninstall(&["3.4.7"]);
+    assert!(!uninstall.success());
+    assert_eq!(
+        uninstall.normalized_stderr(),
+        "Error: UninstallError(NoMatchingRuby)\n"
+    );
+}
+
+#[test]
+fn test_ruby_uninstall_no_request() {
+    let test = RvTest::new();
     let uninstall = test.ruby_uninstall(&[]);
     assert!(!uninstall.success());
     assert_eq!(
