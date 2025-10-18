@@ -10,6 +10,7 @@ pub mod list;
 pub mod pin;
 #[cfg(unix)]
 pub mod run;
+pub mod uninstall;
 
 #[derive(Args)]
 pub struct RubyArgs {
@@ -52,6 +53,12 @@ pub enum RubyCommand {
         install_dir: Option<String>,
 
         /// Ruby version to install
+        version: RubyRequest,
+    },
+
+    #[command(about = "Uninstall a Ruby version")]
+    Uninstall {
+        /// Ruby version to uninstall
         version: RubyRequest,
     },
 

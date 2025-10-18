@@ -21,6 +21,7 @@ use crate::commands::ruby::list::list as ruby_list;
 use crate::commands::ruby::pin::pin as ruby_pin;
 #[cfg(unix)]
 use crate::commands::ruby::run::run as ruby_run;
+use crate::commands::ruby::uninstall::uninstall as ruby_uninstall;
 use crate::commands::ruby::{RubyArgs, RubyCommand};
 use crate::commands::shell::completions::shell_completions;
 use crate::commands::shell::env::env as shell_env;
@@ -188,6 +189,8 @@ pub enum Error {
     ListError(#[from] commands::ruby::list::Error),
     #[error(transparent)]
     InstallError(#[from] commands::ruby::install::Error),
+    #[error(transparent)]
+    UninstallError(#[from] commands::ruby::uninstall::Error),
     #[cfg(unix)]
     #[error(transparent)]
     RunError(#[from] commands::ruby::run::Error),
@@ -281,6 +284,9 @@ async fn run() -> Result<()> {
                     version,
                     install_dir,
                 } => ruby_install(&config, install_dir, version).await?,
+                RubyCommand::Uninstall {
+                    version: version_request,
+                } => ruby_uninstall(&config, version_request).await?,
                 #[cfg(unix)]
                 RubyCommand::Run { version, args } => ruby_run(&config, &version, &args)?,
             },
