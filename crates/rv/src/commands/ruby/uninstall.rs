@@ -1,4 +1,5 @@
 use anstream::println;
+use camino::Utf8PathBuf;
 use owo_colors::OwoColorize;
 use rv_ruby::request::RubyRequest;
 
@@ -10,19 +11,26 @@ pub enum Error {
     NoMatchingRuby,
     #[error(transparent)]
     ConfigError(#[from] crate::config::Error),
+    #[error("Could not delete dir {dir}: {error}")]
+    IoError {
+        dir: Utf8PathBuf,
+        error: std::io::Error,
+    },
 }
 
 type Result<T> = miette::Result<T, Error>;
 
-/// Uninstall the version ruby
+/// Uninstall the given Ruby version.
 pub async fn uninstall(config: &Config, request: RubyRequest) -> Result<()> {
     if let Some(ruby) = config.matching_ruby(&request) {
         let ruby_path = ruby.path;
-        println!("{}", ruby_path.cyan());
+        println!("Deleting {}", ruby_path.cyan());
 
-        //delete install ruby path
-        fs_err::remove_dir_all(ruby_path)
-            .unwrap_or_else(|_| panic!("remove the ruby {} version is error", request));
+        // Delete the dir at this Ruby version's path.
+        fs_err::remove_dir_all(&ruby_path).map_err(|error| Error::IoError {
+            dir: ruby_path,
+            error,
+        })?;
         Ok(())
     } else {
         Err(Error::NoMatchingRuby)
