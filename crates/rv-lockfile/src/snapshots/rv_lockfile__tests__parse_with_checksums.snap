@@ -1,0 +1,424 @@
+---
+source: crates/rv-lockfile/src/tests.rs
+expression: output
+---
+gem:
+  - remote: "https://gem.coop/"
+    specs:
+      - gem_version:
+          name: nokogiri
+          version: 1.18.10-aarch64-linux-gnu
+        deps:
+          - name: racc
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.4"
+            nonstandard: false
+      - gem_version:
+          name: nokogiri
+          version: 1.18.10-aarch64-linux-musl
+        deps:
+          - name: racc
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.4"
+            nonstandard: false
+      - gem_version:
+          name: nokogiri
+          version: 1.18.10-arm-linux-gnu
+        deps:
+          - name: racc
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.4"
+            nonstandard: false
+      - gem_version:
+          name: nokogiri
+          version: 1.18.10-arm-linux-musl
+        deps:
+          - name: racc
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.4"
+            nonstandard: false
+      - gem_version:
+          name: nokogiri
+          version: 1.18.10-arm64-darwin
+        deps:
+          - name: racc
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.4"
+            nonstandard: false
+      - gem_version:
+          name: nokogiri
+          version: 1.18.10-x86_64-darwin
+        deps:
+          - name: racc
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.4"
+            nonstandard: false
+      - gem_version:
+          name: nokogiri
+          version: 1.18.10-x86_64-linux-gnu
+        deps:
+          - name: racc
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.4"
+            nonstandard: false
+      - gem_version:
+          name: nokogiri
+          version: 1.18.10-x86_64-linux-musl
+        deps:
+          - name: racc
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.4"
+            nonstandard: false
+      - gem_version:
+          name: racc
+          version: 1.8.1
+        deps: []
+platforms:
+  - aarch64-linux-gnu
+  - aarch64-linux-musl
+  - arm-linux-gnu
+  - arm-linux-musl
+  - arm64-darwin
+  - x86_64-darwin
+  - x86_64-linux-gnu
+  - x86_64-linux-musl
+dependencies:
+  - name: nokogiri
+    semver:
+      - semver_constraint: Pessimistic
+        version: 0.1.5
+    nonstandard: false
+bundled_with: 2.7.2
+checksums:
+  - gem_version:
+      name: nokogiri
+      version: 1.18.10-aarch64-linux-gnu
+    sha256:
+      - 127
+      - 184
+      - 114
+      - 53
+      - 215
+      - 41
+      - 199
+      - 74
+      - 43
+      - 230
+      - 53
+      - 55
+      - 109
+      - 130
+      - 177
+      - 212
+      - 89
+      - 35
+      - 12
+      - 193
+      - 124
+      - 80
+      - 48
+      - 15
+      - 142
+      - 79
+      - 202
+      - 171
+      - 198
+      - 25
+      - 83
+      - 68
+  - gem_version:
+      name: nokogiri
+      version: 1.18.10-aarch64-linux-musl
+    sha256:
+      - 126
+      - 116
+      - 229
+      - 131
+      - 20
+      - 41
+      - 124
+      - 200
+      - 168
+      - 241
+      - 181
+      - 51
+      - 247
+      - 33
+      - 45
+      - 25
+      - 153
+      - 219
+      - 226
+      - 99
+      - 154
+      - 158
+      - 230
+      - 217
+      - 123
+      - 72
+      - 62
+      - 162
+      - 172
+      - 193
+      - 137
+      - 68
+  - gem_version:
+      name: nokogiri
+      version: 1.18.10-arm-linux-gnu
+    sha256:
+      - 81
+      - 244
+      - 242
+      - 90
+      - 181
+      - 213
+      - 186
+      - 16
+      - 18
+      - 214
+      - 177
+      - 106
+      - 173
+      - 150
+      - 184
+      - 64
+      - 161
+      - 11
+      - 6
+      - 123
+      - 147
+      - 243
+      - 90
+      - 246
+      - 165
+      - 90
+      - 44
+      - 16
+      - 74
+      - 126
+      - 227
+      - 34
+  - gem_version:
+      name: nokogiri
+      version: 1.18.10-arm-linux-musl
+    sha256:
+      - 28
+      - 110
+      - 167
+      - 84
+      - 229
+      - 28
+      - 236
+      - 200
+      - 92
+      - 48
+      - 238
+      - 138
+      - 177
+      - 230
+      - 170
+      - 76
+      - 230
+      - 182
+      - 225
+      - 52
+      - 208
+      - 23
+      - 23
+      - 233
+      - 41
+      - 14
+      - 121
+      - 55
+      - 74
+      - 158
+      - 0
+      - 170
+  - gem_version:
+      name: nokogiri
+      version: 1.18.10-arm64-darwin
+    sha256:
+      - 194
+      - 176
+      - 222
+      - 48
+      - 119
+      - 15
+      - 80
+      - 185
+      - 44
+      - 147
+      - 35
+      - 250
+      - 52
+      - 164
+      - 225
+      - 207
+      - 90
+      - 10
+      - 243
+      - 34
+      - 175
+      - 202
+      - 205
+      - 35
+      - 156
+      - 214
+      - 110
+      - 225
+      - 193
+      - 178
+      - 44
+      - 133
+  - gem_version:
+      name: nokogiri
+      version: 1.18.10-x86_64-darwin
+    sha256:
+      - 83
+      - 110
+      - 116
+      - 190
+      - 214
+      - 219
+      - 43
+      - 80
+      - 118
+      - 118
+      - 156
+      - 171
+      - 94
+      - 95
+      - 90
+      - 240
+      - 205
+      - 29
+      - 204
+      - 187
+      - 215
+      - 95
+      - 27
+      - 62
+      - 31
+      - 166
+      - 157
+      - 31
+      - 92
+      - 45
+      - 121
+      - 226
+  - gem_version:
+      name: nokogiri
+      version: 1.18.10-x86_64-linux-gnu
+    sha256:
+      - 255
+      - 91
+      - 162
+      - 107
+      - 162
+      - 219
+      - 206
+      - 92
+      - 4
+      - 185
+      - 234
+      - 32
+      - 7
+      - 119
+      - 253
+      - 34
+      - 80
+      - 97
+      - 215
+      - 163
+      - 147
+      - 5
+      - 72
+      - 128
+      - 111
+      - 49
+      - 219
+      - 144
+      - 126
+      - 80
+      - 15
+      - 114
+  - gem_version:
+      name: nokogiri
+      version: 1.18.10-x86_64-linux-musl
+    sha256:
+      - 6
+      - 81
+      - 252
+      - 207
+      - 140
+      - 46
+      - 187
+      - 194
+      - 71
+      - 92
+      - 139
+      - 29
+      - 253
+      - 124
+      - 202
+      - 195
+      - 160
+      - 166
+      - 208
+      - 159
+      - 138
+      - 65
+      - 183
+      - 45
+      - 184
+      - 194
+      - 24
+      - 8
+      - 203
+      - 72
+      - 51
+      - 133
+  - gem_version:
+      name: racc
+      version: 1.8.1
+    sha256:
+      - 74
+      - 127
+      - 105
+      - 41
+      - 105
+      - 29
+      - 190
+      - 200
+      - 181
+      - 32
+      - 154
+      - 11
+      - 55
+      - 59
+      - 194
+      - 97
+      - 72
+      - 130
+      - 181
+      - 95
+      - 197
+      - 210
+      - 228
+      - 71
+      - 162
+      - 26
+      - 170
+      - 105
+      - 19
+      - 3
+      - 214
+      - 47

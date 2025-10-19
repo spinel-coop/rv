@@ -1,0 +1,12 @@
+---
+source: crates/rv-lockfile/src/tests.rs
+expression: output
+---
+gem:
+  - remote: "https://rubygems.org/"
+    specs: []
+platforms:
+  - arm64-darwin-20
+  - ruby
+bundled_with: 2.7.2
+checksums: []
