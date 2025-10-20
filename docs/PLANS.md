@@ -21,6 +21,7 @@ All-in-one tooling for Ruby developers.
 
 - [x] `rv ruby list`
 - [x] `rv ruby pin`
+- [x] `rv ruby dir`
 - [ ] `rv ruby install`
   - [ ] `rv ruby install 3.2.x`
   - [ ] `rv ruby install 3.3.x`
@@ -170,7 +171,7 @@ The `ruby` subcommand manages ruby versions, using subcommands `install`, `unins
 
 #### [install](/docs/rv/ruby/install.md)
 
-The install command downloads a precompiled ruby for the current architecture and operating system, installing it into the rubies directory (which defaults to ~/.rubies).
+The install command downloads a precompiled ruby for the current architecture and operating system, installing it into the rubies directory (which defaults to `~/.data/rv/rubies`).
 
 #### [pin](/docs/rv/ruby/pin.md)
 

@@ -18,7 +18,7 @@ pub enum ShellCommand {
         /// The shell to initialize (zsh, bash and fish so far)
         shell: Shell,
     },
-    #[command()]
+    #[command(about = "Configure shell completions to use rv")]
     Completions {
         /// The shell to print completions for (zsh, bash and fish so far)
         shell: Shell,

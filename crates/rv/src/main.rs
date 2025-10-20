@@ -14,12 +14,14 @@ pub mod commands;
 pub mod config;
 
 use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir};
+use crate::commands::ruby::dir::dir as ruby_dir;
 use crate::commands::ruby::find::find as ruby_find;
 use crate::commands::ruby::install::install as ruby_install;
 use crate::commands::ruby::list::list as ruby_list;
 use crate::commands::ruby::pin::pin as ruby_pin;
 #[cfg(unix)]
 use crate::commands::ruby::run::run as ruby_run;
+use crate::commands::ruby::uninstall::uninstall as ruby_uninstall;
 use crate::commands::ruby::{RubyArgs, RubyCommand};
 use crate::commands::shell::completions::shell_completions;
 use crate::commands::shell::env::env as shell_env;
@@ -187,6 +189,8 @@ pub enum Error {
     ListError(#[from] commands::ruby::list::Error),
     #[error(transparent)]
     InstallError(#[from] commands::ruby::install::Error),
+    #[error(transparent)]
+    UninstallError(#[from] commands::ruby::uninstall::Error),
     #[cfg(unix)]
     #[error(transparent)]
     RunError(#[from] commands::ruby::run::Error),
@@ -275,11 +279,15 @@ async fn run() -> Result<()> {
                     installed_only,
                 } => ruby_list(&config, format, installed_only).await?,
                 RubyCommand::Pin { version_request } => ruby_pin(&config, version_request)?,
+                RubyCommand::Dir => ruby_dir(&config),
                 RubyCommand::Install {
                     version,
                     install_dir,
                     tarball_path,
                 } => ruby_install(&config, install_dir, version, tarball_path).await?,
+                RubyCommand::Uninstall {
+                    version: version_request,
+                } => ruby_uninstall(&config, version_request).await?,
                 #[cfg(unix)]
                 RubyCommand::Run { version, args } => ruby_run(&config, &version, &args)?,
             },

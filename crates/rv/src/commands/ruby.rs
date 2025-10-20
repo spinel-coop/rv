@@ -3,12 +3,14 @@ use clap::{Args, Subcommand};
 use crate::commands::ruby::list::OutputFormat;
 use rv_ruby::request::RubyRequest;
 
+pub mod dir;
 pub mod find;
 pub mod install;
 pub mod list;
 pub mod pin;
 #[cfg(unix)]
 pub mod run;
+pub mod uninstall;
 
 #[derive(Args)]
 pub struct RubyArgs {
@@ -35,6 +37,9 @@ pub enum RubyCommand {
         version_request: Option<String>,
     },
 
+    #[command(about = "Show the Ruby installation directory")]
+    Dir,
+
     #[command(about = "Search for a Ruby installation")]
     Find {
         /// Ruby version to find
@@ -53,6 +58,12 @@ pub enum RubyCommand {
         /// Path to a local ruby tarball
         #[arg(long, value_name = "TARBALL_PATH")]
         tarball_path: Option<String>,
+    },
+
+    #[command(about = "Uninstall a Ruby version")]
+    Uninstall {
+        /// Ruby version to uninstall
+        version: RubyRequest,
     },
 
     #[cfg(unix)]

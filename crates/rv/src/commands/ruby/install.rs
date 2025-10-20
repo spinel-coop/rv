@@ -217,8 +217,9 @@ fn extract_ruby_tarball(
     rubies_dir: &Utf8Path,
     version: &str,
 ) -> Result<()> {
-    // dbg!(&tarball_path);
-    std::fs::create_dir_all(format!("{rubies_dir}/{version}"))?;
+    if !rubies_dir.exists() {
+        std::fs::create_dir_all(rubies_dir)?;
+    }
     let tarball = std::fs::File::open(tarball_path)?;
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
     for e in archive.entries()? {
