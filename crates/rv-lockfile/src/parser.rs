@@ -4,7 +4,7 @@ use winnow::{
     ascii::{line_ending, space0, space1},
     combinator::{alt, delimited, dispatch, opt, peek, preceded, repeat, separated, terminated},
     error::{ContextError, ErrMode},
-    stream::{AsChar, Location},
+    stream::{AsChar, Location, Stream},
     token::{take_until, take_while},
 };
 
@@ -79,8 +79,40 @@ pub fn parse<'i>(file: &'i str) -> crate::Result<GemfileDotLock<'i>> {
                     })
                 }
 
-                // TODO: Consume input until the next new line which starts with a non-whitespace character.
-                // If you reach the end of the input, break instead.
+                // Consume input until the next new line which starts with a non-whitespace character.
+                // If we reach the end of input, stop parsing.
+                let remainder = *i.as_ref();
+                if remainder.is_empty() {
+                    break;
+                }
+
+                let mut skip_bytes = remainder.len();
+                let mut found_boundary = false;
+                let mut iter = remainder.char_indices().peekable();
+                while let Some((idx, ch)) = iter.next() {
+                    if ch == '\n' {
+                        if let Some(&(_, next_ch)) = iter.peek() {
+                            if !next_ch.is_whitespace() {
+                                skip_bytes = idx + ch.len_utf8();
+                                found_boundary = true;
+                                break;
+                            }
+                        } else {
+                            skip_bytes = remainder.len();
+                            found_boundary = true;
+                            break;
+                        }
+                    }
+                }
+
+                if skip_bytes == 0 {
+                    break;
+                }
+
+                i.next_slice(skip_bytes);
+                if !found_boundary || i.is_empty() {
+                    break;
+                }
                 continue;
             }
         };
