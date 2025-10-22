@@ -248,24 +248,26 @@ pub trait CleanReporter: Send + Sync {
 
 /// The different kinds of data in the cache are stored in different buckets, which in our case
 /// are subdirectories of the cache root.
+/// Cache structure: `<bucket>-v0/<digest(path)>.ext`
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum CacheBucket {
-    /// Ruby interpreters and metadata.
-    ///
-    /// Cache structure: `ruby-v0/<digest(path)>.json`
+    /// Ruby interpreters
     Ruby,
+    /// Gems
+    Gem,
 }
 
 impl CacheBucket {
     fn to_str(self) -> &'static str {
         match self {
             Self::Ruby => "ruby-v0",
+            Self::Gem => "gem-v0",
         }
     }
 
     /// Return an iterator over all cache buckets.
     pub fn iter() -> impl Iterator<Item = Self> {
-        [Self::Ruby].iter().copied()
+        [Self::Ruby, Self::Gem].iter().copied()
     }
 }
 
@@ -320,7 +322,7 @@ mod tests {
     #[test]
     fn test_cache_bucket_iteration() {
         let buckets: Vec<_> = CacheBucket::iter().collect();
-        assert_eq!(buckets.len(), 1);
+        assert_eq!(buckets.len(), 2);
         assert!(buckets.contains(&CacheBucket::Ruby));
     }
 

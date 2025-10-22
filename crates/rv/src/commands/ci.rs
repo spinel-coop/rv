@@ -37,13 +37,13 @@ pub async fn ci(config: &Config) -> Result<()> {
     } else {
         lockfile_path = "Gemfile.lock".into();
     }
-    ci_inner(lockfile_path).await
+    ci_inner(lockfile_path, &config.cache).await
 }
 
-async fn ci_inner(lockfile_path: Utf8PathBuf) -> Result<()> {
+async fn ci_inner(lockfile_path: Utf8PathBuf, cache: &rv_cache::Cache) -> Result<()> {
     let lockfile_contents = std::fs::read_to_string(lockfile_path)?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
-    download_gems(lockfile).await?;
+    download_gems(lockfile, cache).await?;
     Ok(())
 }
 
@@ -64,7 +64,7 @@ fn rv_http_client() -> Result<Client> {
     Ok(client)
 }
 
-async fn download_gems<'i>(lockfile: GemfileDotLock<'i>) -> Result<()> {
+async fn download_gems<'i>(lockfile: GemfileDotLock<'i>, cache: &rv_cache::Cache) -> Result<()> {
     let client = rv_http_client()?;
     for gem_source in lockfile.gem {
         // Get all URLs for downloading all gems from this source.
@@ -87,19 +87,34 @@ async fn download_gems<'i>(lockfile: GemfileDotLock<'i>) -> Result<()> {
             .collect::<Result<Vec<Url>>>()?;
         let url_stream = futures_util::stream::iter(urls);
         let _downloaded_gems: Vec<(Bytes, Url)> = url_stream
-            .map(|url| download_gem(url, &client))
+            .map(|url| download_gem(url, &client, &cache))
             .buffered(CONCURRENT_REQUESTS_PER_SOURCE)
             .try_collect()
             .await?;
-        // TODO: Extract the gems and put them somewhere on the filesystem
     }
     Ok(())
 }
 
-async fn download_gem(url: Url, client: &Client) -> Result<(Bytes, Url)> {
+async fn download_gem(url: Url, client: &Client, cache: &rv_cache::Cache) -> Result<(Bytes, Url)> {
     eprintln!("Downloading from {url}");
+    let cache_key = rv_cache::cache_digest(url.as_ref());
+    let cache_path = cache
+        .shard(rv_cache::CacheBucket::Gem, "gems")
+        .into_path_buf()
+        .join(format!("{cache_key}.gem"));
+
+    let contents;
+    if cache_path.exists() {
+        let data = tokio::fs::read(&cache_path).await?;
+        contents = Bytes::from(data);
+    } else {
+        contents = client.get(url.clone()).send().await?.bytes().await?;
+        if let Some(parent) = cache_path.parent() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
+        tokio::fs::write(&cache_path, &contents).await?;
+    }
     // TODO: Validate the checksum from the Lockfile if present.
-    let contents = client.get(url.clone()).send().await?.bytes().await?;
     Ok((contents, url))
 }
 
@@ -111,7 +126,8 @@ mod tests {
     async fn test_download_gems() -> Result<()> {
         eprintln!("{:?}", std::env::current_dir());
         let file = "../rv-lockfile/tests/inputs/Gemfile.lock.test0".into();
-        ci_inner(file).await?;
+        let cache = rv_cache::Cache::temp().unwrap();
+        ci_inner(file, &cache).await?;
         Ok(())
     }
 }
