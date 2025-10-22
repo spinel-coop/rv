@@ -24,6 +24,15 @@ enum Section<'i> {
     Checksums(Vec<Checksum<'i>>),
 }
 
+pub fn parse<'i>(file: &'i str) -> crate::Result<GemfileDotLock<'i>> {
+    let input = LocatingSlice::new(file);
+    parse_winnow.parse(input).map_err(|e| {
+        let char_offset = todo!();
+        let msg = e.to_string();
+        crate::Error::CouldNotParse { char_offset, msg }
+    })
+}
+
 fn parse_winnow<'i>(i: &mut Input<'i>) -> Res<GemfileDotLock<'i>> {
     let mut parsed = GemfileDotLock::default();
 
@@ -298,14 +307,6 @@ fn parse_path<'i>(i: &mut Input<'i>) -> Res<PathSection<'i>> {
 
 fn parse_remote<'i>(i: &mut Input<'i>) -> Res<&'i str> {
     take_until(0.., '\n').parse_next(i)
-}
-
-pub fn parse<'i>(
-    src: &'i str,
-) -> Result<GemfileDotLock<'i>, winnow::error::ParseError<LocatingSlice<&'i str>, ContextError>> {
-    let input = LocatingSlice::new(src);
-    let out = parse_winnow.parse(input)?;
-    Ok(out)
 }
 
 #[cfg(test)]
