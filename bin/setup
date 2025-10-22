@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
+
+
 if [[ "$OSTYPE" == "darwin"* ]]; then
   set -x
 
@@ -18,17 +20,24 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     brew install cargo-binstall
   fi
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-  DISTRO_NAME=$(awk -F= '/^NAME/ { print $2 }' /etc/os-release)
-  if [[ $DISTRO_NAME == '"Ubuntu"' ]]; then
+   command_not_found_handle() {
+    echo "Custom error: '$1' is not a recognized command." >&2
+    return 127 # Return the standard "command not found" exit code
+  }
+    set -x
     SUDO=""
     if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
       SUDO="sudo"
     fi
-
-    set -x
-
-    $SUDO apt update -qq
-    $SUDO apt install -y -qq curl pkg-config git gcc libssl-dev
+     
+    APT=$( type apt)
+    APT_STATUS=$?
+    
+    if [ $APT_STATUS -eq 0 ]; then 
+    
+      $SUDO apt update -qq
+      $SUDO apt install -y -qq curl pkg-config git gcc libssl-dev
+    fi
 
     if [[ -z $(which rustup) ]]; then
       curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -38,9 +47,6 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     if [[ -z $(which cargo-binstall) ]]; then
       curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
     fi
-  else
-    echo "We do not support your linux $DISTRO_NAME yet, sorry." 
-  fi
 else
   echo "We don't support automatic setup on $OSTYPE yet, sorry."
   exit 1
