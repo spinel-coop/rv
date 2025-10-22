@@ -14,6 +14,7 @@ pub mod commands;
 pub mod config;
 
 use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir};
+use crate::commands::ruby::ci::ci as ruby_ci;
 use crate::commands::ruby::dir::dir as ruby_dir;
 use crate::commands::ruby::find::find as ruby_find;
 use crate::commands::ruby::install::install as ruby_install;
@@ -191,6 +192,8 @@ pub enum Error {
     InstallError(#[from] commands::ruby::install::Error),
     #[error(transparent)]
     UninstallError(#[from] commands::ruby::uninstall::Error),
+    #[error(transparent)]
+    CiError(#[from] commands::ruby::ci::Error),
     #[cfg(unix)]
     #[error(transparent)]
     RunError(#[from] commands::ruby::run::Error),
@@ -289,6 +292,9 @@ async fn run() -> Result<()> {
                 } => ruby_uninstall(&config, version_request).await?,
                 #[cfg(unix)]
                 RubyCommand::Run { version, args } => ruby_run(&config, &version, &args)?,
+                RubyCommand::Ci { gemfile_lock_path } => {
+                    ruby_ci(&config, gemfile_lock_path).await?
+                }
             },
             Commands::Cache(cache) => match cache.command {
                 CacheCommand::Dir => cache_dir(&config)?,

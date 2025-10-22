@@ -41,6 +41,7 @@ tar = { workspace = true }
 rv-cache = { workspace = true, features = ["clap"] }
 rv-ruby = { workspace = true }
 rv-dirs = { workspace = true }
+rv-lockfile= { workspace = true }
 camino = { workspace = true }
 futures-util = { workspace = true }
 current_platform = { workspace = true }

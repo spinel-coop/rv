@@ -1984,6 +1984,7 @@ dependencies = [
  "reqwest",
  "rv-cache",
  "rv-dirs",
+ "rv-lockfile",
  "rv-ruby",
  "serde",
  "serde_json",

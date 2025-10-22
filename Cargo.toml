@@ -74,6 +74,7 @@ rv = { version = "0.1.0", path = "crates/rv" }
 rv-cache = { version = "0.1.0", path = "crates/rv-cache" }
 rv-dirs = { version = "0.1.0", path = "crates/rv-dirs" }
 rv-gem-package = { version = "0.1.0", path = "crates/rv-gem-package" }
+rv-lockfile = { version = "0.1.0", path = "crates/rv-lockfile" }
 rv-gem-specification-yaml = { version = "0.1.0", path = "crates/rv-gem-specification-yaml" }
 rv-gem-types = { version = "0.1.0", path = "crates/rv-gem-types" }
 rv-ruby = { version = "0.1.0", path = "crates/rv-ruby" }

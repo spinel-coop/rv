@@ -1,8 +1,10 @@
+use camino::Utf8PathBuf;
 use clap::{Args, Subcommand};
 
 use crate::commands::ruby::list::OutputFormat;
 use rv_ruby::request::RubyRequest;
 
+pub mod ci;
 pub mod dir;
 pub mod find;
 pub mod install;
@@ -60,6 +62,13 @@ pub enum RubyCommand {
     Uninstall {
         /// Ruby version to uninstall
         version: RubyRequest,
+    },
+
+    #[command(about = "Clean install from a Gemfile.lock")]
+    Ci {
+        /// Path to Gemfile.lock
+        #[arg(short, long)]
+        gemfile_lock_path: Utf8PathBuf,
     },
 
     #[cfg(unix)]
