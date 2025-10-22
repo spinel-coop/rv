@@ -4,61 +4,62 @@ set -euo pipefail
 
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    set -x
-    
-    if [[ -z $(which brew) ]]; then
-        echo "Homebrew is not installed. Please install Homebrew first."
-        exit 1
-    fi
-    
-    if [[ -z $(which rustup) ]]; then
-        brew install rustup
-        rustup install stable
-    fi
-    
-    if [[ -z $(which cargo-binstall) ]]; then
-        brew install cargo-binstall
-    fi
-    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    command_not_found_handle() {
-        echo "Custom error: '$1' is not a recognized command." >&2
-        return 127 # Return the standard "command not found" exit code
-    }
+  set -x
+
+  if [[ -z $(which brew) ]]; then
+    echo "Homebrew is not installed. Please install Homebrew first."
+    exit 1
+  fi
+
+  if [[ -z $(which rustup) ]]; then
+    brew install rustup
+    rustup install stable
+  fi
+
+  if [[ -z $(which cargo-binstall) ]]; then
+    brew install cargo-binstall
+  fi
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+   command_not_found_handle() {
+    echo "Custom error: '$1' is not a recognized command." >&2
+    return 127 # Return the standard "command not found" exit code
+  }
     set -x
     SUDO=""
     if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
-        SUDO="sudo"
+      SUDO="sudo"
     fi
-    
-    APT=$( type apt )
+     
+    APT=$( type apt)
     APT_STATUS=$?
     
-    if [ $APT_STATUS -eq 0 ]; then
-        $SUDO apt update -qq
-        $SUDO apt install -y -qq curl pkg-config git gcc libssl-dev
-    fi
+    if [ $APT_STATUS -eq 0 ]; then 
     
+      $SUDO apt update -qq
+      $SUDO apt install -y -qq curl pkg-config git gcc libssl-dev
+    fi
+
     if [[ -z $(which rustup) ]]; then
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-        . "$HOME/.cargo/env"
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+      . "$HOME/.cargo/env"
     fi
-    
+
     if [[ -z $(which cargo-binstall) ]]; then
-        curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+      curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
     fi
 else
-    echo "We don't support automatic setup on $OSTYPE yet, sorry."
-    exit 1
+  echo "We don't support automatic setup on $OSTYPE yet, sorry."
+  exit 1
 fi
 
 if [[ -z $(which cargo-nextest) ]]; then
-    cargo binstall cargo-nextest -y
+  cargo binstall cargo-nextest -y
 fi
 
 if [[ -z $(which cargo-insta) ]]; then
-    cargo binstall cargo-insta -y
+  cargo binstall cargo-insta -y
 fi
 
 if [[ -z $(which dist) ]]; then
-    cargo binstall cargo-dist -y
+  cargo binstall cargo-dist -y
 fi
