@@ -161,7 +161,6 @@ fn test_ruby_install_interrupted_download_cleanup() {
     output.assert_failure();
 
     let tarball_name = format!("{}/{}", test.server_url(), download_suffix);
-    dbg!(&tarball_name);
     let cache_key = rv_cache::cache_digest(tarball_name);
     let tarball_path = cache_dir
         .join("ruby-v0")

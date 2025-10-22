@@ -1,0 +1,28 @@
+---
+source: crates/rv-lockfile/src/tests.rs
+expression: output
+---
+gem:
+  - remote: "https://gem.coop/"
+    specs:
+      - gem_version:
+          name: rake
+          version: 13.3.0
+        deps: []
+  - remote: "https://rubygems.org/"
+    specs:
+      - gem_version:
+          name: rack
+          version: 3.2.3
+        deps: []
+platforms:
+  - arm64-darwin-20
+  - ruby
+dependencies:
+  - name: rack
+    semver: ~
+    nonstandard: true
+  - name: rake
+    semver: ~
+    nonstandard: false
+bundled_with: 2.7.2

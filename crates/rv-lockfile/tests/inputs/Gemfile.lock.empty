@@ -1,0 +1,14 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+
+PLATFORMS
+  arm64-darwin-20
+  ruby
+
+DEPENDENCIES
+
+CHECKSUMS
+
+BUNDLED WITH
+   2.7.2

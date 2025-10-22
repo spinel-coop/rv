@@ -1,0 +1,169 @@
+---
+source: crates/rv-lockfile/src/tests.rs
+expression: output
+---
+gem:
+  - remote: "https://rubygems.org/"
+    specs:
+      - gem_version:
+          name: erubi
+          version: 1.13.1
+        deps: []
+      - gem_version:
+          name: netrc
+          version: 0.11.0
+        deps: []
+      - gem_version:
+          name: parallel
+          version: 1.26.3
+        deps: []
+      - gem_version:
+          name: prism
+          version: 1.3.0
+        deps: []
+      - gem_version:
+          name: rbi
+          version: 0.2.2
+        deps:
+          - name: prism
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+            nonstandard: false
+          - name: sorbet-runtime
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.5.9204
+            nonstandard: false
+      - gem_version:
+          name: sorbet
+          version: 0.5.11725
+        deps:
+          - name: sorbet-static
+            semver:
+              - semver_constraint: Exact
+                version: 0.5.11725
+            nonstandard: false
+      - gem_version:
+          name: sorbet-runtime
+          version: 0.5.11725
+        deps: []
+      - gem_version:
+          name: sorbet-static
+          version: 0.5.11725-aarch64-linux
+        deps: []
+      - gem_version:
+          name: sorbet-static
+          version: 0.5.11725-universal-darwin
+        deps: []
+      - gem_version:
+          name: sorbet-static
+          version: 0.5.11725-x86_64-linux
+        deps: []
+      - gem_version:
+          name: sorbet-static-and-runtime
+          version: 0.5.11725
+        deps:
+          - name: sorbet
+            semver:
+              - semver_constraint: Exact
+                version: 0.5.11725
+            nonstandard: false
+          - name: sorbet-runtime
+            semver:
+              - semver_constraint: Exact
+                version: 0.5.11725
+            nonstandard: false
+      - gem_version:
+          name: spoom
+          version: 1.5.0
+        deps:
+          - name: erubi
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.10.0
+            nonstandard: false
+          - name: prism
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.28.0
+            nonstandard: false
+          - name: sorbet-static-and-runtime
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.5.10187
+            nonstandard: false
+          - name: thor
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.19.2
+            nonstandard: false
+      - gem_version:
+          name: tapioca
+          version: 0.16.6
+        deps:
+          - name: bundler
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.2.25
+            nonstandard: false
+          - name: netrc
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.11.0
+            nonstandard: false
+          - name: parallel
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.21.0
+            nonstandard: false
+          - name: rbi
+            semver:
+              - semver_constraint: Pessimistic
+                version: "0.2"
+            nonstandard: false
+          - name: sorbet-static-and-runtime
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.5.11087
+            nonstandard: false
+          - name: spoom
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.2.0
+            nonstandard: false
+          - name: thor
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.2.0
+            nonstandard: false
+          - name: yard-sorbet
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: thor
+          version: 1.4.0
+        deps: []
+      - gem_version:
+          name: yard
+          version: 0.9.37
+        deps: []
+      - gem_version:
+          name: yard-sorbet
+          version: 0.9.0
+        deps:
+          - name: sorbet-runtime
+            semver: ~
+            nonstandard: false
+          - name: yard
+            semver: ~
+            nonstandard: false
+platforms:
+  - aarch64-linux
+  - universal-darwin
+  - x86_64-linux
+dependencies:
+  - name: tapioca
+    semver: ~
+    nonstandard: false
+bundled_with: 4.0.0.dev

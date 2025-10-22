@@ -1,0 +1,69 @@
+---
+source: crates/rv-lockfile/src/tests.rs
+expression: output
+---
+gem:
+  - remote: "https://example.com"
+    specs:
+      - gem_version:
+          name: actioncable
+          version: 7.2.2.1
+        deps: []
+path:
+  - remote: pathgem
+    specs:
+      - gem_version:
+          name: pathgem
+          version: 0.1.0
+        deps: []
+platforms:
+  - aarch64-linux-gnu
+  - aarch64-linux-musl
+  - arm-linux-gnu
+  - arm-linux-musl
+  - arm64-darwin
+  - x86_64-darwin
+  - x86_64-linux-gnu
+  - x86_64-linux-musl
+dependencies:
+  - name: pathgem
+    semver: ~
+    nonstandard: true
+bundled_with: 2.7.2
+checksums:
+  - gem_version:
+      name: nokogiri
+      version: 1.18.10-aarch64-linux-musl
+    sha256:
+      - 126
+      - 116
+      - 229
+      - 131
+      - 20
+      - 41
+      - 124
+      - 200
+      - 168
+      - 241
+      - 181
+      - 51
+      - 247
+      - 33
+      - 45
+      - 25
+      - 153
+      - 219
+      - 226
+      - 99
+      - 154
+      - 158
+      - 230
+      - 217
+      - 123
+      - 72
+      - 62
+      - 162
+      - 172
+      - 193
+      - 137
+      - 68

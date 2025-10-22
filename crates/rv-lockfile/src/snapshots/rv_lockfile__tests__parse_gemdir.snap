@@ -1,0 +1,2009 @@
+---
+source: crates/rv-lockfile/src/tests.rs
+expression: output
+---
+git:
+  - remote: "https://github.com/omniauth/omniauth-github.git"
+    revision: f27bb4e018150d87e9444ad13955acfc9e76f4d7
+    branch: master
+    specs:
+      - gem_version:
+          name: omniauth-github
+          version: 2.0.1
+        deps:
+          - name: omniauth
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.0"
+            nonstandard: false
+          - name: omniauth-oauth2
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.8"
+            nonstandard: false
+gem:
+  - remote: "https://rubygems.org/"
+    specs:
+      - gem_version:
+          name: actioncable
+          version: 8.0.1
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: nio4r
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.0"
+            nonstandard: false
+          - name: websocket-driver
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.6.1
+            nonstandard: false
+          - name: zeitwerk
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.6"
+            nonstandard: false
+      - gem_version:
+          name: actionmailbox
+          version: 8.0.1
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activejob
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activerecord
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activestorage
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: mail
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.8.0
+            nonstandard: false
+      - gem_version:
+          name: actionmailer
+          version: 8.0.1
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: actionview
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activejob
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: mail
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.8.0
+            nonstandard: false
+          - name: rails-dom-testing
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.2"
+            nonstandard: false
+      - gem_version:
+          name: actionpack
+          version: 8.0.1
+        deps:
+          - name: actionview
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: nokogiri
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.8.5
+            nonstandard: false
+          - name: rack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.2.4
+            nonstandard: false
+          - name: rack-session
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.0.1
+            nonstandard: false
+          - name: rack-test
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.6.3
+            nonstandard: false
+          - name: rails-dom-testing
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.2"
+            nonstandard: false
+          - name: rails-html-sanitizer
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.6"
+            nonstandard: false
+          - name: useragent
+            semver:
+              - semver_constraint: Pessimistic
+                version: "0.16"
+            nonstandard: false
+      - gem_version:
+          name: actiontext
+          version: 8.0.1
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activerecord
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activestorage
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: globalid
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.6.0
+            nonstandard: false
+          - name: nokogiri
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.8.5
+            nonstandard: false
+      - gem_version:
+          name: actionview
+          version: 8.0.1
+        deps:
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: builder
+            semver:
+              - semver_constraint: Pessimistic
+                version: "3.1"
+            nonstandard: false
+          - name: erubi
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.11"
+            nonstandard: false
+          - name: rails-dom-testing
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.2"
+            nonstandard: false
+          - name: rails-html-sanitizer
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.6"
+            nonstandard: false
+      - gem_version:
+          name: activejob
+          version: 8.0.1
+        deps:
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: globalid
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.3.6
+            nonstandard: false
+      - gem_version:
+          name: activemodel
+          version: 8.0.1
+        deps:
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+      - gem_version:
+          name: activerecord
+          version: 8.0.1
+        deps:
+          - name: activemodel
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: timeout
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.4.0
+            nonstandard: false
+      - gem_version:
+          name: activestorage
+          version: 8.0.1
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activejob
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activerecord
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: marcel
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+            nonstandard: false
+      - gem_version:
+          name: activesupport
+          version: 8.0.1
+        deps:
+          - name: base64
+            semver: ~
+            nonstandard: false
+          - name: benchmark
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "0.3"
+            nonstandard: false
+          - name: bigdecimal
+            semver: ~
+            nonstandard: false
+          - name: concurrent-ruby
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.3.1
+            nonstandard: false
+          - name: connection_pool
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.2.5
+            nonstandard: false
+          - name: drb
+            semver: ~
+            nonstandard: false
+          - name: i18n
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "1.6"
+              - semver_constraint: LessThan
+                version: "2"
+            nonstandard: false
+          - name: logger
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.4.2
+            nonstandard: false
+          - name: minitest
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "5.1"
+            nonstandard: false
+          - name: securerandom
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "0.3"
+            nonstandard: false
+          - name: tzinfo
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.0"
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.0.5
+            nonstandard: false
+          - name: uri
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.13.1
+            nonstandard: false
+      - gem_version:
+          name: addressable
+          version: 2.8.7
+        deps:
+          - name: public_suffix
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.0.2
+              - semver_constraint: LessThan
+                version: "7.0"
+            nonstandard: false
+      - gem_version:
+          name: ast
+          version: 2.4.2
+        deps: []
+      - gem_version:
+          name: base64
+          version: 0.2.0
+        deps: []
+      - gem_version:
+          name: benchmark
+          version: 0.4.0
+        deps: []
+      - gem_version:
+          name: bigdecimal
+          version: 3.1.9
+        deps: []
+      - gem_version:
+          name: bindex
+          version: 0.8.1
+        deps: []
+      - gem_version:
+          name: bootsnap
+          version: 1.17.0
+        deps:
+          - name: msgpack
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.2"
+            nonstandard: false
+      - gem_version:
+          name: brakeman
+          version: 7.0.0
+        deps:
+          - name: racc
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: builder
+          version: 3.3.0
+        deps: []
+      - gem_version:
+          name: capybara
+          version: 3.40.0
+        deps:
+          - name: addressable
+            semver: ~
+            nonstandard: false
+          - name: matrix
+            semver: ~
+            nonstandard: false
+          - name: mini_mime
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.1.3
+            nonstandard: false
+          - name: nokogiri
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.11"
+            nonstandard: false
+          - name: rack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.6.0
+            nonstandard: false
+          - name: rack-test
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.6.3
+            nonstandard: false
+          - name: regexp_parser
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "1.5"
+              - semver_constraint: LessThan
+                version: "3.0"
+            nonstandard: false
+          - name: xpath
+            semver:
+              - semver_constraint: Pessimistic
+                version: "3.2"
+            nonstandard: false
+      - gem_version:
+          name: concurrent-ruby
+          version: 1.3.5
+        deps: []
+      - gem_version:
+          name: connection_pool
+          version: 2.5.0
+        deps: []
+      - gem_version:
+          name: crass
+          version: 1.0.6
+        deps: []
+      - gem_version:
+          name: date
+          version: 3.4.1
+        deps: []
+      - gem_version:
+          name: debug
+          version: 1.9.2
+        deps:
+          - name: irb
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.10"
+            nonstandard: false
+          - name: reline
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.3.8
+            nonstandard: false
+      - gem_version:
+          name: docile
+          version: 1.4.1
+        deps: []
+      - gem_version:
+          name: drb
+          version: 2.2.1
+        deps: []
+      - gem_version:
+          name: error_highlight
+          version: 0.7.0
+        deps: []
+      - gem_version:
+          name: erubi
+          version: 1.13.1
+        deps: []
+      - gem_version:
+          name: et-orbi
+          version: 1.2.11
+        deps:
+          - name: tzinfo
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: faker
+          version: 3.2.2
+        deps:
+          - name: i18n
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.8.11
+              - semver_constraint: LessThan
+                version: "2"
+            nonstandard: false
+      - gem_version:
+          name: faraday
+          version: 2.7.12
+        deps:
+          - name: base64
+            semver: ~
+            nonstandard: false
+          - name: faraday-net_http
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "2.0"
+              - semver_constraint: LessThan
+                version: "3.1"
+            nonstandard: false
+          - name: ruby2_keywords
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.0.4
+            nonstandard: false
+      - gem_version:
+          name: faraday-net_http
+          version: 3.0.2
+        deps: []
+      - gem_version:
+          name: ffi
+          version: 1.17.1-aarch64-linux-gnu
+        deps: []
+      - gem_version:
+          name: ffi
+          version: 1.17.1-arm64-darwin
+        deps: []
+      - gem_version:
+          name: ffi
+          version: 1.17.1-x86_64-linux-gnu
+        deps: []
+      - gem_version:
+          name: fugit
+          version: 1.11.1
+        deps:
+          - name: et-orbi
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1"
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.2.11
+            nonstandard: false
+          - name: raabro
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.4"
+            nonstandard: false
+      - gem_version:
+          name: gems
+          version: 1.2.0
+        deps: []
+      - gem_version:
+          name: globalid
+          version: 1.2.1
+        deps:
+          - name: activesupport
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "6.1"
+            nonstandard: false
+      - gem_version:
+          name: hashie
+          version: 5.0.0
+        deps: []
+      - gem_version:
+          name: honeybadger
+          version: 5.26.4
+        deps:
+          - name: logger
+            semver: ~
+            nonstandard: false
+          - name: ostruct
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: hotwire-spark
+          version: 0.1.13
+        deps:
+          - name: listen
+            semver: ~
+            nonstandard: false
+          - name: rails
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 7.0.0
+            nonstandard: false
+          - name: zeitwerk
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: i18n
+          version: 1.14.7
+        deps:
+          - name: concurrent-ruby
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+            nonstandard: false
+      - gem_version:
+          name: importmap-rails
+          version: 2.1.0
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 6.0.0
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 6.0.0
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 6.0.0
+            nonstandard: false
+      - gem_version:
+          name: io-console
+          version: 0.8.0
+        deps: []
+      - gem_version:
+          name: irb
+          version: 1.15.1
+        deps:
+          - name: pp
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.6.0
+            nonstandard: false
+          - name: rdoc
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 4.0.0
+            nonstandard: false
+          - name: reline
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.4.2
+            nonstandard: false
+      - gem_version:
+          name: jbuilder
+          version: 2.13.0
+        deps:
+          - name: actionview
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 5.0.0
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 5.0.0
+            nonstandard: false
+      - gem_version:
+          name: json
+          version: 2.10.1
+        deps: []
+      - gem_version:
+          name: jwt
+          version: 2.7.1
+        deps: []
+      - gem_version:
+          name: language_server-protocol
+          version: 3.17.0.4
+        deps: []
+      - gem_version:
+          name: listen
+          version: 3.9.0
+        deps:
+          - name: rb-fsevent
+            semver:
+              - semver_constraint: Pessimistic
+                version: "0.10"
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.10.3
+            nonstandard: false
+          - name: rb-inotify
+            semver:
+              - semver_constraint: Pessimistic
+                version: "0.9"
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.9.10
+            nonstandard: false
+      - gem_version:
+          name: litestream
+          version: 0.12.0
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.0"
+            nonstandard: false
+          - name: actionview
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.0"
+            nonstandard: false
+          - name: activejob
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.0"
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.0"
+            nonstandard: false
+          - name: logfmt
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.0.10
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.0"
+            nonstandard: false
+          - name: sqlite3
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: litestream
+          version: 0.12.0-arm64-darwin
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.0"
+            nonstandard: false
+          - name: actionview
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.0"
+            nonstandard: false
+          - name: activejob
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.0"
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.0"
+            nonstandard: false
+          - name: logfmt
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.0.10
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.0"
+            nonstandard: false
+          - name: sqlite3
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: litestream
+          version: 0.12.0-x86_64-linux
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.0"
+            nonstandard: false
+          - name: actionview
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.0"
+            nonstandard: false
+          - name: activejob
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.0"
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.0"
+            nonstandard: false
+          - name: logfmt
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.0.10
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.0"
+            nonstandard: false
+          - name: sqlite3
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: logfmt
+          version: 0.0.10
+        deps: []
+      - gem_version:
+          name: logger
+          version: 1.6.6
+        deps: []
+      - gem_version:
+          name: loofah
+          version: 2.24.0
+        deps:
+          - name: crass
+            semver:
+              - semver_constraint: Pessimistic
+                version: 1.0.2
+            nonstandard: false
+          - name: nokogiri
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.12.0
+            nonstandard: false
+      - gem_version:
+          name: mail
+          version: 2.8.1
+        deps:
+          - name: mini_mime
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.1.1
+            nonstandard: false
+          - name: net-imap
+            semver: ~
+            nonstandard: false
+          - name: net-pop
+            semver: ~
+            nonstandard: false
+          - name: net-smtp
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: marcel
+          version: 1.0.4
+        deps: []
+      - gem_version:
+          name: matrix
+          version: 0.4.2
+        deps: []
+      - gem_version:
+          name: mini_mime
+          version: 1.1.5
+        deps: []
+      - gem_version:
+          name: minio
+          version: 0.4.0-aarch64-linux
+        deps: []
+      - gem_version:
+          name: minio
+          version: 0.4.0-arm64-darwin
+        deps: []
+      - gem_version:
+          name: minio
+          version: 0.4.0-x86_64-linux
+        deps: []
+      - gem_version:
+          name: minitest
+          version: 5.25.4
+        deps: []
+      - gem_version:
+          name: msgpack
+          version: 1.7.2
+        deps: []
+      - gem_version:
+          name: multi_xml
+          version: 0.6.0
+        deps: []
+      - gem_version:
+          name: net-imap
+          version: 0.5.6
+        deps:
+          - name: date
+            semver: ~
+            nonstandard: false
+          - name: net-protocol
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: net-pop
+          version: 0.1.2
+        deps:
+          - name: net-protocol
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: net-protocol
+          version: 0.2.2
+        deps:
+          - name: timeout
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: net-smtp
+          version: 0.5.1
+        deps:
+          - name: net-protocol
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: nio4r
+          version: 2.7.4
+        deps: []
+      - gem_version:
+          name: nokogiri
+          version: 1.18.3-aarch64-linux-gnu
+        deps:
+          - name: racc
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.4"
+            nonstandard: false
+      - gem_version:
+          name: nokogiri
+          version: 1.18.3-arm64-darwin
+        deps:
+          - name: racc
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.4"
+            nonstandard: false
+      - gem_version:
+          name: nokogiri
+          version: 1.18.3-x86_64-linux-gnu
+        deps:
+          - name: racc
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.4"
+            nonstandard: false
+      - gem_version:
+          name: oauth2
+          version: 2.0.9
+        deps:
+          - name: faraday
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.17.3
+              - semver_constraint: LessThan
+                version: "3.0"
+            nonstandard: false
+          - name: jwt
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "1.0"
+              - semver_constraint: LessThan
+                version: "3.0"
+            nonstandard: false
+          - name: multi_xml
+            semver:
+              - semver_constraint: Pessimistic
+                version: "0.5"
+            nonstandard: false
+          - name: rack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "1.2"
+              - semver_constraint: LessThan
+                version: "4"
+            nonstandard: false
+          - name: snaky_hash
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.0"
+            nonstandard: false
+          - name: version_gem
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.1"
+            nonstandard: false
+      - gem_version:
+          name: omniauth
+          version: 2.1.1
+        deps:
+          - name: hashie
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 3.4.6
+            nonstandard: false
+          - name: rack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.2.3
+            nonstandard: false
+          - name: rack-protection
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: omniauth-oauth2
+          version: 1.8.0
+        deps:
+          - name: oauth2
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "1.4"
+              - semver_constraint: LessThan
+                version: "3"
+            nonstandard: false
+          - name: omniauth
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.0"
+            nonstandard: false
+      - gem_version:
+          name: omniauth-rails_csrf_protection
+          version: 1.0.2
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "4.2"
+            nonstandard: false
+          - name: omniauth
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.0"
+            nonstandard: false
+      - gem_version:
+          name: ostruct
+          version: 0.6.1
+        deps: []
+      - gem_version:
+          name: parallel
+          version: 1.26.3
+        deps: []
+      - gem_version:
+          name: parser
+          version: 3.3.7.1
+        deps:
+          - name: ast
+            semver:
+              - semver_constraint: Pessimistic
+                version: 2.4.1
+            nonstandard: false
+          - name: racc
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: pp
+          version: 0.6.2
+        deps:
+          - name: prettyprint
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: prettyprint
+          version: 0.2.0
+        deps: []
+      - gem_version:
+          name: psych
+          version: 5.2.3
+        deps:
+          - name: date
+            semver: ~
+            nonstandard: false
+          - name: stringio
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: public_suffix
+          version: 6.0.1
+        deps: []
+      - gem_version:
+          name: puma
+          version: 6.4.0
+        deps:
+          - name: nio4r
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.0"
+            nonstandard: false
+      - gem_version:
+          name: raabro
+          version: 1.4.0
+        deps: []
+      - gem_version:
+          name: racc
+          version: 1.8.1
+        deps: []
+      - gem_version:
+          name: rack
+          version: 3.1.10
+        deps: []
+      - gem_version:
+          name: rack-protection
+          version: 3.0.6
+        deps:
+          - name: rack
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: rack-session
+          version: 2.1.0
+        deps:
+          - name: base64
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.1.0
+            nonstandard: false
+          - name: rack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 3.0.0
+            nonstandard: false
+      - gem_version:
+          name: rack-test
+          version: 2.2.0
+        deps:
+          - name: rack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "1.3"
+            nonstandard: false
+      - gem_version:
+          name: rackup
+          version: 2.2.1
+        deps:
+          - name: rack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "3"
+            nonstandard: false
+      - gem_version:
+          name: rails
+          version: 8.0.1
+        deps:
+          - name: actioncable
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: actionmailbox
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: actionmailer
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: actionpack
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: actiontext
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: actionview
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activejob
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activemodel
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activerecord
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activestorage
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: bundler
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.15.0
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+      - gem_version:
+          name: rails-controller-testing
+          version: 1.0.5
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 5.0.1.rc1
+            nonstandard: false
+          - name: actionview
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 5.0.1.rc1
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 5.0.1.rc1
+            nonstandard: false
+      - gem_version:
+          name: rails-dom-testing
+          version: 2.2.0
+        deps:
+          - name: activesupport
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 5.0.0
+            nonstandard: false
+          - name: minitest
+            semver: ~
+            nonstandard: false
+          - name: nokogiri
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "1.6"
+            nonstandard: false
+      - gem_version:
+          name: rails-html-sanitizer
+          version: 1.6.2
+        deps:
+          - name: loofah
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.21"
+            nonstandard: false
+          - name: nokogiri
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.15.7
+              - semver_constraint: NotEqual
+                version: 1.16.7
+              - semver_constraint: NotEqual
+                version: 1.16.6
+              - semver_constraint: NotEqual
+                version: 1.16.5
+              - semver_constraint: NotEqual
+                version: 1.16.4
+              - semver_constraint: NotEqual
+                version: 1.16.3
+              - semver_constraint: NotEqual
+                version: 1.16.2
+              - semver_constraint: NotEqual
+                version: 1.16.1
+              - semver_constraint: NotEqual
+                version: 1.16.0.rc1
+              - semver_constraint: NotEqual
+                version: 1.16.0
+            nonstandard: false
+      - gem_version:
+          name: railties
+          version: 8.0.1
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.1
+            nonstandard: false
+          - name: irb
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.13"
+            nonstandard: false
+          - name: rackup
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.0.0
+            nonstandard: false
+          - name: rake
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "12.2"
+            nonstandard: false
+          - name: thor
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.2.2
+            nonstandard: false
+          - name: zeitwerk
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.6"
+            nonstandard: false
+      - gem_version:
+          name: rainbow
+          version: 3.1.1
+        deps: []
+      - gem_version:
+          name: rake
+          version: 13.2.1
+        deps: []
+      - gem_version:
+          name: rb-fsevent
+          version: 0.11.2
+        deps: []
+      - gem_version:
+          name: rb-inotify
+          version: 0.11.1
+        deps:
+          - name: ffi
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+            nonstandard: false
+      - gem_version:
+          name: rdoc
+          version: 6.12.0
+        deps:
+          - name: psych
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 4.0.0
+            nonstandard: false
+      - gem_version:
+          name: regexp_parser
+          version: 2.10.0
+        deps: []
+      - gem_version:
+          name: reline
+          version: 0.6.0
+        deps:
+          - name: io-console
+            semver:
+              - semver_constraint: Pessimistic
+                version: "0.5"
+            nonstandard: false
+      - gem_version:
+          name: rexml
+          version: 3.2.6
+        deps: []
+      - gem_version:
+          name: rubocop
+          version: 1.60.2
+        deps:
+          - name: json
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.3"
+            nonstandard: false
+          - name: language_server-protocol
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 3.17.0
+            nonstandard: false
+          - name: parallel
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.10"
+            nonstandard: false
+          - name: parser
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 3.3.0.2
+            nonstandard: false
+          - name: rainbow
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.2.2
+              - semver_constraint: LessThan
+                version: "4.0"
+            nonstandard: false
+          - name: regexp_parser
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "1.8"
+              - semver_constraint: LessThan
+                version: "3.0"
+            nonstandard: false
+          - name: rexml
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 3.2.5
+              - semver_constraint: LessThan
+                version: "4.0"
+            nonstandard: false
+          - name: rubocop-ast
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.30.0
+              - semver_constraint: LessThan
+                version: "2.0"
+            nonstandard: false
+          - name: ruby-progressbar
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.7"
+            nonstandard: false
+          - name: unicode-display_width
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.4.0
+              - semver_constraint: LessThan
+                version: "3.0"
+            nonstandard: false
+      - gem_version:
+          name: rubocop-ast
+          version: 1.38.1
+        deps:
+          - name: parser
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 3.3.1.0
+            nonstandard: false
+      - gem_version:
+          name: rubocop-minitest
+          version: 0.34.3
+        deps:
+          - name: rubocop
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "1.39"
+              - semver_constraint: LessThan
+                version: "2.0"
+            nonstandard: false
+          - name: rubocop-ast
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.30.0
+              - semver_constraint: LessThan
+                version: "2.0"
+            nonstandard: false
+      - gem_version:
+          name: rubocop-performance
+          version: 1.20.2
+        deps:
+          - name: rubocop
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.48.1
+              - semver_constraint: LessThan
+                version: "2.0"
+            nonstandard: false
+          - name: rubocop-ast
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.30.0
+              - semver_constraint: LessThan
+                version: "2.0"
+            nonstandard: false
+      - gem_version:
+          name: rubocop-rails
+          version: 2.23.1
+        deps:
+          - name: activesupport
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 4.2.0
+            nonstandard: false
+          - name: rack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "1.1"
+            nonstandard: false
+          - name: rubocop
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.33.0
+              - semver_constraint: LessThan
+                version: "2.0"
+            nonstandard: false
+          - name: rubocop-ast
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.30.0
+              - semver_constraint: LessThan
+                version: "2.0"
+            nonstandard: false
+      - gem_version:
+          name: rubocop-rails-omakase
+          version: 1.0.0
+        deps:
+          - name: rubocop
+            semver: ~
+            nonstandard: false
+          - name: rubocop-minitest
+            semver: ~
+            nonstandard: false
+          - name: rubocop-performance
+            semver: ~
+            nonstandard: false
+          - name: rubocop-rails
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: ruby-progressbar
+          version: 1.13.0
+        deps: []
+      - gem_version:
+          name: ruby2_keywords
+          version: 0.0.5
+        deps: []
+      - gem_version:
+          name: rubyzip
+          version: 2.3.2
+        deps: []
+      - gem_version:
+          name: securerandom
+          version: 0.4.1
+        deps: []
+      - gem_version:
+          name: selenium-webdriver
+          version: 4.16.0
+        deps:
+          - name: rexml
+            semver:
+              - semver_constraint: Pessimistic
+                version: "3.2"
+              - semver_constraint: GreaterThanOrEqual
+                version: 3.2.5
+            nonstandard: false
+          - name: rubyzip
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.2.2
+              - semver_constraint: LessThan
+                version: "3.0"
+            nonstandard: false
+          - name: websocket
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+            nonstandard: false
+      - gem_version:
+          name: simplecov
+          version: 0.22.0
+        deps:
+          - name: docile
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.1"
+            nonstandard: false
+          - name: simplecov-html
+            semver:
+              - semver_constraint: Pessimistic
+                version: "0.11"
+            nonstandard: false
+          - name: simplecov_json_formatter
+            semver:
+              - semver_constraint: Pessimistic
+                version: "0.1"
+            nonstandard: false
+      - gem_version:
+          name: simplecov-html
+          version: 0.13.1
+        deps: []
+      - gem_version:
+          name: simplecov_json_formatter
+          version: 0.1.4
+        deps: []
+      - gem_version:
+          name: snaky_hash
+          version: 2.0.1
+        deps:
+          - name: hashie
+            semver: ~
+            nonstandard: false
+          - name: version_gem
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.1"
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.1.1
+            nonstandard: false
+      - gem_version:
+          name: solid_cable
+          version: 3.0.7
+        deps:
+          - name: actioncable
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.2"
+            nonstandard: false
+          - name: activejob
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.2"
+            nonstandard: false
+          - name: activerecord
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.2"
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.2"
+            nonstandard: false
+      - gem_version:
+          name: solid_cache
+          version: 1.0.7
+        deps:
+          - name: activejob
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.2"
+            nonstandard: false
+          - name: activerecord
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.2"
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.2"
+            nonstandard: false
+      - gem_version:
+          name: solid_queue
+          version: 1.1.3
+        deps:
+          - name: activejob
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.1"
+            nonstandard: false
+          - name: activerecord
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.1"
+            nonstandard: false
+          - name: concurrent-ruby
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.3.1
+            nonstandard: false
+          - name: fugit
+            semver:
+              - semver_constraint: Pessimistic
+                version: 1.11.0
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.1"
+            nonstandard: false
+          - name: thor
+            semver:
+              - semver_constraint: Pessimistic
+                version: 1.3.1
+            nonstandard: false
+      - gem_version:
+          name: sprockets
+          version: 4.2.1
+        deps:
+          - name: concurrent-ruby
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+            nonstandard: false
+          - name: rack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.2.4
+              - semver_constraint: LessThan
+                version: "4"
+            nonstandard: false
+      - gem_version:
+          name: sprockets-rails
+          version: 3.4.2
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "5.2"
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "5.2"
+            nonstandard: false
+          - name: sprockets
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 3.0.0
+            nonstandard: false
+      - gem_version:
+          name: sqlite3
+          version: 2.6.0-aarch64-linux-gnu
+        deps: []
+      - gem_version:
+          name: sqlite3
+          version: 2.6.0-arm64-darwin
+        deps: []
+      - gem_version:
+          name: sqlite3
+          version: 2.6.0-x86_64-linux-gnu
+        deps: []
+      - gem_version:
+          name: stimulus-rails
+          version: 1.3.0
+        deps:
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 6.0.0
+            nonstandard: false
+      - gem_version:
+          name: stringio
+          version: 3.1.5
+        deps: []
+      - gem_version:
+          name: tailwindcss-rails
+          version: 2.0.32-aarch64-linux
+        deps:
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 6.0.0
+            nonstandard: false
+      - gem_version:
+          name: tailwindcss-rails
+          version: 2.0.32-arm64-darwin
+        deps:
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 6.0.0
+            nonstandard: false
+      - gem_version:
+          name: tailwindcss-rails
+          version: 2.0.32-x86_64-linux
+        deps:
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 6.0.0
+            nonstandard: false
+      - gem_version:
+          name: thor
+          version: 1.3.2
+        deps: []
+      - gem_version:
+          name: timeout
+          version: 0.4.3
+        deps: []
+      - gem_version:
+          name: turbo-rails
+          version: 2.0.11
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 6.0.0
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 6.0.0
+            nonstandard: false
+      - gem_version:
+          name: tzinfo
+          version: 2.0.6
+        deps:
+          - name: concurrent-ruby
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+            nonstandard: false
+      - gem_version:
+          name: unicode-display_width
+          version: 2.6.0
+        deps: []
+      - gem_version:
+          name: uri
+          version: 1.0.3
+        deps: []
+      - gem_version:
+          name: useragent
+          version: 0.16.11
+        deps: []
+      - gem_version:
+          name: version_gem
+          version: 1.1.3
+        deps: []
+      - gem_version:
+          name: web-console
+          version: 4.2.1
+        deps:
+          - name: actionview
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 6.0.0
+            nonstandard: false
+          - name: activemodel
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 6.0.0
+            nonstandard: false
+          - name: bindex
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.4.0
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 6.0.0
+            nonstandard: false
+      - gem_version:
+          name: websocket
+          version: 1.2.10
+        deps: []
+      - gem_version:
+          name: websocket-driver
+          version: 0.7.7
+        deps:
+          - name: base64
+            semver: ~
+            nonstandard: false
+          - name: websocket-extensions
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.1.0
+            nonstandard: false
+      - gem_version:
+          name: websocket-extensions
+          version: 0.1.5
+        deps: []
+      - gem_version:
+          name: xpath
+          version: 3.2.0
+        deps:
+          - name: nokogiri
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.8"
+            nonstandard: false
+      - gem_version:
+          name: zeitwerk
+          version: 2.7.2
+        deps: []
+platforms:
+  - aarch64-linux
+  - arm64-darwin-22
+  - arm64-darwin-23
+  - arm64-darwin-24
+  - x86_64-linux
+dependencies:
+  - name: bootsnap
+    semver: ~
+    nonstandard: false
+  - name: brakeman
+    semver: ~
+    nonstandard: false
+  - name: capybara
+    semver:
+      - semver_constraint: Pessimistic
+        version: "3.40"
+    nonstandard: false
+  - name: debug
+    semver:
+      - semver_constraint: Pessimistic
+        version: 1.9.0
+    nonstandard: false
+  - name: error_highlight
+    semver:
+      - semver_constraint: Exact
+        version: 0.7.0
+    nonstandard: false
+  - name: faker
+    semver: ~
+    nonstandard: false
+  - name: gems
+    semver: ~
+    nonstandard: false
+  - name: honeybadger
+    semver:
+      - semver_constraint: Pessimistic
+        version: "5.26"
+    nonstandard: false
+  - name: hotwire-spark
+    semver: ~
+    nonstandard: false
+  - name: importmap-rails
+    semver: ~
+    nonstandard: false
+  - name: jbuilder
+    semver: ~
+    nonstandard: false
+  - name: litestream
+    semver:
+      - semver_constraint: Pessimistic
+        version: 0.12.0
+    nonstandard: false
+  - name: minio
+    semver:
+      - semver_constraint: Pessimistic
+        version: 0.4.0
+    nonstandard: false
+  - name: omniauth-github
+    semver: ~
+    nonstandard: true
+  - name: omniauth-rails_csrf_protection
+    semver:
+      - semver_constraint: Pessimistic
+        version: "1.0"
+    nonstandard: false
+  - name: puma
+    semver:
+      - semver_constraint: GreaterThanOrEqual
+        version: "5.0"
+    nonstandard: false
+  - name: rails
+    semver:
+      - semver_constraint: Exact
+        version: 8.0.1
+    nonstandard: false
+  - name: rails-controller-testing
+    semver: ~
+    nonstandard: false
+  - name: rubocop
+    semver:
+      - semver_constraint: Exact
+        version: 1.60.2
+    nonstandard: false
+  - name: rubocop-rails-omakase
+    semver: ~
+    nonstandard: false
+  - name: selenium-webdriver
+    semver: ~
+    nonstandard: false
+  - name: simplecov
+    semver: ~
+    nonstandard: false
+  - name: solid_cable
+    semver: ~
+    nonstandard: false
+  - name: solid_cache
+    semver: ~
+    nonstandard: false
+  - name: solid_queue
+    semver: ~
+    nonstandard: false
+  - name: sprockets-rails
+    semver: ~
+    nonstandard: false
+  - name: sqlite3
+    semver:
+      - semver_constraint: GreaterThanOrEqual
+        version: "2.1"
+    nonstandard: false
+  - name: stimulus-rails
+    semver: ~
+    nonstandard: false
+  - name: tailwindcss-rails
+    semver: ~
+    nonstandard: false
+  - name: turbo-rails
+    semver: ~
+    nonstandard: false
+  - name: tzinfo-data
+    semver: ~
+    nonstandard: false
+  - name: web-console
+    semver: ~
+    nonstandard: false
+ruby_version: ruby 3.2.0p0
+bundled_with: 2.4.10
