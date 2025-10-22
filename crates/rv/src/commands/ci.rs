@@ -47,10 +47,25 @@ async fn ci_inner(lockfile_path: Utf8PathBuf) -> Result<()> {
     Ok(())
 }
 
-async fn download_gems<'i>(lockfile: GemfileDotLock<'i>) -> Result<()> {
+fn rv_http_client() -> Result<Client> {
+    use reqwest::header;
+    let mut headers = header::HeaderMap::new();
+    headers.insert(
+        "X-RV-PLATFORM",
+        header::HeaderValue::from_static(current_platform::CURRENT_PLATFORM),
+    );
+    headers.insert("X-RV-COMMAND", header::HeaderValue::from_static("ci"));
+
     let client = reqwest::Client::builder()
         .user_agent(format!("rv-{}", env!("CARGO_PKG_VERSION")))
+        .default_headers(headers)
         .build()?;
+
+    Ok(client)
+}
+
+async fn download_gems<'i>(lockfile: GemfileDotLock<'i>) -> Result<()> {
+    let client = rv_http_client()?;
     for gem_source in lockfile.gem {
         // Get all URLs for downloading all gems from this source.
         let urls = gem_source
