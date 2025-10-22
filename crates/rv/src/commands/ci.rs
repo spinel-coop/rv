@@ -9,7 +9,12 @@ use url::Url;
 use crate::config::Config;
 use std::io;
 
-const CONCURRENT_REQUESTS_PER_SOURCE: usize = 10;
+#[derive(clap_derive::Args)]
+pub struct CiArgs {
+    /// Maximum number of downloads that can be in flight at once.
+    #[arg(short, long, default_value = "10")]
+    pub max_concurrent_requests: usize,
+}
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -30,20 +35,24 @@ pub enum Error {
 
 type Result<T> = std::result::Result<T, Error>;
 
-pub async fn ci(config: &Config) -> Result<()> {
+pub async fn ci(config: &Config, args: CiArgs) -> Result<()> {
     let lockfile_path;
     if let Some(path) = &config.gemfile {
         lockfile_path = format!("{}.lock", path.clone()).into();
     } else {
         lockfile_path = "Gemfile.lock".into();
     }
-    ci_inner(lockfile_path, &config.cache).await
+    ci_inner(lockfile_path, &config.cache, args.max_concurrent_requests).await
 }
 
-async fn ci_inner(lockfile_path: Utf8PathBuf, cache: &rv_cache::Cache) -> Result<()> {
+async fn ci_inner(
+    lockfile_path: Utf8PathBuf,
+    cache: &rv_cache::Cache,
+    max_concurrent_requests: usize,
+) -> Result<()> {
     let lockfile_contents = std::fs::read_to_string(lockfile_path)?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
-    download_gems(lockfile, cache).await?;
+    download_gems(lockfile, cache, max_concurrent_requests).await?;
     Ok(())
 }
 
@@ -64,7 +73,11 @@ fn rv_http_client() -> Result<Client> {
     Ok(client)
 }
 
-async fn download_gems<'i>(lockfile: GemfileDotLock<'i>, cache: &rv_cache::Cache) -> Result<()> {
+async fn download_gems<'i>(
+    lockfile: GemfileDotLock<'i>,
+    cache: &rv_cache::Cache,
+    max_concurrent_requests: usize,
+) -> Result<()> {
     let client = rv_http_client()?;
     for gem_source in lockfile.gem {
         // Get all URLs for downloading all gems from this source.
@@ -87,8 +100,8 @@ async fn download_gems<'i>(lockfile: GemfileDotLock<'i>, cache: &rv_cache::Cache
             .collect::<Result<Vec<Url>>>()?;
         let url_stream = futures_util::stream::iter(urls);
         let _downloaded_gems: Vec<(Bytes, Url)> = url_stream
-            .map(|url| download_gem(url, &client, &cache))
-            .buffered(CONCURRENT_REQUESTS_PER_SOURCE)
+            .map(|url| download_gem(url, &client, cache))
+            .buffered(max_concurrent_requests)
             .try_collect()
             .await?;
     }
@@ -127,7 +140,7 @@ mod tests {
         eprintln!("{:?}", std::env::current_dir());
         let file = "../rv-lockfile/tests/inputs/Gemfile.lock.test0".into();
         let cache = rv_cache::Cache::temp().unwrap();
-        ci_inner(file, &cache).await?;
+        ci_inner(file, &cache, 10).await?;
         Ok(())
     }
 }

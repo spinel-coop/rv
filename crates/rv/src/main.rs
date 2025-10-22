@@ -14,7 +14,7 @@ pub mod commands;
 pub mod config;
 
 use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir};
-use crate::commands::ci::ci;
+use crate::commands::ci::{CiArgs, ci};
 use crate::commands::ruby::dir::dir as ruby_dir;
 use crate::commands::ruby::find::find as ruby_find;
 use crate::commands::ruby::install::install as ruby_install;
@@ -131,7 +131,7 @@ enum Commands {
     #[command(about = "Configure your shell to use rv")]
     Shell(ShellArgs),
     #[command(about = "Clean install from a Gemfile.lock")]
-    Ci,
+    Ci(CiArgs),
 }
 
 #[derive(Debug, Copy, Clone, clap::ValueEnum)]
@@ -295,7 +295,7 @@ async fn run() -> Result<()> {
                 #[cfg(unix)]
                 RubyCommand::Run { version, args } => ruby_run(&config, &version, &args)?,
             },
-            Commands::Ci => ci(&config).await?,
+            Commands::Ci(ci_args) => ci(&config, ci_args).await?,
             Commands::Cache(cache) => match cache.command {
                 CacheCommand::Dir => cache_dir(&config)?,
                 CacheCommand::Clean => cache_clean(&config)?,
