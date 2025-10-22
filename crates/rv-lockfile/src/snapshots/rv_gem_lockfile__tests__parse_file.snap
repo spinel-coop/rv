@@ -1,0 +1,520 @@
+---
+source: crates/rv-gem-lockfile/src/tests.rs
+expression: output
+---
+GemfileDotLock {
+    gem: GemSection {
+        remote: "https://rubygems.org/",
+        specs: [
+            Spec {
+                gem_version: GemVersion {
+                    name: "erubi",
+                    version: Version {
+                        major: 1,
+                        minor: 13,
+                        patch: 1,
+                        suffix: None,
+                    },
+                },
+                deps: [],
+            },
+            Spec {
+                gem_version: GemVersion {
+                    name: "netrc",
+                    version: Version {
+                        major: 0,
+                        minor: 11,
+                        patch: 0,
+                        suffix: None,
+                    },
+                },
+                deps: [],
+            },
+            Spec {
+                gem_version: GemVersion {
+                    name: "parallel",
+                    version: Version {
+                        major: 1,
+                        minor: 26,
+                        patch: 3,
+                        suffix: None,
+                    },
+                },
+                deps: [],
+            },
+            Spec {
+                gem_version: GemVersion {
+                    name: "prism",
+                    version: Version {
+                        major: 1,
+                        minor: 3,
+                        patch: 0,
+                        suffix: None,
+                    },
+                },
+                deps: [],
+            },
+            Spec {
+                gem_version: GemVersion {
+                    name: "rbi",
+                    version: Version {
+                        major: 0,
+                        minor: 2,
+                        patch: 2,
+                        suffix: None,
+                    },
+                },
+                deps: [
+                    GemRange {
+                        name: "prism",
+                        semver: Some(
+                            GemRangeSemver {
+                                semver_constraint: Pessimistic,
+                                version: PartialVersion {
+                                    major: 1,
+                                    minor: Some(
+                                        0,
+                                    ),
+                                    patch: None,
+                                    suffix: None,
+                                },
+                            },
+                        ),
+                    },
+                    GemRange {
+                        name: "sorbet-runtime",
+                        semver: Some(
+                            GemRangeSemver {
+                                semver_constraint: GreaterThanOrEqual,
+                                version: PartialVersion {
+                                    major: 0,
+                                    minor: Some(
+                                        5,
+                                    ),
+                                    patch: Some(
+                                        9204,
+                                    ),
+                                    suffix: None,
+                                },
+                            },
+                        ),
+                    },
+                ],
+            },
+            Spec {
+                gem_version: GemVersion {
+                    name: "sorbet",
+                    version: Version {
+                        major: 0,
+                        minor: 5,
+                        patch: 11725,
+                        suffix: None,
+                    },
+                },
+                deps: [
+                    GemRange {
+                        name: "sorbet-static",
+                        semver: Some(
+                            GemRangeSemver {
+                                semver_constraint: Exact,
+                                version: PartialVersion {
+                                    major: 0,
+                                    minor: Some(
+                                        5,
+                                    ),
+                                    patch: Some(
+                                        11725,
+                                    ),
+                                    suffix: None,
+                                },
+                            },
+                        ),
+                    },
+                ],
+            },
+            Spec {
+                gem_version: GemVersion {
+                    name: "sorbet-runtime",
+                    version: Version {
+                        major: 0,
+                        minor: 5,
+                        patch: 11725,
+                        suffix: None,
+                    },
+                },
+                deps: [],
+            },
+            Spec {
+                gem_version: GemVersion {
+                    name: "sorbet-static",
+                    version: Version {
+                        major: 0,
+                        minor: 5,
+                        patch: 11725,
+                        suffix: Some(
+                            "aarch64-linux",
+                        ),
+                    },
+                },
+                deps: [],
+            },
+            Spec {
+                gem_version: GemVersion {
+                    name: "sorbet-static",
+                    version: Version {
+                        major: 0,
+                        minor: 5,
+                        patch: 11725,
+                        suffix: Some(
+                            "universal-darwin",
+                        ),
+                    },
+                },
+                deps: [],
+            },
+            Spec {
+                gem_version: GemVersion {
+                    name: "sorbet-static",
+                    version: Version {
+                        major: 0,
+                        minor: 5,
+                        patch: 11725,
+                        suffix: Some(
+                            "x86_64-linux",
+                        ),
+                    },
+                },
+                deps: [],
+            },
+            Spec {
+                gem_version: GemVersion {
+                    name: "sorbet-static-and-runtime",
+                    version: Version {
+                        major: 0,
+                        minor: 5,
+                        patch: 11725,
+                        suffix: None,
+                    },
+                },
+                deps: [
+                    GemRange {
+                        name: "sorbet",
+                        semver: Some(
+                            GemRangeSemver {
+                                semver_constraint: Exact,
+                                version: PartialVersion {
+                                    major: 0,
+                                    minor: Some(
+                                        5,
+                                    ),
+                                    patch: Some(
+                                        11725,
+                                    ),
+                                    suffix: None,
+                                },
+                            },
+                        ),
+                    },
+                    GemRange {
+                        name: "sorbet-runtime",
+                        semver: Some(
+                            GemRangeSemver {
+                                semver_constraint: Exact,
+                                version: PartialVersion {
+                                    major: 0,
+                                    minor: Some(
+                                        5,
+                                    ),
+                                    patch: Some(
+                                        11725,
+                                    ),
+                                    suffix: None,
+                                },
+                            },
+                        ),
+                    },
+                ],
+            },
+            Spec {
+                gem_version: GemVersion {
+                    name: "spoom",
+                    version: Version {
+                        major: 1,
+                        minor: 5,
+                        patch: 0,
+                        suffix: None,
+                    },
+                },
+                deps: [
+                    GemRange {
+                        name: "erubi",
+                        semver: Some(
+                            GemRangeSemver {
+                                semver_constraint: GreaterThanOrEqual,
+                                version: PartialVersion {
+                                    major: 1,
+                                    minor: Some(
+                                        10,
+                                    ),
+                                    patch: Some(
+                                        0,
+                                    ),
+                                    suffix: None,
+                                },
+                            },
+                        ),
+                    },
+                    GemRange {
+                        name: "prism",
+                        semver: Some(
+                            GemRangeSemver {
+                                semver_constraint: GreaterThanOrEqual,
+                                version: PartialVersion {
+                                    major: 0,
+                                    minor: Some(
+                                        28,
+                                    ),
+                                    patch: Some(
+                                        0,
+                                    ),
+                                    suffix: None,
+                                },
+                            },
+                        ),
+                    },
+                    GemRange {
+                        name: "sorbet-static-and-runtime",
+                        semver: Some(
+                            GemRangeSemver {
+                                semver_constraint: GreaterThanOrEqual,
+                                version: PartialVersion {
+                                    major: 0,
+                                    minor: Some(
+                                        5,
+                                    ),
+                                    patch: Some(
+                                        10187,
+                                    ),
+                                    suffix: None,
+                                },
+                            },
+                        ),
+                    },
+                    GemRange {
+                        name: "thor",
+                        semver: Some(
+                            GemRangeSemver {
+                                semver_constraint: GreaterThanOrEqual,
+                                version: PartialVersion {
+                                    major: 0,
+                                    minor: Some(
+                                        19,
+                                    ),
+                                    patch: Some(
+                                        2,
+                                    ),
+                                    suffix: None,
+                                },
+                            },
+                        ),
+                    },
+                ],
+            },
+            Spec {
+                gem_version: GemVersion {
+                    name: "tapioca",
+                    version: Version {
+                        major: 0,
+                        minor: 16,
+                        patch: 6,
+                        suffix: None,
+                    },
+                },
+                deps: [
+                    GemRange {
+                        name: "bundler",
+                        semver: Some(
+                            GemRangeSemver {
+                                semver_constraint: GreaterThanOrEqual,
+                                version: PartialVersion {
+                                    major: 2,
+                                    minor: Some(
+                                        2,
+                                    ),
+                                    patch: Some(
+                                        25,
+                                    ),
+                                    suffix: None,
+                                },
+                            },
+                        ),
+                    },
+                    GemRange {
+                        name: "netrc",
+                        semver: Some(
+                            GemRangeSemver {
+                                semver_constraint: GreaterThanOrEqual,
+                                version: PartialVersion {
+                                    major: 0,
+                                    minor: Some(
+                                        11,
+                                    ),
+                                    patch: Some(
+                                        0,
+                                    ),
+                                    suffix: None,
+                                },
+                            },
+                        ),
+                    },
+                    GemRange {
+                        name: "parallel",
+                        semver: Some(
+                            GemRangeSemver {
+                                semver_constraint: GreaterThanOrEqual,
+                                version: PartialVersion {
+                                    major: 1,
+                                    minor: Some(
+                                        21,
+                                    ),
+                                    patch: Some(
+                                        0,
+                                    ),
+                                    suffix: None,
+                                },
+                            },
+                        ),
+                    },
+                    GemRange {
+                        name: "rbi",
+                        semver: Some(
+                            GemRangeSemver {
+                                semver_constraint: Pessimistic,
+                                version: PartialVersion {
+                                    major: 0,
+                                    minor: Some(
+                                        2,
+                                    ),
+                                    patch: None,
+                                    suffix: None,
+                                },
+                            },
+                        ),
+                    },
+                    GemRange {
+                        name: "sorbet-static-and-runtime",
+                        semver: Some(
+                            GemRangeSemver {
+                                semver_constraint: GreaterThanOrEqual,
+                                version: PartialVersion {
+                                    major: 0,
+                                    minor: Some(
+                                        5,
+                                    ),
+                                    patch: Some(
+                                        11087,
+                                    ),
+                                    suffix: None,
+                                },
+                            },
+                        ),
+                    },
+                    GemRange {
+                        name: "spoom",
+                        semver: Some(
+                            GemRangeSemver {
+                                semver_constraint: GreaterThanOrEqual,
+                                version: PartialVersion {
+                                    major: 1,
+                                    minor: Some(
+                                        2,
+                                    ),
+                                    patch: Some(
+                                        0,
+                                    ),
+                                    suffix: None,
+                                },
+                            },
+                        ),
+                    },
+                    GemRange {
+                        name: "thor",
+                        semver: Some(
+                            GemRangeSemver {
+                                semver_constraint: GreaterThanOrEqual,
+                                version: PartialVersion {
+                                    major: 1,
+                                    minor: Some(
+                                        2,
+                                    ),
+                                    patch: Some(
+                                        0,
+                                    ),
+                                    suffix: None,
+                                },
+                            },
+                        ),
+                    },
+                    GemRange {
+                        name: "yard-sorbet",
+                        semver: None,
+                    },
+                ],
+            },
+            Spec {
+                gem_version: GemVersion {
+                    name: "thor",
+                    version: Version {
+                        major: 1,
+                        minor: 4,
+                        patch: 0,
+                        suffix: None,
+                    },
+                },
+                deps: [],
+            },
+            Spec {
+                gem_version: GemVersion {
+                    name: "yard",
+                    version: Version {
+                        major: 0,
+                        minor: 9,
+                        patch: 37,
+                        suffix: None,
+                    },
+                },
+                deps: [],
+            },
+            Spec {
+                gem_version: GemVersion {
+                    name: "yard-sorbet",
+                    version: Version {
+                        major: 0,
+                        minor: 9,
+                        patch: 0,
+                        suffix: None,
+                    },
+                },
+                deps: [
+                    GemRange {
+                        name: "sorbet-runtime",
+                        semver: None,
+                    },
+                    GemRange {
+                        name: "yard",
+                        semver: None,
+                    },
+                ],
+            },
+        ],
+    },
+    platforms: [
+        "aarch64-linux",
+        "universal-darwin",
+        "x86_64-linux",
+    ],
+    dependencies: [
+        "tapioca",
+    ],
+    bundled_with: "4.0.0.dev",
+}

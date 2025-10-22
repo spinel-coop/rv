@@ -1,0 +1,27 @@
+[package]
+name = "rv-lockfile"
+version = "0.1.0"
+edition = "2024"
+description = "Parses Gemfile.lock files"
+
+[dependencies]
+thiserror = { workspace = true }
+rv-version = { workspace = true }
+miette = { workspace = true }
+winnow = { workspace = true }
+serde = { workspace = true, optional = true, features = ["derive"] }
+hex = "0.4.3"
+
+[dev-dependencies]
+insta = { workspace = true, features = ["yaml"] }
+criterion = { workspace = true }
+miette = { workspace = true, features = ["fancy"] }
+
+[features]
+# Derive Serde de/serialize traits on the various datatypes the parser outputs.
+serde = ["dep:serde"]
+default = ["serde"]
+
+[[bench]]
+name = "my_bench"
+harness = false

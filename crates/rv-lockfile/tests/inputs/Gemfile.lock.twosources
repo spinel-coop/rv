@@ -1,0 +1,20 @@
+GEM
+  remote: https://gem.coop/
+  specs:
+    rake (13.3.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    rack (3.2.3)
+
+PLATFORMS
+  arm64-darwin-20
+  ruby
+
+DEPENDENCIES
+  rack!
+  rake
+
+BUNDLED WITH
+   2.7.2

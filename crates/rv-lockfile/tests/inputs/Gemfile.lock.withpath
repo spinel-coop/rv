@@ -1,0 +1,28 @@
+PATH
+  remote: pathgem
+  specs:
+    pathgem (0.1.0)
+
+GEM
+  remote: https://example.com
+  specs:
+    actioncable (7.2.2.1)
+
+PLATFORMS
+  aarch64-linux-gnu
+  aarch64-linux-musl
+  arm-linux-gnu
+  arm-linux-musl
+  arm64-darwin
+  x86_64-darwin
+  x86_64-linux-gnu
+  x86_64-linux-musl
+
+DEPENDENCIES
+  pathgem!
+
+CHECKSUMS
+  nokogiri (1.18.10-aarch64-linux-musl) sha256=7e74e58314297cc8a8f1b533f7212d1999dbe2639a9ee6d97b483ea2acc18944
+
+BUNDLED WITH
+   2.7.2

@@ -3,6 +3,7 @@ members = [
   "crates/rv",
   "crates/rv-cache",
   "crates/rv-dirs",
+  "crates/rv-lockfile",
   "crates/rv-gem-package",
   "crates/rv-gem-specification-yaml",
   "crates/rv-gem-types",
