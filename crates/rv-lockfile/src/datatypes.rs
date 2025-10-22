@@ -116,7 +116,17 @@ pub struct Spec<'i> {
 pub struct Checksum<'i> {
     #[serde(borrow)]
     pub gem_version: GemVersion<'i>,
-    pub sha256: Vec<u8>,
+    pub algorithm: ChecksumAlgorithm<'i>,
+    pub value: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum ChecksumAlgorithm<'i> {
+    #[serde(borrow)]
+    Unknown(&'i str),
+    #[default]
+    SHA256,
 }
 
 /// Constrains the range of possible versions of a gem which could be selected.

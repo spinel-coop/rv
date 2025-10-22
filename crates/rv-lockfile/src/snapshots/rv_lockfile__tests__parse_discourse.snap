@@ -3788,7 +3788,8 @@ checksums:
   - gem_version:
       name: Ascii85
       version: 2.0.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 21
       - 203
       - 93
@@ -3824,7 +3825,8 @@ checksums:
   - gem_version:
       name: actionmailer
       version: 8.0.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 109
       - 192
       - 195
@@ -3860,7 +3862,8 @@ checksums:
   - gem_version:
       name: actionpack
       version: 8.0.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 214
       - 60
       - 33
@@ -3896,7 +3899,8 @@ checksums:
   - gem_version:
       name: actionview
       version: 8.0.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 81
       - 113
       - 148
@@ -3932,7 +3936,8 @@ checksums:
   - gem_version:
       name: actionview_precompiler
       version: 0.4.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 51
       - 182
       - 189
@@ -3968,7 +3973,8 @@ checksums:
   - gem_version:
       name: active_model_serializers
       version: 0.8.4
-    sha256:
+    algorithm: SHA256
+    value:
       - 115
       - 80
       - 227
@@ -4004,7 +4010,8 @@ checksums:
   - gem_version:
       name: activejob
       version: 8.0.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 70
       - 158
       - 221
@@ -4040,7 +4047,8 @@ checksums:
   - gem_version:
       name: activemodel
       version: 8.0.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 64
       - 105
       - 7
@@ -4076,7 +4084,8 @@ checksums:
   - gem_version:
       name: activerecord
       version: 8.0.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 155
       - 149
       - 198
@@ -4112,7 +4121,8 @@ checksums:
   - gem_version:
       name: activesupport
       version: 8.0.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 167
       - 17
       - 206
@@ -4148,7 +4158,8 @@ checksums:
   - gem_version:
       name: addressable
       version: 2.8.7
-    sha256:
+    algorithm: SHA256
+    value:
       - 70
       - 41
       - 134
@@ -4184,7 +4195,8 @@ checksums:
   - gem_version:
       name: afm
       version: 1.0.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 91
       - 212
       - 214
@@ -4220,7 +4232,8 @@ checksums:
   - gem_version:
       name: annotaterb
       version: 4.20.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 135
       - 27
       - 46
@@ -4256,7 +4269,8 @@ checksums:
   - gem_version:
       name: ast
       version: 2.4.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 149
       - 70
       - 21
@@ -4292,7 +4306,8 @@ checksums:
   - gem_version:
       name: aws-eventstream
       version: 1.4.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 17
       - 107
       - 248
@@ -4328,7 +4343,8 @@ checksums:
   - gem_version:
       name: aws-partitions
       version: 1.1134.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 40
       - 245
       - 246
@@ -4364,7 +4380,8 @@ checksums:
   - gem_version:
       name: aws-sdk-core
       version: 3.227.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 153
       - 7
       - 31
@@ -4400,7 +4417,8 @@ checksums:
   - gem_version:
       name: aws-sdk-kms
       version: 1.99.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 186
       - 41
       - 47
@@ -4436,7 +4454,8 @@ checksums:
   - gem_version:
       name: aws-sdk-mediaconvert
       version: 1.165.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 217
       - 85
       - 165
@@ -4472,7 +4491,8 @@ checksums:
   - gem_version:
       name: aws-sdk-s3
       version: 1.182.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 208
       - 252
       - 53
@@ -4508,7 +4528,8 @@ checksums:
   - gem_version:
       name: aws-sdk-sns
       version: 1.96.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 249
       - 43
       - 60
@@ -4544,7 +4565,8 @@ checksums:
   - gem_version:
       name: aws-sigv4
       version: 1.12.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 105
       - 115
       - 255
@@ -4580,7 +4602,8 @@ checksums:
   - gem_version:
       name: base64
       version: 0.3.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 39
       - 51
       - 122
@@ -4616,7 +4639,8 @@ checksums:
   - gem_version:
       name: benchmark
       version: 0.4.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 212
       - 239
       - 64
@@ -4652,7 +4676,8 @@ checksums:
   - gem_version:
       name: better_errors
       version: 2.10.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 247
       - 152
       - 241
@@ -4688,7 +4713,8 @@ checksums:
   - gem_version:
       name: bigdecimal
       version: 3.3.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 234
       - 160
       - 30
@@ -4724,7 +4750,8 @@ checksums:
   - gem_version:
       name: binding_of_caller
       version: 1.0.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 43
       - 41
       - 2
@@ -4760,7 +4787,8 @@ checksums:
   - gem_version:
       name: bootsnap
       version: 1.18.6
-    sha256:
+    algorithm: SHA256
+    value:
       - 10
       - 226
       - 57
@@ -4796,7 +4824,8 @@ checksums:
   - gem_version:
       name: builder
       version: 3.3.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 73
       - 121
       - 24
@@ -4832,7 +4861,8 @@ checksums:
   - gem_version:
       name: bullet
       version: 8.0.8
-    sha256:
+    algorithm: SHA256
+    value:
       - 180
       - 185
       - 144
@@ -4868,7 +4898,8 @@ checksums:
   - gem_version:
       name: capybara
       version: 3.40.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 66
       - 219
       - 167
@@ -4904,7 +4935,8 @@ checksums:
   - gem_version:
       name: capybara-playwright-driver
       version: 0.5.7
-    sha256:
+    algorithm: SHA256
+    value:
       - 135
       - 90
       - 25
@@ -4940,7 +4972,8 @@ checksums:
   - gem_version:
       name: cbor
       version: 0.5.10.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 121
       - 205
       - 247
@@ -4976,7 +5009,8 @@ checksums:
   - gem_version:
       name: certified
       version: 1.0.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 170
       - 76
       - 223
@@ -5012,7 +5046,8 @@ checksums:
   - gem_version:
       name: cgi
       version: 0.5.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 254
       - 153
       - 246
@@ -5048,7 +5083,8 @@ checksums:
   - gem_version:
       name: chunky_png
       version: 1.4.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 137
       - 213
       - 179
@@ -5084,7 +5120,8 @@ checksums:
   - gem_version:
       name: coderay
       version: 1.1.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 220
       - 83
       - 0
@@ -5120,7 +5157,8 @@ checksums:
   - gem_version:
       name: colored2
       version: 4.0.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 99
       - 225
       - 3
@@ -5156,7 +5194,8 @@ checksums:
   - gem_version:
       name: concurrent-ruby
       version: 1.3.5
-    sha256:
+    algorithm: SHA256
+    value:
       - 129
       - 59
       - 62
@@ -5192,7 +5231,8 @@ checksums:
   - gem_version:
       name: connection_pool
       version: 2.5.4
-    sha256:
+    algorithm: SHA256
+    value:
       - 233
       - 225
       - 146
@@ -5228,7 +5268,8 @@ checksums:
   - gem_version:
       name: cose
       version: 1.3.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 213
       - 212
       - 219
@@ -5264,7 +5305,8 @@ checksums:
   - gem_version:
       name: cppjieba_rb
       version: 0.4.4
-    sha256:
+    algorithm: SHA256
+    value:
       - 49
       - 154
       - 122
@@ -5300,7 +5342,8 @@ checksums:
   - gem_version:
       name: crack
       version: 1.0.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 200
       - 58
       - 239
@@ -5336,7 +5379,8 @@ checksums:
   - gem_version:
       name: crass
       version: 1.0.6
-    sha256:
+    algorithm: SHA256
+    value:
       - 220
       - 81
       - 96
@@ -5372,7 +5416,8 @@ checksums:
   - gem_version:
       name: css_parser
       version: 1.21.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 108
       - 253
       - 63
@@ -5408,7 +5453,8 @@ checksums:
   - gem_version:
       name: csv
       version: 3.3.5
-    sha256:
+    algorithm: SHA256
+    value:
       - 110
       - 81
       - 52
@@ -5444,7 +5490,8 @@ checksums:
   - gem_version:
       name: date
       version: 3.4.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 191
       - 38
       - 142
@@ -5480,7 +5527,8 @@ checksums:
   - gem_version:
       name: debug
       version: 1.11.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 20
       - 37
       - 219
@@ -5516,7 +5564,8 @@ checksums:
   - gem_version:
       name: debug_inspector
       version: 1.2.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 155
       - 223
       - 160
@@ -5552,7 +5601,8 @@ checksums:
   - gem_version:
       name: diff-lcs
       version: 1.6.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 154
       - 224
       - 210
@@ -5588,7 +5638,8 @@ checksums:
   - gem_version:
       name: diffy
       version: 3.4.4
-    sha256:
+    algorithm: SHA256
+    value:
       - 121
       - 56
       - 74
@@ -5624,7 +5675,8 @@ checksums:
   - gem_version:
       name: digest
       version: 3.2.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 250
       - 46
       - 112
@@ -5660,7 +5712,8 @@ checksums:
   - gem_version:
       name: digest-xxhash
       version: 0.2.9
-    sha256:
+    algorithm: SHA256
+    value:
       - 169
       - 137
       - 216
@@ -5696,7 +5749,8 @@ checksums:
   - gem_version:
       name: discourse-emojis
       version: 1.0.42
-    sha256:
+    algorithm: SHA256
+    value:
       - 73
       - 45
       - 109
@@ -5732,7 +5786,8 @@ checksums:
   - gem_version:
       name: discourse-fonts
       version: 0.0.19
-    sha256:
+    algorithm: SHA256
+    value:
       - 120
       - 212
       - 221
@@ -5768,7 +5823,8 @@ checksums:
   - gem_version:
       name: discourse-seed-fu
       version: 2.3.12
-    sha256:
+    algorithm: SHA256
+    value:
       - 79
       - 97
       - 217
@@ -5804,7 +5860,8 @@ checksums:
   - gem_version:
       name: discourse_ai-tokenizers
       version: 0.3.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 167
       - 117
       - 47
@@ -5840,7 +5897,8 @@ checksums:
   - gem_version:
       name: discourse_dev_assets
       version: 0.0.5
-    sha256:
+    algorithm: SHA256
+    value:
       - 160
       - 154
       - 128
@@ -5876,7 +5934,8 @@ checksums:
   - gem_version:
       name: docile
       version: 1.4.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 150
       - 21
       - 155
@@ -5912,7 +5971,8 @@ checksums:
   - gem_version:
       name: drb
       version: 2.2.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 11
       - 0
       - 214
@@ -5948,7 +6008,8 @@ checksums:
   - gem_version:
       name: dry-initializer
       version: 3.2.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 55
       - 213
       - 151
@@ -5984,7 +6045,8 @@ checksums:
   - gem_version:
       name: ed25519
       version: 1.4.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 22
       - 233
       - 127
@@ -6020,7 +6082,8 @@ checksums:
   - gem_version:
       name: email_reply_trimmer
       version: 0.2.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 5
       - 132
       - 63
@@ -6056,7 +6119,8 @@ checksums:
   - gem_version:
       name: erb
       version: 5.1.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 178
       - 194
       - 110
@@ -6092,7 +6156,8 @@ checksums:
   - gem_version:
       name: erubi
       version: 1.13.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 160
       - 130
       - 16
@@ -6128,7 +6193,8 @@ checksums:
   - gem_version:
       name: excon
       version: 1.2.5
-    sha256:
+    algorithm: SHA256
+    value:
       - 202
       - 4
       - 11
@@ -6164,7 +6230,8 @@ checksums:
   - gem_version:
       name: exifr
       version: 1.4.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 118
       - 131
       - 116
@@ -6200,7 +6267,8 @@ checksums:
   - gem_version:
       name: extralite-bundle
       version: "2.13"
-    sha256:
+    algorithm: SHA256
+    value:
       - 13
       - 0
       - 51
@@ -6236,7 +6304,8 @@ checksums:
   - gem_version:
       name: fabrication
       version: 3.0.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 166
       - 160
       - 191
@@ -6272,7 +6341,8 @@ checksums:
   - gem_version:
       name: faker
       version: 3.5.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 249
       - 168
       - 2
@@ -6308,7 +6378,8 @@ checksums:
   - gem_version:
       name: faraday
       version: 2.14.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 134
       - 153
       - 207
@@ -6344,7 +6415,8 @@ checksums:
   - gem_version:
       name: faraday-multipart
       version: 1.1.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 119
       - 161
       - 143
@@ -6380,7 +6452,8 @@ checksums:
   - gem_version:
       name: faraday-net_http
       version: 3.4.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 9
       - 87
       - 87
@@ -6416,7 +6489,8 @@ checksums:
   - gem_version:
       name: faraday-retry
       version: 2.3.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 36
       - 2
       - 210
@@ -6452,7 +6526,8 @@ checksums:
   - gem_version:
       name: fast_blank
       version: 1.0.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 38
       - 159
       - 195
@@ -6488,7 +6563,8 @@ checksums:
   - gem_version:
       name: fastimage
       version: 2.3.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 35
       - 198
       - 41
@@ -6524,7 +6600,8 @@ checksums:
   - gem_version:
       name: ffi
       version: 1.17.2-aarch64-linux-gnu
-    sha256:
+    algorithm: SHA256
+    value:
       - 201
       - 16
       - 189
@@ -6560,7 +6637,8 @@ checksums:
   - gem_version:
       name: ffi
       version: 1.17.2-aarch64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 105
       - 230
       - 85
@@ -6596,7 +6674,8 @@ checksums:
   - gem_version:
       name: ffi
       version: 1.17.2-arm-linux-gnu
-    sha256:
+    algorithm: SHA256
+    value:
       - 212
       - 164
       - 56
@@ -6632,7 +6711,8 @@ checksums:
   - gem_version:
       name: ffi
       version: 1.17.2-arm-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 151
       - 125
       - 251
@@ -6668,7 +6748,8 @@ checksums:
   - gem_version:
       name: ffi
       version: 1.17.2-arm64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 84
       - 221
       - 151
@@ -6704,7 +6785,8 @@ checksums:
   - gem_version:
       name: ffi
       version: 1.17.2-x86_64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 152
       - 31
       - 45
@@ -6740,7 +6822,8 @@ checksums:
   - gem_version:
       name: ffi
       version: 1.17.2-x86_64-linux-gnu
-    sha256:
+    algorithm: SHA256
+    value:
       - 5
       - 210
       - 2
@@ -6776,7 +6859,8 @@ checksums:
   - gem_version:
       name: ffi
       version: 1.17.2-x86_64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 151
       - 192
       - 235
@@ -6812,7 +6896,8 @@ checksums:
   - gem_version:
       name: fspath
       version: 3.1.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 181
       - 172
       - 155
@@ -6848,7 +6933,8 @@ checksums:
   - gem_version:
       name: globalid
       version: 1.3.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 5
       - 198
       - 57
@@ -6884,7 +6970,8 @@ checksums:
   - gem_version:
       name: goldiloader
       version: 5.4.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 39
       - 122
       - 134
@@ -6920,7 +7007,8 @@ checksums:
   - gem_version:
       name: google-protobuf
       version: 4.33.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 164
       - 145
       - 139
@@ -6956,7 +7044,8 @@ checksums:
   - gem_version:
       name: google-protobuf
       version: 4.33.0-aarch64-linux-gnu
-    sha256:
+    algorithm: SHA256
+    value:
       - 172
       - 28
       - 155
@@ -6992,7 +7081,8 @@ checksums:
   - gem_version:
       name: google-protobuf
       version: 4.33.0-aarch64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 169
       - 68
       - 1
@@ -7028,7 +7118,8 @@ checksums:
   - gem_version:
       name: google-protobuf
       version: 4.33.0-arm64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 222
       - 241
       - 188
@@ -7064,7 +7155,8 @@ checksums:
   - gem_version:
       name: google-protobuf
       version: 4.33.0-x86_64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 75
       - 72
       - 108
@@ -7100,7 +7192,8 @@ checksums:
   - gem_version:
       name: google-protobuf
       version: 4.33.0-x86_64-linux-gnu
-    sha256:
+    algorithm: SHA256
+    value:
       - 2
       - 120
       - 34
@@ -7136,7 +7229,8 @@ checksums:
   - gem_version:
       name: google-protobuf
       version: 4.33.0-x86_64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 22
       - 234
       - 54
@@ -7172,7 +7266,8 @@ checksums:
   - gem_version:
       name: guess_html_encoding
       version: 0.0.11
-    sha256:
+    algorithm: SHA256
+    value:
       - 202
       - 182
       - 70
@@ -7208,7 +7303,8 @@ checksums:
   - gem_version:
       name: hana
       version: 1.3.7
-    sha256:
+    algorithm: SHA256
+    value:
       - 84
       - 37
       - 219
@@ -7244,7 +7340,8 @@ checksums:
   - gem_version:
       name: hashdiff
       version: 1.2.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 156
       - 7
       - 157
@@ -7280,7 +7377,8 @@ checksums:
   - gem_version:
       name: hashery
       version: 2.1.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 210
       - 57
       - 204
@@ -7316,7 +7414,8 @@ checksums:
   - gem_version:
       name: hashie
       version: 5.0.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 157
       - 108
       - 78
@@ -7352,7 +7451,8 @@ checksums:
   - gem_version:
       name: highline
       version: 3.1.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 103
       - 203
       - 211
@@ -7388,7 +7488,8 @@ checksums:
   - gem_version:
       name: htmlentities
       version: 4.3.4
-    sha256:
+    algorithm: SHA256
+    value:
       - 18
       - 90
       - 115
@@ -7424,7 +7525,8 @@ checksums:
   - gem_version:
       name: http_accept_language
       version: 2.1.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 0
       - 67
       - 240
@@ -7460,7 +7562,8 @@ checksums:
   - gem_version:
       name: i18n
       version: 1.14.7
-    sha256:
+    algorithm: SHA256
+    value:
       - 206
       - 186
       - 87
@@ -7496,7 +7599,8 @@ checksums:
   - gem_version:
       name: image_optim
       version: 0.31.4
-    sha256:
+    algorithm: SHA256
+    value:
       - 91
       - 255
       - 208
@@ -7532,7 +7636,8 @@ checksums:
   - gem_version:
       name: image_size
       version: 3.4.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 198
       - 165
       - 128
@@ -7568,7 +7673,8 @@ checksums:
   - gem_version:
       name: in_threads
       version: 1.6.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 145
       - 167
       - 230
@@ -7604,7 +7710,8 @@ checksums:
   - gem_version:
       name: inflection
       version: 1.0.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 206
       - 186
       - 155
@@ -7640,7 +7747,8 @@ checksums:
   - gem_version:
       name: io-console
       version: 0.8.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 30
       - 21
       - 68
@@ -7676,7 +7784,8 @@ checksums:
   - gem_version:
       name: irb
       version: 1.15.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 34
       - 47
       - 50
@@ -7712,7 +7821,8 @@ checksums:
   - gem_version:
       name: iso8601
       version: 0.13.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 41
       - 140
       - 43
@@ -7748,7 +7858,8 @@ checksums:
   - gem_version:
       name: jmespath
       version: 1.6.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 35
       - 141
       - 119
@@ -7784,7 +7895,8 @@ checksums:
   - gem_version:
       name: json
       version: 2.15.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 177
       - 193
       - 178
@@ -7820,7 +7932,8 @@ checksums:
   - gem_version:
       name: json-schema
       version: 5.2.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 96
       - 190
       - 174
@@ -7856,7 +7969,8 @@ checksums:
   - gem_version:
       name: json_schemer
       version: 2.4.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 86
       - 203
       - 97
@@ -7892,7 +8006,8 @@ checksums:
   - gem_version:
       name: jwt
       version: 2.10.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 230
       - 66
       - 74
@@ -7928,7 +8043,8 @@ checksums:
   - gem_version:
       name: kgio
       version: 2.11.4
-    sha256:
+    algorithm: SHA256
+    value:
       - 189
       - 167
       - 162
@@ -7964,7 +8080,8 @@ checksums:
   - gem_version:
       name: language_server-protocol
       version: 3.17.0.5
-    sha256:
+    algorithm: SHA256
+    value:
       - 253
       - 30
       - 57
@@ -8000,7 +8117,8 @@ checksums:
   - gem_version:
       name: libv8-node
       version: 24.1.0.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 47
       - 14
       - 154
@@ -8036,7 +8154,8 @@ checksums:
   - gem_version:
       name: libv8-node
       version: 24.1.0.0-aarch64-linux
-    sha256:
+    algorithm: SHA256
+    value:
       - 254
       - 119
       - 135
@@ -8072,7 +8191,8 @@ checksums:
   - gem_version:
       name: libv8-node
       version: 24.1.0.0-arm64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 243
       - 75
       - 221
@@ -8108,7 +8228,8 @@ checksums:
   - gem_version:
       name: libv8-node
       version: 24.1.0.0-x86_64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 36
       - 60
       - 250
@@ -8144,7 +8265,8 @@ checksums:
   - gem_version:
       name: libv8-node
       version: 24.1.0.0-x86_64-linux
-    sha256:
+    algorithm: SHA256
+    value:
       - 8
       - 87
       - 72
@@ -8180,7 +8302,8 @@ checksums:
   - gem_version:
       name: libv8-node
       version: 24.1.0.0-x86_64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 8
       - 10
       - 36
@@ -8216,7 +8339,8 @@ checksums:
   - gem_version:
       name: lint_roller
       version: 1.1.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 44
       - 12
       - 132
@@ -8252,7 +8376,8 @@ checksums:
   - gem_version:
       name: listen
       version: 3.9.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 219
       - 158
       - 68
@@ -8288,7 +8413,8 @@ checksums:
   - gem_version:
       name: literate_randomizer
       version: 0.4.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 5
       - 7
       - 60
@@ -8324,7 +8450,8 @@ checksums:
   - gem_version:
       name: logger
       version: 1.7.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 25
       - 110
       - 222
@@ -8360,7 +8487,8 @@ checksums:
   - gem_version:
       name: lograge
       version: 0.14.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 66
       - 55
       - 26
@@ -8396,7 +8524,8 @@ checksums:
   - gem_version:
       name: logstash-event
       version: 1.2.02
-    sha256:
+    algorithm: SHA256
+    value:
       - 137
       - 167
       - 220
@@ -8432,7 +8561,8 @@ checksums:
   - gem_version:
       name: logster
       version: 2.20.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 168
       - 75
       - 190
@@ -8468,7 +8598,8 @@ checksums:
   - gem_version:
       name: loofah
       version: 2.24.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 101
       - 90
       - 48
@@ -8504,7 +8635,8 @@ checksums:
   - gem_version:
       name: lru_redux
       version: 1.1.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 238
       - 113
       - 208
@@ -8540,7 +8672,8 @@ checksums:
   - gem_version:
       name: lz4-ruby
       version: 0.3.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 1
       - 27
       - 229
@@ -8576,7 +8709,8 @@ checksums:
   - gem_version:
       name: mail
       version: 2.8.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 236
       - 59
       - 159
@@ -8612,7 +8746,8 @@ checksums:
   - gem_version:
       name: matrix
       version: 0.4.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 160
       - 213
       - 171
@@ -8648,7 +8783,8 @@ checksums:
   - gem_version:
       name: maxminddb
       version: 0.1.22
-    sha256:
+    algorithm: SHA256
+    value:
       - 80
       - 147
       - 59
@@ -8684,7 +8820,8 @@ checksums:
   - gem_version:
       name: memory_profiler
       version: 1.1.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 121
       - 161
       - 125
@@ -8720,7 +8857,8 @@ checksums:
   - gem_version:
       name: message_bus
       version: 4.4.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 113
       - 158
       - 197
@@ -8756,7 +8894,8 @@ checksums:
   - gem_version:
       name: messageformat-wrapper
       version: 1.1.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 236
       - 234
       - 135
@@ -8792,7 +8931,8 @@ checksums:
   - gem_version:
       name: method_source
       version: 1.1.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 24
       - 19
       - 1
@@ -8828,7 +8968,8 @@ checksums:
   - gem_version:
       name: mime-types
       version: 3.7.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 220
       - 235
       - 246
@@ -8864,7 +9005,8 @@ checksums:
   - gem_version:
       name: mime-types-data
       version: 3.2025.0924
-    sha256:
+    algorithm: SHA256
+    value:
       - 242
       - 118
       - 188
@@ -8900,7 +9042,8 @@ checksums:
   - gem_version:
       name: mini_mime
       version: 1.1.5
-    sha256:
+    algorithm: SHA256
+    value:
       - 134
       - 129
       - 183
@@ -8936,7 +9079,8 @@ checksums:
   - gem_version:
       name: mini_racer
       version: 0.19.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 62
       - 78
       - 193
@@ -8972,7 +9116,8 @@ checksums:
   - gem_version:
       name: mini_scheduler
       version: 0.18.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 210
       - 240
       - 132
@@ -9008,7 +9153,8 @@ checksums:
   - gem_version:
       name: mini_sql
       version: 1.6.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 82
       - 150
       - 99
@@ -9044,7 +9190,8 @@ checksums:
   - gem_version:
       name: mini_suffix
       version: 0.3.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 141
       - 29
       - 51
@@ -9080,7 +9227,8 @@ checksums:
   - gem_version:
       name: minio_runner
       version: 1.0.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 202
       - 15
       - 197
@@ -9116,7 +9264,8 @@ checksums:
   - gem_version:
       name: minitest
       version: 5.26.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 245
       - 129
       - 122
@@ -9152,7 +9301,8 @@ checksums:
   - gem_version:
       name: mocha
       version: 2.7.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 143
       - 125
       - 83
@@ -9188,7 +9338,8 @@ checksums:
   - gem_version:
       name: msgpack
       version: 1.8.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 230
       - 76
       - 224
@@ -9224,7 +9375,8 @@ checksums:
   - gem_version:
       name: multi_json
       version: 1.17.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 118
       - 88
       - 31
@@ -9260,7 +9412,8 @@ checksums:
   - gem_version:
       name: multi_xml
       version: 0.7.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 48
       - 122
       - 150
@@ -9296,7 +9449,8 @@ checksums:
   - gem_version:
       name: multipart-post
       version: 2.4.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 152
       - 114
       - 208
@@ -9332,7 +9486,8 @@ checksums:
   - gem_version:
       name: mustache
       version: 1.1.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 144
       - 137
       - 31
@@ -9368,7 +9523,8 @@ checksums:
   - gem_version:
       name: net-http
       version: 0.6.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 150
       - 33
       - 178
@@ -9404,7 +9560,8 @@ checksums:
   - gem_version:
       name: net-imap
       version: 0.5.12
-    sha256:
+    algorithm: SHA256
+    value:
       - 203
       - 140
       - 208
@@ -9440,7 +9597,8 @@ checksums:
   - gem_version:
       name: net-pop
       version: 0.1.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 132
       - 139
       - 78
@@ -9476,7 +9634,8 @@ checksums:
   - gem_version:
       name: net-protocol
       version: 0.2.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 170
       - 115
       - 224
@@ -9512,7 +9671,8 @@ checksums:
   - gem_version:
       name: net-smtp
       version: 0.5.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 237
       - 150
       - 160
@@ -9548,7 +9708,8 @@ checksums:
   - gem_version:
       name: nio4r
       version: 2.7.4
-    sha256:
+    algorithm: SHA256
+    value:
       - 217
       - 93
       - 238
@@ -9584,7 +9745,8 @@ checksums:
   - gem_version:
       name: nokogiri
       version: 1.18.10-aarch64-linux-gnu
-    sha256:
+    algorithm: SHA256
+    value:
       - 127
       - 184
       - 114
@@ -9620,7 +9782,8 @@ checksums:
   - gem_version:
       name: nokogiri
       version: 1.18.10-aarch64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 126
       - 116
       - 229
@@ -9656,7 +9819,8 @@ checksums:
   - gem_version:
       name: nokogiri
       version: 1.18.10-arm-linux-gnu
-    sha256:
+    algorithm: SHA256
+    value:
       - 81
       - 244
       - 242
@@ -9692,7 +9856,8 @@ checksums:
   - gem_version:
       name: nokogiri
       version: 1.18.10-arm-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 28
       - 110
       - 167
@@ -9728,7 +9893,8 @@ checksums:
   - gem_version:
       name: nokogiri
       version: 1.18.10-arm64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 194
       - 176
       - 222
@@ -9764,7 +9930,8 @@ checksums:
   - gem_version:
       name: nokogiri
       version: 1.18.10-x86_64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 83
       - 110
       - 116
@@ -9800,7 +9967,8 @@ checksums:
   - gem_version:
       name: nokogiri
       version: 1.18.10-x86_64-linux-gnu
-    sha256:
+    algorithm: SHA256
+    value:
       - 255
       - 91
       - 162
@@ -9836,7 +10004,8 @@ checksums:
   - gem_version:
       name: nokogiri
       version: 1.18.10-x86_64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 6
       - 81
       - 252
@@ -9872,7 +10041,8 @@ checksums:
   - gem_version:
       name: oauth
       version: 1.1.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 226
       - 154
       - 150
@@ -9908,7 +10078,8 @@ checksums:
   - gem_version:
       name: oauth-tty
       version: 1.0.6
-    sha256:
+    algorithm: SHA256
+    value:
       - 158
       - 139
       - 209
@@ -9944,7 +10115,8 @@ checksums:
   - gem_version:
       name: oauth2
       version: 1.4.11
-    sha256:
+    algorithm: SHA256
+    value:
       - 103
       - 57
       - 252
@@ -9980,7 +10152,8 @@ checksums:
   - gem_version:
       name: octokit
       version: 5.6.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 72
       - 239
       - 178
@@ -10016,7 +10189,8 @@ checksums:
   - gem_version:
       name: oj
       version: 3.16.11
-    sha256:
+    algorithm: SHA256
+    value:
       - 42
       - 171
       - 96
@@ -10052,7 +10226,8 @@ checksums:
   - gem_version:
       name: omniauth
       version: 2.1.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 222
       - 240
       - 50
@@ -10088,7 +10263,8 @@ checksums:
   - gem_version:
       name: omniauth-facebook
       version: 9.0.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 68
       - 10
       - 216
@@ -10124,7 +10300,8 @@ checksums:
   - gem_version:
       name: omniauth-github
       version: 2.0.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 28
       - 162
       - 101
@@ -10160,7 +10337,8 @@ checksums:
   - gem_version:
       name: omniauth-google-oauth2
       version: 1.0.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 46
       - 215
       - 164
@@ -10196,7 +10374,8 @@ checksums:
   - gem_version:
       name: omniauth-oauth
       version: 1.2.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 37
       - 191
       - 34
@@ -10232,7 +10411,8 @@ checksums:
   - gem_version:
       name: omniauth-oauth2
       version: 1.7.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 63
       - 90
       - 143
@@ -10268,7 +10448,8 @@ checksums:
   - gem_version:
       name: omniauth-twitter
       version: 1.4.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 197
       - 204
       - 108
@@ -10304,7 +10485,8 @@ checksums:
   - gem_version:
       name: openssl
       version: 3.3.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 214
       - 104
       - 34
@@ -10340,7 +10522,8 @@ checksums:
   - gem_version:
       name: openssl-signature_algorithm
       version: 1.3.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 163
       - 180
       - 11
@@ -10376,7 +10559,8 @@ checksums:
   - gem_version:
       name: optimist
       version: 3.2.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 140
       - 248
       - 160
@@ -10412,7 +10596,8 @@ checksums:
   - gem_version:
       name: ostruct
       version: 0.6.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 149
       - 162
       - 237
@@ -10448,7 +10633,8 @@ checksums:
   - gem_version:
       name: parallel
       version: 1.27.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 74
       - 193
       - 81
@@ -10484,7 +10670,8 @@ checksums:
   - gem_version:
       name: parallel_tests
       version: 5.4.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 137
       - 65
       - 63
@@ -10520,7 +10707,8 @@ checksums:
   - gem_version:
       name: parser
       version: 3.3.9.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 148
       - 214
       - 146
@@ -10556,7 +10744,8 @@ checksums:
   - gem_version:
       name: pdf-reader
       version: 2.15.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 197
       - 2
       - 87
@@ -10592,7 +10781,8 @@ checksums:
   - gem_version:
       name: pg
       version: 1.6.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 88
       - 97
       - 74
@@ -10628,7 +10818,8 @@ checksums:
   - gem_version:
       name: pg
       version: 1.6.2-aarch64-linux
-    sha256:
+    algorithm: SHA256
+    value:
       - 5
       - 3
       - 198
@@ -10664,7 +10855,8 @@ checksums:
   - gem_version:
       name: pg
       version: 1.6.2-aarch64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 196
       - 64
       - 36
@@ -10700,7 +10892,8 @@ checksums:
   - gem_version:
       name: pg
       version: 1.6.2-arm64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 77
       - 68
       - 80
@@ -10736,7 +10929,8 @@ checksums:
   - gem_version:
       name: pg
       version: 1.6.2-x86_64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 196
       - 65
       - 165
@@ -10772,7 +10966,8 @@ checksums:
   - gem_version:
       name: pg
       version: 1.6.2-x86_64-linux
-    sha256:
+    algorithm: SHA256
+    value:
       - 82
       - 95
       - 67
@@ -10808,7 +11003,8 @@ checksums:
   - gem_version:
       name: pg
       version: 1.6.2-x86_64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 229
       - 200
       - 102
@@ -10844,7 +11040,8 @@ checksums:
   - gem_version:
       name: playwright-ruby-client
       version: 1.55.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 96
       - 81
       - 7
@@ -10880,7 +11077,8 @@ checksums:
   - gem_version:
       name: pp
       version: 0.6.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 41
       - 81
       - 213
@@ -10916,7 +11114,8 @@ checksums:
   - gem_version:
       name: prettier_print
       version: 1.2.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 167
       - 40
       - 56
@@ -10952,7 +11151,8 @@ checksums:
   - gem_version:
       name: prettyprint
       version: 0.2.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 43
       - 201
       - 225
@@ -10988,7 +11188,8 @@ checksums:
   - gem_version:
       name: prism
       version: 1.6.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 191
       - 192
       - 40
@@ -11024,7 +11225,8 @@ checksums:
   - gem_version:
       name: progress
       version: 3.6.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 54
       - 14
       - 211
@@ -11060,7 +11262,8 @@ checksums:
   - gem_version:
       name: propshaft
       version: 1.3.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 154
       - 204
       - 102
@@ -11096,7 +11299,8 @@ checksums:
   - gem_version:
       name: pry
       version: 0.15.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 18
       - 213
       - 75
@@ -11132,7 +11336,8 @@ checksums:
   - gem_version:
       name: pry-rails
       version: 0.3.11
-    sha256:
+    algorithm: SHA256
+    value:
       - 166
       - 158
       - 40
@@ -11168,7 +11373,8 @@ checksums:
   - gem_version:
       name: pry-stack_explorer
       version: 0.6.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 162
       - 219
       - 234
@@ -11204,7 +11410,8 @@ checksums:
   - gem_version:
       name: psych
       version: 5.2.6
-    sha256:
+    algorithm: SHA256
+    value:
       - 129
       - 67
       - 40
@@ -11240,7 +11447,8 @@ checksums:
   - gem_version:
       name: public_suffix
       version: 6.0.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 191
       - 167
       - 205
@@ -11276,7 +11484,8 @@ checksums:
   - gem_version:
       name: puma
       version: 7.1.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 228
       - 92
       - 16
@@ -11312,7 +11521,8 @@ checksums:
   - gem_version:
       name: racc
       version: 1.8.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 74
       - 127
       - 105
@@ -11348,7 +11558,8 @@ checksums:
   - gem_version:
       name: rack
       version: 2.2.20
-    sha256:
+    algorithm: SHA256
+    value:
       - 133
       - 218
       - 52
@@ -11384,7 +11595,8 @@ checksums:
   - gem_version:
       name: rack-mini-profiler
       version: 4.0.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 72
       - 88
       - 16
@@ -11420,7 +11632,8 @@ checksums:
   - gem_version:
       name: rack-protection
       version: 3.2.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 60
       - 116
       - 186
@@ -11456,7 +11669,8 @@ checksums:
   - gem_version:
       name: rack-session
       version: 1.0.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 160
       - 33
       - 21
@@ -11492,7 +11706,8 @@ checksums:
   - gem_version:
       name: rack-test
       version: 2.2.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 0
       - 90
       - 54
@@ -11528,7 +11743,8 @@ checksums:
   - gem_version:
       name: rackup
       version: 1.0.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 186
       - 134
       - 96
@@ -11564,7 +11780,8 @@ checksums:
   - gem_version:
       name: rails-dom-testing
       version: 2.3.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 138
       - 204
       - 121
@@ -11600,7 +11817,8 @@ checksums:
   - gem_version:
       name: rails-html-sanitizer
       version: 1.6.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 53
       - 252
       - 226
@@ -11636,7 +11854,8 @@ checksums:
   - gem_version:
       name: rails_failover
       version: 2.3.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 238
       - 214
       - 234
@@ -11672,7 +11891,8 @@ checksums:
   - gem_version:
       name: rails_multisite
       version: 7.0.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 122
       - 172
       - 243
@@ -11708,7 +11928,8 @@ checksums:
   - gem_version:
       name: railties
       version: 8.0.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 172
       - 227
       - 29
@@ -11744,7 +11965,8 @@ checksums:
   - gem_version:
       name: rainbow
       version: 3.1.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 3
       - 148
       - 145
@@ -11780,7 +12002,8 @@ checksums:
   - gem_version:
       name: raindrops
       version: 0.20.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 170
       - 14
       - 185
@@ -11816,7 +12039,8 @@ checksums:
   - gem_version:
       name: rake
       version: 13.3.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 150
       - 245
       - 9
@@ -11852,7 +12076,8 @@ checksums:
   - gem_version:
       name: rake-compiler-dock
       version: 1.9.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 231
       - 55
       - 32
@@ -11888,7 +12113,8 @@ checksums:
   - gem_version:
       name: rb-fsevent
       version: 0.11.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 67
       - 144
       - 11
@@ -11924,7 +12150,8 @@ checksums:
   - gem_version:
       name: rb-inotify
       version: 0.11.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 160
       - 167
       - 0
@@ -11960,7 +12187,8 @@ checksums:
   - gem_version:
       name: rb_sys
       version: 0.9.117
-    sha256:
+    algorithm: SHA256
+    value:
       - 117
       - 95
       - 234
@@ -11996,7 +12224,8 @@ checksums:
   - gem_version:
       name: rbs
       version: 3.9.5
-    sha256:
+    algorithm: SHA256
+    value:
       - 234
       - 186
       - 175
@@ -12032,7 +12261,8 @@ checksums:
   - gem_version:
       name: rbtrace
       version: 0.5.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 162
       - 215
       - 210
@@ -12068,7 +12298,8 @@ checksums:
   - gem_version:
       name: rchardet
       version: 1.10.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 213
       - 234
       - 46
@@ -12104,7 +12335,8 @@ checksums:
   - gem_version:
       name: rdoc
       version: 6.15.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 15
       - 14
       - 104
@@ -12140,7 +12372,8 @@ checksums:
   - gem_version:
       name: redcarpet
       version: 3.6.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 212
       - 68
       - 145
@@ -12176,7 +12409,8 @@ checksums:
   - gem_version:
       name: redis
       version: 5.4.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 121
       - 137
       - 0
@@ -12212,7 +12446,8 @@ checksums:
   - gem_version:
       name: redis-client
       version: 0.26.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 30
       - 57
       - 210
@@ -12248,7 +12483,8 @@ checksums:
   - gem_version:
       name: redis-namespace
       version: 1.11.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 233
       - 26
       - 26
@@ -12284,7 +12520,8 @@ checksums:
   - gem_version:
       name: regexp_parser
       version: 2.11.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 202
       - 19
       - 243
@@ -12320,7 +12557,8 @@ checksums:
   - gem_version:
       name: reline
       version: 0.6.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 29
       - 173
       - 38
@@ -12356,7 +12594,8 @@ checksums:
   - gem_version:
       name: request_store
       version: 1.7.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 225
       - 183
       - 93
@@ -12392,7 +12631,8 @@ checksums:
   - gem_version:
       name: rexml
       version: 3.4.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 19
       - 132
       - 38
@@ -12428,7 +12668,8 @@ checksums:
   - gem_version:
       name: rinku
       version: 2.0.6
-    sha256:
+    algorithm: SHA256
+    value:
       - 139
       - 96
       - 103
@@ -12464,7 +12705,8 @@ checksums:
   - gem_version:
       name: rotp
       version: 6.3.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 117
       - 212
       - 0
@@ -12500,7 +12742,8 @@ checksums:
   - gem_version:
       name: rouge
       version: 4.6.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 80
       - 117
       - 52
@@ -12536,7 +12779,8 @@ checksums:
   - gem_version:
       name: rqrcode
       version: 3.1.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 226
       - 213
       - 153
@@ -12572,7 +12816,8 @@ checksums:
   - gem_version:
       name: rqrcode_core
       version: 2.0.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 30
       - 64
       - 184
@@ -12608,7 +12853,8 @@ checksums:
   - gem_version:
       name: rrule
       version: 0.7.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 129
       - 107
       - 106
@@ -12644,7 +12890,8 @@ checksums:
   - gem_version:
       name: rspec
       version: 3.13.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 185
       - 249
       - 165
@@ -12680,7 +12927,8 @@ checksums:
   - gem_version:
       name: rspec-core
       version: 3.13.6
-    sha256:
+    algorithm: SHA256
+    value:
       - 168
       - 130
       - 60
@@ -12716,7 +12964,8 @@ checksums:
   - gem_version:
       name: rspec-expectations
       version: 3.13.5
-    sha256:
+    algorithm: SHA256
+    value:
       - 51
       - 164
       - 211
@@ -12752,7 +13001,8 @@ checksums:
   - gem_version:
       name: rspec-html-matchers
       version: 0.10.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 212
       - 36
       - 191
@@ -12788,7 +13038,8 @@ checksums:
   - gem_version:
       name: rspec-mocks
       version: 3.13.6
-    sha256:
+    algorithm: SHA256
+    value:
       - 120
       - 177
       - 55
@@ -12824,7 +13075,8 @@ checksums:
   - gem_version:
       name: rspec-multi-mock
       version: 0.3.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 40
       - 148
       - 112
@@ -12860,7 +13112,8 @@ checksums:
   - gem_version:
       name: rspec-rails
       version: 8.0.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 17
       - 49
       - 57
@@ -12896,7 +13149,8 @@ checksums:
   - gem_version:
       name: rspec-support
       version: 3.13.6
-    sha256:
+    algorithm: SHA256
+    value:
       - 46
       - 141
       - 227
@@ -12932,7 +13186,8 @@ checksums:
   - gem_version:
       name: rss
       version: 0.3.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 180
       - 98
       - 52
@@ -12968,7 +13223,8 @@ checksums:
   - gem_version:
       name: rswag-specs
       version: 2.16.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 139
       - 162
       - 96
@@ -13004,7 +13260,8 @@ checksums:
   - gem_version:
       name: rtlcss
       version: 0.2.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 33
       - 61
       - 90
@@ -13040,7 +13297,8 @@ checksums:
   - gem_version:
       name: rubocop
       version: 1.81.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 53
       - 42
       - 154
@@ -13076,7 +13334,8 @@ checksums:
   - gem_version:
       name: rubocop-ast
       version: 1.47.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 89
       - 38
       - 130
@@ -13112,7 +13371,8 @@ checksums:
   - gem_version:
       name: rubocop-capybara
       version: 2.22.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 206
       - 216
       - 140
@@ -13148,7 +13408,8 @@ checksums:
   - gem_version:
       name: rubocop-discourse
       version: 3.13.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 99
       - 115
       - 149
@@ -13184,7 +13445,8 @@ checksums:
   - gem_version:
       name: rubocop-factory_bot
       version: 2.27.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 157
       - 116
       - 75
@@ -13220,7 +13482,8 @@ checksums:
   - gem_version:
       name: rubocop-rails
       version: 2.33.4
-    sha256:
+    algorithm: SHA256
+    value:
       - 52
       - 236
       - 143
@@ -13256,7 +13519,8 @@ checksums:
   - gem_version:
       name: rubocop-rspec
       version: 3.7.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 183
       - 178
       - 20
@@ -13292,7 +13556,8 @@ checksums:
   - gem_version:
       name: rubocop-rspec_rails
       version: 2.31.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 119
       - 83
       - 117
@@ -13328,7 +13593,8 @@ checksums:
   - gem_version:
       name: ruby-lsp
       version: 0.26.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 209
       - 64
       - 199
@@ -13364,7 +13630,8 @@ checksums:
   - gem_version:
       name: ruby-lsp-rails
       version: 0.4.8
-    sha256:
+    algorithm: SHA256
+    value:
       - 240
       - 157
       - 31
@@ -13400,7 +13667,8 @@ checksums:
   - gem_version:
       name: ruby-prof
       version: 1.7.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 39
       - 4
       - 36
@@ -13436,7 +13704,8 @@ checksums:
   - gem_version:
       name: ruby-progressbar
       version: 1.13.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 128
       - 252
       - 156
@@ -13472,7 +13741,8 @@ checksums:
   - gem_version:
       name: ruby-rc4
       version: 0.1.5
-    sha256:
+    algorithm: SHA256
+    value:
       - 0
       - 204
       - 64
@@ -13508,7 +13778,8 @@ checksums:
   - gem_version:
       name: ruby-readability
       version: 0.7.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 115
       - 81
       - 221
@@ -13544,7 +13815,8 @@ checksums:
   - gem_version:
       name: ruby2_keywords
       version: 0.0.5
-    sha256:
+    algorithm: SHA256
+    value:
       - 255
       - 209
       - 55
@@ -13580,7 +13852,8 @@ checksums:
   - gem_version:
       name: rubyzip
       version: 2.4.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 133
       - 119
       - 200
@@ -13616,7 +13889,8 @@ checksums:
   - gem_version:
       name: sanitize
       version: 7.0.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 38
       - 157
       - 27
@@ -13652,7 +13926,8 @@ checksums:
   - gem_version:
       name: sass-embedded
       version: 1.91.0-aarch64-linux-gnu
-    sha256:
+    algorithm: SHA256
+    value:
       - 147
       - 43
       - 247
@@ -13688,7 +13963,8 @@ checksums:
   - gem_version:
       name: sass-embedded
       version: 1.91.0-aarch64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 8
       - 68
       - 159
@@ -13724,7 +14000,8 @@ checksums:
   - gem_version:
       name: sass-embedded
       version: 1.91.0-arm-linux-gnueabihf
-    sha256:
+    algorithm: SHA256
+    value:
       - 142
       - 151
       - 20
@@ -13760,7 +14037,8 @@ checksums:
   - gem_version:
       name: sass-embedded
       version: 1.91.0-arm-linux-musleabihf
-    sha256:
+    algorithm: SHA256
+    value:
       - 97
       - 52
       - 146
@@ -13796,7 +14074,8 @@ checksums:
   - gem_version:
       name: sass-embedded
       version: 1.91.0-arm64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 4
       - 223
       - 76
@@ -13832,7 +14111,8 @@ checksums:
   - gem_version:
       name: sass-embedded
       version: 1.91.0-x86_64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 141
       - 234
       - 180
@@ -13868,7 +14148,8 @@ checksums:
   - gem_version:
       name: sass-embedded
       version: 1.91.0-x86_64-linux-gnu
-    sha256:
+    algorithm: SHA256
+    value:
       - 249
       - 72
       - 82
@@ -13904,7 +14185,8 @@ checksums:
   - gem_version:
       name: sass-embedded
       version: 1.91.0-x86_64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 216
       - 205
       - 6
@@ -13940,7 +14222,8 @@ checksums:
   - gem_version:
       name: sassc-embedded
       version: 1.80.5
-    sha256:
+    algorithm: SHA256
+    value:
       - 178
       - 114
       - 12
@@ -13976,7 +14259,8 @@ checksums:
   - gem_version:
       name: sawyer
       version: 0.9.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 250
       - 58
       - 114
@@ -14012,7 +14296,8 @@ checksums:
   - gem_version:
       name: securerandom
       version: 0.4.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 204
       - 81
       - 147
@@ -14048,7 +14333,8 @@ checksums:
   - gem_version:
       name: shoulda-matchers
       version: 6.5.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 239
       - 107
       - 87
@@ -14084,7 +14370,8 @@ checksums:
   - gem_version:
       name: sidekiq
       version: 7.3.9
-    sha256:
+    algorithm: SHA256
+    value:
       - 17
       - 8
       - 113
@@ -14120,7 +14407,8 @@ checksums:
   - gem_version:
       name: simplecov
       version: 0.22.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 254
       - 38
       - 34
@@ -14156,7 +14444,8 @@ checksums:
   - gem_version:
       name: simplecov-html
       version: 0.13.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 189
       - 11
       - 142
@@ -14192,7 +14481,8 @@ checksums:
   - gem_version:
       name: simplecov_json_formatter
       version: 0.1.4
-    sha256:
+    algorithm: SHA256
+    value:
       - 82
       - 148
       - 24
@@ -14228,7 +14518,8 @@ checksums:
   - gem_version:
       name: simpleidn
       version: 0.2.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 8
       - 206
       - 150
@@ -14264,7 +14555,8 @@ checksums:
   - gem_version:
       name: snaky_hash
       version: 2.0.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 37
       - 163
       - 210
@@ -14300,7 +14592,8 @@ checksums:
   - gem_version:
       name: sqlite3
       version: 2.7.4-aarch64-linux-gnu
-    sha256:
+    algorithm: SHA256
+    value:
       - 7
       - 29
       - 168
@@ -14336,7 +14629,8 @@ checksums:
   - gem_version:
       name: sqlite3
       version: 2.7.4-aarch64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 169
       - 72
       - 75
@@ -14372,7 +14666,8 @@ checksums:
   - gem_version:
       name: sqlite3
       version: 2.7.4-arm-linux-gnu
-    sha256:
+    algorithm: SHA256
+    value:
       - 183
       - 179
       - 92
@@ -14408,7 +14703,8 @@ checksums:
   - gem_version:
       name: sqlite3
       version: 2.7.4-arm-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 72
       - 9
       - 134
@@ -14444,7 +14740,8 @@ checksums:
   - gem_version:
       name: sqlite3
       version: 2.7.4-arm64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 213
       - 176
       - 156
@@ -14480,7 +14777,8 @@ checksums:
   - gem_version:
       name: sqlite3
       version: 2.7.4-x86_64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 165
       - 27
       - 202
@@ -14516,7 +14814,8 @@ checksums:
   - gem_version:
       name: sqlite3
       version: 2.7.4-x86_64-linux-gnu
-    sha256:
+    algorithm: SHA256
+    value:
       - 7
       - 85
       - 180
@@ -14552,7 +14851,8 @@ checksums:
   - gem_version:
       name: sqlite3
       version: 2.7.4-x86_64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 73
       - 75
       - 76
@@ -14588,7 +14888,8 @@ checksums:
   - gem_version:
       name: sshkey
       version: 3.0.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 101
       - 91
       - 163
@@ -14624,7 +14925,8 @@ checksums:
   - gem_version:
       name: stackprof
       version: 0.2.27
-    sha256:
+    algorithm: SHA256
+    value:
       - 175
       - 246
       - 210
@@ -14660,7 +14962,8 @@ checksums:
   - gem_version:
       name: stringio
       version: 3.1.7
-    sha256:
+    algorithm: SHA256
+    value:
       - 91
       - 120
       - 183
@@ -14696,7 +14999,8 @@ checksums:
   - gem_version:
       name: stripe
       version: 11.1.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 167
       - 110
       - 130
@@ -14732,7 +15036,8 @@ checksums:
   - gem_version:
       name: syntax_tree
       version: 6.3.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 86
       - 226
       - 90
@@ -14768,7 +15073,8 @@ checksums:
   - gem_version:
       name: test-prof
       version: 1.4.4
-    sha256:
+    algorithm: SHA256
+    value:
       - 26
       - 89
       - 81
@@ -14804,7 +15110,8 @@ checksums:
   - gem_version:
       name: thor
       version: 1.4.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 135
       - 99
       - 232
@@ -14840,7 +15147,8 @@ checksums:
   - gem_version:
       name: tiktoken_ruby
       version: 0.0.11.1-aarch64-linux
-    sha256:
+    algorithm: SHA256
+    value:
       - 31
       - 252
       - 252
@@ -14876,7 +15184,8 @@ checksums:
   - gem_version:
       name: tiktoken_ruby
       version: 0.0.11.1-arm-linux
-    sha256:
+    algorithm: SHA256
+    value:
       - 47
       - 27
       - 121
@@ -14912,7 +15221,8 @@ checksums:
   - gem_version:
       name: tiktoken_ruby
       version: 0.0.11.1-arm64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 155
       - 15
       - 42
@@ -14948,7 +15258,8 @@ checksums:
   - gem_version:
       name: tiktoken_ruby
       version: 0.0.11.1-x86_64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 85
       - 76
       - 132
@@ -14984,7 +15295,8 @@ checksums:
   - gem_version:
       name: tiktoken_ruby
       version: 0.0.11.1-x86_64-linux
-    sha256:
+    algorithm: SHA256
+    value:
       - 171
       - 86
       - 201
@@ -15020,7 +15332,8 @@ checksums:
   - gem_version:
       name: tiktoken_ruby
       version: 0.0.11.1-x86_64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 253
       - 82
       - 16
@@ -15056,7 +15369,8 @@ checksums:
   - gem_version:
       name: timeout
       version: 0.4.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 149
       - 9
       - 240
@@ -15092,7 +15406,8 @@ checksums:
   - gem_version:
       name: tokenizers
       version: 0.5.5
-    sha256:
+    algorithm: SHA256
+    value:
       - 123
       - 241
       - 96
@@ -15128,7 +15443,8 @@ checksums:
   - gem_version:
       name: tokenizers
       version: 0.5.5-aarch64-linux
-    sha256:
+    algorithm: SHA256
+    value:
       - 85
       - 172
       - 48
@@ -15164,7 +15480,8 @@ checksums:
   - gem_version:
       name: tokenizers
       version: 0.5.5-aarch64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 221
       - 210
       - 52
@@ -15200,7 +15517,8 @@ checksums:
   - gem_version:
       name: tokenizers
       version: 0.5.5-arm64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 58
       - 22
       - 6
@@ -15236,7 +15554,8 @@ checksums:
   - gem_version:
       name: tokenizers
       version: 0.5.5-x86_64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 137
       - 37
       - 148
@@ -15272,7 +15591,8 @@ checksums:
   - gem_version:
       name: tokenizers
       version: 0.5.5-x86_64-linux
-    sha256:
+    algorithm: SHA256
+    value:
       - 233
       - 104
       - 26
@@ -15308,7 +15628,8 @@ checksums:
   - gem_version:
       name: tokenizers
       version: 0.5.5-x86_64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 245
       - 204
       - 195
@@ -15344,7 +15665,8 @@ checksums:
   - gem_version:
       name: trilogy
       version: 2.9.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 162
       - 214
       - 59
@@ -15380,7 +15702,8 @@ checksums:
   - gem_version:
       name: tsort
       version: 0.2.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 150
       - 80
       - 167
@@ -15416,7 +15739,8 @@ checksums:
   - gem_version:
       name: ttfunk
       version: 1.8.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 167
       - 203
       - 199
@@ -15452,7 +15776,8 @@ checksums:
   - gem_version:
       name: tzinfo
       version: 2.0.6
-    sha256:
+    algorithm: SHA256
+    value:
       - 141
       - 175
       - 130
@@ -15488,7 +15813,8 @@ checksums:
   - gem_version:
       name: tzinfo-data
       version: 1.2025.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 169
       - 35
       - 117
@@ -15524,7 +15850,8 @@ checksums:
   - gem_version:
       name: unf
       version: 0.2.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 230
       - 188
       - 194
@@ -15560,7 +15887,8 @@ checksums:
   - gem_version:
       name: unicode-display_width
       version: 3.2.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 12
       - 221
       - 150
@@ -15596,7 +15924,8 @@ checksums:
   - gem_version:
       name: unicode-emoji
       version: 4.1.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 73
       - 151
       - 210
@@ -15632,7 +15961,8 @@ checksums:
   - gem_version:
       name: unicorn
       version: 6.1.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 69
       - 221
       - 152
@@ -15668,7 +15998,8 @@ checksums:
   - gem_version:
       name: uniform_notifier
       version: 1.18.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 71
       - 135
       - 120
@@ -15704,7 +16035,8 @@ checksums:
   - gem_version:
       name: uri
       version: 1.0.4
-    sha256:
+    algorithm: SHA256
+    value:
       - 52
       - 72
       - 93
@@ -15740,7 +16072,8 @@ checksums:
   - gem_version:
       name: useragent
       version: 0.16.11
-    sha256:
+    algorithm: SHA256
+    value:
       - 112
       - 14
       - 100
@@ -15776,7 +16109,8 @@ checksums:
   - gem_version:
       name: version_gem
       version: 1.1.9
-    sha256:
+    algorithm: SHA256
+    value:
       - 12
       - 26
       - 9
@@ -15812,7 +16146,8 @@ checksums:
   - gem_version:
       name: web-push
       version: 3.0.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 91
       - 77
       - 210
@@ -15848,7 +16183,8 @@ checksums:
   - gem_version:
       name: webmock
       version: 3.25.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 171
       - 157
       - 93
@@ -15884,7 +16220,8 @@ checksums:
   - gem_version:
       name: webrick
       version: 1.9.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 180
       - 45
       - 60
@@ -15920,7 +16257,8 @@ checksums:
   - gem_version:
       name: xpath
       version: 3.2.0
-    sha256:
+    algorithm: SHA256
+    value:
       - 109
       - 253
       - 167
@@ -15956,7 +16294,8 @@ checksums:
   - gem_version:
       name: yaml-lint
       version: 0.1.2
-    sha256:
+    algorithm: SHA256
+    value:
       - 227
       - 150
       - 11
@@ -15992,7 +16331,8 @@ checksums:
   - gem_version:
       name: yard
       version: 0.9.37
-    sha256:
+    algorithm: SHA256
+    value:
       - 166
       - 233
       - 16
@@ -16028,7 +16368,8 @@ checksums:
   - gem_version:
       name: zeitwerk
       version: 2.7.3
-    sha256:
+    algorithm: SHA256
+    value:
       - 178
       - 232
       - 107
@@ -16064,7 +16405,8 @@ checksums:
   - gem_version:
       name: zendesk_api
       version: 1.38.0.rc1
-    sha256:
+    algorithm: SHA256
+    value:
       - 158
       - 190
       - 37

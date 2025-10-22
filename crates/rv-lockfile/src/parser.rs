@@ -307,7 +307,8 @@ fn parse_checksum<'i>(i: &mut Input<'i>) -> Res<Checksum<'i>> {
     let sha256 = parse_hex_string.try_map(hex::decode).parse_next(i)?;
     Ok(Checksum {
         gem_version: GemVersion { name, version },
-        sha256,
+        value: sha256,
+        algorithm: ChecksumAlgorithm::SHA256,
     })
 }
 
