@@ -52,6 +52,8 @@ once_cell = { workspace = true }
 rayon-tracing = { workspace = true }
 clap_complete = "4.5.57"
 clap_complete_nushell = "4.5.8"
+url = "2.5.7"
+bytes = "1.10.1"
 
 [dev-dependencies]
 insta = { workspace = true }
