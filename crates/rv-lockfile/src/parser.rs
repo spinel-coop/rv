@@ -379,7 +379,9 @@ fn parse_ruby_version<'i>(i: &mut Input<'i>) -> Res<&'i str> {
 
 fn parse_gem<'i>(i: &mut Input<'i>) -> Res<GemSection<'i>> {
     "GEM\n".parse_next(i)?;
-    let remote = delimited("  remote: ", parse_remote, line_ending).parse_next(i)?;
+    let remote = opt(delimited("  remote: ", parse_remote, line_ending))
+        .parse_next(i)?
+        .unwrap_or("http://rubygems.org");
     "  specs:\n".parse_next(i)?;
     let specs = repeat(0.., parse_spec).parse_next(i)?;
     Ok(GemSection { remote, specs })
