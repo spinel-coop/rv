@@ -297,19 +297,27 @@ fn parse_hex_string<'i>(i: &mut Input<'i>) -> Res<&'i str> {
 
 fn parse_checksum<'i>(i: &mut Input<'i>) -> Res<Checksum<'i>> {
     // nokogiri (1.18.10-arm-linux-gnu) sha256=51f4f25ab5d5ba1012d6b16aad96b840a10b067b93f35af6a55a2c104a7ee322
+    // rack (3.2.3)
     let name = parse_gem_name.parse_next(i)?;
     space1.parse_next(i)?;
     '('.parse_next(i)?;
     let version = parse_version.parse_next(i)?;
     ')'.parse_next(i)?;
-    space1.parse_next(i)?;
-    "sha256=".parse_next(i)?;
-    let sha256 = parse_hex_string.try_map(hex::decode).parse_next(i)?;
-    Ok(Checksum {
-        gem_version: GemVersion { name, version },
-        value: sha256,
-        algorithm: ChecksumAlgorithm::SHA256,
-    })
+    let value = opt((space1, "sha256=")).parse_next(i)?;
+    if value.is_some() {
+        let sha256 = parse_hex_string.try_map(hex::decode).parse_next(i)?;
+        Ok(Checksum {
+            gem_version: GemVersion { name, version },
+            value: sha256,
+            algorithm: ChecksumAlgorithm::SHA256,
+        })
+    } else {
+        Ok(Checksum {
+            gem_version: GemVersion { name, version },
+            value: vec![],
+            algorithm: ChecksumAlgorithm::None,
+        })
+    }
 }
 
 fn parse_num(i: &mut Input<'_>) -> Res<u32> {

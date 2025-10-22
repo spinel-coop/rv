@@ -123,6 +123,7 @@ pub struct Checksum<'i> {
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ChecksumAlgorithm<'i> {
+    None,
     #[serde(borrow)]
     Unknown(&'i str),
     #[default]
