@@ -321,9 +321,18 @@ fn parse_git_section<'i>(i: &mut Input<'i>) -> Res<GitSection<'i>> {
     "GIT\n".parse_next(i)?;
     let remote = delimited("  remote: ", parse_remote, line_ending).parse_next(i)?;
     let revision = delimited("  revision: ", parse_hex_string, line_ending).parse_next(i)?;
+    let branch = opt(delimited(
+        "  branch: ",
+        take_while(1.., |c: char| {
+            c.is_alphanumeric() || c == '.' || c == '-' || c == '_' || c == '/'
+        }),
+        line_ending,
+    ))
+    .parse_next(i)?;
     "  specs:\n".parse_next(i)?;
     let specs = repeat(0.., parse_spec).parse_next(i)?;
     Ok(GitSection {
+        branch,
         remote,
         revision,
         specs,

@@ -42,7 +42,10 @@ pub struct GemfileDotLock<'i> {
 pub struct GitSection<'i> {
     /// Location of the Git repo.
     pub remote: &'i str,
+    /// Commit used from the Git repo.
     pub revision: &'i str,
+    /// Branch used from the Git repo.
+    pub branch: Option<&'i str>,
     /// All gems which came from this source in particular.
     pub specs: Vec<Spec<'i>>,
 }

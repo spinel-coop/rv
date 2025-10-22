@@ -41,6 +41,27 @@ fn test_parse_feedyouremail() {
     insta::assert_yaml_snapshot!(output);
 }
 
+#[test]
+fn test_parse_gitlab() {
+    let input = include_str!("../tests/inputs/Gemfile.lock.gitlab");
+    let output = must_parse(input);
+    insta::assert_yaml_snapshot!(output);
+}
+
+#[test]
+fn test_parse_gemdir() {
+    let input = include_str!("../tests/inputs/Gemfile.lock.gemdir");
+    let output = must_parse(input);
+    insta::assert_yaml_snapshot!(output);
+}
+
+#[test]
+fn test_parse_discourse() {
+    let input = include_str!("../tests/inputs/Gemfile.lock.discourse");
+    let output = must_parse(input);
+    insta::assert_yaml_snapshot!(output);
+}
+
 fn must_parse(input: &str) -> crate::datatypes::GemfileDotLock<'_> {
     match crate::parse(input) {
         Ok(o) => o,
