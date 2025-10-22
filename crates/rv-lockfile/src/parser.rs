@@ -3,10 +3,19 @@ use winnow::{
     LocatingSlice, ModalResult, Parser,
     ascii::{line_ending, space0, space1},
     combinator::{alt, delimited, dispatch, opt, peek, preceded, repeat, separated, terminated},
-    error::ContextError,
-    stream::AsChar,
+    error::{ContextError, ErrMode},
+    stream::{AsChar, Location},
     token::{take_until, take_while},
 };
+
+const GIT: &str = "GIT";
+const GEM: &str = "GEM";
+const PATH: &str = "PATH";
+const PLATFORMS: &str = "PLATFORMS";
+const DEPENDENCIES: &str = "DEPENDENCIES";
+const CHECKSUMS: &str = "CHECKSUMS";
+const RUBY_VERSION: &str = "RUBY VERSION";
+const BUNDLED_WITH: &str = "BUNDLED WITH";
 
 pub type Input<'a> = LocatingSlice<&'a str>;
 
@@ -26,20 +35,20 @@ enum Section<'i> {
 
 fn parse_section<'i>(i: &mut Input<'i>) -> Res<Section<'i>> {
     (dispatch! {peek(parse_section_header);
-        "GIT" => paragraph(parse_git_section).map(Section::Git),
-        "GEM" => paragraph(parse_gem).map(Section::Gem),
-        "PATH" => paragraph(parse_path).map(Section::Path),
-        "PLATFORMS" => paragraph(parse_platforms).map(Section::Platforms),
-        "DEPENDENCIES" => paragraph(parse_dependencies).map(Section::Dependencies),
-        "CHECKSUMS" => paragraph(parse_checksums).map(Section::Checksums),
-        "RUBY VERSION" => paragraph(parse_ruby_version).map(Section::RubyVersion),
-        "BUNDLED WITH" => paragraph(parse_bundled_with).map(Section::BundledWith),
+        GIT => paragraph(parse_git_section).map(Section::Git),
+        GEM => paragraph(parse_gem).map(Section::Gem),
+        PATH => paragraph(parse_path).map(Section::Path),
+        PLATFORMS => paragraph(parse_platforms).map(Section::Platforms),
+        DEPENDENCIES => paragraph(parse_dependencies).map(Section::Dependencies),
+        CHECKSUMS => paragraph(parse_checksums).map(Section::Checksums),
+        RUBY_VERSION => paragraph(parse_ruby_version).map(Section::RubyVersion),
+        BUNDLED_WITH => paragraph(parse_bundled_with).map(Section::BundledWith),
         _ => winnow::combinator::fail::<_,Section,_>,
     })
     .parse_next(i)
 }
 
-pub fn parse<'i>(file: &'i str) -> Res<GemfileDotLock<'i>> {
+pub fn parse<'i>(file: &'i str) -> crate::Result<GemfileDotLock<'i>> {
     let mut input = LocatingSlice::new(file);
     let i = &mut input;
     let mut parsed = GemfileDotLock::default();
@@ -49,12 +58,18 @@ pub fn parse<'i>(file: &'i str) -> Res<GemfileDotLock<'i>> {
         let section = match parse_section.parse_next(i) {
             Ok(sec) => sec,
             Err(e) => {
-                let byte_offset = winnow::error::ParseError::from(e).offset();
+                // OK, there was an error. Let's figure out where, to highlight it.
+                let byte_offset = i.location();
                 let char_offset = file[..byte_offset.min(file.len())].chars().count();
-                let parse_err = ParseError {
-                    char_offset,
-                    msg: e.to_string(),
+
+                // Then find the error message.
+                let msg = match &e {
+                    ErrMode::Incomplete(_) => "unexpected end of input".to_string(),
+                    ErrMode::Backtrack(err) | ErrMode::Cut(err) => err.to_string(),
                 };
+
+                // Now we can add the error to the list.
+                let parse_err = ParseError { char_offset, msg };
                 if let Some(err) = error.as_mut() {
                     err.others.push(parse_err);
                 } else {
@@ -63,6 +78,9 @@ pub fn parse<'i>(file: &'i str) -> Res<GemfileDotLock<'i>> {
                         others: Vec::new(),
                     })
                 }
+
+                // TODO: Consume input until the next new line which starts with a non-whitespace character.
+                // If you reach the end of the input, break instead.
                 continue;
             }
         };
@@ -94,7 +112,10 @@ pub fn parse<'i>(file: &'i str) -> Res<GemfileDotLock<'i>> {
         }
     }
 
-    Ok(parsed)
+    match error {
+        None => Ok(parsed),
+        Some(error) => Err(crate::Error::CouldNotParse(error)),
+    }
 }
 
 /// Parse a paragraph, i.e. something ending in a new line.
