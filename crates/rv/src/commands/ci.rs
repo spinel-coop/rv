@@ -31,13 +31,13 @@ pub enum Error {
 type Result<T> = std::result::Result<T, Error>;
 
 pub async fn ci(config: &Config) -> Result<()> {
+    let lockfile_path;
     if let Some(path) = &config.gemfile {
-        let lockfile_path = format!("{}.lock", path.clone()).into();
-        println!("{lockfile_path}");
-        ci_inner(lockfile_path).await
+        lockfile_path = format!("{}.lock", path.clone()).into();
     } else {
-        ci_inner("Gemfile.lock".into()).await
+        lockfile_path = "Gemfile.lock".into();
     }
+    ci_inner(lockfile_path).await
 }
 
 async fn ci_inner(lockfile_path: Utf8PathBuf) -> Result<()> {
