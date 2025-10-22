@@ -1,4 +1,5 @@
 use crate::{ParseError, ParseErrors, datatypes::*};
+use miette::SourceSpan;
 use winnow::{
     LocatingSlice, ModalResult, Parser,
     ascii::{line_ending, space0, space1},
@@ -48,7 +49,7 @@ fn parse_section<'i>(i: &mut Input<'i>) -> Res<Section<'i>> {
     .parse_next(i)
 }
 
-pub fn parse<'i>(file: &'i str) -> crate::Result<GemfileDotLock<'i>> {
+pub fn parse<'i>(file: &'i str) -> Result<GemfileDotLock<'i>, ParseErrors> {
     let mut input = LocatingSlice::new(file);
     let i = &mut input;
     let mut parsed = GemfileDotLock::default();
@@ -69,13 +70,16 @@ pub fn parse<'i>(file: &'i str) -> crate::Result<GemfileDotLock<'i>> {
                 };
 
                 // Now we can add the error to the list.
-                let parse_err = ParseError { char_offset, msg };
+                let parse_err = ParseError {
+                    char_offset: SourceSpan::new(char_offset.into(), 1),
+                    msg,
+                };
                 if let Some(err) = error.as_mut() {
                     err.others.push(parse_err);
                 } else {
                     error = Some(ParseErrors {
-                        first: parse_err,
-                        others: Vec::new(),
+                        lockfile_contents: file.to_owned(),
+                        others: vec![parse_err],
                     })
                 }
 
@@ -146,7 +150,7 @@ pub fn parse<'i>(file: &'i str) -> crate::Result<GemfileDotLock<'i>> {
 
     match error {
         None => Ok(parsed),
-        Some(error) => Err(crate::Error::CouldNotParse(error)),
+        Some(error) => Err(error),
     }
 }
 

@@ -15,6 +15,7 @@ hex = "0.4.3"
 [dev-dependencies]
 insta = { workspace = true, features = ["yaml"] }
 criterion = { workspace = true }
+miette = { workspace = true, features = ["fancy"] }
 
 [features]
 # Derive Serde de/serialize traits on the various datatypes the parser outputs.
