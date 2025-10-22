@@ -30,13 +30,19 @@ pub enum Error {
 
 type Result<T> = std::result::Result<T, Error>;
 
-pub async fn ci(_config: &Config, gemfile: Utf8PathBuf) -> Result<()> {
-    ci_inner(gemfile).await
+pub async fn ci(config: &Config) -> Result<()> {
+    if let Some(path) = &config.gemfile {
+        let lockfile_path = format!("{}.lock", path.clone()).into();
+        println!("{lockfile_path}");
+        ci_inner(lockfile_path).await
+    } else {
+        ci_inner("Gemfile.lock".into()).await
+    }
 }
 
-async fn ci_inner(gemfile: Utf8PathBuf) -> Result<()> {
-    let gemfile_contents = std::fs::read_to_string(gemfile)?;
-    let lockfile = rv_lockfile::parse(&gemfile_contents)?;
+async fn ci_inner(lockfile_path: Utf8PathBuf) -> Result<()> {
+    let lockfile_contents = std::fs::read_to_string(lockfile_path)?;
+    let lockfile = rv_lockfile::parse(&lockfile_contents)?;
     download_gems(lockfile).await?;
     Ok(())
 }

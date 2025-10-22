@@ -14,7 +14,7 @@ pub mod commands;
 pub mod config;
 
 use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir};
-use crate::commands::ruby::ci::ci as ruby_ci;
+use crate::commands::ci::ci;
 use crate::commands::ruby::dir::dir as ruby_dir;
 use crate::commands::ruby::find::find as ruby_find;
 use crate::commands::ruby::install::install as ruby_install;
@@ -130,6 +130,8 @@ enum Commands {
     Cache(CacheCommandArgs),
     #[command(about = "Configure your shell to use rv")]
     Shell(ShellArgs),
+    #[command(about = "Clean install from a Gemfile.lock")]
+    Ci,
 }
 
 #[derive(Debug, Copy, Clone, clap::ValueEnum)]
@@ -193,7 +195,7 @@ pub enum Error {
     #[error(transparent)]
     UninstallError(#[from] commands::ruby::uninstall::Error),
     #[error(transparent)]
-    CiError(#[from] commands::ruby::ci::Error),
+    CiError(#[from] commands::ci::Error),
     #[cfg(unix)]
     #[error(transparent)]
     RunError(#[from] commands::ruby::run::Error),
@@ -292,10 +294,8 @@ async fn run() -> Result<()> {
                 } => ruby_uninstall(&config, version_request).await?,
                 #[cfg(unix)]
                 RubyCommand::Run { version, args } => ruby_run(&config, &version, &args)?,
-                RubyCommand::Ci { gemfile_lock_path } => {
-                    ruby_ci(&config, gemfile_lock_path).await?
-                }
             },
+            Commands::Ci => ci(&config).await?,
             Commands::Cache(cache) => match cache.command {
                 CacheCommand::Dir => cache_dir(&config)?,
                 CacheCommand::Clean => cache_clean(&config)?,
