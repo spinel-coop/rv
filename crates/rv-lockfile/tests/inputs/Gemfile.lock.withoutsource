@@ -1,0 +1,22 @@
+GEM
+  specs:
+    rack (3.2.3)
+
+PLATFORMS
+  aarch64-linux-gnu
+  aarch64-linux-musl
+  arm-linux-gnu
+  arm-linux-musl
+  arm64-darwin
+  x86_64-darwin
+  x86_64-linux-gnu
+  x86_64-linux-musl
+
+DEPENDENCIES
+  rack
+
+CHECKSUMS
+  rack (3.2.3)
+
+BUNDLED WITH
+   2.7.2

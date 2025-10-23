@@ -34,7 +34,8 @@ checksums:
   - gem_version:
       name: nokogiri
       version: 1.18.10-aarch64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 126
       - 116
       - 229

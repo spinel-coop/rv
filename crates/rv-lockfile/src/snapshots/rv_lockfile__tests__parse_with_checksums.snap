@@ -101,7 +101,8 @@ checksums:
   - gem_version:
       name: nokogiri
       version: 1.18.10-aarch64-linux-gnu
-    sha256:
+    algorithm: SHA256
+    value:
       - 127
       - 184
       - 114
@@ -137,7 +138,8 @@ checksums:
   - gem_version:
       name: nokogiri
       version: 1.18.10-aarch64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 126
       - 116
       - 229
@@ -173,7 +175,8 @@ checksums:
   - gem_version:
       name: nokogiri
       version: 1.18.10-arm-linux-gnu
-    sha256:
+    algorithm: SHA256
+    value:
       - 81
       - 244
       - 242
@@ -209,7 +212,8 @@ checksums:
   - gem_version:
       name: nokogiri
       version: 1.18.10-arm-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 28
       - 110
       - 167
@@ -245,7 +249,8 @@ checksums:
   - gem_version:
       name: nokogiri
       version: 1.18.10-arm64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 194
       - 176
       - 222
@@ -281,7 +286,8 @@ checksums:
   - gem_version:
       name: nokogiri
       version: 1.18.10-x86_64-darwin
-    sha256:
+    algorithm: SHA256
+    value:
       - 83
       - 110
       - 116
@@ -317,7 +323,8 @@ checksums:
   - gem_version:
       name: nokogiri
       version: 1.18.10-x86_64-linux-gnu
-    sha256:
+    algorithm: SHA256
+    value:
       - 255
       - 91
       - 162
@@ -353,7 +360,8 @@ checksums:
   - gem_version:
       name: nokogiri
       version: 1.18.10-x86_64-linux-musl
-    sha256:
+    algorithm: SHA256
+    value:
       - 6
       - 81
       - 252
@@ -389,7 +397,8 @@ checksums:
   - gem_version:
       name: racc
       version: 1.8.1
-    sha256:
+    algorithm: SHA256
+    value:
       - 74
       - 127
       - 105

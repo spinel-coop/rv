@@ -62,6 +62,16 @@ fn test_parse_discourse() {
     insta::assert_yaml_snapshot!(output);
 }
 
+#[test]
+fn test_parse_withoutsource() {
+    // If the Gemfile has no declared source, Bundler will default to http://rubygems.org,
+    // which provides the endpoints needed to resolve a lockfile successfully, but does not
+    // provide the endpoints needed to record checksums. So this lock has empty checksums.
+    let input = include_str!("../tests/inputs/Gemfile.lock.withoutsource");
+    let output = must_parse(input);
+    insta::assert_yaml_snapshot!(output);
+}
+
 fn must_parse(input: &str) -> crate::datatypes::GemfileDotLock<'_> {
     match crate::parse(input) {
         Ok(o) => o,

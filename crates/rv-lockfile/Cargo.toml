@@ -23,5 +23,5 @@ serde = ["dep:serde"]
 default = ["serde"]
 
 [[bench]]
-name = "my_bench"
+name = "bench_parse"
 harness = false

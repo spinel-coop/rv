@@ -1,0 +1,31 @@
+---
+source: crates/rv-lockfile/src/tests.rs
+expression: output
+---
+gem:
+  - remote: "http://rubygems.org"
+    specs:
+      - gem_version:
+          name: rack
+          version: 3.2.3
+        deps: []
+platforms:
+  - aarch64-linux-gnu
+  - aarch64-linux-musl
+  - arm-linux-gnu
+  - arm-linux-musl
+  - arm64-darwin
+  - x86_64-darwin
+  - x86_64-linux-gnu
+  - x86_64-linux-musl
+dependencies:
+  - name: rack
+    semver: ~
+    nonstandard: false
+bundled_with: 2.7.2
+checksums:
+  - gem_version:
+      name: rack
+      version: 3.2.3
+    algorithm: None
+    value: []
