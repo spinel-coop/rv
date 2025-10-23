@@ -74,6 +74,7 @@ fn rv_http_client() -> Result<Client> {
     Ok(client)
 }
 
+/// Downloads all gems from a Gemfile.lock
 async fn download_gems<'i>(
     lockfile: GemfileDotLock<'i>,
     cache: &rv_cache::Cache,
@@ -90,12 +91,16 @@ struct Downloaded {
     from: Url,
 }
 
+/// Downloads all gems from a particular gem source,
+/// e.g. from gems.coop or rubygems or something.
 async fn download_gem_source<'i>(
     gem_source: GemSection<'i>,
     cache: &rv_cache::Cache,
     max_concurrent_requests: usize,
 ) -> Result<Vec<Downloaded>> {
+    // TODO: If the gem server needs user credentials, accept them and add them to this client.
     let client = rv_http_client()?;
+
     // Get all URLs for downloading all gems from this source.
     let urls = gem_source
         .specs
@@ -114,6 +119,8 @@ async fn download_gem_source<'i>(
             Ok(url)
         })
         .collect::<Result<Vec<Url>>>()?;
+
+    // Download them all, concurrently.
     let url_stream = futures_util::stream::iter(urls);
     let downloaded_gems: Vec<_> = url_stream
         .map(|url| download_gem(url, &client, cache))
@@ -123,6 +130,7 @@ async fn download_gem_source<'i>(
     Ok(downloaded_gems)
 }
 
+/// Download a single gem, from the given URL, using the given client.
 async fn download_gem(url: Url, client: &Client, cache: &rv_cache::Cache) -> Result<Downloaded> {
     eprintln!("Downloading from {url}");
     let cache_key = rv_cache::cache_digest(url.as_ref());
