@@ -53,7 +53,21 @@ async fn ci_inner(
 ) -> Result<()> {
     let lockfile_contents = std::fs::read_to_string(lockfile_path)?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
-    download_gems(lockfile, cache, max_concurrent_requests).await?;
+    let gems = download_gems(lockfile, cache, max_concurrent_requests).await?;
+    install_gems(gems);
+    Ok(())
+}
+
+fn install_gems(gems: Vec<Vec<Downloaded>>) -> Result<()> {
+    // 1. Get the path where we want to put the gems from Bundler
+    //    ruby -rbundler -e 'puts Bundler.bundle_path'
+    // 2. Unpack all the tarballs into DIR/gems/
+    //    each inner tarball inside a .gem goes into a directory that uses
+    //    the gem's name tuple of NAME-VERSION(-PLATFORM), like this:
+    //      nokogiri-1.18.10-arm64-darwin racc-1.8.1 rack-3.2.3 rake-13.3.0
+    // 3. Generate binstubs into DIR/bin/
+    // 4. Handle compiling native extensions for gems with native extensions
+    // 5. Copy the .gem files and the .gemspec files into cache and specificatiosn?
     Ok(())
 }
 
@@ -79,14 +93,14 @@ async fn download_gems<'i>(
     lockfile: GemfileDotLock<'i>,
     cache: &rv_cache::Cache,
     max_concurrent_requests: usize,
-) -> Result<()> {
+) -> Result<Vec<Vec<Downloaded>>> {
     let all_sources = futures_util::stream::iter(lockfile.gem);
     let downloaded: Vec<_> = all_sources
         .map(|gem_source| download_gem_source(gem_source, cache, max_concurrent_requests))
         .buffered(10)
         .try_collect()
         .await?;
-    Ok(())
+    Ok(downloaded)
 }
 
 struct Downloaded {
