@@ -3,6 +3,7 @@ use camino::Utf8PathBuf;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
 use reqwest::Client;
+use rv_lockfile::datatypes::GemSection;
 use rv_lockfile::datatypes::GemfileDotLock;
 use url::Url;
 
@@ -78,37 +79,51 @@ async fn download_gems<'i>(
     cache: &rv_cache::Cache,
     max_concurrent_requests: usize,
 ) -> Result<()> {
-    let client = rv_http_client()?;
     for gem_source in lockfile.gem {
-        // Get all URLs for downloading all gems from this source.
-        let urls = gem_source
-            .specs
-            .iter()
-            .map(|gem| {
-                let remote = gem_source.remote;
-                let gem_name = gem.gem_version.name;
-                let gem_version = gem.gem_version.version;
-                let path = format!("gems/{gem_name}-{gem_version}.gem");
-                let url = url::Url::parse(remote)
-                    .map_err(|err| Error::BadRemote {
-                        remote: remote.to_owned(),
-                        err,
-                    })?
-                    .join(&path)?;
-                Ok(url)
-            })
-            .collect::<Result<Vec<Url>>>()?;
-        let url_stream = futures_util::stream::iter(urls);
-        let _downloaded_gems: Vec<(Bytes, Url)> = url_stream
-            .map(|url| download_gem(url, &client, cache))
-            .buffered(max_concurrent_requests)
-            .try_collect()
-            .await?;
+        let downloaded = download_gem_source(gem_source, cache, max_concurrent_requests).await?;
     }
     Ok(())
 }
 
-async fn download_gem(url: Url, client: &Client, cache: &rv_cache::Cache) -> Result<(Bytes, Url)> {
+struct Downloaded {
+    contents: Bytes,
+    from: Url,
+}
+
+async fn download_gem_source<'i>(
+    gem_source: GemSection<'i>,
+    cache: &rv_cache::Cache,
+    max_concurrent_requests: usize,
+) -> Result<Vec<Downloaded>> {
+    let client = rv_http_client()?;
+    // Get all URLs for downloading all gems from this source.
+    let urls = gem_source
+        .specs
+        .iter()
+        .map(|gem| {
+            let remote = gem_source.remote;
+            let gem_name = gem.gem_version.name;
+            let gem_version = gem.gem_version.version;
+            let path = format!("gems/{gem_name}-{gem_version}.gem");
+            let url = url::Url::parse(remote)
+                .map_err(|err| Error::BadRemote {
+                    remote: remote.to_owned(),
+                    err,
+                })?
+                .join(&path)?;
+            Ok(url)
+        })
+        .collect::<Result<Vec<Url>>>()?;
+    let url_stream = futures_util::stream::iter(urls);
+    let downloaded_gems: Vec<_> = url_stream
+        .map(|url| download_gem(url, &client, cache))
+        .buffered(max_concurrent_requests)
+        .try_collect()
+        .await?;
+    Ok(downloaded_gems)
+}
+
+async fn download_gem(url: Url, client: &Client, cache: &rv_cache::Cache) -> Result<Downloaded> {
     eprintln!("Downloading from {url}");
     let cache_key = rv_cache::cache_digest(url.as_ref());
     let cache_path = cache
@@ -128,7 +143,10 @@ async fn download_gem(url: Url, client: &Client, cache: &rv_cache::Cache) -> Res
         tokio::fs::write(&cache_path, &contents).await?;
     }
     // TODO: Validate the checksum from the Lockfile if present.
-    Ok((contents, url))
+    Ok(Downloaded {
+        contents,
+        from: url,
+    })
 }
 
 #[cfg(test)]
