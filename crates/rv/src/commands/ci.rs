@@ -80,9 +80,12 @@ async fn download_gems<'i>(
     cache: &rv_cache::Cache,
     max_concurrent_requests: usize,
 ) -> Result<()> {
-    for gem_source in lockfile.gem {
-        let downloaded = download_gem_source(gem_source, cache, max_concurrent_requests).await?;
-    }
+    let all_sources = futures_util::stream::iter(lockfile.gem);
+    let downloaded: Vec<_> = all_sources
+        .map(|gem_source| download_gem_source(gem_source, cache, max_concurrent_requests))
+        .buffered(10)
+        .try_collect()
+        .await?;
     Ok(())
 }
 
