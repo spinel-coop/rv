@@ -24,9 +24,14 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
   fi
 
   set -x
-
-  $SUDO apt update -qq
-  $SUDO apt install -qq curl pkg-config git gcc libssl-dev
+  if which apt; then
+    $SUDO apt update -qq
+    $SUDO apt install -y -qq curl pkg-config git gcc libssl-dev
+  else
+    echo "We don't support automatic dev setup for your package manager yet, sorry."
+    echo "We'd love to get a pull request adding support, though!"
+    exit 1
+  fi
 
   if [[ -z $(which rustup) ]]; then
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
