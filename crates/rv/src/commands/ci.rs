@@ -250,6 +250,7 @@ async fn download_gem<'i>(
     if cache_path.exists() {
         let data = tokio::fs::read(&cache_path).await?;
         contents = Bytes::from(data);
+        // TODO: Validate checksum and download it again if mismatched.
         debug!("Reusing gem from {url} in cache");
     } else {
         contents = client.get(url.clone()).send().await?.bytes().await?;
@@ -257,7 +258,7 @@ async fn download_gem<'i>(
             tokio::fs::create_dir_all(parent).await?;
         }
         tokio::fs::write(&cache_path, &contents).await?;
-        debug!("Downloaded gem from {url}, {} bytes", contents.len());
+        debug!("Downloaded gem from {url}");
     }
     // TODO: Validate the checksum from the Lockfile if present.
     Ok(Downloaded { contents, spec })
