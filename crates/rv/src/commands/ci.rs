@@ -8,6 +8,8 @@ use rv_lockfile::datatypes::GemSection;
 use rv_lockfile::datatypes::GemVersion;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_lockfile::datatypes::Spec;
+use tracing::debug;
+use tracing::info;
 use url::Url;
 
 use crate::config::Config;
@@ -138,7 +140,7 @@ impl<'i> Downloaded<'i> {
         // (and optionally, a checksum zip).
         let GemVersion { name, version } = self.spec.gem_version;
         let nameversion = format!("{name}-{version}");
-        eprintln!("Unpacking {bundle_path} {nameversion}");
+        debug!("Unpacking {nameversion}");
 
         // Then unpack the tarball into it.
         let contents = std::io::Cursor::new(self.contents);
@@ -148,7 +150,6 @@ impl<'i> Downloaded<'i> {
             let entry_path = entry.path()?;
             match entry_path.display().to_string().as_str() {
                 "metadata.gz" => {
-                    eprintln!("\tData archive");
                     // Unzip the metadata file,
                     // then write it to
                     // BUNDLEPATH/specifications/name-version.gemspec
@@ -171,13 +172,11 @@ impl<'i> Downloaded<'i> {
                         bundle_path.join("gems").join(&nameversion).into();
                     std::fs::create_dir_all(&data_dir)?;
                     let mut gem_data_archive = tar::Archive::new(GzDecoder::new(entry));
-                    eprintln!("\tData archive");
                     for e in gem_data_archive.entries()? {
                         let mut entry = e?;
                         let entry_path = entry.path()?;
                         let dst = data_dir.join(entry_path);
 
-                        eprintln!("\t\tUnpacking to {}", dst.display());
                         // Not sure if this is strictly necessary, or if we can know the
                         // intermediate directories ahead of time.
                         if let Some(dst_parent) = dst.parent() {
@@ -190,7 +189,7 @@ impl<'i> Downloaded<'i> {
                     // TODO: Validate these checksums
                 }
                 other => {
-                    eprintln!("Unknown dir {other}")
+                    info!("Unknown dir {other} in gem")
                 }
             }
         }
@@ -251,14 +250,14 @@ async fn download_gem<'i>(
     if cache_path.exists() {
         let data = tokio::fs::read(&cache_path).await?;
         contents = Bytes::from(data);
-        // eprintln!("Found gem from {url} in cache, {} bytes", contents.len());
+        debug!("Reusing gem from {url} in cache");
     } else {
         contents = client.get(url.clone()).send().await?.bytes().await?;
         if let Some(parent) = cache_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
         tokio::fs::write(&cache_path, &contents).await?;
-        // eprintln!("Downloaded gem from {url}, {} bytes", contents.len());
+        debug!("Downloaded gem from {url}, {} bytes", contents.len());
     }
     // TODO: Validate the checksum from the Lockfile if present.
     Ok(Downloaded { contents, spec })
