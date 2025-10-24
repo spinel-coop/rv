@@ -32,6 +32,8 @@ pub enum Error {
     },
     #[error(transparent)]
     UrlError(#[from] url::ParseError),
+    #[error("Could not read install directory from Bundler")]
+    BadBundlePath,
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -54,17 +56,25 @@ async fn ci_inner(
     let lockfile_contents = std::fs::read_to_string(lockfile_path)?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
     let gems = download_gems(lockfile, cache, max_concurrent_requests).await?;
-    install_gems(gems);
+    install_gems(gems)?;
     Ok(())
+}
+
+fn find_bundle_path() -> Result<Utf8PathBuf> {
+    let bundle_path = std::process::Command::new("ruby")
+        .args(["-rbundler", "-e", "'puts Bundler.bundle_path'"])
+        .spawn()?
+        .wait_with_output()
+        .map(|out| out.stdout)?;
+    String::from_utf8(bundle_path)
+        .map_err(|_| Error::BadBundlePath)
+        .map(Utf8PathBuf::from)
 }
 
 fn install_gems(gems: Vec<Vec<Downloaded>>) -> Result<()> {
     // 1. Get the path where we want to put the gems from Bundler
     //    ruby -rbundler -e 'puts Bundler.bundle_path'
-    // 2. Unpack all the tarballs into DIR/gems/
-    //    each inner tarball inside a .gem goes into a directory that uses
-    //    the gem's name tuple of NAME-VERSION(-PLATFORM), like this:
-    //      nokogiri-1.18.10-arm64-darwin racc-1.8.1 rack-3.2.3 rake-13.3.0
+    let bundle_path = find_bundle_path()?;
     // 3. Generate binstubs into DIR/bin/
     // 4. Handle compiling native extensions for gems with native extensions
     // 5. Copy the .gem files and the .gemspec files into cache and specificatiosn?
