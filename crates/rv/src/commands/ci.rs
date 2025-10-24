@@ -188,6 +188,9 @@ impl<'i> Downloaded<'i> {
                 "checksums.yaml.gz" => {
                     // TODO: Validate these checksums
                 }
+                "data.tar.gz.sig" | "metadata.gz.sig" | "checksums.yaml.gz.sig" => {
+                    // TODO: Validate these signatures.
+                }
                 other => {
                     info!("Unknown dir {other} in gem")
                 }
