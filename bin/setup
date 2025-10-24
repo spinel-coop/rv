@@ -18,33 +18,29 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     brew install cargo-binstall
   fi
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-   command_not_found_handle() {
-    echo "Custom error: '$1' is not a recognized command." >&2
-    return 127 # Return the standard "command not found" exit code
-  }
-    set -x
-    SUDO=""
-    if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
-      SUDO="sudo"
-    fi
-     
-    APT=$( type apt)
-    APT_STATUS=$?
-    
-    if [ $APT_STATUS -eq 0 ]; then 
-    
-      $SUDO apt update -qq
-      $SUDO apt install -y -qq curl pkg-config git gcc libssl-dev
-    fi
+  SUDO=""
+  if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+    SUDO="sudo"
+  fi
 
-    if [[ -z $(which rustup) ]]; then
-      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-      . "$HOME/.cargo/env"
-    fi
+  set -x
+  if which apt; then
+    $SUDO apt update -qq
+    $SUDO apt install -y -qq curl pkg-config git gcc libssl-dev
+  else
+    echo "We don't support automatic dev setup for your package manager yet, sorry."
+    echo "We'd love to get a pull request adding support, though!"
+    exit 1
+  fi
 
-    if [[ -z $(which cargo-binstall) ]]; then
-      curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-    fi
+  if [[ -z $(which rustup) ]]; then
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    . "$HOME/.cargo/env"
+  fi
+
+  if [[ -z $(which cargo-binstall) ]]; then
+    curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+  fi
 else
   echo "We don't support automatic setup on $OSTYPE yet, sorry."
   exit 1
