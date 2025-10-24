@@ -1,10 +1,11 @@
 use bytes::Bytes;
-use camino::Utf8Path;
 use camino::Utf8PathBuf;
+use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
 use reqwest::Client;
 use rv_lockfile::datatypes::GemSection;
+use rv_lockfile::datatypes::GemVersion;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_lockfile::datatypes::Spec;
 use url::Url;
@@ -82,7 +83,7 @@ fn install_gems(downloaded: Vec<Downloaded>) -> Result<()> {
     let bundle_path = find_bundle_path()?;
     // 2. Unpack all the tarballs
     for download in downloaded {
-        download.unpack_tarball(&bundle_path)?;
+        download.unpack_tarball(bundle_path.clone())?;
     }
     // 3. Generate binstubs into DIR/bin/
     // 4. Handle compiling native extensions for gems with native extensions
@@ -131,37 +132,65 @@ struct Downloaded<'i> {
 }
 
 impl<'i> Downloaded<'i> {
-    fn unpack_tarball(self, bundle_path: &Utf8Path) -> Result<()> {
+    fn unpack_tarball(self, bundle_path: Utf8PathBuf) -> Result<()> {
         // Unpack the tarball into DIR/gems/
-        // each inner tarball inside a .gem goes into a directory that uses
-        // the gem's name tuple of NAME-VERSION(-PLATFORM), like this:
-        //   nokogiri-1.18.10-arm64-darwin racc-1.8.1 rack-3.2.3 rake-13.3.0
-        // So first let's find the directory:
-        let name = self.spec.gem_version.name;
-        let version = self.spec.gem_version.version;
-        let this_gem_dir = format!("{name}/{version}");
-        let gem_dst = bundle_path.join("gems").join(this_gem_dir);
-        std::fs::create_dir_all(&gem_dst)?;
+        // It should contain a metadata zip, and a data zip
+        // (and optionally, a checksum zip).
+        let GemVersion { name, version } = self.spec.gem_version;
+        let nameversion = format!("{name}-{version}");
+        eprintln!("Unpacking {bundle_path} {nameversion}");
 
         // Then unpack the tarball into it.
         let contents = std::io::Cursor::new(self.contents);
         let mut archive = tar::Archive::new(contents);
-        eprintln!("Unpacking gem tarball to {gem_dst}");
         for e in archive.entries()? {
-            let mut entry = e?;
+            let entry = e?;
             let entry_path = entry.path()?;
             match entry_path.display().to_string().as_str() {
                 "metadata.gz" => {
-                    // Idk what to do with this.
+                    eprintln!("\tData archive");
+                    // Unzip the metadata file,
+                    // then write it to
+                    // BUNDLEPATH/specifications/name-version.gemspec
+
+                    // First, create the destination.
+                    let metadata_dir = bundle_path.join("specifications/");
+                    std::fs::create_dir_all(&metadata_dir)?;
+                    let filename = format!("{nameversion}.gemspec");
+                    let dst_path = metadata_dir.join(filename);
+                    let mut dst = std::fs::File::create(dst_path)?;
+
+                    // Then write the (unzipped) source into the destination.
+                    let mut unzipped_contents = GzDecoder::new(entry);
+                    std::io::copy(&mut unzipped_contents, &mut dst)?;
                 }
                 "data.tar.gz" => {
-                    // TODO: Unpack this data
+                    // for every ENTRY in the data tar, unpack it to
+                    // data.tar.gz => BUNDLEPATH/gems/name-version/ENTRY
+                    let data_dir: std::path::PathBuf =
+                        bundle_path.join("gems").join(&nameversion).into();
+                    std::fs::create_dir_all(&data_dir)?;
+                    let mut gem_data_archive = tar::Archive::new(GzDecoder::new(entry));
+                    eprintln!("\tData archive");
+                    for e in gem_data_archive.entries()? {
+                        let mut entry = e?;
+                        let entry_path = entry.path()?;
+                        let dst = data_dir.join(entry_path);
+
+                        eprintln!("\t\tUnpacking to {}", dst.display());
+                        // Not sure if this is strictly necessary, or if we can know the
+                        // intermediate directories ahead of time.
+                        if let Some(dst_parent) = dst.parent() {
+                            std::fs::create_dir_all(dst_parent)?;
+                        }
+                        entry.unpack(dst)?;
+                    }
                 }
                 "checksums.yaml.gz" => {
                     // TODO: Validate these checksums
                 }
-                _ => {
-                    // Unknown entry, just ignore it.
+                other => {
+                    eprintln!("Unknown dir {other}")
                 }
             }
         }
