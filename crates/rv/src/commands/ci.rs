@@ -5,6 +5,7 @@ use futures_util::TryStreamExt;
 use reqwest::Client;
 use rv_lockfile::datatypes::GemSection;
 use rv_lockfile::datatypes::GemfileDotLock;
+use rv_lockfile::datatypes::Spec;
 use url::Url;
 
 use crate::config::Config;
@@ -75,6 +76,10 @@ fn install_gems(gems: Vec<Vec<Downloaded>>) -> Result<()> {
     // 1. Get the path where we want to put the gems from Bundler
     //    ruby -rbundler -e 'puts Bundler.bundle_path'
     let bundle_path = find_bundle_path()?;
+    // 2. Unpack all the tarballs into DIR/gems/
+    //    each inner tarball inside a .gem goes into a directory that uses
+    //    the gem's name tuple of NAME-VERSION(-PLATFORM), like this:
+    //      nokogiri-1.18.10-arm64-darwin racc-1.8.1 rack-3.2.3 rake-13.3.0
     // 3. Generate binstubs into DIR/bin/
     // 4. Handle compiling native extensions for gems with native extensions
     // 5. Copy the .gem files and the .gemspec files into cache and specificatiosn?
@@ -103,7 +108,7 @@ async fn download_gems<'i>(
     lockfile: GemfileDotLock<'i>,
     cache: &rv_cache::Cache,
     max_concurrent_requests: usize,
-) -> Result<Vec<Vec<Downloaded>>> {
+) -> Result<Vec<Vec<Downloaded<'i>>>> {
     let all_sources = futures_util::stream::iter(lockfile.gem);
     let downloaded: Vec<_> = all_sources
         .map(|gem_source| download_gem_source(gem_source, cache, max_concurrent_requests))
@@ -113,9 +118,23 @@ async fn download_gems<'i>(
     Ok(downloaded)
 }
 
-struct Downloaded {
+struct Downloaded<'i> {
     contents: Bytes,
     from: Url,
+    spec: Spec<'i>,
+}
+
+fn url_for_spec(remote: &str, spec: &Spec<'_>) -> Result<Url> {
+    let gem_name = spec.gem_version.name;
+    let gem_version = spec.gem_version.version;
+    let path = format!("gems/{gem_name}-{gem_version}.gem");
+    let url = url::Url::parse(remote)
+        .map_err(|err| Error::BadRemote {
+            remote: remote.to_owned(),
+            err,
+        })?
+        .join(&path)?;
+    Ok(url)
 }
 
 /// Downloads all gems from a particular gem source,
@@ -124,33 +143,16 @@ async fn download_gem_source<'i>(
     gem_source: GemSection<'i>,
     cache: &rv_cache::Cache,
     max_concurrent_requests: usize,
-) -> Result<Vec<Downloaded>> {
+) -> Result<Vec<Downloaded<'i>>> {
     // TODO: If the gem server needs user credentials, accept them and add them to this client.
     let client = rv_http_client()?;
 
     // Get all URLs for downloading all gems from this source.
-    let urls = gem_source
-        .specs
-        .iter()
-        .map(|gem| {
-            let remote = gem_source.remote;
-            let gem_name = gem.gem_version.name;
-            let gem_version = gem.gem_version.version;
-            let path = format!("gems/{gem_name}-{gem_version}.gem");
-            let url = url::Url::parse(remote)
-                .map_err(|err| Error::BadRemote {
-                    remote: remote.to_owned(),
-                    err,
-                })?
-                .join(&path)?;
-            Ok(url)
-        })
-        .collect::<Result<Vec<Url>>>()?;
 
     // Download them all, concurrently.
-    let url_stream = futures_util::stream::iter(urls);
-    let downloaded_gems: Vec<_> = url_stream
-        .map(|url| download_gem(url, &client, cache))
+    let spec_stream = futures_util::stream::iter(gem_source.specs);
+    let downloaded_gems: Vec<_> = spec_stream
+        .map(|spec| download_gem(gem_source.remote, spec, &client, cache))
         .buffered(max_concurrent_requests)
         .try_collect()
         .await?;
@@ -158,7 +160,13 @@ async fn download_gem_source<'i>(
 }
 
 /// Download a single gem, from the given URL, using the given client.
-async fn download_gem(url: Url, client: &Client, cache: &rv_cache::Cache) -> Result<Downloaded> {
+async fn download_gem<'i>(
+    remote: &str,
+    spec: Spec<'i>,
+    client: &Client,
+    cache: &rv_cache::Cache,
+) -> Result<Downloaded<'i>> {
+    let url = url_for_spec(remote, &spec)?;
     eprintln!("Downloading from {url}");
     let cache_key = rv_cache::cache_digest(url.as_ref());
     let cache_path = cache
@@ -181,6 +189,7 @@ async fn download_gem(url: Url, client: &Client, cache: &rv_cache::Cache) -> Res
     Ok(Downloaded {
         contents,
         from: url,
+        spec,
     })
 }
 
