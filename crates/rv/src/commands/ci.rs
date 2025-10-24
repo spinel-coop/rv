@@ -1,4 +1,5 @@
 use bytes::Bytes;
+use camino::Utf8Path;
 use camino::Utf8PathBuf;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
@@ -10,6 +11,7 @@ use url::Url;
 
 use crate::config::Config;
 use std::io;
+use std::path::PathBuf;
 
 #[derive(clap_derive::Args)]
 pub struct CiArgs {
@@ -35,6 +37,8 @@ pub enum Error {
     UrlError(#[from] url::ParseError),
     #[error("Could not read install directory from Bundler")]
     BadBundlePath,
+    #[error("Failed to unpack tarball path {0}")]
+    InvalidTarballPath(PathBuf),
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -72,14 +76,14 @@ fn find_bundle_path() -> Result<Utf8PathBuf> {
         .map(Utf8PathBuf::from)
 }
 
-fn install_gems(gems: Vec<Vec<Downloaded>>) -> Result<()> {
+fn install_gems(downloaded: Vec<Downloaded>) -> Result<()> {
     // 1. Get the path where we want to put the gems from Bundler
     //    ruby -rbundler -e 'puts Bundler.bundle_path'
     let bundle_path = find_bundle_path()?;
-    // 2. Unpack all the tarballs into DIR/gems/
-    //    each inner tarball inside a .gem goes into a directory that uses
-    //    the gem's name tuple of NAME-VERSION(-PLATFORM), like this:
-    //      nokogiri-1.18.10-arm64-darwin racc-1.8.1 rack-3.2.3 rake-13.3.0
+    // 2. Unpack all the tarballs
+    for download in downloaded {
+        download.unpack_tarball(&bundle_path)?;
+    }
     // 3. Generate binstubs into DIR/bin/
     // 4. Handle compiling native extensions for gems with native extensions
     // 5. Copy the .gem files and the .gemspec files into cache and specificatiosn?
@@ -108,20 +112,61 @@ async fn download_gems<'i>(
     lockfile: GemfileDotLock<'i>,
     cache: &rv_cache::Cache,
     max_concurrent_requests: usize,
-) -> Result<Vec<Vec<Downloaded<'i>>>> {
+) -> Result<Vec<Downloaded<'i>>> {
     let all_sources = futures_util::stream::iter(lockfile.gem);
     let downloaded: Vec<_> = all_sources
         .map(|gem_source| download_gem_source(gem_source, cache, max_concurrent_requests))
         .buffered(10)
-        .try_collect()
-        .await?;
+        .try_collect::<Vec<_>>()
+        .await?
+        .into_iter()
+        .flatten()
+        .collect();
     Ok(downloaded)
 }
 
 struct Downloaded<'i> {
     contents: Bytes,
-    from: Url,
     spec: Spec<'i>,
+}
+
+impl<'i> Downloaded<'i> {
+    fn unpack_tarball(self, bundle_path: &Utf8Path) -> Result<()> {
+        // Unpack the tarball into DIR/gems/
+        // each inner tarball inside a .gem goes into a directory that uses
+        // the gem's name tuple of NAME-VERSION(-PLATFORM), like this:
+        //   nokogiri-1.18.10-arm64-darwin racc-1.8.1 rack-3.2.3 rake-13.3.0
+        // So first let's find the directory:
+        let name = self.spec.gem_version.name;
+        let version = self.spec.gem_version.version;
+        let this_gem_dir = format!("{name}/{version}");
+        let gem_dst = bundle_path.join("gems").join(this_gem_dir);
+        std::fs::create_dir_all(&gem_dst)?;
+
+        // Then unpack the tarball into it.
+        let contents = std::io::Cursor::new(self.contents);
+        let mut archive = tar::Archive::new(contents);
+        eprintln!("Unpacking gem tarball to {gem_dst}");
+        for e in archive.entries()? {
+            let mut entry = e?;
+            let entry_path = entry.path()?;
+            match entry_path.display().to_string().as_str() {
+                "metadata.gz" => {
+                    // Idk what to do with this.
+                }
+                "data.tar.gz" => {
+                    // TODO: Unpack this data
+                }
+                "checksums.yaml.gz" => {
+                    // TODO: Validate these checksums
+                }
+                _ => {
+                    // Unknown entry, just ignore it.
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 fn url_for_spec(remote: &str, spec: &Spec<'_>) -> Result<Url> {
@@ -167,7 +212,6 @@ async fn download_gem<'i>(
     cache: &rv_cache::Cache,
 ) -> Result<Downloaded<'i>> {
     let url = url_for_spec(remote, &spec)?;
-    eprintln!("Downloading from {url}");
     let cache_key = rv_cache::cache_digest(url.as_ref());
     let cache_path = cache
         .shard(rv_cache::CacheBucket::Gem, "gems")
@@ -178,19 +222,17 @@ async fn download_gem<'i>(
     if cache_path.exists() {
         let data = tokio::fs::read(&cache_path).await?;
         contents = Bytes::from(data);
+        // eprintln!("Found gem from {url} in cache, {} bytes", contents.len());
     } else {
         contents = client.get(url.clone()).send().await?.bytes().await?;
         if let Some(parent) = cache_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
         tokio::fs::write(&cache_path, &contents).await?;
+        // eprintln!("Downloaded gem from {url}, {} bytes", contents.len());
     }
     // TODO: Validate the checksum from the Lockfile if present.
-    Ok(Downloaded {
-        contents,
-        from: url,
-        spec,
-    })
+    Ok(Downloaded { contents, spec })
 }
 
 #[cfg(test)]
@@ -199,7 +241,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_download_gems() -> Result<()> {
-        eprintln!("{:?}", std::env::current_dir());
         let file = "../rv-lockfile/tests/inputs/Gemfile.lock.test0".into();
         let cache = rv_cache::Cache::temp().unwrap();
         ci_inner(file, &cache, 10).await?;
