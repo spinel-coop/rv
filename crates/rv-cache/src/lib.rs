@@ -205,6 +205,7 @@ impl Cache {
         let mut summary = Removal::default();
 
         if !&self.root.exists() {
+            debug!("No cache found at: {}", &self.root);
             return Ok(summary);
         }
 
