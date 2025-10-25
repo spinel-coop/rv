@@ -13,7 +13,7 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberI
 pub mod commands;
 pub mod config;
 
-use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir};
+use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir, cache_prune};
 use crate::commands::ruby::dir::dir as ruby_dir;
 use crate::commands::ruby::find::find as ruby_find;
 use crate::commands::ruby::install::install as ruby_install;
@@ -293,6 +293,7 @@ async fn run() -> Result<()> {
             Commands::Cache(cache) => match cache.command {
                 CacheCommand::Dir => cache_dir(&config)?,
                 CacheCommand::Clean => cache_clean(&config)?,
+                CacheCommand::Prune => cache_prune(&config)?,
             },
             Commands::Shell(shell) => match shell.command {
                 ShellCommand::Init { shell } => shell_init(&config, shell)?,

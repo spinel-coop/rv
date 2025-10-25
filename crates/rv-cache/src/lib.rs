@@ -204,6 +204,10 @@ impl Cache {
     pub fn prune(&self) -> Result<Removal, io::Error> {
         let mut summary = Removal::default();
 
+        if !&self.root.exists() {
+            return Ok(summary);
+        }
+
         // Remove any top-level directories that are unused. These typically represent
         // outdated cache buckets (e.g., `ruby-v0`, when latest is `ruby-v0`).
         for entry in fs_err::read_dir(&self.root)? {
