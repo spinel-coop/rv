@@ -54,6 +54,9 @@ clap_complete = "4.5.57"
 clap_complete_nushell = "4.5.8"
 url = "2.5.7"
 bytes = "1.10.1"
+saphyr.workspace = true
+sha2.workspace = true
+hex = "0.4.3"
 
 [dev-dependencies]
 insta = { workspace = true }
