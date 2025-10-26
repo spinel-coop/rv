@@ -1,4 +1,5 @@
 use bytes::Bytes;
+use camino::Utf8Path;
 use camino::Utf8PathBuf;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
@@ -348,41 +349,49 @@ impl<'i> Downloaded<'i> {
             };
         }
 
-        // Now extract metadata.gz, then write it to
-        // BUNDLEPATH/specifications/name-version.gemspec
-
-        // First, create the metadata's destination.
-        let metadata_dir = bundle_path.join("specifications/");
-        std::fs::create_dir_all(&metadata_dir)?;
-        let filename = format!("{nameversion}.gemspec");
-        let dst_path = metadata_dir.join(filename);
-        let mut dst = std::fs::File::create(dst_path)?;
-
-        // Then write the (unzipped) source into the destination.
-        let mut unzipped_contents = GzDecoder::new(Cursor::new(metadata_gz));
-        std::io::copy(&mut unzipped_contents, &mut dst)?;
-
-        // Now extract and unpack data.tar.gz
-        // for every ENTRY in the data tar, unpack it to
-        // data.tar.gz => BUNDLEPATH/gems/name-version/ENTRY
-        let data_dir: PathBuf = bundle_path.join("gems").join(&nameversion).into();
-        std::fs::create_dir_all(&data_dir)?;
-        let mut gem_data_archive = tar::Archive::new(GzDecoder::new(Cursor::new(data_tar_gz)));
-        for e in gem_data_archive.entries()? {
-            let mut entry = e?;
-            let entry_path = entry.path()?;
-            let dst = data_dir.join(entry_path);
-
-            // Not sure if this is strictly necessary, or if we can know the
-            // intermediate directories ahead of time.
-            if let Some(dst_parent) = dst.parent() {
-                std::fs::create_dir_all(dst_parent)?;
-            }
-            entry.unpack(dst)?;
-        }
+        unpack_metadata(&bundle_path, &nameversion, metadata_gz)?;
+        unpack_data_tar(&bundle_path, &nameversion, data_tar_gz)?;
 
         Ok(())
     }
+}
+
+/// Given the data.tar.gz from a gem, unpack its contents to the filesystem under
+/// BUNDLEPATH/gems/name-version/ENTRY
+fn unpack_data_tar(bundle_path: &Utf8Path, nameversion: &str, data_tar_gz: Vec<u8>) -> Result<()> {
+    // First, create the data's destination.
+    let data_dir: PathBuf = bundle_path.join("gems").join(&nameversion).into();
+    std::fs::create_dir_all(&data_dir)?;
+    let mut gem_data_archive = tar::Archive::new(GzDecoder::new(Cursor::new(data_tar_gz)));
+    for e in gem_data_archive.entries()? {
+        let mut entry = e?;
+        let entry_path = entry.path()?;
+        let dst = data_dir.join(entry_path);
+
+        // Not sure if this is strictly necessary, or if we can know the
+        // intermediate directories ahead of time.
+        if let Some(dst_parent) = dst.parent() {
+            std::fs::create_dir_all(dst_parent)?;
+        }
+        entry.unpack(dst)?;
+    }
+    Ok(())
+}
+
+/// Given the metadata.gz from a gem, write it to the filesystem under
+/// BUNDLEPATH/specifications/name-version.gemspec
+fn unpack_metadata(bundle_path: &Utf8Path, nameversion: &str, metadata_gz: Vec<u8>) -> Result<()> {
+    // First, create the metadata's destination.
+    let metadata_dir = bundle_path.join("specifications/");
+    std::fs::create_dir_all(&metadata_dir)?;
+    let filename = format!("{nameversion}.gemspec");
+    let dst_path = metadata_dir.join(filename);
+    let mut dst = std::fs::File::create(dst_path)?;
+
+    // Then write the (unzipped) source into the destination.
+    let mut unzipped_contents = GzDecoder::new(Cursor::new(metadata_gz));
+    std::io::copy(&mut unzipped_contents, &mut dst)?;
+    Ok(())
 }
 
 fn url_for_spec(remote: &str, spec: &Spec<'_>) -> Result<Url> {
