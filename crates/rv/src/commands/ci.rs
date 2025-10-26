@@ -5,6 +5,7 @@ use futures_util::StreamExt;
 use futures_util::TryStreamExt;
 use owo_colors::OwoColorize;
 use reqwest::Client;
+use rv_lockfile::datatypes::ChecksumAlgorithm;
 use rv_lockfile::datatypes::GemSection;
 use rv_lockfile::datatypes::GemVersion;
 use rv_lockfile::datatypes::GemfileDotLock;
@@ -15,6 +16,7 @@ use tracing::info;
 use url::Url;
 
 use crate::config::Config;
+use std::collections::HashMap;
 use std::io;
 use std::io::Cursor;
 use std::io::Read;
@@ -83,7 +85,7 @@ async fn ci_inner(
 ) -> Result<()> {
     let lockfile_contents = std::fs::read_to_string(lockfile_path)?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
-    let gems = download_gems(lockfile, cache, args.max_concurrent_requests).await?;
+    let gems = download_gems(lockfile, cache, args).await?;
     install_gems(gems, args)?;
     Ok(())
 }
@@ -130,15 +132,50 @@ fn rv_http_client() -> Result<Client> {
     Ok(client)
 }
 
+enum KnownChecksumAlgos {
+    Sha256,
+}
+
+struct HowToChecksum {
+    algorithm: KnownChecksumAlgos,
+    value: Vec<u8>,
+}
+
 /// Downloads all gems from a Gemfile.lock
 async fn download_gems<'i>(
     lockfile: GemfileDotLock<'i>,
     cache: &rv_cache::Cache,
-    max_concurrent_requests: usize,
+    args: &CiArgs,
 ) -> Result<Vec<Downloaded<'i>>> {
     let all_sources = futures_util::stream::iter(lockfile.gem);
+    let checksums = if args.validate_checksums
+        && let Some(checks) = lockfile.checksums
+    {
+        let mut hm = HashMap::new();
+        for checksum in checks {
+            hm.insert(
+                checksum.gem_version,
+                HowToChecksum {
+                    algorithm: match checksum.algorithm {
+                        ChecksumAlgorithm::None => continue,
+                        ChecksumAlgorithm::Unknown(other) => {
+                            eprintln!("Unknown checksum algorithm {}", other.yellow());
+                            continue;
+                        }
+                        ChecksumAlgorithm::SHA256 => KnownChecksumAlgos::Sha256,
+                    },
+                    value: checksum.value,
+                },
+            );
+        }
+        hm
+    } else {
+        HashMap::default()
+    };
     let downloaded: Vec<_> = all_sources
-        .map(|gem_source| download_gem_source(gem_source, cache, max_concurrent_requests))
+        .map(|gem_source| {
+            download_gem_source(gem_source, &checksums, cache, args.max_concurrent_requests)
+        })
         .buffered(10)
         .try_collect::<Vec<_>>()
         .await?
@@ -365,18 +402,17 @@ fn url_for_spec(remote: &str, spec: &Spec<'_>) -> Result<Url> {
 /// e.g. from gems.coop or rubygems or something.
 async fn download_gem_source<'i>(
     gem_source: GemSection<'i>,
+    checksums: &HashMap<GemVersion<'i>, HowToChecksum>,
     cache: &rv_cache::Cache,
     max_concurrent_requests: usize,
 ) -> Result<Vec<Downloaded<'i>>> {
     // TODO: If the gem server needs user credentials, accept them and add them to this client.
     let client = rv_http_client()?;
 
-    // Get all URLs for downloading all gems from this source.
-
     // Download them all, concurrently.
     let spec_stream = futures_util::stream::iter(gem_source.specs);
     let downloaded_gems: Vec<_> = spec_stream
-        .map(|spec| download_gem(gem_source.remote, spec, &client, cache))
+        .map(|spec| download_gem(gem_source.remote, spec, &client, cache, checksums))
         .buffered(max_concurrent_requests)
         .try_collect()
         .await?;
@@ -389,6 +425,7 @@ async fn download_gem<'i>(
     spec: Spec<'i>,
     client: &Client,
     cache: &rv_cache::Cache,
+    checksums: &HashMap<GemVersion<'i>, HowToChecksum>,
 ) -> Result<Downloaded<'i>> {
     let url = url_for_spec(remote, &spec)?;
     let cache_key = rv_cache::cache_digest(url.as_ref());
@@ -401,7 +438,6 @@ async fn download_gem<'i>(
     if cache_path.exists() {
         let data = tokio::fs::read(&cache_path).await?;
         contents = Bytes::from(data);
-        // TODO: Validate checksum and download it again if mismatched.
         debug!("Reusing gem from {url} in cache");
     } else {
         contents = client.get(url.clone()).send().await?.bytes().await?;
@@ -411,7 +447,22 @@ async fn download_gem<'i>(
         tokio::fs::write(&cache_path, &contents).await?;
         debug!("Downloaded gem from {url}");
     }
-    // TODO: Validate the checksum from the Lockfile if present.
+
+    // Validate the checksums.
+    if let Some(checksum) = checksums.get(&spec.gem_version) {
+        match checksum.algorithm {
+            KnownChecksumAlgos::Sha256 => {
+                let actual = sha2::Sha256::digest(&contents);
+                if actual[..] != checksum.value {
+                    return Err(Error::ChecksumFail {
+                        filename: url.to_string(),
+                        gem_name: format!("{}-{}", spec.gem_version.name, spec.gem_version.version),
+                        algo: "sha256",
+                    });
+                }
+            }
+        }
+    }
     Ok(Downloaded { contents, spec })
 }
 
