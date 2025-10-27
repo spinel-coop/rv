@@ -32,7 +32,7 @@ pub struct CiArgs {
     pub max_concurrent_requests: usize,
 
     /// Validate the checksums from the gem server and gem itself.
-    #[arg(short, long, default_value = "true")]
+    #[arg(long, default_value = "true")]
     pub validate_checksums: bool,
 }
 
