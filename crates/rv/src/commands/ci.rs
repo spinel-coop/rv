@@ -349,7 +349,12 @@ impl<'i> Downloaded<'i> {
                     }
                     found_metadata = true;
                     let data = HashReader::new(entry);
-                    let hashed = unpack_metadata(&bundle_path, &nameversion, data)?;
+                    let UnpackedMetdata { hashed, extensions } =
+                        unpack_metadata(&bundle_path, &nameversion, data)?;
+                    if !extensions.is_empty() {
+                        tracing::debug!("Found native extensions, compiling them");
+                        compile_native_extensions(extensions)?;
+                    }
                     if args.validate_checksums
                         && let Some(ref checksums) = checksums
                     {
@@ -392,6 +397,19 @@ impl<'i> Downloaded<'i> {
 
         Ok(())
     }
+}
+
+fn compile_native_extensions(extensions: Vec<String>) -> Result<()> {
+    for extension in extensions {
+        let _compile_res = std::process::Command::new("ruby")
+            .arg(extension)
+            .spawn()?
+            .wait_with_output();
+        // TODO: check if this succeeded or not,
+        // It should produce .so or .bundle files, which can be
+        // copied to a specific place, so they can be loaded later.
+    }
+    Ok(())
 }
 
 struct HashReader<R> {
@@ -469,13 +487,18 @@ where
     Ok(h.finalize())
 }
 
+struct UnpackedMetdata {
+    hashed: Hashed,
+    extensions: Vec<String>,
+}
+
 /// Given the metadata.gz from a gem, write it to the filesystem under
 /// BUNDLEPATH/specifications/name-version.gemspec
 fn unpack_metadata<R>(
     bundle_path: &Utf8Path,
     nameversion: &str,
     metadata_gz: HashReader<R>,
-) -> Result<Hashed>
+) -> Result<UnpackedMetdata>
 where
     R: Read,
 {
@@ -484,14 +507,28 @@ where
     std::fs::create_dir_all(&metadata_dir)?;
     let filename = format!("{nameversion}.gemspec");
     let dst_path = metadata_dir.join(filename);
-    let mut dst = std::fs::File::create(dst_path)?;
+    let mut dst = std::fs::File::create(&dst_path)?;
 
     // Then write the (unzipped) source into the destination.
-    let mut unzipped_contents = GzDecoder::new(metadata_gz);
-    std::io::copy(&mut unzipped_contents, &mut dst)?;
+    let mut contents = String::new();
+    let mut unzipper = GzDecoder::new(metadata_gz);
+    unzipper.read_to_string(&mut contents)?;
+    let parsed = match rv_gem_specification_yaml::parse(&contents) {
+        Ok(parsed) => Some(parsed),
+        Err(e) => {
+            eprintln!("Warning: specification of {nameversion} was invalid: {e}");
+            None
+        }
+    };
+    std::io::copy(&mut Cursor::new(contents), &mut dst)?;
 
-    let h = unzipped_contents.into_inner();
-    Ok(h.finalize())
+    let extensions = parsed.map(|p| p.extensions).unwrap_or_default();
+
+    let h = unzipper.into_inner();
+    Ok(UnpackedMetdata {
+        hashed: h.finalize(),
+        extensions,
+    })
 }
 
 fn url_for_spec(remote: &str, spec: &Spec<'_>) -> Result<Url> {
