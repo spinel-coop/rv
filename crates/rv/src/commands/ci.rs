@@ -67,6 +67,8 @@ pub enum Error {
         gem_name: String,
         algo: &'static str,
     },
+    #[error("Invalid gem archive: {0}")]
+    InvalidGemArchive(String),
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -218,6 +220,9 @@ impl ArchiveChecksums {
     fn new(file: &str) -> Option<Self> {
         use saphyr::{LoadableYamlNode, Yaml};
         let contents_yaml = Yaml::load_from_str(file).ok()?;
+        if contents_yaml.is_empty() {
+            return None;
+        }
         let root = &contents_yaml[0];
         let mut out = ArchiveChecksums::default();
 
@@ -313,10 +318,11 @@ impl<'i> Downloaded<'i> {
                     let _ = contents.read_to_string(&mut str_contents)?;
                     let cs = ArchiveChecksums::new(&str_contents).ok_or(Error::InvalidChecksum)?;
 
-                    assert!(
-                        checksums.replace(cs).is_none(),
-                        "two checksums.yaml.gz files found in the gem archive"
-                    );
+                    if checksums.replace(cs).is_some() {
+                        return Err(Error::InvalidGemArchive(
+                            "two checksums.yaml.gz files found in the gem archive".to_owned(),
+                        ));
+                    }
                 }
             }
             if checksums.is_none() {
