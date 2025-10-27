@@ -327,7 +327,7 @@ impl<'i> Downloaded<'i> {
             }
             if checksums.is_none() {
                 eprintln!(
-                    "Warning: No checksums found for crate {}",
+                    "Warning: No checksums found for gem {}",
                     nameversion.yellow()
                 );
             }
