@@ -581,7 +581,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_download_gems() -> Result<()> {
-        let file = "../rv-lockfile/tests/inputs/Gemfile.lock.test0".into();
+        let file = "../rv-lockfile/tests/inputs/Gemfile.lock.discourse".into();
         let cache = rv_cache::Cache::temp().unwrap();
         ci_inner(
             file,
