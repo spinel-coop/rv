@@ -1986,6 +1986,7 @@ dependencies = [
  "reqwest",
  "rv-cache",
  "rv-dirs",
+ "rv-gem-specification-yaml",
  "rv-lockfile",
  "rv-ruby",
  "saphyr",
