@@ -617,8 +617,8 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_download_gems() -> Result<()> {
-        let file = "../rv-lockfile/tests/inputs/Gemfile.lock.discourse".into();
+    async fn test_ci_inner() -> Result<()> {
+        let file = "../rv-lockfile/tests/inputs/Gemfile.lock.empty".into();
         let cache = rv_cache::Cache::temp().unwrap();
         ci_inner(
             file,
