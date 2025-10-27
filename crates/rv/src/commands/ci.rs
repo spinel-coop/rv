@@ -344,6 +344,9 @@ impl<'i> Downloaded<'i> {
             let entry_path = entry.path()?;
             match entry_path.display().to_string().as_str() {
                 "metadata.gz" => {
+                    if found_metadata {
+                        return Err(Error::InvalidGemArchive("two metadata.gz found".to_owned()));
+                    }
                     found_metadata = true;
                     let data = HashReader {
                         reader: entry,
@@ -363,6 +366,9 @@ impl<'i> Downloaded<'i> {
                     }
                 }
                 "data.tar.gz" => {
+                    if found_data_tar {
+                        return Err(Error::InvalidGemArchive("two data.tar.gz found".to_owned()));
+                    }
                     found_data_tar = true;
                     let data = HashReader {
                         reader: entry,
