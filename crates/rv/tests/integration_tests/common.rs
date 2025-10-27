@@ -80,6 +80,11 @@ impl RvTest {
             .with_body(content)
     }
 
+    pub fn mock_gem_download(&mut self, filename: &str, content: &[u8]) -> Mock {
+        let path = format!("gems/{}", filename);
+        self.mock_tarball_download(&path, content)
+    }
+
     /// Get the server URL for constructing download URLs
     pub fn server_url(&self) -> String {
         self.server.url()
