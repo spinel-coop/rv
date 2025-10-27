@@ -12,6 +12,8 @@ use rv_lockfile::datatypes::GemVersion;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_lockfile::datatypes::Spec;
 use sha2::Digest;
+use sha2::Sha256;
+use sha2::Sha512;
 use tracing::debug;
 use tracing::info;
 use url::Url;
@@ -202,7 +204,9 @@ struct ArchiveChecksums {
 /// Checksums found in the gem under checksums.yaml
 #[derive(Debug)]
 struct ChecksumFiles {
+    /// Expected checksum, given by server.
     metadata_gz: Vec<u8>,
+    /// Expected checksum, given by server.
     data_tar_gz: Vec<u8>,
 }
 
@@ -232,43 +236,53 @@ impl ArchiveChecksums {
         Some(out)
     }
 
-    fn validate(self, gem_name: String, metadata_gz: &[u8], data_tar_gz: &[u8]) -> Result<()> {
+    fn validate_data_tar(&self, gem_name: String, h256: Bytes, h512: Bytes) -> Result<()> {
+        if self.sha256.is_none() && self.sha512.is_none() {
+            eprintln!("Checksum file was empty");
+        }
+        if let Some(sha256) = &self.sha256
+            && h256 != sha256.data_tar_gz
+        {
+            return Err(Error::ChecksumFail {
+                filename: "data.tar.gz".to_owned(),
+                gem_name,
+                algo: "sha256",
+            });
+        }
+        if let Some(sha512) = &self.sha512
+            && h512 != sha512.data_tar_gz
+        {
+            return Err(Error::ChecksumFail {
+                filename: "data.tar.gz".to_owned(),
+                gem_name,
+                algo: "sha512",
+            });
+        }
+        Ok(())
+    }
+
+    fn validate_metadata(&self, gem_name: String, h256: Bytes, h512: Bytes) -> Result<()> {
         if self.sha256.is_none() && self.sha512.is_none() {
             eprintln!("Checksum file was empty");
         }
         if let Some(sha256) = &self.sha256 {
-            let actual = &sha2::Sha256::digest(metadata_gz)[..];
             let expected = &sha256.metadata_gz;
-            if actual != expected {
+            if h256 != expected {
                 return Err(Error::ChecksumFail {
                     filename: "metadata.gz".to_owned(),
-                    gem_name,
-                    algo: "sha256",
-                });
-            }
-            if sha2::Sha256::digest(data_tar_gz)[..] != sha256.data_tar_gz {
-                return Err(Error::ChecksumFail {
-                    filename: "data.tar.gz".to_owned(),
                     gem_name,
                     algo: "sha256",
                 });
             }
         }
-        if let Some(sha512) = &self.sha512 {
-            if sha2::Sha512::digest(metadata_gz)[..] != sha512.metadata_gz {
-                return Err(Error::ChecksumFail {
-                    filename: "metadata.gz".to_owned(),
-                    gem_name,
-                    algo: "sha512",
-                });
-            }
-            if sha2::Sha512::digest(data_tar_gz)[..] != sha512.data_tar_gz {
-                return Err(Error::ChecksumFail {
-                    filename: "data.tar.gz".to_owned(),
-                    gem_name,
-                    algo: "sha512",
-                });
-            }
+        if let Some(sha512) = &self.sha512
+            && h512 != sha512.metadata_gz
+        {
+            return Err(Error::ChecksumFail {
+                filename: "metadata.gz".to_owned(),
+                gem_name,
+                algo: "sha512",
+            });
         }
         Ok(())
     }
@@ -285,29 +299,15 @@ impl<'i> Downloaded<'i> {
 
         // Then unpack the tarball into it.
         let contents = Cursor::new(self.contents);
-        let mut archive = tar::Archive::new(contents);
-        let mut checksums: Option<ArchiveChecksums> = None;
-        let mut metadata_gz: Vec<u8> = Vec::new();
-        let mut data_tar_gz: Vec<u8> = Vec::new();
-        for e in archive.entries()? {
-            let mut entry = e?;
-            let entry_path = entry.path()?;
-            match entry_path.display().to_string().as_str() {
-                "metadata.gz" => {
-                    assert!(
-                        metadata_gz.is_empty(),
-                        "two metadatadata.gz files found in the gem archive"
-                    );
-                    entry.read_to_end(&mut metadata_gz)?;
-                }
-                "data.tar.gz" => {
-                    assert!(
-                        data_tar_gz.is_empty(),
-                        "two data.tar.gz files found in the gem archive"
-                    );
-                    entry.read_to_end(&mut data_tar_gz)?;
-                }
-                "checksums.yaml.gz" => {
+        let mut archive = tar::Archive::new(contents.clone());
+
+        let checksums = if args.validate_checksums {
+            let mut checksums: Option<ArchiveChecksums> = None;
+            for e in archive.entries()? {
+                let entry = e?;
+                let entry_path = entry.path()?;
+
+                if entry_path.display().to_string().as_str() == "checksums.yaml.gz" {
                     let mut contents = GzDecoder::new(entry);
                     let mut str_contents = String::new();
                     let _ = contents.read_to_string(&mut str_contents)?;
@@ -317,6 +317,66 @@ impl<'i> Downloaded<'i> {
                         checksums.replace(cs).is_none(),
                         "two checksums.yaml.gz files found in the gem archive"
                     );
+                }
+            }
+            if checksums.is_none() {
+                eprintln!(
+                    "Warning: No checksums found for crate {}",
+                    nameversion.yellow()
+                );
+            }
+            checksums
+        } else {
+            None
+        };
+
+        let mut found_metadata = false;
+        let mut found_data_tar = false;
+        let mut archive = tar::Archive::new(contents);
+        for e in archive.entries()? {
+            let entry = e?;
+            let entry_path = entry.path()?;
+            match entry_path.display().to_string().as_str() {
+                "metadata.gz" => {
+                    found_metadata = true;
+                    let data = HashReader {
+                        reader: entry,
+                        h256: Sha256::new(),
+                        h512: Sha512::new(),
+                    };
+                    let (h256, h512) = unpack_metadata(&bundle_path, &nameversion, data)?;
+                    if args.validate_checksums {
+                        if let Some(ref checksums) = checksums {
+                            checksums.validate_metadata(nameversion.clone(), h256, h512)?
+                        } else {
+                            eprintln!(
+                                "Gem server did not send checksums for {}",
+                                nameversion.yellow()
+                            );
+                        };
+                    }
+                }
+                "data.tar.gz" => {
+                    found_data_tar = true;
+                    let data = HashReader {
+                        reader: entry,
+                        h256: Sha256::new(),
+                        h512: Sha512::new(),
+                    };
+                    let (h256, h512) = unpack_data_tar(&bundle_path, &nameversion, data)?;
+                    if args.validate_checksums {
+                        if let Some(ref checksums) = checksums {
+                            checksums.validate_data_tar(nameversion.clone(), h256, h512)?
+                        } else {
+                            eprintln!(
+                                "Gem server did not send checksums for {}",
+                                nameversion.yellow()
+                            );
+                        };
+                    }
+                }
+                "checksums.yaml.gz" => {
+                    // Already handled
                 }
                 "data.tar.gz.sig" | "metadata.gz.sig" | "checksums.yaml.gz.sig" => {
                     // In the future, maybe we should add a flag which checks these?
@@ -329,40 +389,62 @@ impl<'i> Downloaded<'i> {
             }
         }
 
-        // Did we get all the files we were expecting?
-        if metadata_gz.is_empty() {
+        if !found_metadata {
             return Err(Error::NoMetadata);
         }
-        if data_tar_gz.is_empty() {
+        if !found_data_tar {
             return Err(Error::NoDataTar);
         }
-
-        // Validate the checksums.
-        if args.validate_checksums {
-            if let Some(checksums) = checksums {
-                checksums.validate(nameversion.clone(), &metadata_gz, &data_tar_gz)?
-            } else {
-                eprintln!(
-                    "Gem server did not send checksums for {}",
-                    nameversion.yellow()
-                );
-            };
-        }
-
-        unpack_metadata(&bundle_path, &nameversion, metadata_gz)?;
-        unpack_data_tar(&bundle_path, &nameversion, data_tar_gz)?;
 
         Ok(())
     }
 }
 
+struct HashReader<R> {
+    reader: R,
+    h256: Sha256,
+    h512: Sha512,
+}
+
+impl<R> std::io::Read for HashReader<R>
+where
+    R: Read,
+{
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let n = self.reader.read(buf)?;
+        if n > 0 {
+            self.h256.update(&buf[..n]);
+            self.h512.update(&buf[..n]);
+        }
+        Ok(n)
+    }
+}
+
+impl<R> HashReader<R> {
+    /// Get the final hash.
+    fn finalize(self) -> (Bytes, Bytes) {
+        (
+            self.h256.finalize().to_vec().into(),
+            self.h512.finalize().to_vec().into(),
+        )
+    }
+}
+
 /// Given the data.tar.gz from a gem, unpack its contents to the filesystem under
 /// BUNDLEPATH/gems/name-version/ENTRY
-fn unpack_data_tar(bundle_path: &Utf8Path, nameversion: &str, data_tar_gz: Vec<u8>) -> Result<()> {
+/// Returns the checksum.
+fn unpack_data_tar<R>(
+    bundle_path: &Utf8Path,
+    nameversion: &str,
+    data_tar_gz: HashReader<R>,
+) -> Result<(Bytes, Bytes)>
+where
+    R: std::io::Read,
+{
     // First, create the data's destination.
-    let data_dir: PathBuf = bundle_path.join("gems").join(&nameversion).into();
+    let data_dir: PathBuf = bundle_path.join("gems").join(nameversion).into();
     std::fs::create_dir_all(&data_dir)?;
-    let mut gem_data_archive = tar::Archive::new(GzDecoder::new(Cursor::new(data_tar_gz)));
+    let mut gem_data_archive = tar::Archive::new(GzDecoder::new(data_tar_gz));
     for e in gem_data_archive.entries()? {
         let mut entry = e?;
         let entry_path = entry.path()?;
@@ -375,12 +457,21 @@ fn unpack_data_tar(bundle_path: &Utf8Path, nameversion: &str, data_tar_gz: Vec<u
         }
         entry.unpack(dst)?;
     }
-    Ok(())
+    // Get the HashReader back.
+    let h = gem_data_archive.into_inner().into_inner();
+    Ok(h.finalize())
 }
 
 /// Given the metadata.gz from a gem, write it to the filesystem under
 /// BUNDLEPATH/specifications/name-version.gemspec
-fn unpack_metadata(bundle_path: &Utf8Path, nameversion: &str, metadata_gz: Vec<u8>) -> Result<()> {
+fn unpack_metadata<R>(
+    bundle_path: &Utf8Path,
+    nameversion: &str,
+    metadata_gz: HashReader<R>,
+) -> Result<(Bytes, Bytes)>
+where
+    R: Read,
+{
     // First, create the metadata's destination.
     let metadata_dir = bundle_path.join("specifications/");
     std::fs::create_dir_all(&metadata_dir)?;
@@ -389,9 +480,11 @@ fn unpack_metadata(bundle_path: &Utf8Path, nameversion: &str, metadata_gz: Vec<u
     let mut dst = std::fs::File::create(dst_path)?;
 
     // Then write the (unzipped) source into the destination.
-    let mut unzipped_contents = GzDecoder::new(Cursor::new(metadata_gz));
+    let mut unzipped_contents = GzDecoder::new(metadata_gz);
     std::io::copy(&mut unzipped_contents, &mut dst)?;
-    Ok(())
+
+    let h = unzipped_contents.into_inner();
+    Ok(h.finalize())
 }
 
 fn url_for_spec(remote: &str, spec: &Spec<'_>) -> Result<Url> {
