@@ -241,12 +241,12 @@ impl ArchiveChecksums {
         Some(out)
     }
 
-    fn validate_data_tar(&self, gem_name: String, h256: Bytes, h512: Bytes) -> Result<()> {
+    fn validate_data_tar(&self, gem_name: String, hashed: Hashed) -> Result<()> {
         if self.sha256.is_none() && self.sha512.is_none() {
             eprintln!("Checksum file was empty");
         }
         if let Some(sha256) = &self.sha256
-            && h256 != sha256.data_tar_gz
+            && hashed.digest_256 != sha256.data_tar_gz
         {
             return Err(Error::ChecksumFail {
                 filename: "data.tar.gz".to_owned(),
@@ -255,7 +255,7 @@ impl ArchiveChecksums {
             });
         }
         if let Some(sha512) = &self.sha512
-            && h512 != sha512.data_tar_gz
+            && hashed.digest_512 != sha512.data_tar_gz
         {
             return Err(Error::ChecksumFail {
                 filename: "data.tar.gz".to_owned(),
@@ -266,13 +266,13 @@ impl ArchiveChecksums {
         Ok(())
     }
 
-    fn validate_metadata(&self, gem_name: String, h256: Bytes, h512: Bytes) -> Result<()> {
+    fn validate_metadata(&self, gem_name: String, hashed: Hashed) -> Result<()> {
         if self.sha256.is_none() && self.sha512.is_none() {
             eprintln!("Checksum file was empty");
         }
         if let Some(sha256) = &self.sha256 {
             let expected = &sha256.metadata_gz;
-            if h256 != expected {
+            if hashed.digest_256 != expected {
                 return Err(Error::ChecksumFail {
                     filename: "metadata.gz".to_owned(),
                     gem_name,
@@ -281,7 +281,7 @@ impl ArchiveChecksums {
             }
         }
         if let Some(sha512) = &self.sha512
-            && h512 != sha512.metadata_gz
+            && hashed.digest_512 != sha512.metadata_gz
         {
             return Err(Error::ChecksumFail {
                 filename: "metadata.gz".to_owned(),
@@ -348,21 +348,12 @@ impl<'i> Downloaded<'i> {
                         return Err(Error::InvalidGemArchive("two metadata.gz found".to_owned()));
                     }
                     found_metadata = true;
-                    let data = HashReader {
-                        reader: entry,
-                        h256: Sha256::new(),
-                        h512: Sha512::new(),
-                    };
-                    let (h256, h512) = unpack_metadata(&bundle_path, &nameversion, data)?;
-                    if args.validate_checksums {
-                        if let Some(ref checksums) = checksums {
-                            checksums.validate_metadata(nameversion.clone(), h256, h512)?
-                        } else {
-                            eprintln!(
-                                "Gem server did not send checksums for {}",
-                                nameversion.yellow()
-                            );
-                        };
+                    let data = HashReader::new(entry);
+                    let hashed = unpack_metadata(&bundle_path, &nameversion, data)?;
+                    if args.validate_checksums
+                        && let Some(ref checksums) = checksums
+                    {
+                        checksums.validate_metadata(nameversion.clone(), hashed)?
                     }
                 }
                 "data.tar.gz" => {
@@ -370,21 +361,12 @@ impl<'i> Downloaded<'i> {
                         return Err(Error::InvalidGemArchive("two data.tar.gz found".to_owned()));
                     }
                     found_data_tar = true;
-                    let data = HashReader {
-                        reader: entry,
-                        h256: Sha256::new(),
-                        h512: Sha512::new(),
-                    };
-                    let (h256, h512) = unpack_data_tar(&bundle_path, &nameversion, data)?;
-                    if args.validate_checksums {
-                        if let Some(ref checksums) = checksums {
-                            checksums.validate_data_tar(nameversion.clone(), h256, h512)?
-                        } else {
-                            eprintln!(
-                                "Gem server did not send checksums for {}",
-                                nameversion.yellow()
-                            );
-                        };
+                    let data = HashReader::new(entry);
+                    let hashed = unpack_data_tar(&bundle_path, &nameversion, data)?;
+                    if args.validate_checksums
+                        && let Some(ref checksums) = checksums
+                    {
+                        checksums.validate_data_tar(nameversion.clone(), hashed)?
                     }
                 }
                 "checksums.yaml.gz" => {
@@ -418,6 +400,11 @@ struct HashReader<R> {
     h512: Sha512,
 }
 
+struct Hashed {
+    digest_256: Bytes,
+    digest_512: Bytes,
+}
+
 impl<R> std::io::Read for HashReader<R>
 where
     R: Read,
@@ -433,12 +420,20 @@ where
 }
 
 impl<R> HashReader<R> {
+    fn new(reader: R) -> Self {
+        Self {
+            reader,
+            h256: Default::default(),
+            h512: Default::default(),
+        }
+    }
+
     /// Get the final hash.
-    fn finalize(self) -> (Bytes, Bytes) {
-        (
-            self.h256.finalize().to_vec().into(),
-            self.h512.finalize().to_vec().into(),
-        )
+    fn finalize(self) -> Hashed {
+        Hashed {
+            digest_256: self.h256.finalize().to_vec().into(),
+            digest_512: self.h512.finalize().to_vec().into(),
+        }
     }
 }
 
@@ -449,7 +444,7 @@ fn unpack_data_tar<R>(
     bundle_path: &Utf8Path,
     nameversion: &str,
     data_tar_gz: HashReader<R>,
-) -> Result<(Bytes, Bytes)>
+) -> Result<Hashed>
 where
     R: std::io::Read,
 {
@@ -480,7 +475,7 @@ fn unpack_metadata<R>(
     bundle_path: &Utf8Path,
     nameversion: &str,
     metadata_gz: HashReader<R>,
-) -> Result<(Bytes, Bytes)>
+) -> Result<Hashed>
 where
     R: Read,
 {
