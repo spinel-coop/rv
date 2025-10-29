@@ -51,7 +51,8 @@ pub fn init(config: &Config, shell: Shell) -> Result<()> {
                     "function _rv_autoload_hook --on-variable PWD --description 'Change Ruby version on directory change using rv'\n",
                     "    status --is-command-substitution; and return\n",
                     "    {} shell env fish | source\n",
-                    "end\n"
+                    "end\n",
+                    "_rv_autoload_hook\n"
                 ),
                 config.current_exe
             );
