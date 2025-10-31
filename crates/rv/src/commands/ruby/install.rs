@@ -41,6 +41,7 @@ pub async fn install(
     config: &Config,
     install_dir: Option<String>,
     requested: RubyRequest,
+    tarball_path: Option<String>,
 ) -> Result<()> {
     let install_dir = match install_dir {
         Some(dir) => Utf8PathBuf::from(dir),
@@ -50,6 +51,28 @@ pub async fn install(
         },
     };
 
+    match tarball_path {
+        Some(tarball_path) => {
+            extract_local_ruby_tarball(tarball_path, &install_dir, &requested.number()).await?
+        }
+        None => download_and_extract_remote_tarball(config, &install_dir, &requested).await?,
+    }
+
+    println!(
+        "Installed Ruby version {} to {}",
+        requested.to_string().cyan(),
+        install_dir.cyan()
+    );
+
+    Ok(())
+}
+
+// downloads and extracts a remote ruby tarball
+async fn download_and_extract_remote_tarball(
+    config: &Config,
+    install_dir: &Utf8PathBuf,
+    requested: &RubyRequest,
+) -> Result<()> {
     if requested.patch.is_none() {
         Err(Error::IncompleteVersion(requested.clone()))?;
     }
@@ -71,13 +94,18 @@ pub async fn install(
         download_ruby_tarball(config, &url, &tarball_path).await?;
     }
 
-    extract_ruby_tarball(&tarball_path, &install_dir, &requested.number())?;
+    extract_ruby_tarball(&tarball_path, install_dir, &requested.number())?;
 
-    println!(
-        "Installed Ruby version {} to {}",
-        requested.to_string().cyan(),
-        install_dir.cyan()
-    );
+    Ok(())
+}
+
+// extract a local ruby tarball
+async fn extract_local_ruby_tarball(
+    tarball_path: String,
+    install_dir: &Utf8PathBuf,
+    version: &str,
+) -> Result<()> {
+    extract_ruby_tarball(Utf8Path::new(&tarball_path), install_dir, version)?;
 
     Ok(())
 }
