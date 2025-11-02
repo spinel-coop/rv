@@ -9,6 +9,7 @@ homepage = "https://spinel.coop/rv"
 default-run = "rv"
 
 [dependencies]
+axoupdater = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }
 clap_derive = { workspace = true }
 indicatif = { workspace = true, features = ["rayon"] }
