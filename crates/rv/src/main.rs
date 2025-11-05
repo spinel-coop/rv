@@ -87,11 +87,6 @@ impl Cli {
         };
 
         let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
-        let project_dir = if let Some(project_dir) = &self.project_dir {
-            Some(project_dir.clone())
-        } else {
-            config::find_project_dir(current_dir.clone(), root.clone())
-        };
         let ruby_dirs = if self.ruby_dir.is_empty() {
             config::default_ruby_dirs(&root)
         } else {
@@ -107,15 +102,16 @@ impl Cli {
         } else {
             std::env::current_exe()?.to_str().unwrap().into()
         };
+        let requested_ruby = config::find_requested_ruby(current_dir.clone(), root.clone())?;
 
         Ok(Config {
             ruby_dirs,
             gemfile: self.gemfile.clone(),
             root,
             current_dir,
-            project_dir,
             cache,
             current_exe,
+            requested_ruby,
         })
     }
 }

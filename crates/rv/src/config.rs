@@ -141,7 +141,10 @@ pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
         .collect()
 }
 
-pub fn find_project_dir(current_dir: Utf8PathBuf, root: Utf8PathBuf) -> Option<Utf8PathBuf> {
+pub fn find_requested_ruby(
+    current_dir: Utf8PathBuf,
+    root: Utf8PathBuf,
+) -> Result<Option<(RubyRequest, Source)>> {
     debug!("Searching for project directory in {}", current_dir);
     let mut project_dir = current_dir.clone();
 
@@ -149,12 +152,35 @@ pub fn find_project_dir(current_dir: Utf8PathBuf, root: Utf8PathBuf) -> Option<U
         let ruby_version = project_dir.join(".ruby-version");
         if ruby_version.exists() {
             debug!("Found project directory {}", project_dir);
-            return Some(project_dir);
+            let ruby_version_string = std::fs::read_to_string(&ruby_version)?;
+            return Ok(Some((
+                ruby_version_string.parse()?,
+                Source::DotRubyVersion(ruby_version),
+            )));
+        }
+
+        let tools_versions = project_dir.join(".tool-versions");
+        if tools_versions.exists() {
+            let tools_versions_string = std::fs::read_to_string(&tools_versions)?;
+            let mut tools_version = None;
+
+            for line in tools_versions_string.lines() {
+                if line.trim_start().starts_with("ruby") {
+                    tools_version = line.trim_start().strip_prefix("ruby")
+                }
+            }
+
+            if let Some(version) = tools_version {
+                return Ok(Some((
+                    version.parse()?,
+                    Source::DotToolVersions(tools_versions),
+                )));
+            }
         }
 
         if project_dir == root {
             debug!("Reached root {} without finding a project directory", root);
-            return None;
+            return Ok(None);
         }
 
         if let Some(parent_dir) = project_dir.parent() {
@@ -164,7 +190,7 @@ pub fn find_project_dir(current_dir: Utf8PathBuf, root: Utf8PathBuf) -> Option<U
                 "Ran out of parents of {} without finding a project directory",
                 project_dir
             );
-            return None;
+            return Ok(None);
         }
     }
 }

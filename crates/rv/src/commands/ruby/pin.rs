@@ -1,4 +1,7 @@
+use std::borrow::Cow;
+
 use anstream::println;
+use camino::Utf8PathBuf;
 use miette::Diagnostic;
 use owo_colors::OwoColorize;
 
@@ -22,10 +25,18 @@ pub fn pin(config: &Config, version: Option<String>) -> Result<()> {
 }
 
 fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
-    let project_dir = config.project_dir.as_ref().unwrap_or(&config.current_dir);
-
-    let ruby_version_path = project_dir.join(".ruby-version");
-    std::fs::write(ruby_version_path, format!("{version}\n"))?;
+    let project_dir: Cow<Utf8PathBuf> = match config.requested_ruby {
+        Some((_, config::Source::DotToolVersions(ref path))) => Cow::Borrowed(&path),
+        Some((_, config::Source::DotRubyVersion(ref ruby_version_path))) => {
+            std::fs::write(ruby_version_path, format!("{version}\n"))?;
+            Cow::Borrowed(&ruby_version_path)
+        }
+        Some((_, config::Source::Other)) | None => {
+            let ruby_version_path = config.current_dir.join(".ruby-version");
+            std::fs::write(&ruby_version_path, format!("{version}\n"))?;
+            Cow::Owned(ruby_version_path)
+        }
+    };
 
     println!("{0} pinned to Ruby {1}", project_dir.cyan(), version.cyan());
 
@@ -33,18 +44,32 @@ fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
 }
 
 fn show_pinned_ruby(config: &Config) -> Result<()> {
-    let project_dir = config.project_dir.as_ref().ok_or_else(|| {
-        Error::ConfigError(config::Error::NoProjectDir {
+    // let project_dir = config.project_dir.as_ref().ok_or_else(|| {
+    //     Error::ConfigError(config::Error::NoProjectDir {
+    //         current_dir: config.current_dir.clone(),
+    //     })
+    // })?;
+    // let path = project_dir.join(".ruby-version");
+    // let ruby_version = std::fs::read_to_string(path)?;
+    let Some((ruby, source)) = &config.requested_ruby else {
+        return Err(Error::ConfigError(config::Error::NoProjectDir {
             current_dir: config.current_dir.clone(),
-        })
-    })?;
-    let path = project_dir.join(".ruby-version");
-    let ruby_version = std::fs::read_to_string(path)?;
+        }));
+    };
+
+    let project_dir: Cow<Utf8PathBuf> = match source {
+        config::Source::DotToolVersions(path) => Cow::Borrowed(path),
+        config::Source::DotRubyVersion(ruby_version_path) => Cow::Borrowed(ruby_version_path),
+        config::Source::Other => {
+            let ruby_version_path = config.current_dir.join(".ruby-version");
+            Cow::Owned(ruby_version_path)
+        }
+    };
 
     println!(
         "{0} is pinned to Ruby {1}",
-        config.project_dir.as_ref().unwrap().cyan(),
-        ruby_version.cyan()
+        project_dir.as_ref().cyan(),
+        ruby.cyan()
     );
     Ok(())
 }

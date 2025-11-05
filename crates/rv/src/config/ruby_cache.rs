@@ -173,9 +173,9 @@ mod tests {
             gemfile: None,
             root: root.clone(),
             current_dir: root.clone(),
-            project_dir: None,
             cache: Cache::temp().unwrap(),
             current_exe: root.join("bin").join("rv"),
+            requested_ruby: None,
         };
 
         (config, temp_dir)
