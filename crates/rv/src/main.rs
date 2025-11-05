@@ -49,9 +49,6 @@ struct Cli {
     #[arg(long = "ruby-dir", env = "RUBIES_PATH", value_delimiter = ':')]
     ruby_dir: Vec<Utf8PathBuf>,
 
-    #[arg(long = "project-dir")]
-    project_dir: Option<Utf8PathBuf>,
-
     /// Path to Gemfile
     #[arg(long, env = "BUNDLE_GEMFILE")]
     gemfile: Option<Utf8PathBuf>,

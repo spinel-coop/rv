@@ -1970,7 +1970,7 @@ dependencies = [
  "flate2",
  "fs-err",
  "futures-util",
- "indexmap 2.10.0",
+ "indexmap",
  "indicatif",
  "indoc",
  "insta",

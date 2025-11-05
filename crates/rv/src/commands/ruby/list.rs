@@ -249,7 +249,7 @@ pub(crate) async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Re
 /// Lists the available and installed rubies.
 pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -> Result<()> {
     let installed_rubies = config.rubies();
-    let active_ruby = config.project_ruby();
+    let active_ruby = config.current_ruby();
 
     if installed_only {
         if installed_rubies.is_empty() && format == OutputFormat::Text {

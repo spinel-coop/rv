@@ -73,7 +73,7 @@ impl Config {
             .find(|ruby| request.satisfied_by(ruby))
     }
 
-    pub fn project_ruby(&self) -> Option<Ruby> {
+    pub fn current_ruby(&self) -> Option<Ruby> {
         if let Ok(request) = self.ruby_request() {
             self.matching_ruby(&request)
         } else {
@@ -82,12 +82,8 @@ impl Config {
     }
 
     pub fn ruby_request(&self) -> Result<RubyRequest> {
-        if let Some(project_dir) = &self.project_dir {
-            let rv_file = project_dir.join(".ruby-version");
-
-            std::fs::read_to_string(&rv_file)
-                .map_err(Error::from)
-                .and_then(|s| Ok(s.parse::<RubyRequest>()?))
+        if let Some(request) = &self.requested_ruby {
+            Ok(request.0.clone())
         } else {
             Ok(RubyRequest::default())
         }
