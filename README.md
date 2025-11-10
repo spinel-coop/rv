@@ -23,7 +23,7 @@ Eventually, you'll be able to manage all your Rubies, tools, gems, and packages,
 
 ## Install
 
-```zsh
+```bash
 # Homebrew or Linuxbrew
 brew install rv
 ```
@@ -37,25 +37,7 @@ time rv ruby install 3.4.7
 rv ruby run 3.4.7 -- --version
 ```
 
-## Shell setup
-
-```zsh
-# zsh
-echo 'eval "$(rv shell init zsh)"' >> ~/.zshrc
-eval "$(rv shell init zsh)"
-```
-
-```bash
-# bash
-echo 'eval "$(rv shell init bash)"' >> ~/.bashrc
-eval "$(rv shell init bash)"
-```
-
-```fish
-# fish
-echo 'rv shell init fish | source' >> ~/.config/fish/config.fish
-rv shell init fish | source
-```
+See [SHELL INTEGRATION](doc/SHELL_INTEGRATION.md) for zsh, bash, fish, and nushell.
 
 ## Brought to you by Spinel
 
