@@ -9,10 +9,10 @@ Eventually, you'll be able to manage all your Rubies, tools, gems, and packages,
 ## Testimonials
 
 "what the heckie that just installed a ruby version for me in .22 seconds???"
- &mdash; <a href="https://bsky.app/profile/veryroundbird.house/post/3lxdwtsbwp22o">c. ruiyi smallbird</a>
+ &mdash; [c. ruiyi smallbird](https://bsky.app/profile/veryroundbird.house/post/3lxdwtsbwp22o)
 
 "Holy wow that thing \_flies\_."
- &mdash; <a href="https://bsky.app/profile/afomera.dev/post/3m4wjfvqrhk2h">Andrea Fomera</a>
+ &mdash; [Andrea Fomera](https://bsky.app/profile/afomera.dev/post/3m4wjfvqrhk2h)
 
 ## Requirements
 
