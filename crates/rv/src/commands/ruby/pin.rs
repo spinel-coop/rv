@@ -45,13 +45,6 @@ fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
 }
 
 fn show_pinned_ruby(config: &Config) -> Result<()> {
-    // let project_dir = config.project_dir.as_ref().ok_or_else(|| {
-    //     Error::ConfigError(config::Error::NoProjectDir {
-    //         current_dir: config.current_dir.clone(),
-    //     })
-    // })?;
-    // let path = project_dir.join(".ruby-version");
-    // let ruby_version = std::fs::read_to_string(path)?;
     let Some((ruby, source)) = &config.requested_ruby else {
         return Err(Error::ConfigError(config::Error::NoProjectDir {
             current_dir: config.current_dir.clone(),
