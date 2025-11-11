@@ -97,12 +97,26 @@ mod tests {
     }
 
     #[test]
-    fn test_pin_returns_version() {
+    fn test_pin_runs_with_no_version() {
+        let config = test_config().unwrap();
+        pin(&config, None).unwrap();
+    }
+
+    #[test]
+    fn test_pin_runs_with_ruby_version() {
         let config = test_config().unwrap();
 
         let ruby_version_file = config.current_dir.join(".ruby-version");
         std::fs::write(&ruby_version_file, "3.2.0").unwrap();
         pin(&config, None).unwrap();
+    }
+
+    #[test]
+    fn test_pin_runs_with_tool_versions() {
+        let config = test_config().unwrap();
+
+        pin(&config, None).unwrap();
+        let ruby_version_file = config.current_dir.join(".tool-versions");
         std::fs::write(&ruby_version_file, "3.2.0").unwrap();
         pin(&config, None).unwrap();
     }
