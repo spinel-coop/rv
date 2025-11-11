@@ -16,8 +16,6 @@ mod ruby_cache;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
-    #[error("No project was found in the parents of {}", current_dir)]
-    NoProjectDir { current_dir: Utf8PathBuf },
     #[error("Ruby cache miss or invalid cache for {}", ruby_path)]
     RubyCacheMiss { ruby_path: Utf8PathBuf },
     #[error(transparent)]

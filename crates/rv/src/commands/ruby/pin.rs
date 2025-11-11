@@ -6,12 +6,12 @@ use miette::Diagnostic;
 use owo_colors::OwoColorize;
 use rv_ruby::request::Source;
 
-use crate::config::{self, Config};
+use crate::config::Config;
 
 #[derive(Debug, thiserror::Error, Diagnostic)]
 pub enum Error {
-    #[error(transparent)]
-    ConfigError(#[from] config::Error),
+    #[error("No Ruby version request found in {}", path.cyan())]
+    NoRubyRequest { path: Utf8PathBuf },
     #[error(transparent)]
     IoError(#[from] std::io::Error),
 }
@@ -46,12 +46,12 @@ fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
 
 fn show_pinned_ruby(config: &Config) -> Result<()> {
     let Some((ruby, source)) = &config.requested_ruby else {
-        return Err(Error::ConfigError(config::Error::NoProjectDir {
-            current_dir: config.current_dir.clone(),
-        }));
+        return Err(Error::NoRubyRequest {
+            path: config.current_dir.clone(),
+        });
     };
 
-    let project_dir: Cow<Utf8PathBuf> = match source {
+    let dir: Cow<Utf8PathBuf> = match source {
         Source::DotToolVersions(path) => Cow::Borrowed(path),
         Source::DotRubyVersion(ruby_version_path) => Cow::Borrowed(ruby_version_path),
         Source::Other => {
@@ -62,7 +62,7 @@ fn show_pinned_ruby(config: &Config) -> Result<()> {
 
     println!(
         "{0} is pinned to Ruby {1}",
-        project_dir.as_ref().cyan(),
+        dir.as_ref().cyan(),
         ruby.cyan()
     );
     Ok(())
@@ -98,16 +98,17 @@ mod tests {
 
     #[test]
     fn test_pin_runs_with_no_version() {
-        let config = test_config().unwrap();
-        pin(&config, None).unwrap();
+        let mut config = test_config().unwrap();
+        config.requested_ruby = None;
+        pin(&config, None).expect_err("No Ruby request found");
     }
 
     #[test]
     fn test_pin_runs_with_ruby_version() {
-        let config = test_config().unwrap();
+        let mut config = test_config().unwrap();
 
         let ruby_version_file = config.current_dir.join(".ruby-version");
-        std::fs::write(&ruby_version_file, "3.2.0").unwrap();
+        config.requested_ruby = Some(("3.2.0".into(), Source::DotRubyVersion(ruby_version_file)));
         pin(&config, None).unwrap();
     }
 
