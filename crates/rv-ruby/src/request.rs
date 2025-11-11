@@ -470,4 +470,28 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn test_ruby_request_from_str() {
+        let version = "3";
+        let request = RubyRequest::from(version);
+        let output = request.to_string();
+        assert_eq!(
+            output,
+            format!("ruby-{}", version.trim()),
+            "Parsed output does not match input for {version}"
+        );
+    }
+
+    #[test]
+    fn test_ruby_request_from_string() {
+        let version = "3".to_string();
+        let request = RubyRequest::from(version.clone());
+        let output = request.to_string();
+        assert_eq!(
+            output,
+            format!("ruby-{}", version),
+            "Parsed output does not match input for {version}"
+        );
+    }
 }
