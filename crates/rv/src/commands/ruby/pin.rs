@@ -4,6 +4,7 @@ use anstream::println;
 use camino::Utf8PathBuf;
 use miette::Diagnostic;
 use owo_colors::OwoColorize;
+use rv_ruby::request::Source;
 
 use crate::config::{self, Config};
 
@@ -26,12 +27,12 @@ pub fn pin(config: &Config, version: Option<String>) -> Result<()> {
 
 fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
     let project_dir: Cow<Utf8PathBuf> = match config.requested_ruby {
-        Some((_, config::Source::DotToolVersions(ref path))) => Cow::Borrowed(&path),
-        Some((_, config::Source::DotRubyVersion(ref ruby_version_path))) => {
+        Some((_, Source::DotToolVersions(ref path))) => Cow::Borrowed(path),
+        Some((_, Source::DotRubyVersion(ref ruby_version_path))) => {
             std::fs::write(ruby_version_path, format!("{version}\n"))?;
-            Cow::Borrowed(&ruby_version_path)
+            Cow::Borrowed(ruby_version_path)
         }
-        Some((_, config::Source::Other)) | None => {
+        Some((_, Source::Other)) | None => {
             let ruby_version_path = config.current_dir.join(".ruby-version");
             std::fs::write(&ruby_version_path, format!("{version}\n"))?;
             Cow::Owned(ruby_version_path)
@@ -58,9 +59,9 @@ fn show_pinned_ruby(config: &Config) -> Result<()> {
     };
 
     let project_dir: Cow<Utf8PathBuf> = match source {
-        config::Source::DotToolVersions(path) => Cow::Borrowed(path),
-        config::Source::DotRubyVersion(ruby_version_path) => Cow::Borrowed(ruby_version_path),
-        config::Source::Other => {
+        Source::DotToolVersions(path) => Cow::Borrowed(path),
+        Source::DotRubyVersion(ruby_version_path) => Cow::Borrowed(ruby_version_path),
+        Source::Other => {
             let ruby_version_path = config.current_dir.join(".ruby-version");
             Cow::Owned(ruby_version_path)
         }
@@ -85,17 +86,15 @@ mod tests {
         let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
         let ruby_dir = root.join("opt/rubies");
         std::fs::create_dir_all(&ruby_dir)?;
-
-        let project_dir = root.join("project");
-        std::fs::create_dir_all(&project_dir)?;
-
         let current_dir = root.join("project");
+        std::fs::create_dir_all(&current_dir)?;
+        let requested_ruby = Some(("3.5.0".into(), Source::Other));
 
         let config = Config {
             ruby_dirs: indexset![ruby_dir],
             gemfile: None,
             current_exe: root.join("bin").join("rv"),
-            project_dir: Some(project_dir),
+            requested_ruby,
             current_dir,
             cache: rv_cache::Cache::temp().unwrap(),
             root,
@@ -108,7 +107,7 @@ mod tests {
     fn test_pin_returns_version() {
         let config = test_config().unwrap();
 
-        let ruby_version_file = config.project_dir.as_ref().unwrap().join(".ruby-version");
+        let ruby_version_file = config.current_dir.join(".ruby-version");
         std::fs::write(&ruby_version_file, "3.2.0").unwrap();
         pin(&config, None).unwrap();
         std::fs::write(&ruby_version_file, "3.2.0").unwrap();
@@ -124,7 +123,7 @@ mod tests {
         pin(&config, Some(version.clone())).unwrap();
 
         // Verify the file was created
-        let ruby_version_path = config.project_dir.unwrap().join(".ruby-version");
+        let ruby_version_path = config.current_dir.join(".ruby-version");
         assert!(ruby_version_path.exists());
         let content = std::fs::read_to_string(ruby_version_path).unwrap();
         assert_eq!(content, format!("{version}\n"));
@@ -143,7 +142,7 @@ mod tests {
         pin(&config, Some(second_version.clone())).unwrap();
 
         // Verify the file contains the second version
-        let ruby_version_path = config.project_dir.unwrap().join(".ruby-version");
+        let ruby_version_path = config.current_dir.join(".ruby-version");
         let content = std::fs::read_to_string(ruby_version_path).unwrap();
         assert_eq!(content, format!("{second_version}\n"));
     }
@@ -155,7 +154,7 @@ mod tests {
 
         pin(&config, Some(version.clone())).unwrap();
 
-        let ruby_version_path = config.project_dir.unwrap().join(".ruby-version");
+        let ruby_version_path = config.current_dir.join(".ruby-version");
         let content = std::fs::read_to_string(ruby_version_path).unwrap();
         assert_eq!(content, format!("{version}\n"));
     }
@@ -167,7 +166,7 @@ mod tests {
 
         pin(&config, Some(version.clone())).unwrap();
 
-        let ruby_version_path = config.project_dir.unwrap().join(".ruby-version");
+        let ruby_version_path = config.current_dir.join(".ruby-version");
         let content = std::fs::read_to_string(ruby_version_path).unwrap();
         assert_eq!(content, format!("{version}\n"));
     }
