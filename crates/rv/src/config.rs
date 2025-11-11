@@ -149,8 +149,8 @@ pub fn find_requested_ruby(
             let mut tools_version = None;
 
             for line in tools_versions_string.lines() {
-                if line.trim_start().starts_with("ruby") {
-                    tools_version = line.trim_start().strip_prefix("ruby")
+                if line.trim_start().starts_with("ruby ") {
+                    tools_version = line.trim_start().strip_prefix("ruby ")
                 }
             }
 
