@@ -6,14 +6,14 @@ rv integrates with [zsh](#zsh), [bash](#bash), [fish](#fish), and [nushell](#nus
 
 ```zsh
 echo 'eval "$(rv shell init zsh)"
-eval $(rv shell completion zsh)"' >> ~/.zshrc
+eval "$(rv shell completions zsh)"' >> ~/.zshrc
 ```
 
 ## bash
 
 ```bash
 echo 'eval "$(rv shell init bash)"
-eval "$(rv shell completion bash)"' >> ~/.bashrc
+eval "$(rv shell completions bash)"' >> ~/.bashrc
 ```
 
 ## fish
@@ -21,7 +21,7 @@ eval "$(rv shell completion bash)"' >> ~/.bashrc
 ```fish
 # fish
 echo 'rv shell init fish | source
-rv shell completion fish | source' >> ~/.config/fish/config.fish
+rv shell completions fish | source' >> ~/.config/fish/config.fish
 ```
 
 ## nushell
