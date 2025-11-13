@@ -445,9 +445,36 @@ fn format_ruby_entry(entry: &JsonRubyEntry, width: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_fs::TempDir;
     use camino::Utf8PathBuf;
-    use rv_ruby::version::RubyVersion;
+    use indexmap::indexset;
+    use rv_ruby::{request::Source, version::RubyVersion};
     use std::str::FromStr as _;
+
+    fn test_config() -> Result<Config> {
+        let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
+        let ruby_dir = root.join("opt/rubies");
+        std::fs::create_dir_all(&ruby_dir)?;
+        let current_dir = root.join("project");
+        std::fs::create_dir_all(&current_dir)?;
+
+        let config = Config {
+            ruby_dirs: indexset![ruby_dir],
+            gemfile: None,
+            current_exe: root.join("bin").join("rv"),
+            requested_ruby: Some(("3.5.0".into(), Source::Other)),
+            current_dir,
+            cache: rv_cache::Cache::temp().unwrap(),
+            root,
+        };
+
+        Ok(config)
+    }
+    #[tokio::test]
+    async fn test_list() {
+        let config = test_config().unwrap();
+        list(&config, OutputFormat::Text, false).await.unwrap();
+    }
 
     #[test]
     fn test_parse_cache_header() {
