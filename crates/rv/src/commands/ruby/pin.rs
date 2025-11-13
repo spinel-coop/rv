@@ -81,13 +81,12 @@ mod tests {
         std::fs::create_dir_all(&ruby_dir)?;
         let current_dir = root.join("project");
         std::fs::create_dir_all(&current_dir)?;
-        let requested_ruby = Some(("3.5.0".into(), Source::Other));
 
         let config = Config {
             ruby_dirs: indexset![ruby_dir],
             gemfile: None,
             current_exe: root.join("bin").join("rv"),
-            requested_ruby,
+            requested_ruby: Some(("3.5.0".into(), Source::Other)),
             current_dir,
             cache: rv_cache::Cache::temp().unwrap(),
             root,
