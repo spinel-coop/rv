@@ -11,6 +11,24 @@ fn test_shell_env_succeeds() {
 }
 
 #[test]
+fn test_bash_env_succeeds() {
+    let test = RvTest::new();
+    let output = test.rv(&["shell", "env", "bash"]);
+
+    assert_snapshot!(output.normalized_stdout());
+    assert!(output.success());
+}
+
+#[test]
+fn test_fish_env_succeeds() {
+    let test = RvTest::new();
+    let output = test.rv(&["shell", "env", "fish"]);
+
+    assert_snapshot!(output.normalized_stdout());
+    assert!(output.success());
+}
+
+#[test]
 fn test_nushell_env_succeeds() {
     let test = RvTest::new();
     let output = test.rv(&["shell", "env", "nu"]);
