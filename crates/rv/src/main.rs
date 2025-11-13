@@ -8,6 +8,7 @@ use indexmap::IndexSet;
 use miette::Report;
 use rv_cache::CacheArgs;
 use tokio::main;
+use tracing::debug;
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
@@ -103,6 +104,9 @@ impl Cli {
             std::env::current_exe()?.to_str().unwrap().into()
         };
         let requested_ruby = config::find_requested_ruby(current_dir.clone(), root.clone())?;
+        if let Some(req) = &requested_ruby {
+            debug!("Found request for {} in {:?}", req.0, req.1);
+        }
 
         Ok(Config {
             ruby_dirs,
