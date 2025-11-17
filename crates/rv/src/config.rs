@@ -245,3 +245,42 @@ pub fn env_for(ruby: Option<&Ruby>) -> Result<(Vec<&'static str>, Vec<(&'static 
 
     Ok((unset, set))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use assert_fs::TempDir;
+    use camino::Utf8PathBuf;
+    use indexmap::indexset;
+
+    #[test]
+    fn test_config() {
+        let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
+        let ruby_dir = root.join("opt/rubies");
+        std::fs::create_dir_all(&ruby_dir).unwrap();
+        let current_dir = root.join("project");
+        std::fs::create_dir_all(&current_dir).unwrap();
+
+        Config {
+            ruby_dirs: indexset![ruby_dir],
+            gemfile: None,
+            current_exe: root.join("bin").join("rv"),
+            requested_ruby: Some(("3.5.0".into(), Source::Other)),
+            current_dir,
+            cache: rv_cache::Cache::temp().unwrap(),
+            root,
+        };
+    }
+
+    #[test]
+    fn test_default_ruby_dirs() {
+        let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
+        default_ruby_dirs(&root);
+    }
+
+    #[test]
+    fn test_find_requested_ruby() {
+        let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
+        find_requested_ruby(root.clone(), root).unwrap();
+    }
+}
