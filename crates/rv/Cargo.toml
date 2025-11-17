@@ -12,6 +12,7 @@ default-run = "rv"
 clap = { workspace = true, features = ["derive", "env"] }
 clap_derive = { workspace = true }
 indicatif = { workspace = true, features = ["rayon"] }
+indexmap = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
 owo-colors = { workspace = true }
 rayon = { workspace = true }
@@ -51,6 +52,7 @@ once_cell = { workspace = true }
 rayon-tracing = { workspace = true }
 clap_complete = "4.5.57"
 clap_complete_nushell = "4.5.8"
+assert_fs.workspace = true
 
 [dev-dependencies]
 insta = { workspace = true }
