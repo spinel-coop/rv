@@ -101,13 +101,13 @@ pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
         paths.push(PathInfo::new(xdg_path, true));
     }
     let default_path = shellexpand::tilde("~/.data/rv/rubies");
-    paths.push(PathInfo::new(default_path.as_ref(), true));
-
-    // TODO: The paths below are never used, even if they exist (and the ones above don't).
     let legacy_default_path = shellexpand::tilde("~/.rubies");
+
+    paths.push(PathInfo::new(default_path.as_ref(), true));
     paths.push(PathInfo::new(legacy_default_path.as_ref(), false));
     paths.push(PathInfo::new("/opt/rubies", false));
     paths.push(PathInfo::new("/usr/local/rubies", false));
+    paths.push(PathInfo::new("/opt/homebrew/Cellar/ruby", false));
 
     paths
         .into_iter()
