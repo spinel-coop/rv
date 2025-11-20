@@ -2,6 +2,8 @@
 
 rv integrates with [zsh](#zsh), [bash](#bash), [fish](#fish), and [nushell](#nushell).
 
+Using the configuration below, or something equivalent, will set up `rv` to automatically read any `.ruby-version` or `.tool-versions` file any time you `cd` into a new directory. If necessary, the shell integration will change your PATH, GEM_HOME, and other env vars as needed to ensure that the `ruby` command will run the expected version of ruby.
+
 ## zsh
 
 ```zsh
