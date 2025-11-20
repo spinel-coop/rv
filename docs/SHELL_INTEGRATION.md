@@ -7,23 +7,23 @@ Using the configuration below, or something equivalent, will set up `rv` to auto
 ## zsh
 
 ```zsh
-echo 'eval "$(rv shell init zsh)"
-eval "$(rv shell completions zsh)"' >> ~/.zshrc
+echo 'eval "$(rv shell init zsh)"' >> ~/.zshrc
+echo 'eval "$(rv shell completions zsh)"' >> ~/.zshrc
 ```
 
 ## bash
 
 ```bash
-echo 'eval "$(rv shell init bash)"
-eval "$(rv shell completions bash)"' >> ~/.bashrc
+echo 'eval "$(rv shell init bash)"' >> ~/.bashrc
+echo 'eval "$(rv shell completions bash)"' >> ~/.bashrc
 ```
 
 ## fish
 
 ```fish
 # fish
-echo 'rv shell init fish | source
-rv shell completions fish | source' >> ~/.config/fish/config.fish
+echo 'rv shell init fish | source' >> ~/.config/fish/config.fish
+echo 'rv shell completions fish | source' >> ~/.config/fish/config.fish
 ```
 
 ## nushell
