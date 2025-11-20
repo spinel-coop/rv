@@ -37,7 +37,7 @@ time rv ruby install 3.4.7
 rv ruby run 3.4.7 -- --version
 ```
 
-See [SHELL INTEGRATION](doc/SHELL_INTEGRATION.md) for zsh, bash, fish, and nushell.
+See [SHELL INTEGRATION](docs/SHELL_INTEGRATION.md) for zsh, bash, fish, and nushell.
 
 ## Brought to you by Spinel
 
