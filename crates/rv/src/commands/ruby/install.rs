@@ -73,7 +73,7 @@ async fn download_and_extract_remote_tarball(
     install_dir: &Utf8PathBuf,
     requested: &RubyRequest,
 ) -> Result<()> {
-    if requested.patch.is_none() {
+    if requested.major > Some(0) && requested.patch.is_none() {
         Err(Error::IncompleteVersion(requested.clone()))?;
     }
 

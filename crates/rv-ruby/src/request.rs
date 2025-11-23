@@ -308,6 +308,7 @@ mod tests {
     #[test]
     fn test_parsing_supported_ruby_versions() {
         let versions = [
+            "ruby-0.49",
             "ruby-3.2-dev",
             "ruby-3.2.0",
             "ruby-3.2.0-preview1",
