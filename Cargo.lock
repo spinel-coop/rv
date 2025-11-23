@@ -1987,6 +1987,7 @@ dependencies = [
  "rv-cache",
  "rv-dirs",
  "rv-gem-specification-yaml",
+ "rv-gem-types",
  "rv-lockfile",
  "rv-ruby",
  "saphyr",

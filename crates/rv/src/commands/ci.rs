@@ -6,6 +6,7 @@ use futures_util::StreamExt;
 use futures_util::TryStreamExt;
 use owo_colors::OwoColorize;
 use reqwest::Client;
+use rv_gem_types::Specification as GemSpecification;
 use rv_lockfile::datatypes::ChecksumAlgorithm;
 use rv_lockfile::datatypes::GemSection;
 use rv_lockfile::datatypes::GemVersion;
@@ -241,7 +242,7 @@ impl ArchiveChecksums {
         Some(out)
     }
 
-    fn validate_data_tar(&self, gem_name: String, hashed: Hashed) -> Result<()> {
+    fn validate_data_tar(&self, gem_name: String, hashed: &Hashed) -> Result<()> {
         if self.sha256.is_none() && self.sha512.is_none() {
             eprintln!("Checksum file was empty");
         }
@@ -301,6 +302,7 @@ impl<'i> Downloaded<'i> {
         let GemVersion { name, version } = self.spec.gem_version;
         let nameversion = format!("{name}-{version}");
         debug!("Unpacking {nameversion}");
+        let binstub_dir = bundle_path.join("bin");
 
         // Then unpack the tarball into it.
         let contents = Cursor::new(self.contents);
@@ -337,7 +339,7 @@ impl<'i> Downloaded<'i> {
         };
 
         let mut found_metadata = false;
-        let mut found_data_tar = false;
+        let mut unpacked_data_tar = None;
         let mut archive = tar::Archive::new(contents);
         for e in archive.entries()? {
             let entry = e?;
@@ -362,17 +364,17 @@ impl<'i> Downloaded<'i> {
                     }
                 }
                 "data.tar.gz" => {
-                    if found_data_tar {
+                    if unpacked_data_tar.is_some() {
                         return Err(Error::InvalidGemArchive("two data.tar.gz found".to_owned()));
                     }
-                    found_data_tar = true;
                     let data = HashReader::new(entry);
-                    let hashed = unpack_data_tar(&bundle_path, &nameversion, data)?;
+                    let unpacked = unpack_data_tar(&bundle_path, name, &nameversion, data)?;
                     if args.validate_checksums
                         && let Some(ref checksums) = checksums
                     {
-                        checksums.validate_data_tar(nameversion.clone(), hashed)?
+                        checksums.validate_data_tar(nameversion.clone(), &unpacked.hashed)?
                     }
+                    unpacked_data_tar = Some(unpacked);
                 }
                 "checksums.yaml.gz" => {
                     // Already handled
@@ -391,12 +393,31 @@ impl<'i> Downloaded<'i> {
         if !found_metadata {
             return Err(Error::NoMetadata);
         }
-        if !found_data_tar {
+        let Some(unpacked_data) = unpacked_data_tar else {
             return Err(Error::NoDataTar);
+        };
+
+        // Create binstubs.
+        if let Some(gemspec) = unpacked_data.gemspec {
+            for exe_name in gemspec.executables {
+                let binstub_res = write_binstub(name, &exe_name, &binstub_dir);
+                if let Err(e) = binstub_res {
+                    tracing::warn!("Could not write bindir for {nameversion}: {e}");
+                }
+            }
+        } else {
+            tracing::warn!("No Gem spec found for gem {nameversion}");
         }
 
         Ok(())
     }
+}
+
+fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -> io::Result<()> {
+    let binstub_path = binstub_dir.join(exe_name);
+    let binstub_contents =
+        format!("require 'rubygems';\nGem.activate_and_load_bin_path('{gem_name}', '{exe_name}')",);
+    std::fs::write(binstub_path, binstub_contents)
 }
 
 fn compile_native_extensions(extensions: Vec<String>) -> Result<()> {
@@ -455,14 +476,21 @@ impl<R> HashReader<R> {
     }
 }
 
+/// Result of unpacking a gem's `data.tar.gz` archive.
+struct UnpackedData {
+    hashed: Hashed,
+    gemspec: Option<GemSpecification>,
+}
+
 /// Given the data.tar.gz from a gem, unpack its contents to the filesystem under
 /// BUNDLEPATH/gems/name-version/ENTRY
 /// Returns the checksum.
 fn unpack_data_tar<R>(
     bundle_path: &Utf8Path,
+    gem_name: &str,
     nameversion: &str,
     data_tar_gz: HashReader<R>,
-) -> Result<Hashed>
+) -> Result<UnpackedData>
 where
     R: std::io::Read,
 {
@@ -470,9 +498,11 @@ where
     let data_dir: PathBuf = bundle_path.join("gems").join(nameversion).into();
     std::fs::create_dir_all(&data_dir)?;
     let mut gem_data_archive = tar::Archive::new(GzDecoder::new(data_tar_gz));
+    let mut gemspec = None;
     for e in gem_data_archive.entries()? {
         let mut entry = e?;
         let entry_path = entry.path()?;
+        let entry_path_str = entry_path.to_string_lossy().to_lowercase();
         let dst = data_dir.join(entry_path);
 
         // Not sure if this is strictly necessary, or if we can know the
@@ -480,11 +510,23 @@ where
         if let Some(dst_parent) = dst.parent() {
             std::fs::create_dir_all(dst_parent)?;
         }
-        entry.unpack(dst)?;
+        entry.unpack(&dst)?;
+        if entry_path_str == format!("{gem_name}.gemspec") {
+            let gemspec_contents = std::fs::read_to_string(dst).map_err(Error::Io)?;
+            match rv_gem_specification_yaml::parse(&gemspec_contents) {
+                Ok(parsed) => {
+                    gemspec = Some(parsed);
+                }
+                Err(e) => {
+                    tracing::warn!("Invalid gemspec found in {nameversion}: {e}");
+                }
+            }
+        };
     }
     // Get the HashReader back.
     let h = gem_data_archive.into_inner().into_inner();
-    Ok(h.finalize())
+    let hashed = h.finalize();
+    Ok(UnpackedData { hashed, gemspec })
 }
 
 struct UnpackedMetdata {
@@ -619,6 +661,22 @@ mod tests {
     #[tokio::test]
     async fn test_ci_inner() -> Result<()> {
         let file = "../rv-lockfile/tests/inputs/Gemfile.lock.empty".into();
+        let cache = rv_cache::Cache::temp().unwrap();
+        ci_inner(
+            file,
+            &cache,
+            &CiArgs {
+                max_concurrent_requests: 10,
+                validate_checksums: true,
+            },
+        )
+        .await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_ci_inner_requires_internet() -> Result<()> {
+        let file = "../rv-lockfile/tests/inputs/Gemfile.lock.discourse".into();
         let cache = rv_cache::Cache::temp().unwrap();
         ci_inner(
             file,
