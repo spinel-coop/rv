@@ -23,14 +23,14 @@ All-in-one tooling for Ruby developers.
 - [x] `rv ruby pin`
 - [x] `rv ruby dir`
 - [ ] `rv ruby install`
-  - [ ] `rv ruby install 3.2.x`
-  - [ ] `rv ruby install 3.3.x`
   - [x] `rv ruby install 3.4.x`
+  - [x] `rv ruby install 3.3.x`
+  - [x] `rv ruby install 3.2.x`
   - [ ] `rv ruby install jruby 10`
   - [ ] `rv ruby install truffleruby 24`
   - [ ] `rv ruby install truffleruby+graalvm 24`
   - [ ] `rv ruby install mruby 3.3`
-- [ ] `rv ruby uninstall`
+- [x] `rv ruby uninstall`
 
 ### Gem CLI tools
 
