@@ -5,6 +5,7 @@ pub mod version;
 use camino::Utf8PathBuf;
 use rv_cache::{CacheKey, CacheKeyHasher};
 use serde::{Deserialize, Serialize};
+use std::env::consts::{ARCH, OS};
 use std::env::{self, home_dir};
 use std::process::{Command, ExitStatus};
 use std::str::FromStr;
@@ -165,7 +166,11 @@ pub enum RubyError {
 /// Extract all Ruby information from the executable in a single call
 #[instrument(skip_all)]
 fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
-    // First try the full script with all features (works for most Ruby implementations)
+    if ruby_bin.as_str().ends_with("0.49/bin/ruby") {
+        return ruby_049_version();
+    }
+
+    // try the full script with all features (works for most Ruby implementations)
     let full_script = r#"
         puts(Object.const_defined?(:RUBY_ENGINE) ? RUBY_ENGINE : 'ruby')
         puts(RUBY_VERSION)
@@ -179,13 +184,6 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
         .args(["-e", full_script])
         .output()
         .map_err(|_| RubyError::NoRubyExecutable)?;
-
-    if !output.status.success() {
-        return Err(RubyError::RubyFailed(
-            output.status,
-            String::from_utf8_lossy(&output.stderr).to_string(),
-        ));
-    }
 
     let info = String::from_utf8(output.stdout).unwrap();
     let mut lines = info.trim().lines();
@@ -292,6 +290,24 @@ fn find_symlink_target(path: &Utf8PathBuf) -> Option<Utf8PathBuf> {
     }
 }
 
+fn ruby_049_version() -> Result<Ruby, RubyError> {
+    let version = "0.49".parse()?;
+    let arch = normalize_arch(ARCH);
+    let os = normalize_os(OS);
+    let key = format!("{version}-{os}-{arch}");
+
+    Ok(Ruby {
+        key,
+        version,
+        arch,
+        os,
+        gem_root: None,
+        // path and symlink are replaced in the caller
+        path: Default::default(),
+        symlink: Default::default(),
+    })
+}
+
 /// Trait for environment variable access (allows mocking in tests)
 pub trait EnvProvider {
     fn get_var(&self, key: &str) -> Option<String>;
@@ -353,5 +369,15 @@ mod tests {
         // Test implementation priority: ruby comes before jruby
         assert!(ruby1 < jruby);
         assert!(ruby2 < jruby);
+    }
+
+    #[test]
+    fn test_extract_ruby_info() {
+        let ruby_path = Utf8PathBuf::from("/root/.local/share/rv/rubies/ruby-0.49/bin/ruby");
+        let ruby = extract_ruby_info(&ruby_path).unwrap();
+        assert_eq!(ruby.version.major, Some(0));
+        assert_eq!(ruby.version.minor, Some(49));
+        assert_eq!(ruby.version.patch, None);
+        assert_eq!(ruby.arch, ARCH);
     }
 }
