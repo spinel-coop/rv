@@ -26,7 +26,7 @@ use std::io::Cursor;
 use std::io::Read;
 use std::path::PathBuf;
 
-const FS_CONCURRENCY_LIMIT: usize = 100;
+const FS_CONCURRENCY_LIMIT: usize = 20;
 
 #[derive(clap_derive::Args)]
 pub struct CiArgs {
@@ -124,6 +124,7 @@ async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiArgs) -> Res
     let bundle_path = find_bundle_path()?;
     // 2. Unpack all the tarballs
     let binstub_dir = bundle_path.join("bin");
+    tokio::fs::create_dir_all(&binstub_dir).await?;
     use futures_util::stream::TryStreamExt;
     futures_util::stream::iter(downloaded)
         .map(Ok::<_, Error>)
@@ -451,7 +452,6 @@ async fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -
     let binstub_path = binstub_dir.join(exe_name);
     let binstub_contents =
         format!("require 'rubygems';\nGem.activate_and_load_bin_path('{gem_name}', '{exe_name}')",);
-    // dbg!(&binstub_contents);
     tokio::fs::write(binstub_path, binstub_contents).await
 }
 
