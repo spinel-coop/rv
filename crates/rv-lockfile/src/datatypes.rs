@@ -71,13 +71,19 @@ pub struct PathSection<'i> {
 }
 
 /// A (gem, version) pair.
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GemVersion<'i> {
     /// Name of the gem.
     pub name: &'i str,
     /// Version of the gem.
     pub version: &'i str,
+}
+
+impl<'i> std::fmt::Display for GemVersion<'i> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}-{}", self.name, self.version)
+    }
 }
 
 /// A range of possible versions of a certain gem.

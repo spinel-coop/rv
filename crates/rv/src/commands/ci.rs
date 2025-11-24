@@ -112,10 +112,28 @@ fn install_gems(downloaded: Vec<Downloaded>, args: &CiArgs) -> Result<()> {
     //    ruby -rbundler -e 'puts Bundler.bundle_path'
     let bundle_path = find_bundle_path()?;
     // 2. Unpack all the tarballs
+    let binstub_dir = bundle_path.join("bin");
+    let mut dep_gemspecs = Vec::new();
     for download in downloaded {
-        download.unpack_tarball(bundle_path.clone(), args)?;
+        let gem_version = download.spec.gem_version;
+        let dep_gemspec = download.unpack_tarball(bundle_path.clone(), args)?;
+        if let Some(dep_gemspec) = dep_gemspec {
+            dep_gemspecs.push((gem_version, dep_gemspec));
+        } else {
+            tracing::warn!("No Gem spec found for gem {gem_version}");
+        }
     }
+
     // 3. Generate binstubs into DIR/bin/
+    for (gem_version, dep_gemspec) in dep_gemspecs {
+        for exe_name in dep_gemspec.executables {
+            let binstub_res = write_binstub(gem_version.name, &exe_name, &binstub_dir);
+            if let Err(e) = binstub_res {
+                tracing::warn!("Could not write binstub for {gem_version}: {e}",);
+            }
+        }
+    }
+
     // 4. Handle compiling native extensions for gems with native extensions
     // 5. Copy the .gem files and the .gemspec files into cache and specificatiosn?
     Ok(())
@@ -295,14 +313,17 @@ impl ArchiveChecksums {
 }
 
 impl<'i> Downloaded<'i> {
-    fn unpack_tarball(self, bundle_path: Utf8PathBuf, args: &CiArgs) -> Result<()> {
+    fn unpack_tarball(
+        self,
+        bundle_path: Utf8PathBuf,
+        args: &CiArgs,
+    ) -> Result<Option<GemSpecification>> {
         // Unpack the tarball into DIR/gems/
         // It should contain a metadata zip, and a data zip
         // (and optionally, a checksum zip).
         let GemVersion { name, version } = self.spec.gem_version;
         let nameversion = format!("{name}-{version}");
         debug!("Unpacking {nameversion}");
-        let binstub_dir = bundle_path.join("bin");
 
         // Then unpack the tarball into it.
         let contents = Cursor::new(self.contents);
@@ -397,19 +418,7 @@ impl<'i> Downloaded<'i> {
             return Err(Error::NoDataTar);
         };
 
-        // Create binstubs.
-        if let Some(gemspec) = unpacked_data.gemspec {
-            for exe_name in gemspec.executables {
-                let binstub_res = write_binstub(name, &exe_name, &binstub_dir);
-                if let Err(e) = binstub_res {
-                    tracing::warn!("Could not write bindir for {nameversion}: {e}");
-                }
-            }
-        } else {
-            tracing::warn!("No Gem spec found for gem {nameversion}");
-        }
-
-        Ok(())
+        Ok(unpacked_data.gemspec)
     }
 }
 
