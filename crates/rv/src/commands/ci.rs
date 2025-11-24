@@ -89,10 +89,10 @@ async fn ci_inner(
     cache: &rv_cache::Cache,
     args: &CiArgs,
 ) -> Result<()> {
-    let lockfile_contents = std::fs::read_to_string(lockfile_path)?;
+    let lockfile_contents = tokio::fs::read_to_string(lockfile_path).await?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
     let gems = download_gems(lockfile, cache, args).await?;
-    install_gems(gems, args)?;
+    install_gems(gems, args).await?;
     Ok(())
 }
 
@@ -107,7 +107,7 @@ fn find_bundle_path() -> Result<Utf8PathBuf> {
         .map(Utf8PathBuf::from)
 }
 
-fn install_gems(downloaded: Vec<Downloaded>, args: &CiArgs) -> Result<()> {
+async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiArgs) -> Result<()> {
     // 1. Get the path where we want to put the gems from Bundler
     //    ruby -rbundler -e 'puts Bundler.bundle_path'
     let bundle_path = find_bundle_path()?;
@@ -116,7 +116,7 @@ fn install_gems(downloaded: Vec<Downloaded>, args: &CiArgs) -> Result<()> {
     let mut dep_gemspecs = Vec::new();
     for download in downloaded {
         let gem_version = download.spec.gem_version;
-        let dep_gemspec = download.unpack_tarball(bundle_path.clone(), args)?;
+        let dep_gemspec = download.unpack_tarball(bundle_path.clone(), args).await?;
         if let Some(dep_gemspec) = dep_gemspec {
             dep_gemspecs.push((gem_version, dep_gemspec));
         } else {
@@ -128,7 +128,7 @@ fn install_gems(downloaded: Vec<Downloaded>, args: &CiArgs) -> Result<()> {
     for (gem_version, dep_gemspec) in dep_gemspecs {
         for exe_name in dep_gemspec.executables {
             let binstub_res = write_binstub(gem_version.name, &exe_name, &binstub_dir);
-            if let Err(e) = binstub_res {
+            if let Err(e) = binstub_res.await {
                 tracing::warn!("Could not write binstub for {gem_version}: {e}",);
             }
         }
@@ -313,7 +313,7 @@ impl ArchiveChecksums {
 }
 
 impl<'i> Downloaded<'i> {
-    fn unpack_tarball(
+    async fn unpack_tarball(
         self,
         bundle_path: Utf8PathBuf,
         args: &CiArgs,
@@ -373,7 +373,7 @@ impl<'i> Downloaded<'i> {
                     found_metadata = true;
                     let data = HashReader::new(entry);
                     let UnpackedMetdata { hashed, extensions } =
-                        unpack_metadata(&bundle_path, &nameversion, data)?;
+                        unpack_metadata(&bundle_path, &nameversion, data).await?;
                     if !extensions.is_empty() {
                         tracing::debug!("Found native extensions, compiling them");
                         compile_native_extensions(extensions)?;
@@ -389,7 +389,7 @@ impl<'i> Downloaded<'i> {
                         return Err(Error::InvalidGemArchive("two data.tar.gz found".to_owned()));
                     }
                     let data = HashReader::new(entry);
-                    let unpacked = unpack_data_tar(&bundle_path, name, &nameversion, data)?;
+                    let unpacked = unpack_data_tar(&bundle_path, name, &nameversion, data).await?;
                     if args.validate_checksums
                         && let Some(ref checksums) = checksums
                     {
@@ -422,11 +422,11 @@ impl<'i> Downloaded<'i> {
     }
 }
 
-fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -> io::Result<()> {
+async fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -> io::Result<()> {
     let binstub_path = binstub_dir.join(exe_name);
     let binstub_contents =
         format!("require 'rubygems';\nGem.activate_and_load_bin_path('{gem_name}', '{exe_name}')",);
-    std::fs::write(binstub_path, binstub_contents)
+    tokio::fs::write(binstub_path, binstub_contents).await
 }
 
 fn compile_native_extensions(extensions: Vec<String>) -> Result<()> {
@@ -494,7 +494,7 @@ struct UnpackedData {
 /// Given the data.tar.gz from a gem, unpack its contents to the filesystem under
 /// BUNDLEPATH/gems/name-version/ENTRY
 /// Returns the checksum.
-fn unpack_data_tar<R>(
+async fn unpack_data_tar<R>(
     bundle_path: &Utf8Path,
     gem_name: &str,
     nameversion: &str,
@@ -505,7 +505,7 @@ where
 {
     // First, create the data's destination.
     let data_dir: PathBuf = bundle_path.join("gems").join(nameversion).into();
-    std::fs::create_dir_all(&data_dir)?;
+    tokio::fs::create_dir_all(&data_dir).await?;
     let mut gem_data_archive = tar::Archive::new(GzDecoder::new(data_tar_gz));
     let mut gemspec = None;
     for e in gem_data_archive.entries()? {
@@ -517,11 +517,11 @@ where
         // Not sure if this is strictly necessary, or if we can know the
         // intermediate directories ahead of time.
         if let Some(dst_parent) = dst.parent() {
-            std::fs::create_dir_all(dst_parent)?;
+            tokio::fs::create_dir_all(dst_parent).await?;
         }
         entry.unpack(&dst)?;
         if entry_path_str == format!("{gem_name}.gemspec") {
-            let gemspec_contents = std::fs::read_to_string(dst).map_err(Error::Io)?;
+            let gemspec_contents = tokio::fs::read_to_string(dst).await.map_err(Error::Io)?;
             match rv_gem_specification_yaml::parse(&gemspec_contents) {
                 Ok(parsed) => {
                     gemspec = Some(parsed);
@@ -545,7 +545,7 @@ struct UnpackedMetdata {
 
 /// Given the metadata.gz from a gem, write it to the filesystem under
 /// BUNDLEPATH/specifications/name-version.gemspec
-fn unpack_metadata<R>(
+async fn unpack_metadata<R>(
     bundle_path: &Utf8Path,
     nameversion: &str,
     metadata_gz: HashReader<R>,
@@ -555,10 +555,10 @@ where
 {
     // First, create the metadata's destination.
     let metadata_dir = bundle_path.join("specifications/");
-    std::fs::create_dir_all(&metadata_dir)?;
+    tokio::fs::create_dir_all(&metadata_dir).await?;
     let filename = format!("{nameversion}.gemspec");
     let dst_path = metadata_dir.join(filename);
-    let mut dst = std::fs::File::create(&dst_path)?;
+    let mut dst = tokio::fs::File::create(&dst_path).await?;
 
     // Then write the (unzipped) source into the destination.
     let mut contents = String::new();
@@ -571,7 +571,7 @@ where
             None
         }
     };
-    std::io::copy(&mut Cursor::new(contents), &mut dst)?;
+    tokio::io::copy(&mut Cursor::new(contents), &mut dst).await?;
 
     let extensions = parsed.map(|p| p.extensions).unwrap_or_default();
 
