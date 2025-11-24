@@ -72,6 +72,12 @@ pub enum Error {
     },
     #[error("Invalid gem archive: {0}")]
     InvalidGemArchive(String),
+    #[error("Could not write binstub for {dep_name}/{exe_name}: {error}")]
+    CouldNotWriteBinstub {
+        dep_name: String,
+        exe_name: String,
+        error: io::Error,
+    },
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -134,7 +140,7 @@ async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiArgs) -> Res
             };
 
             // 3. Generate binstubs.
-            install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir).await;
+            install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir).await?;
             // 4. Handle compiling native extensions for gems with native extensions
             compile_native_extensions(&dep_gemspec.extensions)?;
             Ok(())
@@ -145,12 +151,21 @@ async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiArgs) -> Res
     Ok(())
 }
 
-async fn install_binstub(dep_name: &str, executables: &[String], binstub_dir: &Utf8Path) {
+async fn install_binstub(
+    dep_name: &str,
+    executables: &[String],
+    binstub_dir: &Utf8Path,
+) -> Result<()> {
     for exe_name in executables {
-        if let Err(e) = write_binstub(&dep_name, &exe_name, &binstub_dir).await {
-            tracing::warn!("Could not write binstub for {dep_name}/{exe_name}: {e}",);
+        if let Err(error) = write_binstub(&dep_name, &exe_name, &binstub_dir).await {
+            return Err(Error::CouldNotWriteBinstub {
+                dep_name: dep_name.to_owned(),
+                exe_name: exe_name.to_owned(),
+                error,
+            });
         }
     }
+    Ok(())
 }
 
 fn rv_http_client() -> Result<Client> {
