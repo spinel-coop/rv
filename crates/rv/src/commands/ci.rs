@@ -26,7 +26,7 @@ use std::io::Cursor;
 use std::io::Read;
 use std::path::PathBuf;
 
-const FS_CONCURRENCY_LIMIT: usize = 10;
+const FS_CONCURRENCY_LIMIT: usize = 100;
 
 #[derive(clap_derive::Args)]
 pub struct CiArgs {
@@ -119,27 +119,25 @@ async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiArgs) -> Res
     // 2. Unpack all the tarballs
     let binstub_dir = bundle_path.join("bin");
     use futures_util::stream::TryStreamExt;
-    let dep_gemspecs: Result<Vec<_>> = futures_util::stream::iter(downloaded)
-        .map(|download| async {
-            let dep_gemspec = download.unpack_tarball(bundle_path.clone(), args).await?;
-            Ok(dep_gemspec)
-        })
-        .buffered(FS_CONCURRENCY_LIMIT)
-        .and_then(|dep_gemspec| async {
-            if let Some(dep_gemspec) = dep_gemspec {
-                install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir).await
-            }
+    let _dep_gemspecs = futures_util::stream::iter(downloaded)
+        .map(Ok::<_, Error>)
+        .try_for_each_concurrent(FS_CONCURRENCY_LIMIT, |download| async {
+            let gv = download.spec.gem_version;
+            // Actually unpack the tarball here.
+            let dep_gemspec_res = download.unpack_tarball(bundle_path.clone(), args).await?;
+
+            // Generate binstubs.
+            let Some(dep_gemspec) = dep_gemspec_res else {
+                eprintln!(
+                    "Warning: No gemspec found for downloaded dep {}",
+                    gv.yellow()
+                );
+                return Ok(());
+            };
+            install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir).await;
             Ok(())
         })
-        .try_collect()
-        .await;
-
-    // 3. Generate binstubs into DIR/bin/
-    // futures_util::stream::iter(dep_gemspecs)
-    //     .for_each_concurrent(FS_CONCURRENCY_LIMIT, |(gem_version, dep_gemspec)| async {
-    //         install_binstub(x, binstub_dir)
-    //     })
-    //     .await;
+        .await?;
 
     // 4. Handle compiling native extensions for gems with native extensions
     // 5. Copy the .gem files and the .gemspec files into cache and specificatiosn?
