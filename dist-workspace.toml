@@ -21,6 +21,7 @@ precise-builds = true
 macos-sign = true
 
 [dist.github-custom-runners]
+x86_64-apple-darwin = "macos-14"
 aarch64-apple-darwin = "macos-14"
 aarch64-unknown-linux-gnu = "ubuntu-24.04-arm"
 x86_64-unknown-linux-gnu = "ubuntu-24.04"
