@@ -125,8 +125,6 @@ async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiArgs) -> Res
             let gv = download.spec.gem_version;
             // Actually unpack the tarball here.
             let dep_gemspec_res = download.unpack_tarball(bundle_path.clone(), args).await?;
-
-            // Generate binstubs.
             let Some(dep_gemspec) = dep_gemspec_res else {
                 eprintln!(
                     "Warning: No gemspec found for downloaded dep {}",
@@ -134,12 +132,15 @@ async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiArgs) -> Res
                 );
                 return Ok(());
             };
+
+            // 3. Generate binstubs.
             install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir).await;
+            // 4. Handle compiling native extensions for gems with native extensions
+            compile_native_extensions(&dep_gemspec.extensions)?;
             Ok(())
         })
         .await?;
 
-    // 4. Handle compiling native extensions for gems with native extensions
     // 5. Copy the .gem files and the .gemspec files into cache and specificatiosn?
     Ok(())
 }
@@ -372,25 +373,21 @@ impl<'i> Downloaded<'i> {
             None
         };
 
-        let mut found_metadata = false;
-        let mut unpacked_data_tar = None;
+        let mut found_gemspec = None;
+        let mut found_data_tar = false;
         let mut archive = tar::Archive::new(contents);
         for e in archive.entries()? {
             let entry = e?;
             let entry_path = entry.path()?;
             match entry_path.display().to_string().as_str() {
                 "metadata.gz" => {
-                    if found_metadata {
+                    if found_gemspec.is_some() {
                         return Err(Error::InvalidGemArchive("two metadata.gz found".to_owned()));
                     }
-                    found_metadata = true;
                     let data = HashReader::new(entry);
-                    let UnpackedMetdata { hashed, extensions } =
+                    let UnpackedMetdata { hashed, gemspec } =
                         unpack_metadata(&bundle_path, &nameversion, data).await?;
-                    if !extensions.is_empty() {
-                        tracing::debug!("Found native extensions, compiling them");
-                        compile_native_extensions(extensions)?;
-                    }
+                    found_gemspec = Some(gemspec);
                     if args.validate_checksums
                         && let Some(ref checksums) = checksums
                     {
@@ -398,17 +395,17 @@ impl<'i> Downloaded<'i> {
                     }
                 }
                 "data.tar.gz" => {
-                    if unpacked_data_tar.is_some() {
+                    if found_data_tar {
                         return Err(Error::InvalidGemArchive("two data.tar.gz found".to_owned()));
                     }
                     let data = HashReader::new(entry);
-                    let unpacked = unpack_data_tar(&bundle_path, name, &nameversion, data).await?;
+                    let unpacked = unpack_data_tar(&bundle_path, &nameversion, data).await?;
                     if args.validate_checksums
                         && let Some(ref checksums) = checksums
                     {
                         checksums.validate_data_tar(nameversion.clone(), &unpacked.hashed)?
                     }
-                    unpacked_data_tar = Some(unpacked);
+                    found_data_tar = true;
                 }
                 "checksums.yaml.gz" => {
                     // Already handled
@@ -424,14 +421,14 @@ impl<'i> Downloaded<'i> {
             }
         }
 
-        if !found_metadata {
-            return Err(Error::NoMetadata);
-        }
-        let Some(unpacked_data) = unpacked_data_tar else {
+        if !found_data_tar {
             return Err(Error::NoDataTar);
+        }
+        let Some(found_gemspec) = found_gemspec else {
+            return Err(Error::NoMetadata);
         };
 
-        Ok(unpacked_data.gemspec)
+        Ok(found_gemspec)
     }
 }
 
@@ -439,19 +436,12 @@ async fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -
     let binstub_path = binstub_dir.join(exe_name);
     let binstub_contents =
         format!("require 'rubygems';\nGem.activate_and_load_bin_path('{gem_name}', '{exe_name}')",);
+    // dbg!(&binstub_contents);
     tokio::fs::write(binstub_path, binstub_contents).await
 }
 
-fn compile_native_extensions(extensions: Vec<String>) -> Result<()> {
-    for extension in extensions {
-        let _compile_res = std::process::Command::new("ruby")
-            .arg(extension)
-            .spawn()?
-            .wait_with_output();
-        // TODO: check if this succeeded or not,
-        // It should produce .so or .bundle files, which can be
-        // copied to a specific place, so they can be loaded later.
-    }
+fn compile_native_extensions(_extensions: &[String]) -> Result<()> {
+    // todo
     Ok(())
 }
 
@@ -501,7 +491,6 @@ impl<R> HashReader<R> {
 /// Result of unpacking a gem's `data.tar.gz` archive.
 struct UnpackedData {
     hashed: Hashed,
-    gemspec: Option<GemSpecification>,
 }
 
 /// Given the data.tar.gz from a gem, unpack its contents to the filesystem under
@@ -509,7 +498,6 @@ struct UnpackedData {
 /// Returns the checksum.
 async fn unpack_data_tar<R>(
     bundle_path: &Utf8Path,
-    gem_name: &str,
     nameversion: &str,
     data_tar_gz: HashReader<R>,
 ) -> Result<UnpackedData>
@@ -520,11 +508,9 @@ where
     let data_dir: PathBuf = bundle_path.join("gems").join(nameversion).into();
     tokio::fs::create_dir_all(&data_dir).await?;
     let mut gem_data_archive = tar::Archive::new(GzDecoder::new(data_tar_gz));
-    let mut gemspec = None;
     for e in gem_data_archive.entries()? {
         let mut entry = e?;
         let entry_path = entry.path()?;
-        let entry_path_str = entry_path.to_string_lossy().to_lowercase();
         let dst = data_dir.join(entry_path);
 
         // Not sure if this is strictly necessary, or if we can know the
@@ -533,27 +519,16 @@ where
             tokio::fs::create_dir_all(dst_parent).await?;
         }
         entry.unpack(&dst)?;
-        if entry_path_str == format!("{gem_name}.gemspec") {
-            let gemspec_contents = tokio::fs::read_to_string(dst).await.map_err(Error::Io)?;
-            match rv_gem_specification_yaml::parse(&gemspec_contents) {
-                Ok(parsed) => {
-                    gemspec = Some(parsed);
-                }
-                Err(e) => {
-                    tracing::warn!("Invalid gemspec found in {nameversion}: {e}");
-                }
-            }
-        };
     }
     // Get the HashReader back.
     let h = gem_data_archive.into_inner().into_inner();
     let hashed = h.finalize();
-    Ok(UnpackedData { hashed, gemspec })
+    Ok(UnpackedData { hashed })
 }
 
 struct UnpackedMetdata {
     hashed: Hashed,
-    extensions: Vec<String>,
+    gemspec: Option<GemSpecification>,
 }
 
 /// Given the metadata.gz from a gem, write it to the filesystem under
@@ -586,12 +561,10 @@ where
     };
     tokio::io::copy(&mut Cursor::new(contents), &mut dst).await?;
 
-    let extensions = parsed.map(|p| p.extensions).unwrap_or_default();
-
     let h = unzipper.into_inner();
     Ok(UnpackedMetdata {
         hashed: h.finalize(),
-        extensions,
+        gemspec: parsed,
     })
 }
 
@@ -699,7 +672,7 @@ mod tests {
     #[tokio::test]
     async fn test_ci_inner_requires_internet() -> Result<()> {
         let file = "../rv-lockfile/tests/inputs/Gemfile.lock.discourse".into();
-        let cache = rv_cache::Cache::temp().unwrap();
+        let cache = rv_cache::Cache::from_path("cache".to_owned());
         ci_inner(
             file,
             &cache,
