@@ -125,7 +125,7 @@ async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiArgs) -> Res
     // 2. Unpack all the tarballs
     let binstub_dir = bundle_path.join("bin");
     use futures_util::stream::TryStreamExt;
-    let _dep_gemspecs = futures_util::stream::iter(downloaded)
+    futures_util::stream::iter(downloaded)
         .map(Ok::<_, Error>)
         .try_for_each_concurrent(FS_CONCURRENCY_LIMIT, |download| async {
             let gv = download.spec.gem_version;
@@ -157,7 +157,7 @@ async fn install_binstub(
     binstub_dir: &Utf8Path,
 ) -> Result<()> {
     for exe_name in executables {
-        if let Err(error) = write_binstub(&dep_name, &exe_name, &binstub_dir).await {
+        if let Err(error) = write_binstub(dep_name, exe_name, binstub_dir).await {
             return Err(Error::CouldNotWriteBinstub {
                 dep_name: dep_name.to_owned(),
                 exe_name: exe_name.to_owned(),
