@@ -1,6 +1,6 @@
 [package]
 name = "rv"
-version = "0.2.0"
+version = "0.3.0"
 rust-version = "1.88.0"
 edition = "2024"
 repository = "https://github.com/spinel-coop/rv"
