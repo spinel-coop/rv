@@ -12,6 +12,7 @@ default-run = "rv"
 clap = { workspace = true, features = ["derive", "env"] }
 clap_derive = { workspace = true }
 indicatif = { workspace = true, features = ["rayon"] }
+indexmap = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
 owo-colors = { workspace = true }
 rayon = { workspace = true }
@@ -35,7 +36,7 @@ tracing-indicatif = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 anstream = { workspace = true }
 clap-verbosity-flag = { workspace = true, features = ["tracing"] }
-reqwest = { workspace = true, features = ["stream"] }
+reqwest = { workspace = true, features = ["stream", "socks"] }
 flate2 = { workspace = true }
 tar = { workspace = true }
 rv-cache = { workspace = true, features = ["clap"] }
@@ -59,6 +60,7 @@ bytes = "1.10.1"
 saphyr.workspace = true
 sha2.workspace = true
 hex = "0.4.3"
+assert_fs.workspace = true
 
 [dev-dependencies]
 insta = { workspace = true }

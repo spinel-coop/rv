@@ -18,6 +18,8 @@ pub struct CacheCommandArgs {
 pub enum CacheCommand {
     #[command(about = "Clear the cache")]
     Clean,
+    #[command(about = "Prune all unused entries from the cache")]
+    Prune,
     #[command(about = "Show the cache directory")]
     Dir,
 }
@@ -33,6 +35,17 @@ pub fn cache_clean(config: &Config) -> io::Result<()> {
         fn on_complete(&self) {}
     }
     let removal = config.cache.clear(Box::new(Reporter {}))?;
+    let num_bytes_cleaned = ByteSize::b(removal.bytes).display().iec_short();
+    println!(
+        "Removed {} directories, totalling {}",
+        removal.dirs.cyan(),
+        num_bytes_cleaned.cyan()
+    );
+    Ok(())
+}
+
+pub fn cache_prune(config: &Config) -> io::Result<()> {
+    let removal = config.cache.prune()?;
     let num_bytes_cleaned = ByteSize::b(removal.bytes).display().iec_short();
     println!(
         "Removed {} directories, totalling {}",

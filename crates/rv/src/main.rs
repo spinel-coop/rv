@@ -4,17 +4,19 @@ use clap::builder::Styles;
 use clap::builder::styling::AnsiColor;
 use clap::{ArgAction, CommandFactory, Parser, Subcommand};
 use config::Config;
+use indexmap::IndexSet;
 use miette::Report;
 use rv_cache::CacheArgs;
 use tokio::main;
+use tracing::debug;
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
 pub mod commands;
 pub mod config;
 
-use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir};
 use crate::commands::ci::{CiArgs, ci};
+use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir, cache_prune};
 use crate::commands::ruby::dir::dir as ruby_dir;
 use crate::commands::ruby::find::find as ruby_find;
 use crate::commands::ruby::install::install as ruby_install;
@@ -46,11 +48,8 @@ const STYLES: Styles = Styles::styled()
 #[command(disable_help_flag = true)]
 struct Cli {
     /// Ruby directories to search for installations
-    #[arg(long = "ruby-dir")]
+    #[arg(long = "ruby-dir", env = "RUBIES_PATH", value_delimiter = ':')]
     ruby_dir: Vec<Utf8PathBuf>,
-
-    #[arg(long = "project-dir")]
-    project_dir: Option<Utf8PathBuf>,
 
     /// Path to Gemfile
     #[arg(long, env = "BUNDLE_GEMFILE")]
@@ -90,11 +89,6 @@ impl Cli {
         };
 
         let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
-        let project_dir = if let Some(project_dir) = &self.project_dir {
-            Some(project_dir.clone())
-        } else {
-            config::find_project_dir(current_dir.clone(), root.clone())
-        };
         let ruby_dirs = if self.ruby_dir.is_empty() {
             config::default_ruby_dirs(&root)
         } else {
@@ -103,21 +97,26 @@ impl Cli {
                 .map(|path: &Utf8PathBuf| root.join(path))
                 .collect()
         };
+        let ruby_dirs: IndexSet<Utf8PathBuf> = ruby_dirs.into_iter().collect();
         let cache = self.cache_args.to_cache()?;
         let current_exe = if let Some(exe) = self.current_exe.clone() {
             exe
         } else {
             std::env::current_exe()?.to_str().unwrap().into()
         };
+        let requested_ruby = config::find_requested_ruby(current_dir.clone(), root.clone())?;
+        if let Some(req) = &requested_ruby {
+            debug!("Found request for {} in {:?}", req.0, req.1);
+        }
 
         Ok(Config {
             ruby_dirs,
             gemfile: self.gemfile.clone(),
             root,
             current_dir,
-            project_dir,
             cache,
             current_exe,
+            requested_ruby,
         })
     }
 }
@@ -288,7 +287,8 @@ async fn run() -> Result<()> {
                 RubyCommand::Install {
                     version,
                     install_dir,
-                } => ruby_install(&config, install_dir, version).await?,
+                    tarball_path,
+                } => ruby_install(&config, install_dir, version, tarball_path).await?,
                 RubyCommand::Uninstall {
                     version: version_request,
                 } => ruby_uninstall(&config, version_request).await?,
@@ -299,6 +299,7 @@ async fn run() -> Result<()> {
             Commands::Cache(cache) => match cache.command {
                 CacheCommand::Dir => cache_dir(&config)?,
                 CacheCommand::Clean => cache_clean(&config)?,
+                CacheCommand::Prune => cache_prune(&config)?,
             },
             Commands::Shell(shell) => match shell.command {
                 ShellCommand::Init { shell } => shell_init(&config, shell)?,

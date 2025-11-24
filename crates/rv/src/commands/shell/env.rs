@@ -14,7 +14,7 @@ pub enum Error {
 type Result<T> = miette::Result<T, Error>;
 
 pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
-    let ruby = config.project_ruby();
+    let ruby = config.current_ruby();
     let (unset, set) = config::env_for(ruby.as_ref())?;
 
     match shell {
@@ -82,8 +82,40 @@ fn fish_var_escape(s: String) -> String {
 
 #[cfg(test)]
 mod tests {
+    use crate::config::Config;
+
     use super::*;
+    use assert_fs::TempDir;
+    use camino::Utf8PathBuf;
+    use indexmap::indexset;
+    use rv_ruby::request::Source;
     use serde_json::json;
+
+    fn test_config() -> Result<Config> {
+        let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
+        let ruby_dir = root.join("opt/rubies");
+        std::fs::create_dir_all(&ruby_dir)?;
+        let current_dir = root.join("project");
+        std::fs::create_dir_all(&current_dir)?;
+
+        let config = Config {
+            ruby_dirs: indexset![ruby_dir],
+            gemfile: None,
+            current_exe: root.join("bin").join("rv"),
+            requested_ruby: Some(("3.5.0".into(), Source::Other)),
+            current_dir,
+            cache: rv_cache::Cache::temp().unwrap(),
+            root,
+        };
+
+        Ok(config)
+    }
+
+    #[test]
+    fn env_runs() {
+        let config = test_config().unwrap();
+        env(&config, Shell::Zsh).unwrap();
+    }
 
     #[test]
     fn nushell_env_serializes_changes() {

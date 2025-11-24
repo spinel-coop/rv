@@ -9,17 +9,21 @@ Eventually, you'll be able to manage all your Rubies, tools, gems, and packages,
 ## Testimonials
 
 "what the heckie that just installed a ruby version for me in .22 seconds???"
- &mdash; <a href="https://bsky.app/profile/veryroundbird.house/post/3lxdwtsbwp22o">c. ruiyi smallbird</a>
+ &mdash; [c. ruiyi smallbird](https://bsky.app/profile/veryroundbird.house/post/3lxdwtsbwp22o)
+
+"Holy wow that thing \_flies\_."
+ &mdash; [Andrea Fomera](https://bsky.app/profile/afomera.dev/post/3m4wjfvqrhk2h)
 
 ## Requirements
 
-- **Operating Systems**: macOS 14 and up, Ubuntu 24.04 and up
-- **Ruby Versions**: All Ruby 3.2.x versions, 3.3.x versions, and all versions since 3.4.1
-- **Shells**: zsh, bash, fish
+- **Operating Systems**: macOS (14 or higher), Linux (glibc 2.35 or higher)
+- **Architectures**: x86 (Intel, AMD, etc), arm64 (Apple, Qualcomm, etc)
+- **Ruby Versions**: All Ruby 3.2.x versions, 3.3.x versions, 3.4.1 and up.
+- **Shells**: zsh, bash, fish, nushell
 
 ## Install
 
-```zsh
+```bash
 # Homebrew or Linuxbrew
 brew install rv
 ```
@@ -28,29 +32,16 @@ Or, visit the [releases page](https://github.com/spinel-coop/rv/releases) for an
 
 ## Usage
 
-```zsh
-time rv ruby install 3.4.5
-rv ruby run 3.4.5 -- --version
+```bash
+time rv ruby install 3.4.7
+rv ruby run 3.4.7 -- --version
 ```
 
-## Shell setup
-
-```zsh
-echo "3.4.5" > .ruby-version
-# zsh
-echo 'eval "$(rv shell init zsh)"' >> ~/.zshrc
-eval "$(rv shell init zsh)"
-# bash
-echo 'eval "$(rv shell init bash)"' >> ~/.bashrc
-eval "$(rv shell init bash)"
-# fish
-echo 'rv shell init fish | source' >> ~/.config/fish/config.fish
-rv shell init fish | source
-```
+See [SHELL INTEGRATION](docs/SHELL_INTEGRATION.md) for zsh, bash, fish, and nushell.
 
 ## Brought to you by Spinel
 
-[Spinel.coop](https://spinel.coop) is a collective of Ruby open source maintainers building next-generation developer tooling, like `rv`, and offering [flat-rate, unlimited access to maintainers](https://spinel.coop/retainers) who come from the core teams of Rails, Hotwire, Bundler, RubyGems, rbenv, and more.
+[Spinel.coop](https://spinel.coop) makes engineering teams more effective with decades of lessons learned on the core teams of Rails, Hotwire, Bundler, and rbenv. Let us [multiply the team you already have](https://spinel.coop).
 
 ## Future plans
 

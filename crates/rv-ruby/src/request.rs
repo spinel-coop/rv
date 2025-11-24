@@ -1,3 +1,4 @@
+use camino::Utf8PathBuf;
 use rv_cache::{CacheKey, CacheKeyHasher};
 use std::{fmt::Display, str::FromStr};
 
@@ -14,6 +15,23 @@ pub struct RubyRequest {
     pub patch: Option<VersionPart>,
     pub tiny: Option<VersionPart>,
     pub prerelease: Option<String>,
+}
+
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Source {
+    DotToolVersions(Utf8PathBuf),
+    DotRubyVersion(Utf8PathBuf),
+    Other,
+}
+
+impl std::fmt::Debug for Source {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::DotToolVersions(arg0) => f.debug_tuple("DotToolVersions").field(arg0).finish(),
+            Self::DotRubyVersion(arg0) => f.debug_tuple("DotRubyVersion").field(arg0).finish(),
+            Self::Other => write!(f, "Other"),
+        }
+    }
 }
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
@@ -451,5 +469,29 @@ mod tests {
                 "Parsed output does not match input for {version}"
             );
         }
+    }
+
+    #[test]
+    fn test_ruby_request_from_str() {
+        let version = "3";
+        let request = RubyRequest::from(version);
+        let output = request.to_string();
+        assert_eq!(
+            output,
+            format!("ruby-{}", version.trim()),
+            "Parsed output does not match input for {version}"
+        );
+    }
+
+    #[test]
+    fn test_ruby_request_from_string() {
+        let version = "3".to_string();
+        let request = RubyRequest::from(version.clone());
+        let output = request.to_string();
+        assert_eq!(
+            output,
+            format!("ruby-{}", version),
+            "Parsed output does not match input for {version}"
+        );
     }
 }

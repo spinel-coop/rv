@@ -2,6 +2,7 @@ use current_platform::CURRENT_PLATFORM;
 
 use crate::common::RvTest;
 use std::fs;
+use std::process::Command;
 
 fn arch() -> &'static str {
     match CURRENT_PLATFORM {
@@ -53,6 +54,28 @@ fn test_ruby_install_successful_download() {
         cached_content, tarball_content,
         "Cached content should match downloaded content"
     );
+}
+
+#[test]
+fn test_ruby_install_from_tarball() {
+    let mut test = RvTest::new();
+
+    let tarball_content = create_mock_tarball();
+    let filename = make_tarball_file_name("3.4.5");
+    let tarball_file = test.mock_tarball_on_disk(&filename, &tarball_content);
+
+    let tarball_path = tarball_file.as_str();
+    let output = test.rv(&["ruby", "install", "--tarball-path", tarball_path, "3.4.5"]);
+
+    output.assert_success();
+
+    // is the mocked ruby from the tarball actually installed
+    let mocked_ruby_path = test
+        .temp_dir
+        .path()
+        .join("tmp/home/.data/rv/rubies/portable-ruby/bin/ruby");
+    let mut command = Command::new(mocked_ruby_path);
+    command.output().expect("mock ruby");
 }
 
 #[test]
@@ -243,6 +266,16 @@ fn test_ruby_install_invalid_url() {
 }
 
 fn make_dl_suffix(version: &str) -> String {
+    let filename = make_tarball_file_name(version);
+    format!("latest/download/{filename}")
+}
+
+fn make_tarball_file_name(version: &str) -> String {
+    let suffix = make_platform_suffix();
+    format!("ruby-{version}.{suffix}.tar.gz")
+}
+
+fn make_platform_suffix() -> String {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     let suffix = "arm64_sonoma";
     #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
@@ -251,7 +284,8 @@ fn make_dl_suffix(version: &str) -> String {
     let suffix = "arm64_linux";
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     let suffix = "x86_64_linux";
-    format!("latest/download/ruby-{version}.{suffix}.tar.gz")
+
+    suffix.to_string()
 }
 
 #[test]

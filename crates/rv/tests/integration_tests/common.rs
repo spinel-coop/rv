@@ -85,6 +85,16 @@ impl RvTest {
         self.mock_tarball_download(&path, content)
     }
 
+    /// Mock a tarball on disk for testing
+    pub fn mock_tarball_on_disk(&mut self, filename: &str, content: &[u8]) -> Utf8PathBuf {
+        let temp_dir = self.temp_dir.path().join("tmp");
+        std::fs::create_dir_all(&temp_dir).expect("Failed to create TMP directory");
+        let full_path = temp_dir.join(filename);
+        std::fs::write(&full_path, content).expect("Failed to write path");
+
+        full_path
+    }
+
     /// Get the server URL for constructing download URLs
     pub fn server_url(&self) -> String {
         self.server.url()

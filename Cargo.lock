@@ -1972,6 +1972,7 @@ dependencies = [
  "fs-err",
  "futures-util",
  "hex",
+ "indexmap",
  "indicatif",
  "indoc",
  "insta",

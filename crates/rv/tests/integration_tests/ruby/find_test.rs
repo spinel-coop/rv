@@ -68,7 +68,7 @@ fn test_ruby_find_dot_ruby_version_empty() {
     find.assert_failure();
     assert_eq!(
         find.normalized_stderr(),
-        "Error: FindError(ConfigError(RequestError(EmptyInput)))\n"
+        "Error: ConfigError(RequestError(EmptyInput))\n"
     );
 }
 
