@@ -113,19 +113,23 @@ async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiArgs) -> Res
     let bundle_path = find_bundle_path()?;
     // 2. Unpack all the tarballs
     let binstub_dir = bundle_path.join("bin");
-    let mut dep_gemspecs = Vec::new();
-    for download in downloaded {
-        let gem_version = download.spec.gem_version;
-        let dep_gemspec = download.unpack_tarball(bundle_path.clone(), args).await?;
-        if let Some(dep_gemspec) = dep_gemspec {
-            dep_gemspecs.push((gem_version, dep_gemspec));
-        } else {
-            tracing::warn!("No Gem spec found for gem {gem_version}");
-        }
-    }
+    let dep_gemspecs: Vec<_> = futures_util::stream::iter(downloaded)
+        .map(|download| async {
+            let gem_version = download.spec.gem_version;
+            let dep_gemspec = download.unpack_tarball(bundle_path.clone(), args).await?;
+            if let Some(dep_gemspec) = dep_gemspec {
+                Ok::<_, Error>(Some((gem_version, dep_gemspec)))
+            } else {
+                tracing::warn!("No Gem spec found for gem {gem_version}");
+                Ok(None)
+            }
+        })
+        .buffered(10)
+        .try_collect()
+        .await?;
 
     // 3. Generate binstubs into DIR/bin/
-    for (gem_version, dep_gemspec) in dep_gemspecs {
+    for (gem_version, dep_gemspec) in dep_gemspecs.into_iter().flatten() {
         for exe_name in dep_gemspec.executables {
             let binstub_res = write_binstub(gem_version.name, &exe_name, &binstub_dir);
             if let Err(e) = binstub_res.await {
