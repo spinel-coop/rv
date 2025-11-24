@@ -26,6 +26,8 @@ use std::io::Cursor;
 use std::io::Read;
 use std::path::PathBuf;
 
+const FS_CONCURRENCY_LIMIT: usize = 10;
+
 #[derive(clap_derive::Args)]
 pub struct CiArgs {
     /// Maximum number of downloads that can be in flight at once.
@@ -92,7 +94,10 @@ async fn ci_inner(
     let lockfile_contents = tokio::fs::read_to_string(lockfile_path).await?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
     let gems = download_gems(lockfile, cache, args).await?;
+    let start_install = std::time::Instant::now();
     install_gems(gems, args).await?;
+    let install_time = start_install.elapsed();
+    eprintln!("ADAM: Install took {}s", install_time.as_secs_f64());
     Ok(())
 }
 
@@ -113,34 +118,40 @@ async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiArgs) -> Res
     let bundle_path = find_bundle_path()?;
     // 2. Unpack all the tarballs
     let binstub_dir = bundle_path.join("bin");
-    let dep_gemspecs: Vec<_> = futures_util::stream::iter(downloaded)
+    use futures_util::stream::TryStreamExt;
+    let dep_gemspecs: Result<Vec<_>> = futures_util::stream::iter(downloaded)
         .map(|download| async {
-            let gem_version = download.spec.gem_version;
             let dep_gemspec = download.unpack_tarball(bundle_path.clone(), args).await?;
-            if let Some(dep_gemspec) = dep_gemspec {
-                Ok::<_, Error>(Some((gem_version, dep_gemspec)))
-            } else {
-                tracing::warn!("No Gem spec found for gem {gem_version}");
-                Ok(None)
-            }
+            Ok(dep_gemspec)
         })
-        .buffered(10)
+        .buffered(FS_CONCURRENCY_LIMIT)
+        .and_then(|dep_gemspec| async {
+            if let Some(dep_gemspec) = dep_gemspec {
+                install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir).await
+            }
+            Ok(())
+        })
         .try_collect()
-        .await?;
+        .await;
 
     // 3. Generate binstubs into DIR/bin/
-    for (gem_version, dep_gemspec) in dep_gemspecs.into_iter().flatten() {
-        for exe_name in dep_gemspec.executables {
-            let binstub_res = write_binstub(gem_version.name, &exe_name, &binstub_dir);
-            if let Err(e) = binstub_res.await {
-                tracing::warn!("Could not write binstub for {gem_version}: {e}",);
-            }
-        }
-    }
+    // futures_util::stream::iter(dep_gemspecs)
+    //     .for_each_concurrent(FS_CONCURRENCY_LIMIT, |(gem_version, dep_gemspec)| async {
+    //         install_binstub(x, binstub_dir)
+    //     })
+    //     .await;
 
     // 4. Handle compiling native extensions for gems with native extensions
     // 5. Copy the .gem files and the .gemspec files into cache and specificatiosn?
     Ok(())
+}
+
+async fn install_binstub(dep_name: &str, executables: &[String], binstub_dir: &Utf8Path) {
+    for exe_name in executables {
+        if let Err(e) = write_binstub(&dep_name, &exe_name, &binstub_dir).await {
+            tracing::warn!("Could not write binstub for {dep_name}/{exe_name}: {e}",);
+        }
+    }
 }
 
 fn rv_http_client() -> Result<Client> {
@@ -204,7 +215,7 @@ async fn download_gems<'i>(
         .map(|gem_source| {
             download_gem_source(gem_source, &checksums, cache, args.max_concurrent_requests)
         })
-        .buffered(10)
+        .buffered(args.max_concurrent_requests)
         .try_collect::<Vec<_>>()
         .await?
         .into_iter()
