@@ -17,6 +17,8 @@ install-path = "CARGO_HOME"
 install-updater = false
 # Build only the required packages, and individually
 precise-builds = true
+# Whether to sign macOS executables
+macos-sign = true
 
 [dist.github-custom-runners]
 aarch64-apple-darwin = "macos-14"
