@@ -100,14 +100,13 @@ async fn ci_inner(
     let lockfile_contents = tokio::fs::read_to_string(lockfile_path).await?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
     let gems = download_gems(lockfile, cache, args).await?;
-    let start_install = std::time::Instant::now();
     install_gems(gems, args).await?;
-    let install_time = start_install.elapsed();
-    eprintln!("ADAM: Install took {}s", install_time.as_secs_f64());
     Ok(())
 }
 
 fn find_bundle_path() -> Result<Utf8PathBuf> {
+    // TODO: Something is wrong with this,
+    // maybe rv ruby subshells or whatever
     let bundle_path = std::process::Command::new("ruby")
         .args(["-rbundler", "-e", "'puts Bundler.bundle_path'"])
         .spawn()?
@@ -144,6 +143,7 @@ async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiArgs) -> Res
             install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir).await?;
             // 4. Handle compiling native extensions for gems with native extensions
             compile_native_extensions(&dep_gemspec.extensions)?;
+            generate_ruby_gemspec(&dep_gemspec).await?;
             Ok(())
         })
         .await?;
@@ -457,6 +457,13 @@ async fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -
 
 fn compile_native_extensions(_extensions: &[String]) -> Result<()> {
     // todo
+    Ok(())
+}
+
+async fn generate_ruby_gemspec(_dep_gemspec: &GemSpecification) -> Result<()> {
+    // todo
+    // For now, shell out to Ruby and let it convert the YAML to ruby code
+    // In the future, we will (sigh) rewrite it in Rust
     Ok(())
 }
 
