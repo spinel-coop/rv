@@ -17,6 +17,15 @@ pub enum Error {
 type Result<T> = miette::Result<T, Error>;
 
 pub fn run(config: &Config, request: &RubyRequest, args: &[String]) -> Result<()> {
+    let cmd = build_cmd(config, request, args)?;
+    exec(cmd)
+}
+
+pub(crate) fn build_cmd(
+    config: &Config,
+    request: &RubyRequest,
+    args: &[String],
+) -> Result<Command> {
     let Some(ruby) = config.matching_ruby(request) else {
         return Err(Error::NoMatchingRuby);
     };
@@ -29,8 +38,7 @@ pub fn run(config: &Config, request: &RubyRequest, args: &[String]) -> Result<()
     for (var, val) in set {
         cmd.env(var, val);
     }
-
-    exec(cmd)
+    Ok(cmd)
 }
 
 #[cfg(unix)]
