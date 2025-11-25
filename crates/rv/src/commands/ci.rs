@@ -486,6 +486,8 @@ async fn generate_ruby_gemspec(_dep_gemspec: &GemSpecification) -> Result<()> {
     Ok(())
 }
 
+/// Wrapper around some reader type `R`
+/// that also computes SHA checksums as it reads.
 struct HashReader<R> {
     reader: R,
     h256: Sha256,
@@ -512,6 +514,8 @@ where
 }
 
 impl<R> HashReader<R> {
+    /// Wrap the `reader` into this `HashReader` which both
+    /// reads and also computes checksums.
     fn new(reader: R) -> Self {
         Self {
             reader,
