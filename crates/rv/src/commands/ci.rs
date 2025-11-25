@@ -128,8 +128,6 @@ fn find_lockfile_path(config: &Config) -> Result<Utf8PathBuf> {
 }
 
 fn find_install_path(lockfile_path: &Utf8PathBuf) -> Result<Utf8PathBuf> {
-    // TODO: Something is wrong with this,
-    // maybe rv ruby subshells or whatever
     let lockfile_dir = lockfile_path.parent().unwrap();
     let bundle_path = std::process::Command::new("ruby")
         .current_dir(lockfile_dir)
@@ -138,6 +136,8 @@ fn find_install_path(lockfile_path: &Utf8PathBuf) -> Result<Utf8PathBuf> {
         .stdout;
     if bundle_path.is_empty() {
         return Err(Error::BadBundlePath);
+    } else {
+        debug!("found install path {:?}", bundle_path);
     }
     String::from_utf8(bundle_path)
         .map_err(|_| Error::BadBundlePath)
