@@ -1,5 +1,5 @@
-mod datatypes;
-pub mod parser;
+pub mod datatypes;
+mod parser;
 #[cfg(test)]
 mod tests;
 

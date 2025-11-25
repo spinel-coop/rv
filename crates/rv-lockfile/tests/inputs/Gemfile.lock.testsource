@@ -1,0 +1,17 @@
+GEM
+  remote: http://gems.example.com/
+  specs:
+    test-gem (1.0.0)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  test-gem
+
+CHECKSUMS
+  test-gem (1.0.0)
+
+BUNDLED WITH
+   2.7.2
+

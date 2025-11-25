@@ -33,6 +33,8 @@ impl RvTest {
 
         test.env.insert("RV_TEST_EXE".into(), "/tmp/bin/rv".into());
         test.env.insert("HOME".into(), "/tmp/home".into());
+        test.env
+            .insert("BUNDLE_PATH".into(), test.cwd.join("app").into());
         test.env.insert("RV_DISABLE_INDICATIF".into(), "1".into()); // Disable indicatif progress bars in tests due to a bug in tracing-indicatif
 
         // Disable network requests by default
@@ -78,6 +80,11 @@ impl RvTest {
             .with_status(200)
             .with_header("content-type", "application/gzip")
             .with_body(content)
+    }
+
+    pub fn mock_gem_download(&mut self, filename: &str, content: &[u8]) -> Mock {
+        let path = format!("gems/{}", filename);
+        self.mock_tarball_download(&path, content)
     }
 
     /// Mock a tarball on disk for testing
@@ -142,6 +149,26 @@ echo ""
         }
 
         ruby_dir
+    }
+
+    pub fn use_gemfile(&self, path: &str) {
+        let gemfile = fs_err::read_to_string(path).unwrap();
+        let _ = fs_err::write(self.cwd.join("Gemfile"), &gemfile);
+    }
+
+    pub fn use_lockfile(&self, path: &str) {
+        let lockfile = fs_err::read_to_string(path).unwrap();
+        let _ = fs_err::write(self.cwd.join("Gemfile.lock"), &lockfile);
+    }
+
+    pub fn replace_source(&self, from: &str, to: &str) {
+        let gemfile_path = self.cwd.join("Gemfile");
+        let gemfile = fs_err::read_to_string(&gemfile_path).unwrap();
+        let _ = fs_err::write(gemfile_path, gemfile.replace(from, to));
+
+        let lockfile_path = self.cwd.join("Gemfile.lock");
+        let lockfile = fs_err::read_to_string(&lockfile_path).unwrap();
+        let _ = fs_err::write(lockfile_path, lockfile.replace(from, to));
     }
 }
 
