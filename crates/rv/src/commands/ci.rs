@@ -720,7 +720,13 @@ async fn download_gem<'i>(
         Bytes::from(data)
     } else {
         debug!("Downloading gem from {url}");
-        client.get(url.clone()).send().await?.bytes().await?
+        client
+            .get(url.clone())
+            .send()
+            .await?
+            .error_for_status()?
+            .bytes()
+            .await?
     };
 
     // Validate the checksums.
