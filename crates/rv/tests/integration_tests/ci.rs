@@ -22,11 +22,12 @@ fn test_clean_install_download_test_gem() {
 }
 
 #[test]
-#[ignore]
-fn test_clean_install_download_discourse() {
+fn test_clean_install_download_faker() {
     let test = RvTest::new();
-    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.discourse");
-    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.lock.discourse");
+    // https://github.com/faker-ruby/faker/blob/2f8b18b112fb3b7d2750321a8e574518cfac0d53/Gemfile
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.faker");
+    // https://github.com/faker-ruby/faker/blob/2f8b18b112fb3b7d2750321a8e574518cfac0d53/Gemfile.lock
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.lock.faker");
 
     let output = test.rv(&["ci"]);
     output.assert_success();
