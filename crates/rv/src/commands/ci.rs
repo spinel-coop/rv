@@ -148,7 +148,9 @@ fn find_install_path(lockfile_path: &Utf8PathBuf) -> Result<Utf8PathBuf> {
 
 async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiInnerArgs) -> Result<()> {
     let binstub_dir = args.install_path.join("bin");
+    debug!("about to create {}", binstub_dir);
     tokio::fs::create_dir_all(&binstub_dir).await?;
+    debug!("finished creating {}", binstub_dir);
     use futures_util::stream::TryStreamExt;
     futures_util::stream::iter(downloaded)
         .map(Ok::<_, Error>)
@@ -269,6 +271,7 @@ async fn download_gems<'i>(
         .into_iter()
         .flatten()
         .collect();
+    debug!("Downloaded all gems");
     Ok(downloaded)
 }
 
@@ -685,6 +688,10 @@ async fn download_gem_source<'i>(
         .buffered(max_concurrent_requests)
         .try_collect()
         .await?;
+    debug!(
+        "Finished downloading gems from source {}",
+        gem_source.remote
+    );
     Ok(downloaded_gems)
 }
 
@@ -705,16 +712,16 @@ async fn download_gem<'i>(
 
     let contents;
     if cache_path.exists() {
+        debug!("Reusing gem from {url} in cache");
         let data = tokio::fs::read(&cache_path).await?;
         contents = Bytes::from(data);
-        debug!("Reusing gem from {url} in cache");
     } else {
+        debug!("Downloading gem from {url}");
         contents = client.get(url.clone()).send().await?.bytes().await?;
         if let Some(parent) = cache_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
         tokio::fs::write(&cache_path, &contents).await?;
-        debug!("Downloaded gem from {url}");
     }
 
     // Validate the checksums.
