@@ -12,6 +12,7 @@ use rv_lockfile::datatypes::GemSection;
 use rv_lockfile::datatypes::GemVersion;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_lockfile::datatypes::Spec;
+use rv_ruby::request::RubyRequest;
 use sha2::Digest;
 use sha2::Sha256;
 use sha2::Sha512;
@@ -49,10 +50,13 @@ struct CiInnerArgs {
     pub validate_checksums: bool,
     pub lockfile_path: Utf8PathBuf,
     pub install_path: Utf8PathBuf,
+    pub ruby_version: RubyRequest,
 }
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
+    #[error("You must specify a ruby version to use")]
+    NoRubyVersion,
     #[error(transparent)]
     Parse(#[from] rv_lockfile::ParseErrors),
     #[error(transparent)]
@@ -96,12 +100,18 @@ type Result<T> = std::result::Result<T, Error>;
 
 pub async fn ci(config: &Config, args: CiArgs) -> Result<()> {
     let lockfile_path = find_lockfile_path(config)?;
-    let install_path = find_install_path(&lockfile_path)?;
+    let ruby_version = config
+        .requested_ruby
+        .clone()
+        .map(|r| r.0)
+        .ok_or(Error::NoRubyVersion)?;
+    let install_path = find_install_path(&lockfile_path, &ruby_version)?;
     let inner_args = CiInnerArgs {
         max_concurrent_requests: args.max_concurrent_requests,
         validate_checksums: args.validate_checksums,
         lockfile_path,
         install_path,
+        ruby_version,
     };
     ci_inner(&config.cache, &inner_args).await
 }
@@ -110,7 +120,7 @@ async fn ci_inner(cache: &rv_cache::Cache, args: &CiInnerArgs) -> Result<()> {
     let lockfile_contents = tokio::fs::read_to_string(&args.lockfile_path).await?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
     let gems = download_gems(lockfile, cache, args).await?;
-    install_gems(gems, args).await?;
+    install_gems(gems, args, &args.ruby_version).await?;
     Ok(())
 }
 
@@ -129,18 +139,32 @@ fn find_lockfile_path(config: &Config) -> Result<Utf8PathBuf> {
     Ok(lockfile_path)
 }
 
-fn find_install_path(lockfile_path: &Utf8PathBuf) -> Result<Utf8PathBuf> {
+fn find_install_path(
+    lockfile_path: &Utf8PathBuf,
+    ruby_version: &RubyRequest,
+) -> Result<Utf8PathBuf> {
     let env_path = std::env::var("BUNDLE_PATH");
     if let Ok(bundle_path) = env_path {
         return Ok(Utf8PathBuf::from(&bundle_path));
     }
     let lockfile_dir = lockfile_path.parent().unwrap();
-    let bundle_path = std::process::Command::new("ruby")
+    let cmd_output = std::process::Command::new("rv")
         .current_dir(lockfile_dir)
-        .args(["-rbundler", "-e", "puts Bundler.bundle_path"])
-        .output()?
-        .stdout;
+        .args([
+            "ruby",
+            "run",
+            &ruby_version.to_string(),
+            "--",
+            "-rbundler",
+            "-e",
+            "puts Bundler.bundle_path",
+        ])
+        .output()?;
+    let bundle_path = cmd_output.stdout;
     if bundle_path.is_empty() {
+        debug!("empty bundle path");
+        let stderr = String::from_utf8_lossy(&cmd_output.stderr);
+        debug!("cmd stderr was {stderr}");
         return Err(Error::BadBundlePath);
     }
     let bundle_path = String::from_utf8(bundle_path)
@@ -150,7 +174,11 @@ fn find_install_path(lockfile_path: &Utf8PathBuf) -> Result<Utf8PathBuf> {
     bundle_path
 }
 
-async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiInnerArgs) -> Result<()> {
+async fn install_gems<'i>(
+    downloaded: Vec<Downloaded<'i>>,
+    args: &CiInnerArgs,
+    ruby_version: &RubyRequest,
+) -> Result<()> {
     let binstub_dir = args.install_path.join("bin");
     debug!("about to create {}", binstub_dir);
     tokio::fs::create_dir_all(&binstub_dir).await?;
@@ -162,7 +190,7 @@ async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiInnerArgs) -
             let gv = download.spec.gem_version;
             // Actually unpack the tarball here.
             let dep_gemspec_res = download
-                .unpack_tarball(args.install_path.clone(), args)
+                .unpack_tarball(args.install_path.clone(), args, ruby_version)
                 .await?;
             let Some(dep_gemspec) = dep_gemspec_res else {
                 eprintln!(
@@ -387,6 +415,7 @@ impl<'i> Downloaded<'i> {
         self,
         bundle_path: Utf8PathBuf,
         args: &CiInnerArgs,
+        ruby_version: &RubyRequest,
     ) -> Result<Option<GemSpecification>> {
         // Unpack the tarball into DIR/gems/
         // It should contain a metadata zip, and a data zip
@@ -451,8 +480,13 @@ impl<'i> Downloaded<'i> {
                     if found_gemspec.is_some() {
                         return Err(Error::InvalidGemArchive("two metadata.gz found".to_owned()));
                     }
-                    let UnpackedMetdata { hashed, gemspec } =
-                        unpack_metadata(&bundle_path, &nameversion, HashReader::new(entry)).await?;
+                    let UnpackedMetdata { hashed, gemspec } = unpack_metadata(
+                        &bundle_path,
+                        &nameversion,
+                        HashReader::new(entry),
+                        ruby_version,
+                    )
+                    .await?;
                     found_gemspec = Some(gemspec);
                     if args.validate_checksums
                         && let Some(ref checksums) = checksums
@@ -607,6 +641,7 @@ async fn unpack_metadata<R>(
     bundle_path: &Utf8Path,
     nameversion: &str,
     metadata_gz: HashReader<R>,
+    ruby_version: &RubyRequest,
 ) -> Result<UnpackedMetdata>
 where
     R: Read,
@@ -629,7 +664,7 @@ where
             None
         }
     };
-    let ruby_contents = convert_gemspec_yaml_to_ruby(yaml_contents);
+    let ruby_contents = convert_gemspec_yaml_to_ruby(yaml_contents, ruby_version);
     tokio::io::copy(&mut Cursor::new(ruby_contents), &mut dst).await?;
 
     let h = unzipper.into_inner();
@@ -639,9 +674,13 @@ where
     })
 }
 
-fn convert_gemspec_yaml_to_ruby(contents: String) -> String {
-    let mut child = std::process::Command::new("ruby")
+fn convert_gemspec_yaml_to_ruby(contents: String, ruby_version: &RubyRequest) -> String {
+    let mut child = std::process::Command::new("rv")
         .args([
+            "ruby",
+            "run",
+            &ruby_version.to_string(),
+            "--",
             "-e",
             "Gem.load_yaml; print Gem::SafeYAML.safe_load(ARGF.read).to_ruby",
         ])
@@ -767,6 +806,14 @@ mod tests {
         ci_inner(
             &cache,
             &CiInnerArgs {
+                ruby_version: RubyRequest {
+                    engine: rv_ruby::engine::RubyEngine::Ruby,
+                    major: Some("3".parse().unwrap()),
+                    minor: Some("4".parse().unwrap()),
+                    patch: Some("7".parse().unwrap()),
+                    tiny: None,
+                    prerelease: None,
+                },
                 max_concurrent_requests: 10,
                 validate_checksums: true,
                 install_path: dir.into(),
