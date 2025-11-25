@@ -16,7 +16,7 @@ fn test_clean_install_download_test_gem() {
         .mock_gem_download("test-gem-1.0.0.gem", &tarball_content)
         .create();
 
-    let output = test.rv(&["ci", "--verbose"]);
+    let output = test.rv(&["ci", "--verbose", "--ruby", "3.4.7"]);
     output.assert_success();
     mock.assert();
 }
