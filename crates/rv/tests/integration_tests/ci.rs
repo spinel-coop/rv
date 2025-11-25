@@ -33,13 +33,16 @@ fn test_clean_install_download_faker() {
     output.assert_success();
 
     // Store a snapshot of all the files `rv ci` created.
-    let test_dir_contents = std::process::Command::new("ls")
-        .args(["-R".to_owned()])
+    let test_dir_contents = std::process::Command::new("find")
+        .args([".", "-type", "f"])
         .current_dir(test.cwd)
         .output()
         .expect("ls should succeed")
         .stdout;
     let test_dir_contents =
-        String::from_utf8(test_dir_contents).expect("ls -R should return UTF-8 bytes");
-    insta::assert_snapshot!(test_dir_contents);
+        String::from_utf8(test_dir_contents).expect("'find' should return UTF-8 bytes");
+    let mut lines: Vec<_> = test_dir_contents.lines().collect();
+    lines.sort();
+    let files_sorted = lines.join("\n");
+    insta::assert_snapshot!(files_sorted);
 }
