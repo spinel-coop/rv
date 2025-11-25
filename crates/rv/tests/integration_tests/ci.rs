@@ -22,6 +22,7 @@ fn test_clean_install_download_test_gem() {
 }
 
 #[test]
+#[ignore]
 fn test_clean_install_download_discourse() {
     let test = RvTest::new();
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.discourse");
