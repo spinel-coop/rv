@@ -21,6 +21,7 @@ use url::Url;
 
 use crate::config::Config;
 use std::collections::HashMap;
+use std::env::current_dir;
 use std::io;
 use std::io::Cursor;
 use std::io::Read;
@@ -29,7 +30,7 @@ use std::path::PathBuf;
 
 const FS_CONCURRENCY_LIMIT: usize = 20;
 
-#[derive(clap_derive::Args)]
+#[derive(Debug, clap_derive::Args)]
 pub struct CiArgs {
     /// Maximum number of downloads that can be in flight at once.
     #[arg(short, long, default_value = "10")]
@@ -38,6 +39,14 @@ pub struct CiArgs {
     /// Validate the checksums from the gem server and gem itself.
     #[arg(long, default_value = "true")]
     pub validate_checksums: bool,
+}
+
+#[derive(Debug)]
+struct CiInnerArgs {
+    pub max_concurrent_requests: usize,
+    pub validate_checksums: bool,
+    pub lockfile_path: Utf8PathBuf,
+    pub install_path: Utf8PathBuf,
 }
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -84,31 +93,37 @@ pub enum Error {
 type Result<T> = std::result::Result<T, Error>;
 
 pub async fn ci(config: &Config, args: CiArgs) -> Result<()> {
-    let lockfile_path;
+    let lockfile_name: Utf8PathBuf;
     if let Some(path) = &config.gemfile {
-        lockfile_path = format!("{}.lock", path.clone()).into();
+        lockfile_name = format!("{}.lock", path.clone()).into();
     } else {
-        lockfile_path = "Gemfile.lock".into();
+        lockfile_name = "Gemfile.lock".into();
     }
-    ci_inner(lockfile_path, &config.cache, &args).await
+    let lockfile_path = Utf8PathBuf::from_path_buf(current_dir()?.join(lockfile_name)).unwrap();
+    let install_path = find_install_path(&lockfile_path)?;
+    let inner_args = CiInnerArgs {
+        max_concurrent_requests: args.max_concurrent_requests,
+        validate_checksums: args.validate_checksums,
+        lockfile_path,
+        install_path,
+    };
+    ci_inner(&config.cache, &inner_args).await
 }
 
-async fn ci_inner(
-    lockfile_path: Utf8PathBuf,
-    cache: &rv_cache::Cache,
-    args: &CiArgs,
-) -> Result<()> {
-    let lockfile_contents = tokio::fs::read_to_string(lockfile_path).await?;
+async fn ci_inner(cache: &rv_cache::Cache, args: &CiInnerArgs) -> Result<()> {
+    let lockfile_contents = tokio::fs::read_to_string(&args.lockfile_path).await?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
     let gems = download_gems(lockfile, cache, args).await?;
     install_gems(gems, args).await?;
     Ok(())
 }
 
-fn find_bundle_path() -> Result<Utf8PathBuf> {
+fn find_install_path(lockfile_path: &Utf8PathBuf) -> Result<Utf8PathBuf> {
     // TODO: Something is wrong with this,
     // maybe rv ruby subshells or whatever
+    let lockfile_dir = lockfile_path.parent().unwrap();
     let bundle_path = std::process::Command::new("ruby")
+        .current_dir(lockfile_dir)
         .args(["-rbundler", "-e", "puts Bundler.bundle_path"])
         .output()?
         .stdout;
@@ -120,12 +135,11 @@ fn find_bundle_path() -> Result<Utf8PathBuf> {
         .map(Utf8PathBuf::from)
 }
 
-async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiArgs) -> Result<()> {
+async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiInnerArgs) -> Result<()> {
     // 1. Get the path where we want to put the gems from Bundler
     //    ruby -rbundler -e 'puts Bundler.bundle_path'
-    let bundle_path = find_bundle_path()?;
     // 2. Unpack all the tarballs
-    let binstub_dir = bundle_path.join("bin");
+    let binstub_dir = args.install_path.join("bin");
     tokio::fs::create_dir_all(&binstub_dir).await?;
     use futures_util::stream::TryStreamExt;
     futures_util::stream::iter(downloaded)
@@ -133,7 +147,9 @@ async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiArgs) -> Res
         .try_for_each_concurrent(FS_CONCURRENCY_LIMIT, |download| async {
             let gv = download.spec.gem_version;
             // Actually unpack the tarball here.
-            let dep_gemspec_res = download.unpack_tarball(bundle_path.clone(), args).await?;
+            let dep_gemspec_res = download
+                .unpack_tarball(args.install_path.clone(), args)
+                .await?;
             let Some(dep_gemspec) = dep_gemspec_res else {
                 eprintln!(
                     "Warning: No gemspec found for downloaded dep {}",
@@ -203,7 +219,7 @@ struct HowToChecksum {
 async fn download_gems<'i>(
     lockfile: GemfileDotLock<'i>,
     cache: &rv_cache::Cache,
-    args: &CiArgs,
+    args: &CiInnerArgs,
 ) -> Result<Vec<Downloaded<'i>>> {
     if lockfile.git.is_empty().not() {
         tracing::warn!("rv ci does not support git deps yet");
@@ -356,7 +372,7 @@ impl<'i> Downloaded<'i> {
     async fn unpack_tarball(
         self,
         bundle_path: Utf8PathBuf,
-        args: &CiArgs,
+        args: &CiInnerArgs,
     ) -> Result<Option<GemSpecification>> {
         // Unpack the tarball into DIR/gems/
         // It should contain a metadata zip, and a data zip
@@ -703,14 +719,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_ci_inner() -> Result<()> {
-        let file = "../rv-lockfile/tests/inputs/Gemfile.lock.empty".into();
+        let file: Utf8PathBuf = "../rv-lockfile/tests/inputs/Gemfile.lock.empty".into();
+        let dir = file.parent().unwrap();
         let cache = rv_cache::Cache::temp().unwrap();
         ci_inner(
-            file,
             &cache,
-            &CiArgs {
+            &CiInnerArgs {
                 max_concurrent_requests: 10,
                 validate_checksums: true,
+                install_path: dir.into(),
+                lockfile_path: file,
             },
         )
         .await?;
@@ -719,14 +737,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_ci_inner_requires_internet() -> Result<()> {
-        let file = "../rv-lockfile/tests/inputs/Gemfile.lock.discourse".into();
+        let file: Utf8PathBuf = "../rv-lockfile/tests/inputs/Gemfile.lock.empty".into();
+        let dir = file.parent().unwrap();
         let cache = rv_cache::Cache::from_path("cache".to_owned());
         ci_inner(
-            file,
             &cache,
-            &CiArgs {
+            &CiInnerArgs {
                 max_concurrent_requests: 10,
                 validate_checksums: true,
+                install_path: dir.into(),
+                lockfile_path: file,
             },
         )
         .await?;
