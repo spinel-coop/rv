@@ -27,8 +27,11 @@ fn test_clean_install_download() {
 fn test_clean_install_download_discourse() {
     let test = RvTest::new();
 
-    let discourse_gemfile = "../rv-lockfile/tests/inputs/Gemfile.lock.discourse";
-    let lockfile = fs_err::read_to_string(discourse_gemfile).unwrap();
+    let discourse_gemfile = "../rv-lockfile/tests/inputs/Gemfile.discourse";
+    let gemfile = fs_err::read_to_string(discourse_gemfile).unwrap();
+    let discourse_gemfile_lock = "../rv-lockfile/tests/inputs/Gemfile.lock.discourse";
+    let lockfile = fs_err::read_to_string(discourse_gemfile_lock).unwrap();
+    let _ = fs_err::write(test.cwd.join("Gemfile"), &gemfile);
     let _ = fs_err::write(test.cwd.join("Gemfile.lock"), &lockfile);
     let output = test.rv(&["ci"]);
     output.assert_success();
