@@ -109,10 +109,12 @@ fn find_bundle_path() -> Result<Utf8PathBuf> {
     // TODO: Something is wrong with this,
     // maybe rv ruby subshells or whatever
     let bundle_path = std::process::Command::new("ruby")
-        .args(["-rbundler", "-e", "'puts Bundler.bundle_path'"])
-        .spawn()?
-        .wait_with_output()
-        .map(|out| out.stdout)?;
+        .args(["-rbundler", "-e", "puts Bundler.bundle_path"])
+        .output()?
+        .stdout;
+    if bundle_path.is_empty() {
+        return Err(Error::BadBundlePath);
+    }
     String::from_utf8(bundle_path)
         .map_err(|_| Error::BadBundlePath)
         .map(Utf8PathBuf::from)
