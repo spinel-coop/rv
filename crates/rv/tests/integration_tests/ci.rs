@@ -41,7 +41,11 @@ fn test_clean_install_download_faker() {
         .stdout;
     let test_dir_contents =
         String::from_utf8(test_dir_contents).expect("'find' should return UTF-8 bytes");
-    let mut lines: Vec<_> = test_dir_contents.lines().collect();
+    let mut lines: Vec<_> = test_dir_contents
+        .lines()
+        // This file is created when running with coverage, we don't want to include it.
+        .filter(|line| !line.ends_with("profraw"))
+        .collect();
     lines.sort();
     let files_sorted = lines.join("\n");
     insta::assert_snapshot!(files_sorted);
