@@ -136,12 +136,12 @@ fn find_install_path(lockfile_path: &Utf8PathBuf) -> Result<Utf8PathBuf> {
         .stdout;
     if bundle_path.is_empty() {
         return Err(Error::BadBundlePath);
-    } else {
-        debug!("found install path {:?}", bundle_path);
     }
-    String::from_utf8(bundle_path)
-        .map_err(|_| Error::BadBundlePath)
-        .map(Utf8PathBuf::from)
+    let bundle_path = String::from_utf8(bundle_path)
+        .map(|s| Utf8PathBuf::from(s.trim()))
+        .map_err(|_| Error::BadBundlePath);
+    debug!("found install path {:?}", bundle_path);
+    bundle_path
 }
 
 async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiInnerArgs) -> Result<()> {
@@ -149,7 +149,9 @@ async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiInnerArgs) -
     //    ruby -rbundler -e 'puts Bundler.bundle_path'
     // 2. Unpack all the tarballs
     let binstub_dir = args.install_path.join("bin");
+    eprintln!("Creating binstub dir at {binstub_dir}");
     tokio::fs::create_dir_all(&binstub_dir).await?;
+    eprintln!("Created binstub dir");
     use futures_util::stream::TryStreamExt;
     futures_util::stream::iter(downloaded)
         .map(Ok::<_, Error>)
