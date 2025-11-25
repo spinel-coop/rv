@@ -55,7 +55,7 @@ struct CiInnerArgs {
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
-    #[error("You must specify a ruby version to use")]
+    #[error("You must specify a ruby version to use, try setting $RUBY_VERSION")]
     NoRubyVersion,
     #[error(transparent)]
     Parse(#[from] rv_lockfile::ParseErrors),
@@ -808,9 +808,9 @@ mod tests {
             &CiInnerArgs {
                 ruby_version: RubyRequest {
                     engine: rv_ruby::engine::RubyEngine::Ruby,
-                    major: Some("3".parse().unwrap()),
-                    minor: Some("4".parse().unwrap()),
-                    patch: Some("7".parse().unwrap()),
+                    major: Some(3),
+                    minor: Some(4),
+                    patch: Some(7),
                     tiny: None,
                     prerelease: None,
                 },
