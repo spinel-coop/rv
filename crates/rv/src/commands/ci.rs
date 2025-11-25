@@ -714,19 +714,14 @@ async fn download_gem<'i>(
         .into_path_buf()
         .join(format!("{cache_key}.gem"));
 
-    let contents;
-    if cache_path.exists() {
+    let contents = if cache_path.exists() {
         debug!("Reusing gem from {url} in cache");
         let data = tokio::fs::read(&cache_path).await?;
-        contents = Bytes::from(data);
+        Bytes::from(data)
     } else {
         debug!("Downloading gem from {url}");
-        contents = client.get(url.clone()).send().await?.bytes().await?;
-        if let Some(parent) = cache_path.parent() {
-            tokio::fs::create_dir_all(parent).await?;
-        }
-        tokio::fs::write(&cache_path, &contents).await?;
-    }
+        client.get(url.clone()).send().await?.bytes().await?
+    };
 
     // Validate the checksums.
     if let Some(checksum) = checksums.get(&spec.gem_version) {
@@ -743,7 +738,14 @@ async fn download_gem<'i>(
             }
         }
     }
-    debug!("Downloaded {}", spec.gem_version);
+    debug!("Validated {}", spec.gem_version);
+    if !cache_path.exists() {
+        if let Some(parent) = cache_path.parent() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
+        tokio::fs::write(&cache_path, &contents).await?;
+        debug!("Cached {}", spec.gem_version);
+    }
     Ok(Downloaded { contents, spec })
 }
 
