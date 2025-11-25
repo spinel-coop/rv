@@ -130,6 +130,10 @@ fn find_lockfile_path(config: &Config) -> Result<Utf8PathBuf> {
 }
 
 fn find_install_path(lockfile_path: &Utf8PathBuf) -> Result<Utf8PathBuf> {
+    let env_path = std::env::var("BUNDLE_PATH");
+    if let Ok(bundle_path) = env_path {
+        return Ok(Utf8PathBuf::from(&bundle_path));
+    }
     let lockfile_dir = lockfile_path.parent().unwrap();
     let bundle_path = std::process::Command::new("ruby")
         .current_dir(lockfile_dir)
