@@ -24,6 +24,7 @@ use std::collections::HashMap;
 use std::io;
 use std::io::Cursor;
 use std::io::Read;
+use std::ops::Not;
 use std::path::PathBuf;
 
 const FS_CONCURRENCY_LIMIT: usize = 20;
@@ -144,6 +145,7 @@ async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiArgs) -> Res
             // 4. Handle compiling native extensions for gems with native extensions
             compile_native_extensions(&dep_gemspec.extensions)?;
             generate_ruby_gemspec(&dep_gemspec).await?;
+            debug!("Installed {gv}");
             Ok(())
         })
         .await?;
@@ -201,6 +203,12 @@ async fn download_gems<'i>(
     cache: &rv_cache::Cache,
     args: &CiArgs,
 ) -> Result<Vec<Downloaded<'i>>> {
+    if lockfile.git.is_empty().not() {
+        tracing::warn!("rv ci does not support git deps yet");
+    }
+    if lockfile.path.is_empty().not() {
+        tracing::warn!("rv ci does not support path deps yet");
+    }
     let all_sources = futures_util::stream::iter(lockfile.gem);
     let checksums = if args.validate_checksums
         && let Some(checks) = lockfile.checksums
@@ -672,13 +680,14 @@ async fn download_gem<'i>(
                 if actual[..] != checksum.value {
                     return Err(Error::ChecksumFail {
                         filename: url.to_string(),
-                        gem_name: format!("{}-{}", spec.gem_version.name, spec.gem_version.version),
+                        gem_name: spec.gem_version.to_string(),
                         algo: "sha256",
                     });
                 }
             }
         }
     }
+    debug!("Downloaded {}", spec.gem_version);
     Ok(Downloaded { contents, spec })
 }
 
