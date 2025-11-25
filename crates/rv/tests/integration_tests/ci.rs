@@ -22,3 +22,24 @@ fn test_clean_install_download() {
     output.assert_success();
     mock.assert();
 }
+
+#[test]
+fn test_clean_install_download_discourse() {
+    let test = RvTest::new();
+
+    let discourse_gemfile = "../rv-lockfile/tests/inputs/Gemfile.lock.discourse";
+    let lockfile = fs_err::read_to_string(discourse_gemfile).unwrap();
+    let _ = fs_err::write(test.cwd.join("Gemfile.lock"), &lockfile);
+    let output = test.rv(&["ci"]);
+    output.assert_success();
+
+    // Store a snapshot of all the files `rv ci` created.
+    let test_dir_contents = std::process::Command::new("ls")
+        .args(["-R".to_owned(), test.cwd.into_string()])
+        .output()
+        .expect("ls should succeed")
+        .stdout;
+    let test_dir_contents =
+        String::from_utf8(test_dir_contents).expect("ls -R should return UTF-8 bytes");
+    insta::assert_snapshot!(test_dir_contents);
+}
