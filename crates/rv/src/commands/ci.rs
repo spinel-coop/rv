@@ -67,7 +67,7 @@ pub enum Error {
     #[error("Could not read install directory from Bundler")]
     BadBundlePath,
     #[error("Failed to unpack tarball path {0}")]
-    InvalidTarballPath(PathBuf),
+    InvalidPath(PathBuf),
     #[error("Checksum file was not valid YAML")]
     InvalidChecksum,
     #[error("Gem archive did not include metadata.gz")]
@@ -93,13 +93,7 @@ pub enum Error {
 type Result<T> = std::result::Result<T, Error>;
 
 pub async fn ci(config: &Config, args: CiArgs) -> Result<()> {
-    let lockfile_name: Utf8PathBuf;
-    if let Some(path) = &config.gemfile {
-        lockfile_name = format!("{}.lock", path.clone()).into();
-    } else {
-        lockfile_name = "Gemfile.lock".into();
-    }
-    let lockfile_path = Utf8PathBuf::from_path_buf(current_dir()?.join(lockfile_name)).unwrap();
+    let lockfile_path = find_lockfile_path(config)?;
     let install_path = find_install_path(&lockfile_path)?;
     let inner_args = CiInnerArgs {
         max_concurrent_requests: args.max_concurrent_requests,
@@ -116,6 +110,21 @@ async fn ci_inner(cache: &rv_cache::Cache, args: &CiInnerArgs) -> Result<()> {
     let gems = download_gems(lockfile, cache, args).await?;
     install_gems(gems, args).await?;
     Ok(())
+}
+
+fn find_lockfile_path(config: &Config) -> Result<Utf8PathBuf> {
+    let lockfile_name: Utf8PathBuf;
+    if let Some(path) = &config.gemfile {
+        lockfile_name = format!("{}.lock", path.clone()).into();
+    } else {
+        lockfile_name = "Gemfile.lock".into();
+    }
+    let lockfile_path = match Utf8PathBuf::from_path_buf(current_dir()?.join(lockfile_name)) {
+        Ok(it) => it,
+        Err(err) => return Err(Error::InvalidPath(err)),
+    };
+    debug!("found lockfile_path {}", lockfile_path);
+    Ok(lockfile_path)
 }
 
 fn find_install_path(lockfile_path: &Utf8PathBuf) -> Result<Utf8PathBuf> {
