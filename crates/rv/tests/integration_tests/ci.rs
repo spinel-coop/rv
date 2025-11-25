@@ -35,7 +35,8 @@ fn test_clean_install_download_discourse() {
 
     // Store a snapshot of all the files `rv ci` created.
     let test_dir_contents = std::process::Command::new("ls")
-        .args(["-R".to_owned(), test.cwd.into_string()])
+        .args(["-R".to_owned()])
+        .current_dir(test.cwd)
         .output()
         .expect("ls should succeed")
         .stdout;
