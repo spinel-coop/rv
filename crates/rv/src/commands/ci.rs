@@ -776,22 +776,4 @@ mod tests {
         .await?;
         Ok(())
     }
-
-    #[tokio::test]
-    async fn test_ci_inner_requires_internet() -> Result<()> {
-        let file: Utf8PathBuf = "../rv-lockfile/tests/inputs/Gemfile.lock.empty".into();
-        let dir = file.parent().unwrap();
-        let cache = rv_cache::Cache::from_path("cache".to_owned());
-        ci_inner(
-            &cache,
-            &CiInnerArgs {
-                max_concurrent_requests: 10,
-                validate_checksums: true,
-                install_path: dir.into(),
-                lockfile_path: file,
-            },
-        )
-        .await?;
-        Ok(())
-    }
 }
