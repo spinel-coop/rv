@@ -359,6 +359,10 @@ impl<'i> Downloaded<'i> {
         let contents = Cursor::new(self.contents);
         let mut archive = tar::Archive::new(contents.clone());
 
+        // If the user wants to validate checksums,
+        // then iterate through the archive entries until you find the checksum entry.
+        // We'll then store it, and iterate through the archive a second time to find
+        // the real files, and validate their checksums.
         let checksums = if args.validate_checksums {
             let mut checksums: Option<ArchiveChecksums> = None;
             for e in archive.entries()? {
@@ -371,11 +375,14 @@ impl<'i> Downloaded<'i> {
                     let _ = contents.read_to_string(&mut str_contents)?;
                     let cs = ArchiveChecksums::new(&str_contents).ok_or(Error::InvalidChecksum)?;
 
+                    // Should not happen in practice, because we break after finding the checksums.
+                    // But may as well be defensive here.
                     if checksums.replace(cs).is_some() {
                         return Err(Error::InvalidGemArchive(
                             "two checksums.yaml.gz files found in the gem archive".to_owned(),
                         ));
                     }
+                    break;
                 }
             }
             if checksums.is_none() {
@@ -389,6 +396,9 @@ impl<'i> Downloaded<'i> {
             None
         };
 
+        // Now that we've handled checksums (perhaps), we can iterate through the archive
+        // and unpack the entries we care about. Specifically the metadata and the data itself.
+        // If we found checksums, validate them.
         let mut found_gemspec = None;
         let mut found_data_tar = false;
         let mut archive = tar::Archive::new(contents);
@@ -397,12 +407,12 @@ impl<'i> Downloaded<'i> {
             let entry_path = entry.path()?;
             match entry_path.display().to_string().as_str() {
                 "metadata.gz" => {
+                    // Unpack the metadata, which stores the gem specs.
                     if found_gemspec.is_some() {
                         return Err(Error::InvalidGemArchive("two metadata.gz found".to_owned()));
                     }
-                    let data = HashReader::new(entry);
                     let UnpackedMetdata { hashed, gemspec } =
-                        unpack_metadata(&bundle_path, &nameversion, data).await?;
+                        unpack_metadata(&bundle_path, &nameversion, HashReader::new(entry)).await?;
                     found_gemspec = Some(gemspec);
                     if args.validate_checksums
                         && let Some(ref checksums) = checksums
@@ -411,11 +421,12 @@ impl<'i> Downloaded<'i> {
                     }
                 }
                 "data.tar.gz" => {
+                    // Unpack the data archive, which stores all the gems.
                     if found_data_tar {
                         return Err(Error::InvalidGemArchive("two data.tar.gz found".to_owned()));
                     }
-                    let data = HashReader::new(entry);
-                    let unpacked = unpack_data_tar(&bundle_path, &nameversion, data).await?;
+                    let unpacked =
+                        unpack_data_tar(&bundle_path, &nameversion, HashReader::new(entry)).await?;
                     if args.validate_checksums
                         && let Some(ref checksums) = checksums
                     {
@@ -424,7 +435,7 @@ impl<'i> Downloaded<'i> {
                     found_data_tar = true;
                 }
                 "checksums.yaml.gz" => {
-                    // Already handled
+                    // Already handled in the earlier loop above.
                 }
                 "data.tar.gz.sig" | "metadata.gz.sig" | "checksums.yaml.gz.sig" => {
                     // In the future, maybe we should add a flag which checks these?
