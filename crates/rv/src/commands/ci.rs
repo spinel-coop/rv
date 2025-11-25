@@ -148,9 +148,7 @@ fn find_install_path(lockfile_path: &Utf8PathBuf) -> Result<Utf8PathBuf> {
 
 async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiInnerArgs) -> Result<()> {
     let binstub_dir = args.install_path.join("bin");
-    eprintln!("Creating binstub dir at {binstub_dir}");
     tokio::fs::create_dir_all(&binstub_dir).await?;
-    eprintln!("Created binstub dir");
     use futures_util::stream::TryStreamExt;
     futures_util::stream::iter(downloaded)
         .map(Ok::<_, Error>)
