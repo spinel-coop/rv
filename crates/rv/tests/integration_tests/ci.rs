@@ -1,22 +1,21 @@
-use std::env::current_dir;
-
 use crate::common::RvTest;
 
 #[test]
-fn test_clean_install_download() {
+fn test_clean_install_download_test_gem() {
     let mut test = RvTest::new();
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testsource");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.lock.testsource");
+    test.replace_source("http://gems.example.com", &test.server_url());
 
-    println!("{:?}", current_dir());
+    let gemfile = fs_err::read_to_string(test.cwd.join("Gemfile")).unwrap();
+    println!("{}", gemfile);
+
     let tarball_content =
         fs_err::read("../rv-gem-package/tests/fixtures/test-gem-1.0.0.gem").unwrap();
     let mock = test
         .mock_gem_download("test-gem-1.0.0.gem", &tarball_content)
         .create();
 
-    let rack_gemfile = "../rv-lockfile/tests/inputs/Gemfile.lock.testsource";
-    let mut lockfile = fs_err::read_to_string(rack_gemfile).unwrap();
-    lockfile = lockfile.replace("http://gems.example.com", &test.server_url());
-    let _ = fs_err::write(test.cwd.join("Gemfile.lock"), &lockfile);
     let output = test.rv(&["ci"]);
 
     output.assert_success();
@@ -26,13 +25,9 @@ fn test_clean_install_download() {
 #[test]
 fn test_clean_install_download_discourse() {
     let test = RvTest::new();
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.discourse");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.lock.discourse");
 
-    let discourse_gemfile = "../rv-lockfile/tests/inputs/Gemfile.discourse";
-    let gemfile = fs_err::read_to_string(discourse_gemfile).unwrap();
-    let discourse_gemfile_lock = "../rv-lockfile/tests/inputs/Gemfile.lock.discourse";
-    let lockfile = fs_err::read_to_string(discourse_gemfile_lock).unwrap();
-    let _ = fs_err::write(test.cwd.join("Gemfile"), &gemfile);
-    let _ = fs_err::write(test.cwd.join("Gemfile.lock"), &lockfile);
     let output = test.rv(&["ci"]);
     output.assert_success();
 

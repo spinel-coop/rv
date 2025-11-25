@@ -148,6 +148,26 @@ echo ""
 
         ruby_dir
     }
+
+    pub fn use_gemfile(&self, path: &str) {
+        let gemfile = fs_err::read_to_string(path).unwrap();
+        let _ = fs_err::write(self.cwd.join("Gemfile"), &gemfile);
+    }
+
+    pub fn use_lockfile(&self, path: &str) {
+        let lockfile = fs_err::read_to_string(path).unwrap();
+        let _ = fs_err::write(self.cwd.join("Gemfile.lock"), &lockfile);
+    }
+
+    pub fn replace_source(&self, from: &str, to: &str) {
+        let gemfile_path = self.cwd.join("Gemfile");
+        let gemfile = fs_err::read_to_string(&gemfile_path).unwrap();
+        let _ = fs_err::write(gemfile_path, gemfile.replace(from, to));
+
+        let lockfile_path = self.cwd.join("Gemfile.lock");
+        let lockfile = fs_err::read_to_string(&lockfile_path).unwrap();
+        let _ = fs_err::write(lockfile_path, lockfile.replace(from, to));
+    }
 }
 
 pub struct RvOutput {
