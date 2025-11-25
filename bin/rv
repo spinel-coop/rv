@@ -2,4 +2,8 @@
 set -euo pipefail
 set -x
 
-cargo run --release -q --bin rv -- "$@"
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}"/ )/.." && pwd )"
+pushd "$DIR"
+cargo build --release -q --bin rv
+popd
+exec "$DIR"/target/release/rv "$@"
