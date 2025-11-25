@@ -25,8 +25,10 @@ use std::env::current_dir;
 use std::io;
 use std::io::Cursor;
 use std::io::Read;
+use std::io::Write;
 use std::ops::Not;
 use std::path::PathBuf;
+use std::process::Stdio;
 
 const FS_CONCURRENCY_LIMIT: usize = 20;
 
@@ -145,9 +147,6 @@ fn find_install_path(lockfile_path: &Utf8PathBuf) -> Result<Utf8PathBuf> {
 }
 
 async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiInnerArgs) -> Result<()> {
-    // 1. Get the path where we want to put the gems from Bundler
-    //    ruby -rbundler -e 'puts Bundler.bundle_path'
-    // 2. Unpack all the tarballs
     let binstub_dir = args.install_path.join("bin");
     eprintln!("Creating binstub dir at {binstub_dir}");
     tokio::fs::create_dir_all(&binstub_dir).await?;
@@ -173,7 +172,6 @@ async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiInnerArgs) -
             install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir).await?;
             // 4. Handle compiling native extensions for gems with native extensions
             compile_native_extensions(&dep_gemspec.extensions)?;
-            generate_ruby_gemspec(&dep_gemspec).await?;
             debug!("Installed {gv}");
             Ok(())
         })
@@ -508,13 +506,6 @@ fn compile_native_extensions(_extensions: &[String]) -> Result<()> {
     Ok(())
 }
 
-async fn generate_ruby_gemspec(_dep_gemspec: &GemSpecification) -> Result<()> {
-    // todo
-    // For now, shell out to Ruby and let it convert the YAML to ruby code
-    // In the future, we will (sigh) rewrite it in Rust
-    Ok(())
-}
-
 /// Wrapper around some reader type `R`
 /// that also computes SHA checksums as it reads.
 struct HashReader<R> {
@@ -623,23 +614,46 @@ where
     let mut dst = tokio::fs::File::create(&dst_path).await?;
 
     // Then write the (unzipped) source into the destination.
-    let mut contents = String::new();
+    let mut yaml_contents = String::new();
     let mut unzipper = GzDecoder::new(metadata_gz);
-    unzipper.read_to_string(&mut contents)?;
-    let parsed = match rv_gem_specification_yaml::parse(&contents) {
+    unzipper.read_to_string(&mut yaml_contents)?;
+    let parsed = match rv_gem_specification_yaml::parse(&yaml_contents) {
         Ok(parsed) => Some(parsed),
         Err(e) => {
             eprintln!("Warning: specification of {nameversion} was invalid: {e}");
             None
         }
     };
-    tokio::io::copy(&mut Cursor::new(contents), &mut dst).await?;
+    let ruby_contents = convert_gemspec_yaml_to_ruby(yaml_contents);
+    tokio::io::copy(&mut Cursor::new(ruby_contents), &mut dst).await?;
 
     let h = unzipper.into_inner();
     Ok(UnpackedMetdata {
         hashed: h.finalize(),
         gemspec: parsed,
     })
+}
+
+fn convert_gemspec_yaml_to_ruby(contents: String) -> String {
+    let mut child = std::process::Command::new("ruby")
+        .args([
+            "-e",
+            "Gem.load_yaml; print Gem::SafeYAML.safe_load(ARGF.read).to_ruby",
+        ])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to spawn child process");
+
+    let mut stdin = child.stdin.take().expect("Failed to open stdin");
+    std::thread::spawn(move || {
+        stdin
+            .write_all(contents.as_bytes())
+            .expect("Failed to write to stdin");
+    });
+
+    let output = child.wait_with_output().expect("Failed to read stdout");
+    String::from_utf8_lossy(&output.stdout).to_string()
 }
 
 fn url_for_spec(remote: &str, spec: &Spec<'_>) -> Result<Url> {
