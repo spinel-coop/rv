@@ -12,14 +12,27 @@ pub enum Error {
     ConfigError(#[from] crate::config::Error),
     #[error(transparent)]
     ExecError(#[from] io::Error),
+    #[error(transparent)]
+    InstallError(#[from] crate::commands::ruby::install::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
 
-pub fn run(config: &Config, request: &RubyRequest, args: &[String]) -> Result<()> {
-    let Some(ruby) = config.matching_ruby(request) else {
-        return Err(Error::NoMatchingRuby);
+pub async fn run(
+    config: &Config,
+    request: &RubyRequest,
+    no_install: bool,
+    args: &[String],
+) -> Result<()> {
+    if config.matching_ruby(request).is_none() && !no_install {
+        // Not installed, try to install it.
+        // None means it'll install in whatever default ruby location it chooses.
+        let install_dir = None;
+        // There's probably a way to remove this clone but it doesn't actually matter.
+        let requested = request.to_owned();
+        crate::commands::ruby::install::install(config, install_dir, requested, None).await?
     };
+    let ruby = config.matching_ruby(request).ok_or(Error::NoMatchingRuby)?;
     let (unset, set) = config::env_for(Some(&ruby))?;
     let mut cmd = Command::new(ruby.executable_path());
     cmd.args(args);

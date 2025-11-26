@@ -172,6 +172,7 @@ echo ""
     }
 }
 
+#[derive(Debug)]
 pub struct RvOutput {
     pub output: std::process::Output,
     pub test_root: String,
