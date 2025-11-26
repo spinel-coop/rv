@@ -1,6 +1,6 @@
 # Meet `rv`, the super fast no-fuss Ruby version manager
 
-Welcome to `rv`, the Ruby version manager that revs your Ruby installs so [they take just seconds](#usage).
+Welcome to `rv`, the Ruby version manager that revs your Ruby installs so [they take just seconds](#install-benchmark).
 
 [In the future](#future-features), rv can also manage your tools, gems, and packages, faster than you would believe is possible.
 
