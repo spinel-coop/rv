@@ -69,6 +69,12 @@ pub enum RubyCommand {
     #[cfg(unix)]
     #[command(about = "Run a specific Ruby", dont_delimit_trailing_values = true)]
     Run {
+        /// By default, if your requested Ruby version isn't installed,
+        /// it will be installed with `rv ruby install`'s default options.
+        /// This option disables that behaviour.
+        #[arg(long)]
+        no_install: bool,
+
         /// Ruby version to run
         version: RubyRequest,
 

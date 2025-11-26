@@ -293,7 +293,11 @@ async fn run() -> Result<()> {
                     version: version_request,
                 } => ruby_uninstall(&config, version_request).await?,
                 #[cfg(unix)]
-                RubyCommand::Run { version, args } => ruby_run(&config, &version, &args)?,
+                RubyCommand::Run {
+                    version,
+                    no_install,
+                    args,
+                } => ruby_run(&config, &version, no_install, &args).await?,
             },
             Commands::Ci(ci_args) => ci(&config, ci_args).await?,
             Commands::Cache(cache) => match cache.command {
