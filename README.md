@@ -14,7 +14,6 @@ We precompile Ruby 3.2+ for [macOS & Linux](#requirements) to vastly improve ins
 - **Unbreakable**: Homebrew updating OpenSSL will never break your Ruby install again.
 - **Zero compile time**: no more waiting 5-40min to compile Ruby on your dev machine or deployment dyno.
 - **Zero compile errors**: your Ruby install won't fail to compile due to low-level libraries being missing or unlinked.
-- **Improved Security**: rv installs new Rubies automatically, so you'll get Ruby security fixes on release.
 - **Eco-friendly**: saving minutes of compilation time across thousands of dev machines and deployment dynos across Ruby releases all add up.
 
 ### Install Benchmark
@@ -41,9 +40,9 @@ time rv ruby install 3.4.7
 Downloaded https://github.com/spinel-coop/rv-ruby/releases/latest/download/ruby-3.4.7.arm64_sonoma.tar.gz to ~/.cache/rv/ruby-v0/tarballs/8758fed525bd3750.tar.gz
 Installed Ruby version ruby-3.4.7 to ~/.data/rv/rubies
 
-real	0m2.479s
-user	0m0.362s
-sys	0m0.551s
+real 0m2.479s
+user 0m0.362s
+sys  0m0.551s
 ```
 
 #### rbenv + ruby-build install in High Power Mode
@@ -64,9 +63,9 @@ ruby-build: using gmp from homebrew
 -> make install
 ==> Installed ruby-3.4.7 to ~/.rbenv/versions/3.4.7
 
-real	1m29.611s
-user	2m54.163s
-sys	0m57.157s
+real 1m29.611s
+user 2m54.163s
+sys  0m57.157s
 ```
 
 #### rbenv + ruby-build install in Low Power Mode
@@ -87,9 +86,9 @@ ruby-build: using gmp from homebrew
 -> make install
 ==> Installed ruby-3.4.7 to ~/.rbenv/versions/3.4.7
 
-real	2m39.752s
-user	4m41.813s
-sys	1m35.644s
+real 2m39.752s
+user 4m41.813s
+sys  1m35.644s
 ```
 
 </details>
@@ -129,9 +128,9 @@ time rv ruby run 3.4.7 -- --version
 > [!NOTE]
 > We've prepended `time` to show how fast rv installs Ruby on the first run, it's not needed to use rv.
 
-## Shell Integration
+For automatic Ruby version selection, like `rbenv` or `chruby`, you can add a line of configuration to your shell. After this one-time setup, `rv` will automatically use `.ruby-version` or `.tool-versions` files to give you the requested Ruby. Set or update the version of Ruby used in a project by running `rv ruby pin VERSION`.
 
-See [SHELL INTEGRATION](docs/SHELL_INTEGRATION.md) for zsh, bash, fish, and nushell.
+See [SHELL INTEGRATION](docs/SHELL_INTEGRATION.md) for instructions to configure zsh, bash, fish, and nushell.
 
 ## Brought to you by Spinel
 
@@ -143,7 +142,7 @@ See [Ruby Butler](https://github.com/RubyElders/ruby-butler) for similar next-le
 
 We appreciate any tooling that improves Ruby and the lives of Ruby developers. We're all richer for people contributing their time & energy to make us all better. If you're reading this and you've contributed to Ruby in any way, thank you!
 
-## Future plans
+## Future Plans
 
 All-in-one tooling for Ruby developers.
 
