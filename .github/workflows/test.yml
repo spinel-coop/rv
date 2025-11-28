@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runs-on: 
+        runs-on:
         - ubuntu-latest # x86
         - macos-latest # xarm
         - ubuntu-24.04-arm #arm
@@ -37,6 +37,7 @@ jobs:
   run-tests-coverage:
     name: Run tests with coverage
     runs-on: ubuntu-latest
+    if: ${{ github.repository == 'spinel-coop/rv' }}
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
@@ -57,7 +58,7 @@ jobs:
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v5
         with:
-          token: ${{secrets.CODECOV_TOKEN}}
+          token: ${{ secrets.CODECOV_TOKEN }}
           slug: spinel-coop/rv
           fail_ci_if_error: true
           flags: unittests
