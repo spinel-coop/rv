@@ -112,7 +112,7 @@ async fn extract_local_ruby_tarball(
 
 /// Does a usable tarball already exist at this path?
 fn valid_tarball_exists(path: &Utf8Path) -> bool {
-    std::fs::metadata(path).is_ok_and(|m| m.len() > 0)
+    std::fs::metadata(path).is_ok_and(|m| m.is_file() && m.len() > 0)
 }
 
 fn ruby_url(version: &str) -> Result<String> {
