@@ -73,7 +73,7 @@ async fn download_and_extract_remote_tarball(
     install_dir: &Utf8PathBuf,
     requested: &RubyRequest,
 ) -> Result<()> {
-    if requested.patch.is_none() {
+    if requested.major > Some(0) && requested.patch.is_none() {
         Err(Error::IncompleteVersion(requested.clone()))?;
     }
 
@@ -125,13 +125,10 @@ fn ruby_url(version: &str) -> Result<String> {
         other => return Err(Error::UnsupportedPlatform(other)),
     };
 
-    let download_base = std::env::var("RV_RELEASES_URL")
-        .unwrap_or("https://github.com/spinel-coop/rv-ruby/releases".to_owned());
+    let download_base = std::env::var("RV_INSTALL_URL")
+        .unwrap_or("https://github.com/spinel-coop/rv-ruby/releases/latest/download".to_owned());
 
-    Ok(format!(
-        "{}/latest/download/ruby-{version}.{arch}.tar.gz",
-        download_base
-    ))
+    Ok(format!("{}/ruby-{version}.{arch}.tar.gz", download_base))
 }
 
 fn tarball_path(config: &Config, url: impl AsRef<str>) -> Utf8PathBuf {
