@@ -38,6 +38,14 @@ impl RvTest {
         test.env.insert("RV_DISABLE_INDICATIF".into(), "1".into()); // Disable indicatif progress bars in tests due to a bug in tracing-indicatif
 
         // Disable network requests by default
+        test.env.insert(
+            "RV_LIST_URL".into(),
+            format!(
+                "{}/{}",
+                test.server.url(),
+                "repos/spinel-coop/rv-ruby/releases/latest"
+            ),
+        );
         test.env.insert("RV_RELEASES_URL".into(), test.server.url());
 
         // Disable caching for tests by default

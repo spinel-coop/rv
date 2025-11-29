@@ -146,17 +146,17 @@ pub(crate) async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Re
     );
     let client = reqwest::Client::new();
 
-    let api_base =
-        std::env::var("RV_RELEASES_URL").unwrap_or_else(|_| "https://api.github.com".to_string());
-    if api_base == "-" {
+    let url = std::env::var("RV_LIST_URL").unwrap_or_else(|_| {
+        "https://api.github.com/repos/spinel-coop/rv-ruby/releases/latest".to_string()
+    });
+    if url == "-" {
         // Special case to return empty list
-        tracing::debug!("RV_RELEASES_URL is '-', returning empty list without network request.");
+        tracing::debug!("RV_LIST_URL is '-', returning empty list without network request.");
         return Ok(Release {
             name: "Empty release".to_owned(),
             assets: Vec::new(),
         });
     }
-    let url = format!("{}/repos/spinel-coop/rv-ruby/releases/latest", api_base);
 
     // 1. Try to read from the disk cache.
     let cached_data: Option<CachedRelease> =
