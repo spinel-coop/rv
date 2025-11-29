@@ -46,7 +46,7 @@ impl RvTest {
                 "repos/spinel-coop/rv-ruby/releases/latest"
             ),
         );
-        test.env.insert("RV_RELEASES_URL".into(), test.server.url());
+        test.env.insert("RV_INSTALL_URL".into(), test.server.url());
 
         // Disable caching for tests by default
         test.env.insert("RV_NO_CACHE".into(), "true".into());

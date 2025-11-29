@@ -125,7 +125,7 @@ fn ruby_url(version: &str) -> Result<String> {
         other => return Err(Error::UnsupportedPlatform(other)),
     };
 
-    let download_base = std::env::var("RV_RELEASES_URL")
+    let download_base = std::env::var("RV_INSTALL_URL")
         .unwrap_or("https://github.com/spinel-coop/rv-ruby/releases".to_owned());
 
     Ok(format!(
