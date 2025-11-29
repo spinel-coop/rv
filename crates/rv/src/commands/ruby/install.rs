@@ -126,12 +126,9 @@ fn ruby_url(version: &str) -> Result<String> {
     };
 
     let download_base = std::env::var("RV_INSTALL_URL")
-        .unwrap_or("https://github.com/spinel-coop/rv-ruby/releases".to_owned());
+        .unwrap_or("https://github.com/spinel-coop/rv-ruby/releases/latest/download".to_owned());
 
-    Ok(format!(
-        "{}/latest/download/ruby-{version}.{arch}.tar.gz",
-        download_base
-    ))
+    Ok(format!("{}/ruby-{version}.{arch}.tar.gz", download_base))
 }
 
 fn tarball_path(config: &Config, url: impl AsRef<str>) -> Utf8PathBuf {
