@@ -21,7 +21,7 @@ use crate::config::Config;
 const MINIMUM_CACHE_TTL: Duration = Duration::from_secs(60);
 
 static ARCH_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"ruby-[\d\.]+\.(?P<arch>[a-zA-Z0-9_]+)\.tar\.gz").unwrap());
+    Lazy::new(|| Regex::new(r"ruby-[\d\.a-z-]+\.(?P<arch>[a-zA-Z0-9_]+)\.tar\.gz").unwrap());
 
 static PARSE_MAX_AGE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"max-age=(\d+)").unwrap());
 
