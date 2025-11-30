@@ -82,3 +82,10 @@ lto = true
 # The profile that benchmarks, and `cargo-flamegraph` will build with
 [profile.bench]
 debug = true
+
+[workspace.lints.clippy]
+assertions_on_result_states = "warn"
+dbg_macro = "warn"
+redundant_clone = "warn"
+result_large_err = "allow"
+

@@ -28,9 +28,7 @@ pub async fn run(
         // Not installed, try to install it.
         // None means it'll install in whatever default ruby location it chooses.
         let install_dir = None;
-        // There's probably a way to remove this clone but it doesn't actually matter.
-        let requested = request.to_owned();
-        crate::commands::ruby::install::install(config, install_dir, requested, None).await?
+        crate::commands::ruby::install::install(config, install_dir, request, None).await?
     };
     let ruby = config.matching_ruby(request).ok_or(Error::NoMatchingRuby)?;
     let (unset, set) = config::env_for(Some(&ruby))?;
