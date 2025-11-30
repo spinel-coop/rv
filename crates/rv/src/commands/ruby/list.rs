@@ -80,21 +80,24 @@ fn parse_max_age(header: &str) -> Option<Duration> {
 fn parse_arch_str(arch_str: &str) -> (&'static str, &'static str) {
     match arch_str {
         "arm64_sonoma" => ("macos", "aarch64"),
+        "ventura" => ("macos", "x86_64"),
+        "sequoia" => ("macos", "x86_64"),
         "x86_64_linux" => ("linux", "x86_64"),
         "arm64_linux" => ("linux", "aarch64"),
         _ => ("unknown", "unknown"),
     }
 }
 
-fn current_platform_arch_str() -> &'static str {
+fn current_platform_arch_str() -> Vec<&'static str> {
     let platform =
         std::env::var("RV_TEST_PLATFORM").unwrap_or_else(|_| CURRENT_PLATFORM.to_string());
 
     match platform.as_str() {
-        "aarch64-apple-darwin" => "arm64_sonoma",
-        "x86_64-unknown-linux-gnu" => "x86_64_linux",
-        "aarch64-unknown-linux-gnu" => "arm64_linux",
-        _ => "unsupported",
+        "aarch64-apple-darwin" => vec!["arm64_sonoma"],
+        "x86_64-apple-darwin" => vec!["sequoia", "ventura"],
+        "x86_64-unknown-linux-gnu" => vec!["x86_64_linux"],
+        "aarch64-unknown-linux-gnu" => vec!["arm64_linux"],
+        _ => vec!["unsupported"],
     }
 }
 
@@ -321,7 +324,7 @@ fn rubies_to_show(
     release: Release,
     installed_rubies: Vec<Ruby>,
     active_ruby: Option<Ruby>,
-    current_platform: &'static str,
+    current_platforms: Vec<&'static str>,
 ) -> Vec<JsonRubyEntry> {
     // Might have multiple installed rubies with the same version (e.g., "ruby-3.2.0" and "mruby-3.2.0").
     let mut rubies_map: BTreeMap<String, Vec<Ruby>> = BTreeMap::new();
@@ -332,23 +335,28 @@ fn rubies_to_show(
             .push(ruby);
     }
 
-    // Filter releases+assets for current platform
-    let (desired_os, desired_arch) = parse_arch_str(current_platform);
-    let rubies_for_this_platform: Vec<Ruby> = release
-        .assets
-        .iter()
-        .filter_map(|asset| ruby_from_asset(asset).ok())
-        .filter(|ruby| ruby.os == desired_os && ruby.arch == desired_arch)
-        .collect();
+    let mut available_rubies: Vec<Ruby> = vec![];
+    for platform in current_platforms {
+        // Filter releases+assets for current platform
+        let (desired_os, desired_arch) = parse_arch_str(platform);
+        let rubies_for_this_platform: Vec<Ruby> = release
+            .assets
+            .iter()
+            .filter_map(|asset| ruby_from_asset(asset).ok())
+            .filter(|ruby| ruby.os == desired_os && ruby.arch == desired_arch)
+            .collect();
 
-    let available_rubies = latest_patch_version(rubies_for_this_platform);
+        for ruby in latest_patch_version(rubies_for_this_platform) {
+            available_rubies.push(ruby)
+        }
 
-    debug!(
-        "Found {} available rubies for platform {}/{}",
-        available_rubies.len(),
-        desired_os,
-        desired_arch
-    );
+        debug!(
+            "Found {} available rubies for platform {}/{}",
+            available_rubies.len(),
+            desired_os,
+            desired_arch
+        );
+    }
 
     // Merge in installed rubies, replacing any available ones with the installed versions
     for ruby in available_rubies {
@@ -688,12 +696,8 @@ mod tests {
             expected,
         } in tests
         {
-            let actual = rubies_to_show(
-                release,
-                installed_rubies,
-                active_ruby,
-                current_platform_arch,
-            );
+            let current_platforms = vec![current_platform_arch];
+            let actual = rubies_to_show(release, installed_rubies, active_ruby, current_platforms);
             pretty_assertions::assert_eq!(actual, expected, "failed test case '{test_name}'");
         }
     }
