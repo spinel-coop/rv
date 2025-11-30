@@ -1,4 +1,8 @@
-use std::{io, process::Command};
+use std::{
+    io,
+    path::Path,
+    process::{Command, ExitStatus, Output},
+};
 
 use rv_ruby::request::RubyRequest;
 
@@ -18,12 +22,26 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
-pub async fn run(
+#[derive(Debug, Default, Clone, Copy)]
+pub(crate) enum CaptureOutput {
+    #[default]
+    No,
+    /// Both stdout and stderr
+    Both,
+}
+
+/// Shell out to the given ruby, run it with the given arguments.
+/// By default, if the ruby isn't installed, install it (disabled via `no_install`).
+/// The ruby's output may be captured, depending on `capture_output`. If you pass
+/// `CaptureOutput::No`, this returns an empty `Output` struct.
+pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
     config: &Config,
     request: &RubyRequest,
     no_install: bool,
-    args: &[String],
-) -> Result<()> {
+    args: &[A],
+    capture_output: CaptureOutput,
+    cwd: Option<&Path>,
+) -> Result<Output> {
     if config.matching_ruby(request).is_none() && !no_install {
         // Not installed, try to install it.
         // None means it'll install in whatever default ruby location it chooses.
@@ -42,8 +60,22 @@ pub async fn run(
     for (var, val) in set {
         cmd.env(var, val);
     }
+    if let Some(path) = cwd {
+        cmd.current_dir(path);
+    }
 
-    exec(cmd)
+    match capture_output {
+        CaptureOutput::No => {
+            exec(cmd).map(|()| Output {
+                // Success
+                status: ExitStatus::default(),
+                // Both empty
+                stdout: Vec::new(),
+                stderr: Vec::new(),
+            })
+        }
+        CaptureOutput::Both => Ok(cmd.output()?),
+    }
 }
 
 #[cfg(unix)]

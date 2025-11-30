@@ -304,7 +304,16 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
                 version,
                 no_install,
                 args,
-            } => ruby_run(config, &version, no_install, &args).await?,
+            } => ruby_run(
+                config,
+                &version,
+                no_install,
+                &args,
+                Default::default(),
+                Default::default(),
+            )
+            .await
+            .map(|_| ())?,
         },
         Commands::Ci(ci_args) => ci(config, ci_args).await?,
         Commands::Cache(cache) => match cache.command {
