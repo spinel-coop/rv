@@ -105,6 +105,7 @@ fn all_suffixes() -> impl IntoIterator<Item = &'static str> {
         ".x86_64_linux.tar.gz",
         // We follow the Homebrew convention that if there's no arch, it defaults to x86.
         ".ventura.tar.gz",
+        ".sequoia.tar.gz",
     ]
 }
 
