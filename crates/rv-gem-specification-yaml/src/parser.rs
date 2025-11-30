@@ -83,9 +83,9 @@ fn mapping_end<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<(), Conte
     .parse_next(input)
 }
 
-fn sequence_start<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<(), ContextError> {
+fn sequence_start<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<usize, ContextError> {
     any.verify_map(|(event, _span)| match event {
-        Event::SequenceStart(_, _) => Some(()),
+        Event::SequenceStart(anchor_id, _) => Some(anchor_id),
         _ => None,
     })
     .parse_next(input)
@@ -759,11 +759,27 @@ fn get_error_details(
             Event::StreamEnd => "stream end".to_string(),
             Event::DocumentStart(_) => "document start".to_string(),
             Event::DocumentEnd => "document end".to_string(),
-            Event::MappingStart(_, Some(tag)) => format!("mapping start with tag '{}'", tag.suffix),
+            Event::MappingStart(anchor_id, Some(tag)) => {
+                if *anchor_id > 0 {
+                    format!(
+                        "mapping start with tag '{}' and anchor '{}'",
+                        tag.suffix, anchor_id
+                    )
+                } else {
+                    format!("mapping start with tag '{}'", tag.suffix)
+                }
+            }
             Event::MappingStart(_, None) => "mapping start".to_string(),
             Event::MappingEnd => "mapping end".to_string(),
-            Event::SequenceStart(_, Some(tag)) => {
-                format!("sequence start with tag '{}'", tag.suffix)
+            Event::SequenceStart(anchor_id, Some(tag)) => {
+                if *anchor_id > 0 {
+                    format!(
+                        "sequence start with tag '{}' and anchor '{}'",
+                        tag.suffix, anchor_id
+                    )
+                } else {
+                    format!("sequence start with tag '{}'", tag.suffix)
+                }
             }
             Event::SequenceStart(_, None) => "sequence start".to_string(),
             Event::SequenceEnd => "sequence end".to_string(),
