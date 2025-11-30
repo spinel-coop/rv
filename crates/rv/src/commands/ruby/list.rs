@@ -547,19 +547,32 @@ mod tests {
                 test_name: "no local installs",
                 release: Release {
                     name: "latest".to_owned(),
-                    assets: vec![Asset {
-                        name: "ruby-3.3.0.arm64_sonoma.tar.gz".to_owned(),
-                        browser_download_url: u("3.3.0"),
-                    }],
+                    assets: vec![
+                        Asset {
+                            name: "ruby-3.3.0.arm64_sonoma.tar.gz".to_owned(),
+                            browser_download_url: u("3.3.0"),
+                        },
+                        Asset {
+                            name: "ruby-3.5.0-preview1.arm64_sonoma.tar.gz".to_owned(),
+                            browser_download_url: u("3.5.0-preview1"),
+                        },
+                    ],
                 },
                 installed_rubies: Vec::new(),
                 active_ruby: None,
                 current_platform_arch: "arm64_sonoma",
-                expected: vec![JsonRubyEntry {
-                    details: ruby("ruby-3.3.0"),
-                    installed: false,
-                    active: false,
-                }],
+                expected: vec![
+                    JsonRubyEntry {
+                        details: ruby("ruby-3.3.0"),
+                        installed: false,
+                        active: false,
+                    },
+                    JsonRubyEntry {
+                        details: ruby("ruby-3.5.0-preview1"),
+                        installed: false,
+                        active: false,
+                    },
+                ],
             },
             // Nothing weird should happen if there's no remotely-available versions.
             Test {
