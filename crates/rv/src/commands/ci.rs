@@ -33,7 +33,7 @@ use std::process::Stdio;
 const FS_CONCURRENCY_LIMIT: usize = 20;
 
 #[derive(Debug, clap_derive::Args)]
-pub struct CiArgs {
+pub struct CleanInstallArgs {
     /// Maximum number of downloads that can be in flight at once.
     #[arg(short, long, default_value = "10")]
     pub max_concurrent_requests: usize,
@@ -94,7 +94,7 @@ pub enum Error {
 
 type Result<T> = std::result::Result<T, Error>;
 
-pub async fn ci(config: &Config, args: CiArgs) -> Result<()> {
+pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     let lockfile_path = find_lockfile_path(config)?;
     let install_path = find_install_path(&lockfile_path)?;
     let inner_args = CiInnerArgs {
