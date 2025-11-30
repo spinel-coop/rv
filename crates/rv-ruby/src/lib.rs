@@ -3,6 +3,7 @@ pub mod request;
 pub mod version;
 
 use camino::Utf8PathBuf;
+use regex::Regex;
 use rv_cache::{CacheKey, CacheKeyHasher};
 use serde::{Deserialize, Serialize};
 use std::env::consts::{ARCH, OS};
@@ -178,6 +179,7 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
         puts(Object.const_defined?(:RbConfig) && RbConfig::CONFIG['host_cpu'] ? RbConfig::CONFIG['host_cpu'] : 'unknown')
         puts(Object.const_defined?(:RbConfig) && RbConfig::CONFIG['host_os'] ? RbConfig::CONFIG['host_os'] : 'unknown')
         puts(begin; require 'rubygems'; puts Gem.default_dir; rescue ScriptError, NoMethodError; end)
+        puts(Object.const_defined?(:RUBY_DESCRIPTION) ? RUBY_DESCRIPTION : '')
     "#;
 
     let output = Command::new(ruby_bin)
@@ -194,6 +196,8 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
     let host_cpu = lines.next().unwrap_or("unknown");
     let host_os = lines.next().unwrap_or("unknown");
     let gem_root = lines.next().unwrap_or_default();
+    let description = lines.next().unwrap_or_default();
+    let ruby_description = parse_description(description);
 
     let host_cpu = if host_cpu != "unknown" {
         host_cpu.to_string()
@@ -209,7 +213,13 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
     // Normalize architecture and OS names to match common conventions
     let arch = normalize_arch(&host_cpu);
     let os = normalize_os(&host_os);
-    let version = format!("{ruby_engine}-{ruby_version}").parse()?;
+
+    let version: RubyVersion = if let Some(d) = ruby_description {
+        let desc_version = &d["version"];
+        format!("{ruby_engine}-{desc_version}").parse()?
+    } else {
+        format!("{ruby_engine}-{ruby_version}").parse()?
+    };
     let gem_root = if gem_root.is_empty() {
         None
     } else {
@@ -308,6 +318,11 @@ fn ruby_049_version() -> Result<Ruby, RubyError> {
     })
 }
 
+fn parse_description(description: &str) -> Option<regex::Captures<'_>> {
+    let re = Regex::new(r"ruby (?<version>[^ ]+) \((?<date>\d\d\d\d-\d\d-\d\d) (?<source>\S+) (?<revision>[0-9a-f]+)\) (?<prism>\+PRISM )?\[(?<arch>\w+)-(?<os>\w+)\]").unwrap();
+    re.captures(description)
+}
+
 /// Trait for environment variable access (allows mocking in tests)
 pub trait EnvProvider {
     fn get_var(&self, key: &str) -> Option<String>;
@@ -324,6 +339,7 @@ impl EnvProvider for SystemEnv {
 
 #[cfg(test)]
 mod tests {
+
     use std::str::FromStr;
 
     use super::*;
@@ -379,5 +395,82 @@ mod tests {
         assert_eq!(ruby.version.minor, Some(49));
         assert_eq!(ruby.version.patch, None);
         assert_eq!(ruby.arch, ARCH);
+    }
+
+    #[test]
+    fn test_parse_description() {
+        let info =
+            parse_description("ruby 3.1.6p260 (2024-05-29 revision a777087be6) [arm64-darwin24]")
+                .unwrap();
+        assert_eq!(&info["version"], "3.1.6p260");
+        assert_eq!(&info["date"], "2024-05-29");
+        assert_eq!(&info["source"], "revision");
+        assert_eq!(&info["revision"], "a777087be6");
+        assert_eq!(&info["arch"], "arm64");
+        assert_eq!(&info["os"], "darwin24");
+
+        let info =
+            parse_description("ruby 3.2.9 (2025-07-24 revision 8f611e0c46) [arm64-darwin23]")
+                .unwrap();
+        assert_eq!(&info["version"], "3.2.9");
+        assert_eq!(&info["date"], "2025-07-24");
+        assert_eq!(&info["source"], "revision");
+        assert_eq!(&info["revision"], "8f611e0c46");
+        assert_eq!(&info["arch"], "arm64");
+        assert_eq!(&info["os"], "darwin23");
+
+        let info =
+            parse_description("ruby 3.3.9 (2025-07-24 revision f5c772fc7c) [arm64-darwin23]")
+                .unwrap();
+        assert_eq!(&info["version"], "3.3.9");
+        assert_eq!(&info["date"], "2025-07-24");
+        assert_eq!(&info["source"], "revision");
+        assert_eq!(&info["revision"], "f5c772fc7c");
+        assert_eq!(&info["arch"], "arm64");
+        assert_eq!(&info["os"], "darwin23");
+
+        let info = parse_description(
+            "ruby 3.4.0rc1 (2024-12-12 master 29caae9991) +PRISM [arm64-darwin25]",
+        )
+        .unwrap();
+        assert_eq!(&info["version"], "3.4.0rc1");
+        assert_eq!(&info["date"], "2024-12-12");
+        assert_eq!(&info["source"], "master");
+        assert_eq!(&info["revision"], "29caae9991");
+        assert_eq!(&info["arch"], "arm64");
+        assert_eq!(&info["os"], "darwin25");
+
+        let info = parse_description(
+            "ruby 3.4.7 (2025-10-08 revision 7a5688e2a2) +PRISM [arm64-darwin25]",
+        )
+        .unwrap();
+        assert_eq!(&info["version"], "3.4.7");
+        assert_eq!(&info["date"], "2025-10-08");
+        assert_eq!(&info["source"], "revision");
+        assert_eq!(&info["revision"], "7a5688e2a2");
+        assert_eq!(&info["arch"], "arm64");
+        assert_eq!(&info["os"], "darwin25");
+
+        let info = parse_description(
+            "ruby 3.5.0preview1 (2025-04-18 master d06ec25be4) +PRISM [arm64-darwin23]",
+        )
+        .unwrap();
+        assert_eq!(&info["version"], "3.5.0preview1");
+        assert_eq!(&info["date"], "2025-04-18");
+        assert_eq!(&info["source"], "master");
+        assert_eq!(&info["revision"], "d06ec25be4");
+        assert_eq!(&info["arch"], "arm64");
+        assert_eq!(&info["os"], "darwin23");
+
+        let info = parse_description(
+            "ruby 4.0.0preview2 (2025-11-17 master 4fa6e9938c) +PRISM [arm64-darwin23]",
+        )
+        .unwrap();
+        assert_eq!(&info["version"], "4.0.0preview2");
+        assert_eq!(&info["date"], "2025-11-17");
+        assert_eq!(&info["source"], "master");
+        assert_eq!(&info["revision"], "4fa6e9938c");
+        assert_eq!(&info["arch"], "arm64");
+        assert_eq!(&info["os"], "darwin23");
     }
 }
