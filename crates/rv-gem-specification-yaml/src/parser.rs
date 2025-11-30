@@ -768,7 +768,7 @@ fn get_error_details(
             Event::SequenceStart(_, None) => "sequence start".to_string(),
             Event::SequenceEnd => "sequence end".to_string(),
             Event::Scalar(value, _, _, _) => format!("scalar value '{value}'"),
-            Event::Alias(_) => "alias".to_string(),
+            Event::Alias(value) => format!("alias id '{value}'"),
             Event::Nothing => "nothing".to_string(),
         };
         (found_description, start_idx, length)
