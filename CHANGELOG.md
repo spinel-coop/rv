@@ -4,20 +4,20 @@
 
 Adds x86 macOS as a supported platform, Ruby 3.3, and YJIT for all Rubies. Adds shells bash, fish, and nushell.
 
-- Build for x86 macOS (https://github.com/spinel-coop/rv/pull/137, @indirect)
-- Enable Actions support for merge queue (https://github.com/spinel-coop/rv/pull/137, @indirect)
-- Test all four platforms (https://github.com/spinel-coop/rv/pull/136, @adamchalmers)
-- Set GEM_PATH to gem location, no bin (https://github.com/spinel-coop/rv/pull/110, @Thomascountz)
-- Default data to `~/.local/share/rv`, respect XDG (https://github.com/spinel-coop/rv/pull/84, @lgarron)
-- Support Ruby 3.3.x via the new rv-ruby release scheme (https://github.com/spinel-coop/rv/pull/132, @adamchalmers)
-- Support nushell (https://github.com/spinel-coop/rv/pull/123, @adamchalmers)
-- Add code coverage reporting to CI (https://github.com/spinel-coop/rv/pull/112, @adamchalmers)
-- Add benchmarks and fuzz testing for library code (https://github.com/spinel-coop/rv/pull/95, @adamchalmers)
-- Shell completions for zsh, bash, and fish (https://github.com/spinel-coop/rv/pull/81, @lgarron)
-- Fix race condition from tracing+rayon together (https://github.com/spinel-coop/rv/pull/73, @segiddins)
-- List available Rubies (https://github.com/spinel-coop/rv/pull/68, @coezbek)
-- Support fish shell (https://github.com/spinel-coop/rv/pull/67, @renatolond)
-- Compact top-level help, even on `--help` (https://github.com/spinel-coop/rv/pull/70, @coezbek)
+- Build for x86 macOS (<https://github.com/spinel-coop/rv/pull/137>, @indirect)
+- Enable Actions support for merge queue (<https://github.com/spinel-coop/rv/pull/137>, @indirect)
+- Test all four platforms (<https://github.com/spinel-coop/rv/pull/136>, @adamchalmers)
+- Set GEM_PATH to gem location, no bin (<https://github.com/spinel-coop/rv/pull/110>, @Thomascountz)
+- Default data to `~/.local/share/rv`, respect XDG (<https://github.com/spinel-coop/rv/pull/84>, @lgarron)
+- Support Ruby 3.3.x via the new rv-ruby release scheme (<https://github.com/spinel-coop/rv/pull/132>, @adamchalmers)
+- Support nushell (<https://github.com/spinel-coop/rv/pull/123>, @adamchalmers)
+- Add code coverage reporting to CI (<https://github.com/spinel-coop/rv/pull/112>, @adamchalmers)
+- Add benchmarks and fuzz testing for library code (<https://github.com/spinel-coop/rv/pull/95>, @adamchalmers)
+- Shell completions for zsh, bash, and fish (<https://github.com/spinel-coop/rv/pull/81>, @lgarron)
+- Fix race condition from tracing+rayon together (<https://github.com/spinel-coop/rv/pull/73>, @segiddins)
+- List available Rubies (<https://github.com/spinel-coop/rv/pull/68>, @coezbek)
+- Support fish shell (<https://github.com/spinel-coop/rv/pull/67>, @renatolond)
+- Compact top-level help, even on `--help` (<https://github.com/spinel-coop/rv/pull/70>, @coezbek)
 
 ## rv 0.1.1
 
