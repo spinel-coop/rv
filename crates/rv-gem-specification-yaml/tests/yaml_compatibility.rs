@@ -1,4 +1,5 @@
 use rv_gem_specification_yaml::parse;
+use rv_gem_types::DependencyType;
 use std::fs;
 
 fn load_fixture(name: &str) -> String {
@@ -438,12 +439,48 @@ fn test_yaml_anchors_and_prerelease_field() {
 
 #[test]
 fn test_yaml_with_aliased_dependencies() {
-    let yaml_content = load_fixture("lz4-0.3.3");
+    let yaml_content = load_fixture("lz4-0.3.3.gemspec");
     let result = parse(&yaml_content);
 
     match result {
-        Ok(_spec) => {
-            // Successfully parsed YAML with anchors and prerelease fields
+        Ok(spec) => {
+            assert_eq!(spec.name, "lz4-ruby");
+            assert_eq!(spec.version.to_string(), "0.3.3");
+            assert_eq!(spec.authors, vec![Some("KOMIYA Atsushi".to_string())]);
+            assert_eq!(spec.dependencies.len(), 5);
+
+            // rspec has &id003 anchor defined as ">= 0"
+            let rspec = &spec.dependencies[0];
+            assert_eq!(rspec.name, "rspec");
+            assert_eq!(rspec.dep_type, DependencyType::Development);
+            assert_eq!(rspec.requirement.to_string(), ">= 0");
+
+            // bundler uses *id003 alias, should resolve to ">= 0"
+            let bundler = &spec.dependencies[2];
+            assert_eq!(bundler.name, "bundler");
+            assert_eq!(bundler.dep_type, DependencyType::Development);
+            assert_eq!(
+                bundler.requirement.to_string(),
+                ">= 0",
+                "bundler should resolve *id003 alias to '>= 0'"
+            );
+
+            // rake-compiler uses *id003 alias, should resolve to ">= 0"
+            let rake_compiler = &spec.dependencies[4];
+            assert_eq!(rake_compiler.name, "rake-compiler");
+            assert_eq!(rake_compiler.dep_type, DependencyType::Development);
+            assert_eq!(
+                rake_compiler.requirement.to_string(),
+                ">= 0",
+                "rake-compiler should resolve *id003 alias to '>= 0'"
+            );
+
+            // Verify required_rubygems_version uses *id003 alias, should resolve to ">= 0"
+            assert_eq!(
+                spec.required_rubygems_version.to_string(),
+                ">= 0",
+                "required_rubygems_version should resolve *id003 alias to '>= 0'"
+            );
         }
         Err(e) => {
             panic!("YAML anchors and prerelease field should now parse successfully: {e}");
