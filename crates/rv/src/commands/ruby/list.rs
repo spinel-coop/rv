@@ -102,7 +102,7 @@ fn all_suffixes() -> impl IntoIterator<Item = &'static str> {
     [
         ".arm64_linux.tar.gz",
         ".arm64_sonoma.tar.gz",
-        "x86_64_linux.tar.gz",
+        ".x86_64_linux.tar.gz",
         // We follow the Homebrew convention that if there's no arch, it defaults to x86.
         ".ventura.tar.gz",
     ]
