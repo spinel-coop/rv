@@ -435,3 +435,18 @@ fn test_yaml_anchors_and_prerelease_field() {
         }
     }
 }
+
+#[test]
+fn test_yaml_with_aliased_dependencies() {
+    let yaml_content = load_fixture("lz4-0.3.3");
+    let result = parse(&yaml_content);
+
+    match result {
+        Ok(_spec) => {
+            // Successfully parsed YAML with anchors and prerelease fields
+        }
+        Err(e) => {
+            panic!("YAML anchors and prerelease field should now parse successfully: {e}");
+        }
+    }
+}
