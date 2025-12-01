@@ -40,7 +40,7 @@ type Result<T> = miette::Result<T, Error>;
 pub async fn install(
     config: &Config,
     install_dir: Option<String>,
-    requested: RubyRequest,
+    requested: &RubyRequest,
     tarball_path: Option<String>,
 ) -> Result<()> {
     let install_dir = match install_dir {
@@ -55,7 +55,7 @@ pub async fn install(
         Some(tarball_path) => {
             extract_local_ruby_tarball(tarball_path, &install_dir, &requested.number()).await?
         }
-        None => download_and_extract_remote_tarball(config, &install_dir, &requested).await?,
+        None => download_and_extract_remote_tarball(config, &install_dir, requested).await?,
     }
 
     println!(

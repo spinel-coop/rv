@@ -298,7 +298,7 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
                 version,
                 install_dir,
                 tarball_path,
-            } => ruby_install(config, install_dir, version, tarball_path).await?,
+            } => ruby_install(config, install_dir, &version, tarball_path).await?,
             RubyCommand::Uninstall {
                 version: version_request,
             } => ruby_uninstall(config, version_request).await?,
