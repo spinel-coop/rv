@@ -5,6 +5,7 @@ use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
 use owo_colors::OwoColorize;
+use rayon::ThreadPoolBuildError;
 use reqwest::Client;
 use rv_gem_types::Specification as GemSpecification;
 use rv_lockfile::datatypes::ChecksumAlgorithm;
@@ -31,13 +32,17 @@ use std::ops::Not;
 use std::path::PathBuf;
 use std::process::Stdio;
 
-const FS_CONCURRENCY_LIMIT: usize = 20;
-
 #[derive(Debug, clap_derive::Args)]
 pub struct CiArgs {
     /// Maximum number of downloads that can be in flight at once.
     #[arg(short, long, default_value = "10")]
     pub max_concurrent_requests: usize,
+
+    /// Maximum number of gem installations that can be in flight at once.
+    /// This reduces concurrently-open files on your filesystem,
+    /// and concurrent disk operations.
+    #[arg(long, default_value = "20")]
+    pub max_concurrent_installs: usize,
 
     /// Validate the checksums from the gem server and gem itself.
     #[arg(long, default_value = "true")]
@@ -47,6 +52,7 @@ pub struct CiArgs {
 #[derive(Debug)]
 struct CiInnerArgs {
     pub max_concurrent_requests: usize,
+    pub max_concurrent_installs: usize,
     pub validate_checksums: bool,
     pub lockfile_path: Utf8PathBuf,
     pub install_path: Utf8PathBuf,
@@ -104,6 +110,7 @@ pub async fn ci(config: &Config, args: CiArgs) -> Result<()> {
     let install_path = find_install_path(config, &lockfile_path).await?;
     let inner_args = CiInnerArgs {
         max_concurrent_requests: args.max_concurrent_requests,
+        max_concurrent_installs: args.max_concurrent_installs,
         validate_checksums: args.validate_checksums,
         lockfile_path,
         install_path,
@@ -164,48 +171,55 @@ async fn find_install_path(config: &Config, lockfile_path: &Utf8PathBuf) -> Resu
     bundle_path
 }
 
+pub fn create_rayon_pool(
+    num_threads: usize,
+) -> std::result::Result<rayon::ThreadPool, ThreadPoolBuildError> {
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(num_threads)
+        .build()
+}
+
 async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiInnerArgs) -> Result<()> {
     let binstub_dir = args.install_path.join("bin");
     debug!("about to create {}", binstub_dir);
     tokio::fs::create_dir_all(&binstub_dir).await?;
     debug!("finished creating {}", binstub_dir);
-    use futures_util::stream::TryStreamExt;
-    futures_util::stream::iter(downloaded)
-        .map(Ok::<_, Error>)
-        .try_for_each_concurrent(FS_CONCURRENCY_LIMIT, |download| async {
-            let gv = download.spec.gem_version;
-            // Actually unpack the tarball here.
-            let dep_gemspec_res = download
-                .unpack_tarball(args.install_path.clone(), args)
-                .await?;
-            let Some(dep_gemspec) = dep_gemspec_res else {
-                eprintln!(
-                    "Warning: No gemspec found for downloaded dep {}",
-                    gv.yellow()
-                );
-                return Ok(());
-            };
+    use rayon::prelude::*;
+    let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
+    pool.install(|| {
+        downloaded
+            .into_iter()
+            .par_bridge()
+            .map(|download| {
+                let gv = download.spec.gem_version;
+                // Actually unpack the tarball here.
+                let dep_gemspec_res = download.unpack_tarball(args.install_path.clone(), args)?;
+                let Some(dep_gemspec) = dep_gemspec_res else {
+                    eprintln!(
+                        "Warning: No gemspec found for downloaded dep {}",
+                        gv.yellow()
+                    );
+                    return Ok::<_, Error>(());
+                };
 
-            // 3. Generate binstubs.
-            install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir).await?;
-            // 4. Handle compiling native extensions for gems with native extensions
-            compile_native_extensions(&dep_gemspec.extensions)?;
-            debug!("Installed {gv}");
-            Ok(())
-        })
-        .await?;
+                // 3. Generate binstubs.
+                install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir)?;
+                // 4. Handle compiling native extensions for gems with native extensions
+                compile_native_extensions(&dep_gemspec.extensions)?;
+                debug!("Installed {gv}");
+                Ok(())
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok::<_, Error>(())
+    })?;
 
     // 5. Copy the .gem files and the .gemspec files into cache and specificatiosn?
     Ok(())
 }
 
-async fn install_binstub(
-    dep_name: &str,
-    executables: &[String],
-    binstub_dir: &Utf8Path,
-) -> Result<()> {
+fn install_binstub(dep_name: &str, executables: &[String], binstub_dir: &Utf8Path) -> Result<()> {
     for exe_name in executables {
-        if let Err(error) = write_binstub(dep_name, exe_name, binstub_dir).await {
+        if let Err(error) = write_binstub(dep_name, exe_name, binstub_dir) {
             return Err(Error::CouldNotWriteBinstub {
                 dep_name: dep_name.to_owned(),
                 exe_name: exe_name.to_owned(),
@@ -397,7 +411,7 @@ impl ArchiveChecksums {
 }
 
 impl<'i> Downloaded<'i> {
-    async fn unpack_tarball(
+    fn unpack_tarball(
         self,
         bundle_path: Utf8PathBuf,
         args: &CiInnerArgs,
@@ -466,7 +480,7 @@ impl<'i> Downloaded<'i> {
                         return Err(Error::InvalidGemArchive("two metadata.gz found".to_owned()));
                     }
                     let UnpackedMetdata { hashed, gemspec } =
-                        unpack_metadata(&bundle_path, &nameversion, HashReader::new(entry)).await?;
+                        unpack_metadata(&bundle_path, &nameversion, HashReader::new(entry))?;
                     found_gemspec = Some(gemspec);
                     if args.validate_checksums
                         && let Some(ref checksums) = checksums
@@ -480,7 +494,7 @@ impl<'i> Downloaded<'i> {
                         return Err(Error::InvalidGemArchive("two data.tar.gz found".to_owned()));
                     }
                     let unpacked =
-                        unpack_data_tar(&bundle_path, &nameversion, HashReader::new(entry)).await?;
+                        unpack_data_tar(&bundle_path, &nameversion, HashReader::new(entry))?;
                     if args.validate_checksums
                         && let Some(ref checksums) = checksums
                     {
@@ -513,11 +527,11 @@ impl<'i> Downloaded<'i> {
     }
 }
 
-async fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -> io::Result<()> {
+fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -> io::Result<()> {
     let binstub_path = binstub_dir.join(exe_name);
     let binstub_contents =
         format!("require 'rubygems';\nGem.activate_and_load_bin_path('{gem_name}', '{exe_name}')",);
-    tokio::fs::write(binstub_path, binstub_contents).await
+    std::fs::write(binstub_path, binstub_contents)
 }
 
 fn compile_native_extensions(_extensions: &[String]) -> Result<()> {
@@ -580,7 +594,7 @@ struct UnpackedData {
 /// Given the data.tar.gz from a gem, unpack its contents to the filesystem under
 /// BUNDLEPATH/gems/name-version/ENTRY
 /// Returns the checksum.
-async fn unpack_data_tar<R>(
+fn unpack_data_tar<R>(
     bundle_path: &Utf8Path,
     nameversion: &str,
     data_tar_gz: HashReader<R>,
@@ -590,7 +604,7 @@ where
 {
     // First, create the data's destination.
     let data_dir: PathBuf = bundle_path.join("gems").join(nameversion).into();
-    tokio::fs::create_dir_all(&data_dir).await?;
+    std::fs::create_dir_all(&data_dir)?;
     let mut gem_data_archive = tar::Archive::new(GzDecoder::new(data_tar_gz));
     for e in gem_data_archive.entries()? {
         let mut entry = e?;
@@ -600,7 +614,7 @@ where
         // Not sure if this is strictly necessary, or if we can know the
         // intermediate directories ahead of time.
         if let Some(dst_parent) = dst.parent() {
-            tokio::fs::create_dir_all(dst_parent).await?;
+            std::fs::create_dir_all(dst_parent)?;
         }
         entry.unpack(&dst)?;
     }
@@ -617,7 +631,7 @@ struct UnpackedMetdata {
 
 /// Given the metadata.gz from a gem, write it to the filesystem under
 /// BUNDLEPATH/specifications/name-version.gemspec
-async fn unpack_metadata<R>(
+fn unpack_metadata<R>(
     bundle_path: &Utf8Path,
     nameversion: &str,
     metadata_gz: HashReader<R>,
@@ -627,10 +641,10 @@ where
 {
     // First, create the metadata's destination.
     let metadata_dir = bundle_path.join("specifications/");
-    tokio::fs::create_dir_all(&metadata_dir).await?;
+    std::fs::create_dir_all(&metadata_dir)?;
     let filename = format!("{nameversion}.gemspec");
     let dst_path = metadata_dir.join(filename);
-    let mut dst = tokio::fs::File::create(&dst_path).await?;
+    let mut dst = std::fs::File::create(&dst_path)?;
 
     // Then write the (unzipped) source into the destination.
     let mut yaml_contents = String::new();
@@ -644,7 +658,7 @@ where
         }
     };
     let ruby_contents = convert_gemspec_yaml_to_ruby(yaml_contents);
-    tokio::io::copy(&mut Cursor::new(ruby_contents), &mut dst).await?;
+    std::io::copy(&mut Cursor::new(ruby_contents), &mut dst)?;
 
     let h = unzipper.into_inner();
     Ok(UnpackedMetdata {
@@ -782,6 +796,7 @@ mod tests {
             &cache,
             &CiInnerArgs {
                 max_concurrent_requests: 10,
+                max_concurrent_installs: 20,
                 validate_checksums: true,
                 install_path: dir.into(),
                 lockfile_path: file,
