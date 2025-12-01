@@ -1,6 +1,7 @@
 use bytes::Bytes;
 use camino::Utf8Path;
 use camino::Utf8PathBuf;
+use current_platform::CURRENT_PLATFORM;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
@@ -716,6 +717,36 @@ fn convert_gemspec_yaml_to_ruby(contents: String) -> String {
     String::from_utf8_lossy(&output.stdout).to_string()
 }
 
+#[derive(Debug)]
+enum Platform {
+    Ruby,
+    Linux,
+    Mac,
+    // Windows,
+    Other,
+}
+
+fn platform_for_gem(gem_version: &str) -> Platform {
+    // looks like 3.25.1
+    if gem_version.chars().all(|c| c == '.' || c.is_ascii_digit()) {
+        return Platform::Ruby;
+    }
+
+    if gem_version.ends_with("linux-gnu")
+        || gem_version.ends_with("linux-musl")
+        || gem_version.ends_with("linux-musleabihf")
+        || gem_version.ends_with("linux-gnueabihf")
+        || gem_version.ends_with("linux")
+    {
+        return Platform::Linux;
+    }
+
+    if gem_version.ends_with("darwin") {
+        return Platform::Mac;
+    }
+    Platform::Other
+}
+
 fn url_for_spec(remote: &str, spec: &Spec<'_>) -> Result<Url> {
     let gem_name = spec.gem_version.name;
     let gem_version = spec.gem_version.version;
@@ -741,7 +772,17 @@ async fn download_gem_source<'i>(
     let client = rv_http_client()?;
 
     // Download them all, concurrently.
-    let spec_stream = futures_util::stream::iter(gem_source.specs);
+
+    let spec_stream = futures_util::stream::iter(gem_source.specs.into_iter().filter(|spec| {
+        let arch = platform_for_gem(spec.gem_version.version);
+        match arch {
+            Platform::Linux => {
+                !(CURRENT_PLATFORM.contains("darwin") || CURRENT_PLATFORM.contains("windows"))
+            }
+            Platform::Mac => !CURRENT_PLATFORM.contains("linux"),
+            Platform::Ruby | Platform::Other => true,
+        }
+    }));
     let downloaded_gems: Vec<_> = spec_stream
         .map(|spec| download_gem(gem_source.remote, spec, &client, cache, checksums))
         .buffered(max_concurrent_requests)
