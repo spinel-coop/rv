@@ -38,6 +38,12 @@ pub struct CiArgs {
     #[arg(short, long, default_value = "10")]
     pub max_concurrent_requests: usize,
 
+    /// Maximum number of gem installations that can be in flight at once.
+    /// This reduces concurrently-open files on your filesystem,
+    /// and concurrent disk operations.
+    #[arg(long, default_value = "20")]
+    pub max_concurrent_installs: usize,
+
     /// Validate the checksums from the gem server and gem itself.
     #[arg(long, default_value = "true")]
     pub validate_checksums: bool,
@@ -46,6 +52,7 @@ pub struct CiArgs {
 #[derive(Debug)]
 struct CiInnerArgs {
     pub max_concurrent_requests: usize,
+    pub max_concurrent_installs: usize,
     pub validate_checksums: bool,
     pub lockfile_path: Utf8PathBuf,
     pub install_path: Utf8PathBuf,
@@ -103,6 +110,7 @@ pub async fn ci(config: &Config, args: CiArgs) -> Result<()> {
     let install_path = find_install_path(config, &lockfile_path).await?;
     let inner_args = CiInnerArgs {
         max_concurrent_requests: args.max_concurrent_requests,
+        max_concurrent_installs: args.max_concurrent_installs,
         validate_checksums: args.validate_checksums,
         lockfile_path,
         install_path,
@@ -177,7 +185,7 @@ async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiInnerArgs) -
     tokio::fs::create_dir_all(&binstub_dir).await?;
     debug!("finished creating {}", binstub_dir);
     use rayon::prelude::*;
-    let pool = create_rayon_pool(20).unwrap();
+    let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
     pool.install(|| {
         downloaded
             .into_iter()
@@ -788,6 +796,7 @@ mod tests {
             &cache,
             &CiInnerArgs {
                 max_concurrent_requests: 10,
+                max_concurrent_installs: 20,
                 validate_checksums: true,
                 install_path: dir.into(),
                 lockfile_path: file,
