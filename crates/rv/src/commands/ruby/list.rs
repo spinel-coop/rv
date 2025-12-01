@@ -454,9 +454,9 @@ mod tests {
     fn test_config() -> Result<Config> {
         let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
         let ruby_dir = root.join("opt/rubies");
-        std::fs::create_dir_all(&ruby_dir)?;
+        fs_err::create_dir_all(&ruby_dir)?;
         let current_dir = root.join("project");
-        std::fs::create_dir_all(&current_dir)?;
+        fs_err::create_dir_all(&current_dir)?;
 
         let config = Config {
             ruby_dirs: indexset![ruby_dir],
@@ -486,7 +486,7 @@ mod tests {
 
     #[test]
     fn test_deser_release() {
-        let jtxt = std::fs::read_to_string("../../testdata/api.json").unwrap();
+        let jtxt = fs_err::read_to_string("../../testdata/api.json").unwrap();
         let release: Release = serde_json::from_str(&jtxt).unwrap();
         let actual = ruby_from_asset(&release.assets[0]).unwrap();
         let expected = Ruby {
