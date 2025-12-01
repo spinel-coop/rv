@@ -82,7 +82,7 @@ async fn download_and_extract_remote_tarball(
 
     let new_dir = tarball_path.parent().unwrap();
     if !new_dir.exists() {
-        std::fs::create_dir_all(new_dir)?;
+        fs_err::create_dir_all(new_dir)?;
     }
 
     if valid_tarball_exists(&tarball_path) {
@@ -112,7 +112,7 @@ async fn extract_local_ruby_tarball(
 
 /// Does a usable tarball already exist at this path?
 fn valid_tarball_exists(path: &Utf8Path) -> bool {
-    std::fs::metadata(path).is_ok_and(|m| m.is_file() && m.len() > 0)
+    fs_err::metadata(path).is_ok_and(|m| m.is_file() && m.len() > 0)
 }
 
 fn ruby_url(version: &str) -> Result<String> {
@@ -206,9 +206,9 @@ fn extract_ruby_tarball(
     version: &str,
 ) -> Result<()> {
     if !rubies_dir.exists() {
-        std::fs::create_dir_all(rubies_dir)?;
+        fs_err::create_dir_all(rubies_dir)?;
     }
-    let tarball = std::fs::File::open(tarball_path)?;
+    let tarball = fs_err::File::open(tarball_path)?;
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
     for e in archive.entries()? {
         let mut entry = e?;
