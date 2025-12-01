@@ -741,7 +741,7 @@ fn platform_for_gem(gem_version: &str) -> Platform {
         return Platform::Linux;
     }
 
-    if gem_version.ends_with("darwin") {
+    if gem_version.ends_with("darwin") || gem_version.contains("darwin-") {
         return Platform::Mac;
     }
     Platform::Other
