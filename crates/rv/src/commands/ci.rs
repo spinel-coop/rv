@@ -773,7 +773,7 @@ async fn download_gem_source<'i>(
 
     // Download them all, concurrently.
 
-    let spec_stream = futures_util::stream::iter(gem_source.specs.into_iter().filter(|spec| {
+    let gems_to_download = gem_source.specs.into_iter().filter(|spec| {
         let arch = platform_for_gem(spec.gem_version.version);
         match arch {
             Platform::Linux => {
@@ -782,7 +782,8 @@ async fn download_gem_source<'i>(
             Platform::Mac => !CURRENT_PLATFORM.contains("linux"),
             Platform::Ruby | Platform::Other => true,
         }
-    }));
+    });
+    let spec_stream = futures_util::stream::iter(gems_to_download);
     let downloaded_gems: Vec<_> = spec_stream
         .map(|spec| download_gem(gem_source.remote, spec, &client, cache, checksums))
         .buffered(max_concurrent_requests)
