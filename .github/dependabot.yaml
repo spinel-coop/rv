@@ -2,6 +2,24 @@ version: 2
 
 updates:
   - package-ecosystem: "github-actions"
+    cooldown:
+      default-days: 7
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "tuesday"
+      time: "09:00"
+      timezone: "America/Los_Angeles"
+  - package-ecosystem: "cargo"
+    cooldown:
+      default-days: 7
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "tuesday"
+      time: "09:00"
+      timezone: "America/Los_Angeles"
+  - package-ecosystem: "rust-toolchain"
     directory: "/"
     schedule:
       interval: "monthly"
