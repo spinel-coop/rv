@@ -19,6 +19,7 @@ use tracing::debug;
 use tracing::info;
 use url::Url;
 
+use crate::commands::ruby::run::CaptureOutput;
 use crate::config::Config;
 use std::collections::HashMap;
 use std::env::current_dir;
@@ -53,6 +54,10 @@ struct CiInnerArgs {
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
+    #[error(transparent)]
+    Config(#[from] crate::config::Error),
+    #[error(transparent)]
+    Run(#[from] crate::commands::ruby::run::Error),
     #[error(transparent)]
     Parse(#[from] rv_lockfile::ParseErrors),
     #[error(transparent)]
@@ -96,7 +101,7 @@ type Result<T> = std::result::Result<T, Error>;
 
 pub async fn ci(config: &Config, args: CiArgs) -> Result<()> {
     let lockfile_path = find_lockfile_path(config)?;
-    let install_path = find_install_path(&lockfile_path)?;
+    let install_path = find_install_path(config, &lockfile_path).await?;
     let inner_args = CiInnerArgs {
         max_concurrent_requests: args.max_concurrent_requests,
         validate_checksums: args.validate_checksums,
@@ -129,17 +134,26 @@ fn find_lockfile_path(config: &Config) -> Result<Utf8PathBuf> {
     Ok(lockfile_path)
 }
 
-fn find_install_path(lockfile_path: &Utf8PathBuf) -> Result<Utf8PathBuf> {
+/// Which path should `ci` install gems under?
+/// Uses Bundler's `bundle_path`.
+async fn find_install_path(config: &Config, lockfile_path: &Utf8PathBuf) -> Result<Utf8PathBuf> {
     let env_path = std::env::var("BUNDLE_PATH");
     if let Ok(bundle_path) = env_path {
         return Ok(Utf8PathBuf::from(&bundle_path));
     }
     let lockfile_dir = lockfile_path.parent().unwrap();
-    let bundle_path = std::process::Command::new("ruby")
-        .current_dir(lockfile_dir)
-        .args(["-rbundler", "-e", "puts Bundler.bundle_path"])
-        .output()?
-        .stdout;
+    let args = ["-rbundler", "-e", "puts Bundler.bundle_path"];
+    let bundle_path = crate::commands::ruby::run::run(
+        config,
+        &config.ruby_request()?,
+        Default::default(),
+        args.as_slice(),
+        CaptureOutput::Both,
+        Some(lockfile_dir.as_ref()),
+    )
+    .await?
+    .stdout;
+
     if bundle_path.is_empty() {
         return Err(Error::BadBundlePath);
     }
