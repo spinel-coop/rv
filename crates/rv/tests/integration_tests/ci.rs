@@ -30,7 +30,7 @@ fn test_clean_install_native() {
     output.assert_success();
 
     // Store a snapshot of all the files `rv ci` created.
-    let files_sorted = f(test.cwd.as_ref());
+    let files_sorted = find_all_files_in_dir(test.cwd.as_ref());
     insta::assert_snapshot!(files_sorted);
 }
 
@@ -46,11 +46,11 @@ fn test_clean_install_download_faker() {
     output.assert_success();
 
     // Store a snapshot of all the files `rv ci` created.
-    let files_sorted = f(test.cwd.as_ref());
+    let files_sorted = find_all_files_in_dir(test.cwd.as_ref());
     insta::assert_snapshot!(files_sorted);
 }
 
-fn f(cwd: &std::path::Path) -> String {
+fn find_all_files_in_dir(cwd: &std::path::Path) -> String {
     let test_dir_contents = std::process::Command::new("find")
         .args([".", "-type", "f"])
         .current_dir(cwd)
