@@ -1051,10 +1051,14 @@ end"#;
         use Cpu::*;
         use Os::*;
         for (gem_version, expected) in [
+            // Real gem versions taken from Discourse's gemfile.lock
             ("1.17.2-arm64-darwin", (Arm, Darwin)),
             ("1.17.2-x86_64-darwin", (X86, Darwin)),
             ("2.7.4-x86_64-linux-gnu", (X86, Linux)),
             ("2.7.4-x86_64-linux-musl", (X86, Linux)),
+            ("0.5.5-aarch64-linux-musl", (Arm, Linux)),
+            ("2.7.4-aarch64-linux-gnu", (Arm, Linux)),
+            ("1.17.2-arm-linux-gnu", (Arm, Linux)),
         ] {
             let actual = platform_for_gem(gem_version);
             let expected = Platform {
