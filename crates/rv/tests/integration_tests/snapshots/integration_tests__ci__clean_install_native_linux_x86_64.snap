@@ -1,0 +1,6 @@
+---
+source: crates/rv/tests/integration_tests/ci.rs
+expression: files_sorted
+---
+./Gemfile
+./Gemfile.lock
