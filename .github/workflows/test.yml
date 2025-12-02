@@ -16,10 +16,10 @@ jobs:
       fail-fast: false
       matrix:
         runs-on:
-        - ubuntu-latest # x86
-        - macos-latest # xarm
-        - ubuntu-24.04-arm #arm
-        - macos-15-intel # x86
+          - ubuntu-latest # x86
+          - macos-latest # xarm
+          - ubuntu-24.04-arm #arm
+          - macos-15-intel # x86
 
     steps:
       - uses: actions/checkout@v6
