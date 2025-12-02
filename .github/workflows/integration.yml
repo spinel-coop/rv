@@ -9,7 +9,23 @@ on:
 permissions: read-all
 name: Integration
 jobs:
-  test-arch-linux:
+  alpine-linux:
+    name: Run on Alpine Linux
+    runs-on: ubuntu-latest
+    container:
+      image: rust:alpine
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install dependencies
+        run: apk add --no-cache musl-dev build-base
+      - name: Build rv
+        run: cargo build --release
+      - name: Test rv works
+        run: |
+          ./target/release/rv --version
+          ./target/release/rv --help
+
+  arch-linux:
     name: Run on Arch Linux
     runs-on: ubuntu-latest
     container:
