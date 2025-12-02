@@ -1047,6 +1047,51 @@ end"#;
     }
 
     #[test]
+    fn test_matches() {
+        use Cpu::*;
+        use Os::*;
+        let should_match = [
+            // They're the same.
+            ((Arm, Darwin), (Arm, Darwin)),
+            // Unknown should always match a known.
+            ((Cpu::Unknown, Darwin), (Arm, Darwin)),
+            ((Arm, Darwin), (Cpu::Unknown, Darwin)),
+            ((Arm, Os::Unknown), (Arm, Darwin)),
+            ((Arm, Darwin), (Arm, Os::Unknown)),
+        ];
+        for input in should_match {
+            let p0 = Platform {
+                cpu: input.0.0,
+                os: input.0.1,
+            };
+            let p1 = Platform {
+                cpu: input.1.0,
+                os: input.1.1,
+            };
+            assert!(p0.matches(&p1));
+        }
+        let should_not_match = [
+            // Different OS, same CPU
+            ((Arm, Darwin), (Arm, Linux)),
+            // Different CPU, same OS
+            ((Arm, Linux), (X86, Linux)),
+            // Different CPU and OS
+            ((Arm, Darwin), (X86, Linux)),
+        ];
+        for input in should_not_match {
+            let p0 = Platform {
+                cpu: input.0.0,
+                os: input.0.1,
+            };
+            let p1 = Platform {
+                cpu: input.1.0,
+                os: input.1.1,
+            };
+            assert!(!p0.matches(&p1));
+        }
+    }
+
+    #[test]
     fn test_platform_for_gem() {
         use Cpu::*;
         use Os::*;
