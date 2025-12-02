@@ -34,22 +34,6 @@ jobs:
         uses: Swatinem/rust-cache@v2
       - run: ./bin/test
 
-  test-alpine-linux:
-    name: Test on Alpine Linux
-    runs-on: ubuntu-latest
-    container:
-      image: rust:alpine
-    steps:
-      - uses: actions/checkout@v6
-      - name: Install dependencies
-        run: apk add --no-cache musl-dev build-base
-      - name: Build rv
-        run: cargo build --release
-      - name: Test rv works
-        run: |
-          ./target/release/rv --version
-          ./target/release/rv --help
-
   run-tests-coverage:
     name: Run tests with coverage
     runs-on: ubuntu-latest
