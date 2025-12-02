@@ -808,13 +808,8 @@ impl Cpu {
             | (Self::Unknown, _)
             | (_, Self::Universal)
             | (_, Self::Unknown) => true,
-            // These platforms are clearly the same.
-            (Self::X86, Self::X86) => true,
-            (Self::Arm, Self::Arm) => true,
-            (Self::Powerpc, Self::Powerpc) => true,
-            (Self::Sparc, Self::Sparc) => true,
-            // Everything else is a mismatch.
-            _ => false,
+            // Other types should be matched exactly, i.e. be the same enum variant.
+            (a, b) => a == b,
         }
     }
 }
@@ -839,17 +834,8 @@ impl Os {
             // Err on the side of caution for unknown.
             // And universal means it should match everything, right?
             (Self::Unknown, _) | (_, Self::Unknown) => true,
-            // These platforms are clearly the same.
-            (Self::Darwin, Self::Darwin) => true,
-            (Self::Windows, Self::Windows) => true,
-            (Self::Mingw, Self::Mingw) => true,
-            (Self::Linux, Self::Linux) => true,
-            (Self::Solaris, Self::Solaris) => true,
-            (Self::Java, Self::Java) => true,
-            (Self::Dalvik, Self::Dalvik) => true,
-            (Self::Dotnet, Self::Dotnet) => true,
-            // Everything else is a mismatch.
-            _ => false,
+            // Other types should be matched exactly, i.e. be the same enum variant.
+            (a, b) => a == b,
         }
     }
 }
