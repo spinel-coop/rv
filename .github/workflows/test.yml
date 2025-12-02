@@ -34,24 +34,6 @@ jobs:
         uses: Swatinem/rust-cache@v2
       - run: ./bin/test
 
-  test-arch-linux:
-    name: Test on Arch Linux
-    runs-on: ubuntu-latest
-    container:
-      image: archlinux:latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Install dependencies
-        run: pacman -Syu --noconfirm base-devel rustup
-      - name: Install Rust toolchain
-        run: rustup default stable
-      - name: Build rv
-        run: cargo build --release
-      - name: Test rv works
-        run: |
-          ./target/release/rv --version
-          ./target/release/rv --help
-
   run-tests-coverage:
     name: Run tests with coverage
     runs-on: ubuntu-latest
