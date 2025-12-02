@@ -1048,37 +1048,19 @@ end"#;
 
     #[test]
     fn test_platform_for_gem() {
+        use Cpu::*;
+        use Os::*;
         for (gem_version, expected) in [
-            (
-                "1.17.2-arm64-darwin",
-                Platform {
-                    cpu: Cpu::Arm,
-                    os: Os::Darwin,
-                },
-            ),
-            (
-                "1.17.2-x86_64-darwin",
-                Platform {
-                    cpu: Cpu::X86,
-                    os: Os::Darwin,
-                },
-            ),
-            (
-                "2.7.4-x86_64-linux-gnu",
-                Platform {
-                    cpu: Cpu::X86,
-                    os: Os::Linux,
-                },
-            ),
-            (
-                "2.7.4-x86_64-linux-musl",
-                Platform {
-                    cpu: Cpu::X86,
-                    os: Os::Linux,
-                },
-            ),
+            ("1.17.2-arm64-darwin", (Arm, Darwin)),
+            ("1.17.2-x86_64-darwin", (X86, Darwin)),
+            ("2.7.4-x86_64-linux-gnu", (X86, Linux)),
+            ("2.7.4-x86_64-linux-musl", (X86, Linux)),
         ] {
             let actual = platform_for_gem(gem_version);
+            let expected = Platform {
+                cpu: expected.0,
+                os: expected.1,
+            };
             assert_eq!(actual, expected);
         }
     }
