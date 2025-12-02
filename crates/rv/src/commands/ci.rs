@@ -33,6 +33,9 @@ use std::ops::Not;
 use std::path::PathBuf;
 use std::process::Stdio;
 
+const ARM_STRINGS: [&str; 3] = ["arm64", "arm", "aarch64"];
+const X86_STRINGS: [&str; 4] = ["x86", "i686", "win32", "win64"];
+
 #[derive(Debug, clap_derive::Args)]
 pub struct CiArgs {
     /// Maximum number of downloads that can be in flight at once.
@@ -718,27 +721,29 @@ fn convert_gemspec_yaml_to_ruby(contents: String) -> String {
 }
 
 fn platform_for_gem(gem_version: &str) -> Platform {
+    let is_arm = ARM_STRINGS.iter().any(|s| gem_version.contains(s));
+    let is_x86 = X86_STRINGS.iter().any(|s| gem_version.contains(s));
     let (cpu, os) = if gem_version.contains("darwin") {
         //        when /^i686-darwin(\d)/     then ["x86",       "darwin",  $1]
         //        when "powerpc-darwin"       then ["powerpc",   "darwin",  nil]
         //        when /powerpc-darwin(\d)/   then ["powerpc",   "darwin",  $1]
         //        when /universal-darwin(\d)/ then ["universal", "darwin",  $1]
-        if gem_version.contains("i686") || gem_version.contains("x86_64") {
+        if is_x86 {
             (Cpu::X86, Os::Darwin)
         } else if gem_version.contains("powerpc") {
             (Cpu::Powerpc, Os::Darwin)
         } else if gem_version.contains("universal") {
             (Cpu::Universal, Os::Darwin)
-        } else if gem_version.contains("arm64") {
+        } else if is_arm {
             (Cpu::Arm, Os::Darwin)
         } else {
             (Cpu::Unknown, Os::Darwin)
         }
     } else if gem_version.contains("linux") {
         // when /^i\d86-linux/         then ["x86",       "linux",   nil]
-        if gem_version.contains("86") {
+        if is_x86 {
             (Cpu::X86, Os::Linux)
-        } else if gem_version.contains("arm64") {
+        } else if is_arm {
             (Cpu::Arm, Os::Linux)
         } else {
             (Cpu::Unknown, Os::Linux)
@@ -753,9 +758,9 @@ fn platform_for_gem(gem_version: &str) -> Platform {
     } else if gem_version.contains("mswin") {
         // when /mswin32(\_(\d+))?/    then ["x86",       "mswin32", $2]
         // when /mswin64(\_(\d+))?/    then ["x64",       "mswin64", $2]
-        if gem_version.contains("32") || gem_version.contains("64") {
+        if is_x86 {
             (Cpu::X86, Os::Windows)
-        } else if gem_version.contains("arm64") {
+        } else if is_arm {
             (Cpu::Arm, Os::Windows)
         } else {
             (Cpu::Unknown, Os::Windows)
@@ -763,7 +768,7 @@ fn platform_for_gem(gem_version: &str) -> Platform {
     } else if gem_version.contains("mingw") {
         if gem_version.contains("32") || gem_version.contains("64") {
             (Cpu::X86, Os::Mingw)
-        } else if gem_version.contains("arm64") {
+        } else if is_arm {
             (Cpu::Arm, Os::Mingw)
         } else {
             (Cpu::Unknown, Os::Mingw)
