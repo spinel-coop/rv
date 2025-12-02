@@ -723,6 +723,7 @@ fn convert_gemspec_yaml_to_ruby(contents: String) -> String {
 fn platform_for_gem(gem_version: &str) -> Platform {
     let is_arm = ARM_STRINGS.iter().any(|s| gem_version.contains(s));
     let is_x86 = X86_STRINGS.iter().any(|s| gem_version.contains(s));
+    // Comments starting with `when` are relevant examples from rubygems.
     let (cpu, os) = if gem_version.contains("darwin") {
         //        when /^i686-darwin(\d)/     then ["x86",       "darwin",  $1]
         //        when "powerpc-darwin"       then ["powerpc",   "darwin",  nil]
@@ -796,7 +797,6 @@ enum Cpu {
     Unknown,
     Universal,
     Sparc,
-    // If you add a new variant, add it to the self-match checks in the PartialEq impl.
 }
 
 impl Cpu {
@@ -825,14 +825,12 @@ enum Os {
     Dalvik,
     Dotnet,
     Unknown,
-    // If you add a new variant, add it to the self-match checks in the PartialEq impl.
 }
 
 impl Os {
     fn matches(&self, other: &Self) -> bool {
         match (self, other) {
             // Err on the side of caution for unknown.
-            // And universal means it should match everything, right?
             (Self::Unknown, _) | (_, Self::Unknown) => true,
             // Other types should be matched exactly, i.e. be the same enum variant.
             (a, b) => a == b,
