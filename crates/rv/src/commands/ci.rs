@@ -717,34 +717,188 @@ fn convert_gemspec_yaml_to_ruby(contents: String) -> String {
     String::from_utf8_lossy(&output.stdout).to_string()
 }
 
-#[derive(Debug)]
-enum Platform {
-    Ruby,
-    Linux,
-    Mac,
-    // Windows,
-    Other,
+fn platform_for_gem(gem_version: &str) -> Platform {
+    let (cpu, os) = if gem_version.contains("darwin") {
+        //        when /^i686-darwin(\d)/     then ["x86",       "darwin",  $1]
+        //        when "powerpc-darwin"       then ["powerpc",   "darwin",  nil]
+        //        when /powerpc-darwin(\d)/   then ["powerpc",   "darwin",  $1]
+        //        when /universal-darwin(\d)/ then ["universal", "darwin",  $1]
+        if gem_version.contains("i686") || gem_version.contains("x86_64") {
+            (Cpu::X86, Os::Darwin)
+        } else if gem_version.contains("powerpc") {
+            (Cpu::Powerpc, Os::Darwin)
+        } else if gem_version.contains("universal") {
+            (Cpu::Universal, Os::Darwin)
+        } else if gem_version.contains("arm64") {
+            (Cpu::Arm, Os::Darwin)
+        } else {
+            (Cpu::Unknown, Os::Darwin)
+        }
+    } else if gem_version.contains("linux") {
+        // when /^i\d86-linux/         then ["x86",       "linux",   nil]
+        if gem_version.contains("86") {
+            (Cpu::X86, Os::Linux)
+        } else if gem_version.contains("arm64") {
+            (Cpu::Arm, Os::Linux)
+        } else {
+            (Cpu::Unknown, Os::Linux)
+        }
+    } else if gem_version.contains("sparc-solaris") {
+        // when /sparc-solaris2.8/     then ["sparc",     "solaris", "2.8"]
+        if gem_version.contains("sparc") {
+            (Cpu::Sparc, Os::Solaris)
+        } else {
+            (Cpu::Unknown, Os::Solaris)
+        }
+    } else if gem_version.contains("mswin") {
+        // when /mswin32(\_(\d+))?/    then ["x86",       "mswin32", $2]
+        // when /mswin64(\_(\d+))?/    then ["x64",       "mswin64", $2]
+        if gem_version.contains("32") || gem_version.contains("64") {
+            (Cpu::X86, Os::Windows)
+        } else if gem_version.contains("arm64") {
+            (Cpu::Arm, Os::Windows)
+        } else {
+            (Cpu::Unknown, Os::Windows)
+        }
+    } else if gem_version.contains("mingw") {
+        if gem_version.contains("32") || gem_version.contains("64") {
+            (Cpu::X86, Os::Mingw)
+        } else if gem_version.contains("arm64") {
+            (Cpu::Arm, Os::Mingw)
+        } else {
+            (Cpu::Unknown, Os::Mingw)
+        }
+    } else if gem_version.contains("java") || gem_version.contains("jruby") {
+        // when "java", "jruby"        then [nil,         "java",    nil]
+        (Cpu::Unknown, Os::Java)
+    } else if gem_version.contains("dalvik") {
+        // when /^dalvik(\d+)?$/       then [nil,         "dalvik",  $1]
+        (Cpu::Unknown, Os::Dalvik)
+    } else if gem_version.contains("dotnet") {
+        // when /dotnet(\-(\d+\.\d+))? then ["universal", "dotnet",  $2]
+        (Cpu::Universal, Os::Dotnet)
+    } else {
+        (Cpu::Unknown, Os::Unknown)
+    };
+    Platform { cpu, os }
 }
 
-fn platform_for_gem(gem_version: &str) -> Platform {
-    // looks like 3.25.1
-    if gem_version.chars().all(|c| c == '.' || c.is_ascii_digit()) {
-        return Platform::Ruby;
-    }
+#[derive(Debug, Eq, PartialEq)]
+enum Cpu {
+    X86,
+    Arm,
+    Powerpc,
+    Unknown,
+    Universal,
+    Sparc,
+    // If you add a new variant, add it to the self-match checks in the PartialEq impl.
+}
 
-    if gem_version.ends_with("linux-gnu")
-        || gem_version.ends_with("linux-musl")
-        || gem_version.ends_with("linux-musleabihf")
-        || gem_version.ends_with("linux-gnueabihf")
-        || gem_version.ends_with("linux")
-    {
-        return Platform::Linux;
+impl Cpu {
+    fn matches(&self, other: &Self) -> bool {
+        match (self, other) {
+            // Err on the side of caution for unknown.
+            // And universal means it should match everything, right?
+            (Self::Universal, _)
+            | (Self::Unknown, _)
+            | (_, Self::Universal)
+            | (_, Self::Unknown) => true,
+            // These platforms are clearly the same.
+            (Self::X86, Self::X86) => true,
+            (Self::Arm, Self::Arm) => true,
+            (Self::Powerpc, Self::Powerpc) => true,
+            (Self::Sparc, Self::Sparc) => true,
+            // Everything else is a mismatch.
+            _ => false,
+        }
     }
+}
 
-    if gem_version.ends_with("darwin") || gem_version.contains("darwin-") {
-        return Platform::Mac;
+#[derive(Debug, Eq, PartialEq)]
+enum Os {
+    Darwin,
+    Windows,
+    Mingw,
+    Linux,
+    Solaris,
+    Java,
+    Dalvik,
+    Dotnet,
+    Unknown,
+    // If you add a new variant, add it to the self-match checks in the PartialEq impl.
+}
+
+impl Os {
+    fn matches(&self, other: &Self) -> bool {
+        match (self, other) {
+            // Err on the side of caution for unknown.
+            // And universal means it should match everything, right?
+            (Self::Unknown, _) | (_, Self::Unknown) => true,
+            // These platforms are clearly the same.
+            (Self::Darwin, Self::Darwin) => true,
+            (Self::Windows, Self::Windows) => true,
+            (Self::Mingw, Self::Mingw) => true,
+            (Self::Linux, Self::Linux) => true,
+            (Self::Solaris, Self::Solaris) => true,
+            (Self::Java, Self::Java) => true,
+            (Self::Dalvik, Self::Dalvik) => true,
+            (Self::Dotnet, Self::Dotnet) => true,
+            // Everything else is a mismatch.
+            _ => false,
+        }
     }
-    Platform::Other
+}
+
+#[derive(Debug, Eq, PartialEq)]
+struct Platform {
+    cpu: Cpu,
+    os: Os,
+}
+
+impl Platform {
+    fn matches(&self, other: &Self) -> bool {
+        self.cpu.matches(&other.cpu) && self.os.matches(&other.os)
+    }
+}
+
+impl Platform {
+    fn current() -> Self {
+        match CURRENT_PLATFORM {
+            "aarch64-apple-darwin" => Platform {
+                os: Os::Darwin,
+                cpu: Cpu::Arm,
+            },
+            "x86_64-apple-darwin" => Platform {
+                os: Os::Darwin,
+                cpu: Cpu::X86,
+            },
+            "x86_64-unknown-linux-gnu" => Platform {
+                os: Os::Linux,
+                cpu: Cpu::X86,
+            },
+            "aarch64-unknown-linux-gnu" => Platform {
+                os: Os::Linux,
+                cpu: Cpu::Arm,
+            },
+            other => {
+                #[cfg(debug_assertions)]
+                {
+                    panic!(
+                        "Unknown target {}, please add it to the above match stmt",
+                        other
+                    );
+                }
+                #[cfg(not(debug_assertions))]
+                {
+                    eprintln!("Warning: unknown OS {}", other.yellow());
+                    Platform {
+                        os: Os::Unknown,
+                        cpu: Cpu::Unknown,
+                    }
+                }
+            }
+        }
+    }
 }
 
 fn url_for_spec(remote: &str, spec: &Spec<'_>) -> Result<Url> {
@@ -775,13 +929,8 @@ async fn download_gem_source<'i>(
 
     let gems_to_download = gem_source.specs.into_iter().filter(|spec| {
         let arch = platform_for_gem(spec.gem_version.version);
-        match arch {
-            Platform::Linux => {
-                !(CURRENT_PLATFORM.contains("darwin") || CURRENT_PLATFORM.contains("windows"))
-            }
-            Platform::Mac => !CURRENT_PLATFORM.contains("linux"),
-            Platform::Ruby | Platform::Other => true,
-        }
+        let this_arch = Platform::current();
+        arch.matches(&this_arch)
     });
     let spec_stream = futures_util::stream::iter(gems_to_download);
     let downloaded_gems: Vec<_> = spec_stream
@@ -904,5 +1053,42 @@ else
   load Gem.activate_bin_path('rake', 'rake', version)
 end"#;
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_platform_for_gem() {
+        for (gem_version, expected) in [
+            (
+                "1.17.2-arm64-darwin",
+                Platform {
+                    cpu: Cpu::Arm,
+                    os: Os::Darwin,
+                },
+            ),
+            (
+                "1.17.2-x86_64-darwin",
+                Platform {
+                    cpu: Cpu::X86,
+                    os: Os::Darwin,
+                },
+            ),
+            (
+                "2.7.4-x86_64-linux-gnu",
+                Platform {
+                    cpu: Cpu::X86,
+                    os: Os::Linux,
+                },
+            ),
+            (
+                "2.7.4-x86_64-linux-musl",
+                Platform {
+                    cpu: Cpu::X86,
+                    os: Os::Linux,
+                },
+            ),
+        ] {
+            let actual = platform_for_gem(gem_version);
+            assert_eq!(actual, expected);
+        }
     }
 }
