@@ -22,6 +22,19 @@ fn test_clean_install_download_test_gem() {
 }
 
 #[test]
+fn test_clean_install_native() {
+    let test = RvTest::new();
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.lock.testwithnative");
+    let output = test.rv(&["ci"]);
+    output.assert_success();
+
+    // Store a snapshot of all the files `rv ci` created.
+    let files_sorted = f(test.cwd.as_ref());
+    insta::assert_snapshot!(files_sorted);
+}
+
+#[test]
 fn test_clean_install_download_faker() {
     let test = RvTest::new();
     // https://github.com/faker-ruby/faker/blob/2f8b18b112fb3b7d2750321a8e574518cfac0d53/Gemfile
@@ -33,9 +46,14 @@ fn test_clean_install_download_faker() {
     output.assert_success();
 
     // Store a snapshot of all the files `rv ci` created.
+    let files_sorted = f(test.cwd.as_ref());
+    insta::assert_snapshot!(files_sorted);
+}
+
+fn f(cwd: &std::path::Path) -> String {
     let test_dir_contents = std::process::Command::new("find")
         .args([".", "-type", "f"])
-        .current_dir(test.cwd)
+        .current_dir(cwd)
         .output()
         .expect("ls should succeed")
         .stdout;
@@ -47,6 +65,5 @@ fn test_clean_install_download_faker() {
         .filter(|line| !line.ends_with("profraw"))
         .collect();
     lines.sort();
-    let files_sorted = lines.join("\n");
-    insta::assert_snapshot!(files_sorted);
+    lines.join("\n")
 }
