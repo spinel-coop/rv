@@ -5,6 +5,8 @@ edition = "2024"
 
 [dependencies]
 camino = { workspace = true, features = ["serde1"] }
+once_cell.workspace = true
+regex.workspace = true
 rv-cache = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_with = { workspace = true }

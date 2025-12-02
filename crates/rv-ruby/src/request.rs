@@ -150,6 +150,8 @@ impl FromStr for RubyRequest {
                 }
             } else if let Some(pos) = version.find('-') {
                 (Some(&version[..pos]), Some(&version[pos + 1..]))
+            } else if let Some(pos) = version.find(char::is_alphabetic) {
+                (Some(&version[..pos]), Some(&version[pos..]))
             } else {
                 (Some(version), None)
             };
@@ -420,6 +422,18 @@ mod tests {
                 "Parsed output does not match input for {version}"
             );
         }
+    }
+
+    #[test]
+    fn test_parsing_ruby_description_versions() {
+        // in the RUBY_DESCRIPTION constant, printed for `ruby --version`, the version number for some reason
+        // does not include a dash before the prerelease version number.
+        let request = RubyRequest::from_str("ruby-4.0.0preview2").unwrap();
+        assert_eq!(request.to_string(), "ruby-4.0.0-preview2");
+        let request = RubyRequest::from_str("ruby-3.5.0preview1").unwrap();
+        assert_eq!(request.to_string(), "ruby-3.5.0-preview1");
+        let request = RubyRequest::from_str("ruby-3.4.0rc1").unwrap();
+        assert_eq!(request.to_string(), "ruby-3.4.0-rc1");
     }
 
     #[test]
