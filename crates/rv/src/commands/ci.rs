@@ -1111,4 +1111,32 @@ end"#;
             assert_eq!(actual, expected);
         }
     }
+
+    #[test]
+    fn test_platform_current() {
+        use Cpu::*;
+        use Os::*;
+        #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+        let expected = Platform {
+            os: Darwin,
+            cpu: X86,
+        };
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        let expected = Platform {
+            os: Darwin,
+            cpu: Arm,
+        };
+        #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+        let expected = Platform {
+            os: Linux,
+            cpu: X86,
+        };
+        #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+        let expected = Platform {
+            os: Linux,
+            cpu: Arm,
+        };
+        let actual = Platform::current();
+        assert_eq!(actual, expected);
+    }
 }
