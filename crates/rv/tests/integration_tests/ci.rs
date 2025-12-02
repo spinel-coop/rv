@@ -21,7 +21,7 @@ fn test_clean_install_download_test_gem() {
     mock.assert();
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #[test]
 fn test_clean_install_native() {
     let test = RvTest::new();
