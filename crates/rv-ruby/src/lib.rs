@@ -3,6 +3,7 @@ pub mod request;
 pub mod version;
 
 use camino::Utf8PathBuf;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use rv_cache::{CacheKey, CacheKeyHasher};
 use serde::{Deserialize, Serialize};
@@ -14,6 +15,10 @@ use tracing::instrument;
 
 use crate::request::RubyRequest;
 use crate::version::RubyVersion;
+
+static RUBY_DESCRIPTION_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"ruby (?<version>[^ ]+) \((?<date>\d\d\d\d-\d\d-\d\d) (?<source>\S+) (?<revision>[0-9a-f]+)\) (?<prism>\+PRISM )?\[(?<arch>\w+)-(?<os>\w+)\]").unwrap()
+});
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Release {
@@ -319,8 +324,7 @@ fn ruby_049_version() -> Result<Ruby, RubyError> {
 }
 
 fn parse_description(description: &str) -> Option<regex::Captures<'_>> {
-    let re = Regex::new(r"ruby (?<version>[^ ]+) \((?<date>\d\d\d\d-\d\d-\d\d) (?<source>\S+) (?<revision>[0-9a-f]+)\) (?<prism>\+PRISM )?\[(?<arch>\w+)-(?<os>\w+)\]").unwrap();
-    re.captures(description)
+    RUBY_DESCRIPTION_REGEX.captures(description)
 }
 
 /// Trait for environment variable access (allows mocking in tests)
