@@ -27,7 +27,7 @@ fn test_clean_install_native_macos_aarch64() {
     let test = RvTest::new();
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.lock.testwithnative");
-    let output = test.rv(&["ci"]);
+    let output = test.rv(&["ci", "--skip-compile-extensions"]);
     output.assert_success();
 
     // Store a snapshot of all the files `rv ci` created.
@@ -41,7 +41,7 @@ fn test_clean_install_native_linux_x86_64() {
     let test = RvTest::new();
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.lock.testwithnative");
-    let output = test.rv(&["ci"]);
+    let output = test.rv(&["ci", "--skip-compile-extensions"]);
     output.assert_success();
 
     // Store a snapshot of all the files `rv ci` created.

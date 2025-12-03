@@ -55,10 +55,15 @@ pub struct CleanInstallArgs {
     /// Validate the checksums from the gem server and gem itself.
     #[arg(long, default_value = "true")]
     pub validate_checksums: bool,
+
+    /// Don't compile the extensions in native gems.
+    #[arg(long, default_value = "false")]
+    pub skip_compile_extensions: bool,
 }
 
 #[derive(Debug)]
 struct CiInnerArgs {
+    pub skip_compile_extensions: bool,
     pub max_concurrent_requests: usize,
     pub max_concurrent_installs: usize,
     pub validate_checksums: bool,
@@ -119,6 +124,7 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     let lockfile_path = find_lockfile_path(args.gemfile)?;
     let install_path = find_install_path(config, &lockfile_path).await?;
     let inner_args = CiInnerArgs {
+        skip_compile_extensions: args.skip_compile_extensions,
         max_concurrent_requests: args.max_concurrent_requests,
         max_concurrent_installs: args.max_concurrent_installs,
         validate_checksums: args.validate_checksums,
@@ -219,10 +225,12 @@ async fn install_gems<'i>(
                 // 3. Generate binstubs.
                 install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir)?;
                 // 4. Handle compiling native extensions for gems with native extensions
-                let compiled_ok =
-                    compile_native_extensions(config, args, gv, &dep_gemspec.extensions)?;
-                if !compiled_ok {
-                    return Err(Error::CompileFailures);
+                if !args.skip_compile_extensions {
+                    let compiled_ok =
+                        compile_native_extensions(config, args, gv, &dep_gemspec.extensions)?;
+                    if !compiled_ok {
+                        return Err(Error::CompileFailures);
+                    }
                 }
                 debug!("Installed {gv}");
                 Ok(())
