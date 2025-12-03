@@ -308,13 +308,10 @@ fn parse_requirement<'a>(
     anchors: &AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Requirement, ContextError> {
-    delimited(
-        tagged_mapping_start("ruby/object:Gem::Requirement"),
-        parse_requirement_fields,
-        mapping_end,
-    )
-    .context(StrContext::Label("Gem::Requirement object"))
-    .parse_next(input)
+    tagged_mapping_start("ruby/object:Gem::Requirement").parse_next(input)?;
+    let fields = parse_requirement_fields(anchors, input)?;
+    mapping_end.parse_next(input)?;
+    Ok(fields)
 }
 
 fn parse_requirement_fields<'a>(
@@ -383,11 +380,8 @@ fn parse_dependency<'a>(
     anchors: &AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Dependency, ContextError> {
-    let _start: usize = tagged_mapping_start("ruby/object:Gem::Dependency").parse_next(input)?;
-
-    let fields = parse_dependency_fields
-        .context(StrContext::Label("dependency fields"))
-        .parse_next(input);
+    tagged_mapping_start("ruby/object:Gem::Dependency").parse_next(input)?;
+    let fields = parse_dependency_fields(anchors, input);
     mapping_end.parse_next(input)?;
     fields
 }
