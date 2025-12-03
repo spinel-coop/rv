@@ -133,13 +133,13 @@ fn document_end<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<(), Cont
 
 fn tagged_mapping_start<'a>(
     expected_tag: &'static str,
-) -> impl winnow::Parser<&'a [(Event<'a>, Span)], (), ContextError> + 'a {
+) -> impl winnow::Parser<&'a [(Event<'a>, Span)], usize, ContextError> + 'a {
     move |input: &mut &'a [(Event<'a>, Span)]| {
         any.verify_map(|(event, _span)| match event {
-            Event::MappingStart(_, Some(tag))
+            Event::MappingStart(anchor_id, Some(tag))
                 if tag.handle == "!" && tag.suffix == expected_tag =>
             {
-                Some(())
+                Some(anchor_id)
             }
             _ => None,
         })
@@ -377,13 +377,13 @@ fn parse_constraint_pair<'a>(
 fn parse_dependency<'a>(
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Dependency, ContextError> {
-    delimited(
-        tagged_mapping_start("ruby/object:Gem::Dependency"),
-        parse_dependency_fields.context(StrContext::Label("dependency fields")),
-        mapping_end,
-    )
-    .context(StrContext::Label("Gem::Dependency object"))
-    .parse_next(input)
+    let start: usize = tagged_mapping_start("ruby/object:Gem::Dependency").parse_next(input)?;
+
+    let fields = parse_dependency_fields
+        .context(StrContext::Label("dependency fields"))
+        .parse_next(input);
+    mapping_end.parse_next(input)?;
+    fields
 }
 
 fn parse_dependency_fields<'a>(
