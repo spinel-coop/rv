@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use indexmap::IndexMap;
 use miette::{Result, SourceSpan};
 use saphyr::Scalar;
@@ -12,6 +14,7 @@ use rv_gem_types::{Dependency, DependencyType, Platform, Requirement, Specificat
 pub use error::DeserializationError;
 
 mod error;
+type AnchorMap<'a> = HashMap<usize, &'a str>;
 
 // Helper function to parse YAML into events
 fn parse_yaml_events<'a>(source: &'a str) -> Result<Vec<(Event<'a>, Span)>> {
@@ -377,7 +380,7 @@ fn parse_constraint_pair<'a>(
 fn parse_dependency<'a>(
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Dependency, ContextError> {
-    let start: usize = tagged_mapping_start("ruby/object:Gem::Dependency").parse_next(input)?;
+    let _start: usize = tagged_mapping_start("ruby/object:Gem::Dependency").parse_next(input)?;
 
     let fields = parse_dependency_fields
         .context(StrContext::Label("dependency fields"))
@@ -453,14 +456,23 @@ fn parse_dependency_fields<'a>(
 }
 
 fn parse_dependencies<'a>(
+    _anchors: &AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Vec<Dependency>, ContextError> {
-    delimited(sequence_start, repeat(0.., parse_dependency), sequence_end).parse_next(input)
+    let _start = sequence_start.parse_next(input)?;
+    let mut deps = Vec::new();
+    while let Ok(dep) = parse_dependency.parse_next(input) {
+        deps.push(dep);
+    }
+    sequence_end.parse_next(input)?;
+    Ok(deps)
 }
 
 fn parse_gem_specification_winnow<'a>(
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Specification, ContextError> {
+    let anchors: HashMap<usize, &str> = HashMap::new();
+
     // Skip stream/document start events
     let _ = opt(stream_start).parse_next(input)?;
     let _ = opt(document_start).parse_next(input)?;
@@ -543,7 +555,7 @@ fn parse_gem_specification_winnow<'a>(
                 authors = parse_optional_string_array.parse_next(input)?;
             }
             "dependencies" => {
-                dependencies = parse_dependencies.parse_next(input)?;
+                dependencies = parse_dependencies(&anchors, input)?;
             }
             "cert_chain" => {
                 cert_chain = parse_string_array.parse_next(input)?;
