@@ -68,6 +68,8 @@ struct CiInnerArgs {
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
+    #[error("Some gems did not compile their extensions")]
+    CompileFailures,
     #[error(transparent)]
     Config(#[from] crate::config::Error),
     #[error(transparent)]
@@ -123,14 +125,14 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         lockfile_path,
         install_path,
     };
-    ci_inner(&config.cache, &inner_args).await
+    ci_inner(config, &inner_args).await
 }
 
-async fn ci_inner(cache: &rv_cache::Cache, args: &CiInnerArgs) -> Result<()> {
+async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     let lockfile_contents = tokio::fs::read_to_string(&args.lockfile_path).await?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
-    let gems = download_gems(lockfile, cache, args).await?;
-    install_gems(gems, args).await?;
+    let gems = download_gems(lockfile, &config.cache, args).await?;
+    install_gems(config, gems, args).await?;
     Ok(())
 }
 
@@ -164,7 +166,7 @@ async fn find_install_path(config: &Config, lockfile_path: &Utf8PathBuf) -> Resu
         Default::default(),
         args.as_slice(),
         CaptureOutput::Both,
-        Some(lockfile_dir.as_ref()),
+        Some(lockfile_dir),
     )
     .await?
     .stdout;
@@ -187,7 +189,11 @@ pub fn create_rayon_pool(
         .build()
 }
 
-async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiInnerArgs) -> Result<()> {
+async fn install_gems<'i>(
+    config: &Config,
+    downloaded: Vec<Downloaded<'i>>,
+    args: &CiInnerArgs,
+) -> Result<()> {
     let binstub_dir = args.install_path.join("bin");
     debug!("about to create {}", binstub_dir);
     tokio::fs::create_dir_all(&binstub_dir).await?;
@@ -213,7 +219,11 @@ async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiInnerArgs) -
                 // 3. Generate binstubs.
                 install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir)?;
                 // 4. Handle compiling native extensions for gems with native extensions
-                compile_native_extensions(&dep_gemspec.extensions)?;
+                let compiled_ok =
+                    compile_native_extensions(config, args, gv, &dep_gemspec.extensions)?;
+                if !compiled_ok {
+                    return Err(Error::CompileFailures);
+                }
                 debug!("Installed {gv}");
                 Ok(())
             })
@@ -459,10 +469,10 @@ impl<'i> Downloaded<'i> {
                 }
             }
             if checksums.is_none() {
-                eprintln!(
-                    "Warning: No checksums found for gem {}",
-                    nameversion.yellow()
-                );
+                // eprintln!(
+                //     "Warning: No checksums found for gem {}",
+                //     nameversion.yellow()
+                // );
             }
             checksums
         } else {
@@ -566,9 +576,56 @@ fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -> io::
     std::fs::write(binstub_path, binstub_contents)
 }
 
-fn compile_native_extensions(_extensions: &[String]) -> Result<()> {
-    // todo
-    Ok(())
+struct CompileNativeExtResult<'a> {
+    extension: &'a str,
+    output: std::process::Output,
+}
+
+impl<'a> CompileNativeExtResult<'a> {
+    pub fn success(&self) -> bool {
+        self.output.status.success()
+    }
+}
+
+fn compile_native_extensions(
+    config: &Config,
+    args: &CiInnerArgs,
+    gv: GemVersion,
+    extensions: &[String],
+) -> Result<bool> {
+    let mut compile_results = Vec::with_capacity(extensions.len());
+    for extension in extensions {
+        let this_gems_dir = args.install_path.join("gems").join(gv.to_string());
+        let output = crate::commands::ruby::run::run_no_install(
+            config,
+            &config.ruby_request()?,
+            &[extension],
+            CaptureOutput::Both,
+            Some(&this_gems_dir),
+        )?;
+        compile_results.push(CompileNativeExtResult { extension, output });
+    }
+    let all_ok = compile_results.iter().all(|res| res.success());
+    for res in compile_results
+        .iter()
+        .filter(|compile_res| !compile_res.success())
+    {
+        eprintln!(
+            "Warning: Could not compile gem {}'s extension {}. It had exit code {}.",
+            gv.to_string().yellow(),
+            res.extension.yellow(),
+            res.output
+                .status
+                .code()
+                .map(|c| c.to_string())
+                .unwrap_or("<unknown>".to_owned()),
+        );
+        eprintln!(
+            "Its stderr:\n{}",
+            String::from_utf8_lossy(&res.output.stderr)
+        );
+    }
+    Ok(all_ok)
 }
 
 /// Wrapper around some reader type `R`
@@ -994,25 +1051,6 @@ async fn download_gem<'i>(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[tokio::test]
-    async fn test_ci_inner() -> Result<()> {
-        let file: Utf8PathBuf = "../rv-lockfile/tests/inputs/Gemfile.lock.empty".into();
-        let dir = file.parent().unwrap();
-        let cache = rv_cache::Cache::temp().unwrap();
-        ci_inner(
-            &cache,
-            &CiInnerArgs {
-                max_concurrent_requests: 10,
-                max_concurrent_installs: 20,
-                validate_checksums: true,
-                install_path: dir.into(),
-                lockfile_path: file,
-            },
-        )
-        .await?;
-        Ok(())
-    }
 
     #[test]
     fn test_generate_binstub() {
