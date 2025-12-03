@@ -305,6 +305,7 @@ fn parse_metadata_as_map<'a>(
 }
 
 fn parse_requirement<'a>(
+    anchors: &AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Requirement, ContextError> {
     delimited(
@@ -317,6 +318,7 @@ fn parse_requirement<'a>(
 }
 
 fn parse_requirement_fields<'a>(
+    anchors: &AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Requirement, ContextError> {
     let mut constraints: Option<Vec<String>> = None;
@@ -378,6 +380,7 @@ fn parse_constraint_pair<'a>(
 }
 
 fn parse_dependency<'a>(
+    anchors: &AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Dependency, ContextError> {
     let _start: usize = tagged_mapping_start("ruby/object:Gem::Dependency").parse_next(input)?;
@@ -390,6 +393,7 @@ fn parse_dependency<'a>(
 }
 
 fn parse_dependency_fields<'a>(
+    anchors: &AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Dependency, ContextError> {
     let mut name: Option<String> = None;
@@ -414,7 +418,7 @@ fn parse_dependency_fields<'a>(
                 name = Some(string.parse_next(input)?);
             }
             "requirement" => {
-                requirement = Some(parse_requirement.parse_next(input)?);
+                requirement = Some(parse_requirement(anchors, input)?);
             }
             // Handle older gem specification field names
             "version_requirements" => {
@@ -423,7 +427,7 @@ fn parse_dependency_fields<'a>(
                         skip_value.parse_next(input)?;
                         Some(r)
                     }
-                    None => Some(parse_requirement.parse_next(input)?),
+                    None => Some(parse_requirement(anchors, input)?),
                 };
             }
             "type" => {
@@ -456,12 +460,12 @@ fn parse_dependency_fields<'a>(
 }
 
 fn parse_dependencies<'a>(
-    _anchors: &AnchorMap,
+    anchors: &AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Vec<Dependency>, ContextError> {
     let _start = sequence_start.parse_next(input)?;
     let mut deps = Vec::new();
-    while let Ok(dep) = parse_dependency.parse_next(input) {
+    while let Ok(dep) = parse_dependency(anchors, input) {
         deps.push(dep);
     }
     sequence_end.parse_next(input)?;
@@ -588,10 +592,10 @@ fn parse_gem_specification_winnow<'a>(
                 test_files = parse_string_array.parse_next(input)?;
             }
             "required_ruby_version" => {
-                required_ruby_version = Some(parse_requirement.parse_next(input)?);
+                required_ruby_version = Some(parse_requirement(&anchors, input)?);
             }
             "required_rubygems_version" => {
-                required_rubygems_version = Some(parse_requirement.parse_next(input)?);
+                required_rubygems_version = Some(parse_requirement(&anchors, input)?);
             }
             "metadata" => {
                 metadata = parse_metadata_as_map.parse_next(input)?;
