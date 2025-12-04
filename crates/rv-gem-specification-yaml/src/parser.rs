@@ -360,13 +360,12 @@ fn parse_requirement_array<'a>(
     _anchors: &AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Vec<String>, ContextError> {
-    delimited(
-        sequence_start,
-        repeat(0.., parse_constraint_pair),
-        sequence_end,
-    )
-    .context(StrContext::Label("requirements array"))
-    .parse_next(input)
+    sequence_start.parse_next(input)?;
+    let pairs = repeat(0.., parse_constraint_pair)
+        .context(StrContext::Label("requirements array"))
+        .parse_next(input)?;
+    sequence_end.parse_next(input)?;
+    Ok(pairs)
 }
 
 fn parse_constraint_pair<'a>(
