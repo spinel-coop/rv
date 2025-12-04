@@ -372,12 +372,12 @@ fn parse_constraint_pair<'a>(
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<String, ContextError> {
     // Parse a sequence like [">=", version_object]
-    delimited(
-        sequence_start,
-        (string, parse_version).map(|(op, version)| format!("{op} {version}")),
-        sequence_end,
-    )
-    .parse_next(input)
+    sequence_start.parse_next(input)?;
+    let v = (string, parse_version)
+        .map(|(op, version)| format!("{op} {version}"))
+        .parse_next(input)?;
+    sequence_end.parse_next(input)?;
+    Ok(v)
 }
 
 fn parse_dependency<'a>(
