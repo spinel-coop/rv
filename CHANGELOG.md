@@ -4,6 +4,10 @@
 
 Highlights include support for Ruby versions 3.2.x, 3.5.0-preview1, 4.0.0-preview2, automatic Ruby installation during the `rv ruby run` command, and support for `.tool-versions` files, which are also used by the [asdf](https://asdf-vm.com) and [mise](https://mise.jdx.dev) tools.
 
+Just for fun, we also added the oldest version of Ruby that has released source code: 0.49! If you'd like to try it, there are some [example scripts](https://github.com/sampersand/ruby-0.49?tab=readme-ov-file#sample-program) available in the [repo where @sampersand modernized the code](https://github.com/sampersand/ruby-0.49).
+
+- Test against Arch Linux (<https://github.com/spinel-coop/rv/pull/193>, @case)
+- Support Ruby preview releases (<https://github.com/spinel-coop/rv/pull/201>, @indirect)
 - Support Ruby 0.49 (<https://github.com/spinel-coop/rv/pull/189>, @indirect)
 - Install Ruby during `rv ruby run` (<https://github.com/spinel-coop/rv/pull/182>, @adamchalmers)
 - Sign macOS binaries (<https://github.com/spinel-coop/rv/pull/179>, @indirect)
