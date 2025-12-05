@@ -21,7 +21,7 @@ jobs:
           apk add --no-cache build-base
       - name: Build rv
         run: cargo build --release --locked --bin rv
-      - name: Test rv works
+      - name: Test rv runs
         run: |
           ./target/release/rv --version
           ./target/release/rv --help
@@ -30,11 +30,11 @@ jobs:
     name: Run on Arch Linux
     runs-on: ubuntu-latest
     container:
-      image: archlinux:latest
+      image: archlinux:base-devel
     steps:
       - uses: actions/checkout@v6
       - name: Install dependencies
-        run: pacman -Syu --noconfirm base-devel rust
+        run: pacman -Syu --noconfirm rust
       - name: Build rv
         run: cargo build --release --locked --bin rv
       - name: Test rv works
