@@ -1,9 +1,12 @@
 use std::borrow::Cow;
+use std::str::FromStr;
 
 use anstream::println;
 use camino::Utf8PathBuf;
 use miette::Diagnostic;
 use owo_colors::OwoColorize;
+
+use rv_ruby::request::RubyRequest;
 use rv_ruby::request::Source;
 
 use crate::config::Config;
@@ -12,6 +15,8 @@ use crate::config::Config;
 pub enum Error {
     #[error("No Ruby version request found in {}", path.cyan())]
     NoRubyRequest { path: Utf8PathBuf },
+    #[error(transparent)]
+    InvalidVersion(#[from] rv_ruby::request::RequestError),
     #[error(transparent)]
     IoError(#[from] std::io::Error),
 }
@@ -26,6 +31,8 @@ pub fn pin(config: &Config, version: Option<String>) -> Result<()> {
 }
 
 fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
+    RubyRequest::from_str(&version)?;
+
     let project_dir: Cow<Utf8PathBuf> = match config.requested_ruby {
         Some((_, Source::DotToolVersions(ref path))) => {
             let versions = fs_err::read_to_string(path)?;
@@ -141,7 +148,7 @@ mod tests {
     }
 
     #[test]
-    fn test_pin_ruby_creates_file() {
+    fn test_pin_ruby_creates_file_when_requested_version_is_valid() {
         let config = test_config().unwrap();
         let version = "3.2.0".to_string();
 
@@ -153,6 +160,21 @@ mod tests {
         assert!(ruby_version_path.exists());
         let content = fs_err::read_to_string(ruby_version_path).unwrap();
         assert_eq!(content, format!("{version}\n"));
+    }
+
+    #[test]
+    fn test_pin_ruby_does_not_create_file_when_requested_version_is_invalid() {
+        let config = test_config().unwrap();
+        let version = "3.2.0.4.5".to_string();
+
+        // Should panic - basic smoke test
+        pin(&config, Some(version.clone())).expect_err(&format!(
+            "Expected invalid version {version} to be rejected, but was accepted"
+        ));
+
+        // Verify the file was not created
+        let ruby_version_path = config.current_dir.join(".ruby-version");
+        assert!(!ruby_version_path.exists());
     }
 
     #[test]
