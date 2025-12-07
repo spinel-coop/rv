@@ -6,6 +6,9 @@ Highlights include support for Ruby versions 3.2.x, 3.5.0-preview1, 4.0.0-previe
 
 Just for fun, we also added the oldest version of Ruby that has released source code: 0.49! If you'd like to try it, there are some [example scripts](https://github.com/sampersand/ruby-0.49?tab=readme-ov-file#sample-program) available in the [repo where @sampersand modernized the code](https://github.com/sampersand/ruby-0.49).
 
+Special thanks to our new contributors @savechina, @Mado13, @case, and @deivid-rodriguez!
+
+- Make `ruby pin` reject invalid versions (<https://github.com/spinel-coop/rv/pull/223>, @deivid-rodriguez)
 - Test against Arch Linux (<https://github.com/spinel-coop/rv/pull/193>, @case)
 - Support Ruby preview releases (<https://github.com/spinel-coop/rv/pull/201>, @indirect)
 - Support Ruby 0.49 (<https://github.com/spinel-coop/rv/pull/189>, @indirect)
