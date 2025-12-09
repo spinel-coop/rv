@@ -31,7 +31,7 @@ pub fn pin(config: &Config, version: Option<String>) -> Result<()> {
 }
 
 fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
-    RubyRequest::from_str(&version)?;
+    let requested_version = RubyRequest::from_str(&version)?;
 
     let project_dir: Cow<Utf8PathBuf> = match config.requested_ruby {
         Some((_, Source::DotToolVersions(ref path))) => {
@@ -65,7 +65,11 @@ fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
         }
     };
 
-    println!("{0} pinned to Ruby {1}", project_dir.cyan(), version.cyan());
+    println!(
+        "{0} pinned to {1}",
+        project_dir.cyan(),
+        requested_version.cyan()
+    );
 
     Ok(())
 }
@@ -86,11 +90,7 @@ fn show_pinned_ruby(config: &Config) -> Result<()> {
         }
     };
 
-    println!(
-        "{0} is pinned to Ruby {1}",
-        dir.as_ref().cyan(),
-        ruby.cyan()
-    );
+    println!("{0} is pinned to {1}", dir.as_ref().cyan(), ruby.cyan());
     Ok(())
 }
 
