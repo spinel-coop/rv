@@ -113,7 +113,9 @@ impl Ruby {
     }
 
     pub fn gem_home(&self) -> Option<Utf8PathBuf> {
-        if let Some(home) = home_dir() {
+        if let Ok(gem_home) = std::env::var("GEM_HOME") {
+            Some(Utf8PathBuf::from(gem_home))
+        } else if let Some(home) = home_dir() {
             Some(
                 home.join(".gem")
                     .join(self.version.engine.name())
