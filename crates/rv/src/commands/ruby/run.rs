@@ -46,7 +46,7 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
     cwd: Option<&Utf8Path>,
 ) -> Result<Output> {
     let request = match version {
-        None => config.ruby_request()?,
+        None => config.ruby_request(),
         Some(version) => version,
     };
     let install = !no_install;

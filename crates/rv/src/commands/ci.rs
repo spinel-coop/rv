@@ -147,7 +147,7 @@ pub enum Error {
 type Result<T> = std::result::Result<T, Error>;
 
 pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
-    let ruby_request = config.ruby_request()?;
+    let ruby_request = config.ruby_request();
     let extensions_dir = find_exts_dir(config).await?;
     let lockfile_path = find_lockfile_path(args.gemfile)?;
     let lockfile_dir = lockfile_path
