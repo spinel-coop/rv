@@ -1,7 +1,7 @@
 ---
 source: crates/rv/tests/integration_tests/shell/env_test.rs
-assertion_line: 100
-expression: output.normalized_stdout()
+assertion_line: 120
+expression: output.normalized_stdout_with_temp_dir(temp_dir.path().to_string_lossy().to_string())
 ---
 unset RUBYOPT GEM_ROOT
 export RUBY_ROOT=/opt/rubies/ruby-3.3.5
