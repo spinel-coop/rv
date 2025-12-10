@@ -16,8 +16,8 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
-pub fn find(config: &Config, request: &Option<RubyRequest>) -> Result<()> {
-    let request = if let Some(request) = request {
+pub fn find(config: &Config, version: &Option<RubyRequest>) -> Result<()> {
+    let request = if let Some(request) = version {
         Cow::Borrowed(request)
     } else {
         Cow::Owned(config.ruby_request()?)

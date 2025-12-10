@@ -291,21 +291,19 @@ async fn run() -> Result<()> {
 async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
     match command {
         Commands::Ruby(ruby) => match ruby.command {
-            RubyCommand::Find { request } => ruby_find(config, &request)?,
+            RubyCommand::Find { version } => ruby_find(config, &version)?,
             RubyCommand::List {
                 format,
                 installed_only,
             } => ruby_list(config, format, installed_only).await?,
-            RubyCommand::Pin { version_request } => ruby_pin(config, version_request)?,
+            RubyCommand::Pin { version } => ruby_pin(config, version)?,
             RubyCommand::Dir => ruby_dir(config),
             RubyCommand::Install {
                 version,
                 install_dir,
                 tarball_path,
             } => ruby_install(config, install_dir, &version, tarball_path).await?,
-            RubyCommand::Uninstall {
-                version: version_request,
-            } => ruby_uninstall(config, version_request).await?,
+            RubyCommand::Uninstall { version } => ruby_uninstall(config, version).await?,
             #[cfg(unix)]
             RubyCommand::Run {
                 version,
