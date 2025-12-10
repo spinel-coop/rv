@@ -43,7 +43,7 @@ pub enum RubyCommand {
     #[command(about = "Search for a Ruby installation")]
     Find {
         /// Ruby version to find
-        version: Option<RubyRequest>,
+        version: Option<String>,
     },
 
     #[command(about = "Install a Ruby version")]

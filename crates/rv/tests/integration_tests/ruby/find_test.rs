@@ -35,6 +35,17 @@ fn test_ruby_find_no_matching_rubies() {
 }
 
 #[test]
+fn test_ruby_find_invalid_version() {
+    let test = RvTest::new();
+    let find = test.ruby_find(&["3.4.5.6.7"]);
+    find.assert_failure();
+    assert_eq!(
+        find.normalized_stderr(),
+        "Error: FindError(InvalidVersion(TooManySegments(\"3.4.5.6.7\")))\n"
+    );
+}
+
+#[test]
 fn test_ruby_find_matching_request() {
     let test = RvTest::new();
     test.create_ruby_dir("ruby-3.3.5");

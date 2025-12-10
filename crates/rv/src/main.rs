@@ -291,7 +291,7 @@ async fn run() -> Result<()> {
 async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
     match command {
         Commands::Ruby(ruby) => match ruby.command {
-            RubyCommand::Find { version } => ruby_find(config, &version)?,
+            RubyCommand::Find { version } => ruby_find(config, version)?,
             RubyCommand::List {
                 format,
                 installed_only,
