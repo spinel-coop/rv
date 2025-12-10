@@ -15,7 +15,7 @@ impl RvTest {
 fn test_ruby_find_no_rubies() {
     let test = RvTest::new();
     let find = test.ruby_find(&[]);
-    assert!(!find.success());
+    find.assert_failure();
     assert_eq!(
         find.normalized_stderr(),
         "Error: FindError(NoMatchingRuby)\n"
@@ -27,7 +27,7 @@ fn test_ruby_find_no_matching_rubies() {
     let test = RvTest::new();
     test.create_ruby_dir("ruby-3.3.5");
     let find = test.ruby_find(&["3.4.5"]);
-    assert!(!find.success());
+    find.assert_failure();
     assert_eq!(
         find.normalized_stderr(),
         "Error: FindError(NoMatchingRuby)\n"
