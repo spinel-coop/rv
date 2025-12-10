@@ -114,13 +114,24 @@ impl Ruby {
 
     pub fn gem_home(&self) -> Option<Utf8PathBuf> {
         if let Some(home) = home_dir() {
-            Some(
-                home.join(".gem")
-                    .join(self.version.engine.name())
-                    .join(self.version.number())
-                    .to_str()
-                    .map(Utf8PathBuf::from)?,
-            )
+            let legacy_path = home
+                .join(".gem")
+                .join(self.version.engine.name())
+                .join(self.version.number());
+            if legacy_path.exists() {
+                Some(legacy_path.to_str().map(Utf8PathBuf::from)?)
+            } else {
+                Some(
+                    home.join(".local")
+                        .join("share")
+                        .join("rv")
+                        .join("gems")
+                        .join(self.version.engine.name())
+                        .join(self.version.number())
+                        .to_str()
+                        .map(Utf8PathBuf::from)?,
+                )
+            }
         } else {
             None
         }

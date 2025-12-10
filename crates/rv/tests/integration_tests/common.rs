@@ -251,6 +251,14 @@ impl RvOutput {
         output.replace(&full_test_root, "")
     }
 
+    /// Perform the normalization of `.normalized_stdout()` and also replace
+    /// instances of the given temp dir with `/tmp`
+    pub fn normalized_stdout_with_temp_dir(&self, temp_dir_path: String) -> String {
+        assert!(!temp_dir_path.ends_with("/"));
+        let output = self.normalized_stdout();
+        output.replace(&temp_dir_path, "/tmp")
+    }
+
     /// Normalize stderr for cross-platform snapshot testing
     #[allow(dead_code)]
     pub fn normalized_stderr(&self) -> String {
