@@ -1,9 +1,9 @@
 use std::{
     io,
-    path::Path,
     process::{Command, ExitStatus, Output},
 };
 
+use camino::Utf8Path;
 use rv_ruby::request::RubyRequest;
 
 use crate::config::{self, Config};
@@ -40,7 +40,7 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
     no_install: bool,
     args: &[A],
     capture_output: CaptureOutput,
-    cwd: Option<&Path>,
+    cwd: Option<&Utf8Path>,
 ) -> Result<Output> {
     if config.matching_ruby(request).is_none() && !no_install {
         // Not installed, try to install it.
@@ -48,6 +48,17 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
         let install_dir = None;
         crate::commands::ruby::install::install(config, install_dir, request, None).await?
     };
+    run_no_install(config, request, args, capture_output, cwd)
+}
+
+/// Run, without installing the Ruby version if necessary.
+pub(crate) fn run_no_install<A: AsRef<std::ffi::OsStr>>(
+    config: &Config,
+    request: &RubyRequest,
+    args: &[A],
+    capture_output: CaptureOutput,
+    cwd: Option<&Utf8Path>,
+) -> Result<Output> {
     let ruby = config.matching_ruby(request).ok_or(Error::NoMatchingRuby)?;
     let (unset, set) = config::env_for(Some(&ruby))?;
     let mut cmd = Command::new(ruby.executable_path());
