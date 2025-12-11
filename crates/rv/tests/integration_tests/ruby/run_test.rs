@@ -34,7 +34,7 @@ fn test_ruby_run_simple() {
         &["-e", "'puts \"Hello, World\"'"],
     );
 
-    assert!(output.success(), "rv ruby run should succeed");
+    output.assert_success();
     assert!(output.stderr().is_empty());
     assert_eq!(
         output.normalized_stdout(),
@@ -56,7 +56,7 @@ fn test_ruby_run_simple_no_install() {
         &["-e", "'puts \"Hello, World\"'"],
     );
 
-    assert!(output.success(), "rv ruby run should succeed");
+    output.assert_success();
     assert!(output.stderr().is_empty());
     assert_eq!(
         output.normalized_stdout(),
