@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use anstream::println;
 use owo_colors::OwoColorize;
 use rv_ruby::request::RubyRequest;
@@ -18,10 +16,10 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
-pub fn find(config: &Config, version: Option<String>) -> Result<()> {
+pub fn find(config: &Config, version: Option<RubyRequest>) -> Result<()> {
     let request = match version {
         None => config.ruby_request()?,
-        Some(version) => RubyRequest::from_str(&version)?,
+        Some(version) => version,
     };
     if let Some(ruby) = config.matching_ruby(&request) {
         println!("{}", ruby.executable_path().cyan());
