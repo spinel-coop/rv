@@ -1,3 +1,6 @@
+// https://github.com/zkat/miette/issues/458
+#![expect(unused_assignments, reason = "miette macros trigger false positives")]
+
 //! # rv-gem-specification-yaml
 //!
 //! A Rust library for parsing and serializing Ruby gem specification YAML files.
