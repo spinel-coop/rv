@@ -26,6 +26,8 @@ pub enum Error {
     EnvError(#[from] std::env::VarError),
     #[error(transparent)]
     JoinPathsError(#[from] JoinPathsError),
+    #[error("No Ruby version found locally")]
+    MissingRubyRequestError,
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -56,19 +58,11 @@ impl Config {
     }
 
     pub fn current_ruby(&self) -> Option<Ruby> {
-        if let Ok(request) = self.ruby_request() {
-            self.matching_ruby(&request)
-        } else {
-            None
-        }
+      self.ruby_request().ok().and_then(|r| self.matching_ruby(&r))
     }
 
     pub fn ruby_request(&self) -> Result<RubyRequest> {
-        if let Some(request) = &self.requested_ruby {
-            Ok(request.0.clone())
-        } else {
-            Ok(RubyRequest::default())
-        }
+        self.requested_ruby.as_ref().map(|r| r.0.clone()).ok_or(Error::MissingRubyRequestError)
     }
 }
 

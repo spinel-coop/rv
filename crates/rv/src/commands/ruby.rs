@@ -52,12 +52,12 @@ pub enum RubyCommand {
         #[arg(short, long, value_name = "DIR")]
         install_dir: Option<String>,
 
-        /// Ruby version to install
-        version: RubyRequest,
-
         /// Path to a local ruby tarball
         #[arg(long, value_name = "TARBALL_PATH")]
         tarball_path: Option<String>,
+
+        /// Ruby version to install
+        version: Option<RubyRequest>,
     },
 
     #[command(about = "Uninstall a Ruby version")]

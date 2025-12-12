@@ -1,6 +1,5 @@
 use anstream::println;
 use camino::{Utf8Path, Utf8PathBuf};
-use core::panic;
 use current_platform::CURRENT_PLATFORM;
 use futures_util::StreamExt;
 use owo_colors::OwoColorize;
@@ -40,30 +39,29 @@ type Result<T> = miette::Result<T, Error>;
 pub async fn install(
     config: &Config,
     install_dir: Option<String>,
-    requested: RubyRequest,
+    version: Option<RubyRequest>,
     tarball_path: Option<String>,
 ) -> Result<()> {
+    if version.is_none() && config.ruby_request().is_err() {
+        println!("Couldn't find a .ruby-version or .tool-versions");
+        return Ok(())
+    }
+
+    let version = version.or_else(|| config.ruby_request().ok()).unwrap_or_default();
+
     let install_dir = match install_dir {
         Some(dir) => Utf8PathBuf::from(dir),
-        None => match config.ruby_dirs.first() {
-            Some(dir) => dir.clone(),
-            None => panic!("No Ruby directories to install into"),
-        },
+        None => config.ruby_dirs.first().expect("No Ruby directories to install into").clone()
     };
 
     match tarball_path {
         Some(tarball_path) => {
-            extract_local_ruby_tarball(tarball_path, &install_dir, &requested.number()).await?
+            extract_local_ruby_tarball(tarball_path, &install_dir, &version.number()).await?
         }
-        None => download_and_extract_remote_tarball(config, &install_dir, &requested).await?,
+        None => download_and_extract_remote_tarball(config, &install_dir, &version).await?,
     }
 
-    println!(
-        "Installed Ruby version {} to {}",
-        requested.to_string().cyan(),
-        install_dir.cyan()
-    );
-
+    println!("Installed Ruby version {} to {}", version.to_string().cyan(), install_dir.cyan());
     Ok(())
 }
 
