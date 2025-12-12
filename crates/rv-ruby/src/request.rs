@@ -17,6 +17,10 @@ pub struct RubyRequest {
     pub prerelease: Option<String>,
 }
 
+impl AsRef<RubyRequest> for RubyRequest {
+  fn as_ref(&self) -> &RubyRequest { &self }
+}
+
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Source {
     DotToolVersions(Utf8PathBuf),

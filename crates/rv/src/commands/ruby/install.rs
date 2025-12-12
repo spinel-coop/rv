@@ -42,12 +42,9 @@ pub async fn install(
     version: Option<&RubyRequest>,
     tarball_path: Option<String>,
 ) -> Result<()> {
-    if version.is_none() && config.ruby_request().is_err() {
-        println!("Couldn't find a .ruby-version or .tool-versions");
-        return Ok(())
-    }
-
-    let version = version.or_else(|| config.ruby_request().ok()).unwrap_or_default();
+    let version = version.unwrap_or_else(||
+        config.ruby_request().expect("Couldn't find a .ruby-version or .tool-versions").as_ref()
+    );
 
     let install_dir = install_dir.map(|d| Utf8PathBuf::from(d)).unwrap_or_else(||
         config.ruby_dirs.first().expect("No Ruby directories to install into").clone()
