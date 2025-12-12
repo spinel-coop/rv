@@ -9,6 +9,7 @@ use tokio::io::AsyncWriteExt;
 use rv_ruby::request::RubyRequest;
 
 use crate::config::Config;
+use crate::config;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -16,6 +17,8 @@ pub enum Error {
     ReqwestError(#[from] reqwest::Error),
     #[error(transparent)]
     IoError(#[from] std::io::Error),
+    #[error(transparent)]
+    ConfigError(#[from] config::Error),
     #[error(transparent)]
     StripPrefixError(#[from] std::path::StripPrefixError),
     #[error("Major, minor, and patch version is required, but got {0}")]
@@ -42,9 +45,10 @@ pub async fn install(
     version: Option<&RubyRequest>,
     tarball_path: Option<String>,
 ) -> Result<()> {
-    let version = version.unwrap_or_else(||
-        config.ruby_request().expect("Couldn't find a .ruby-version or .tool-versions").as_ref()
-    );
+    let version: RubyRequest = match version {
+        Some(v) => v.clone(),
+        None => config.ruby_request()?
+    };
 
     let install_dir = install_dir.map(|d| Utf8PathBuf::from(d)).unwrap_or_else(||
         config.ruby_dirs.first().expect("No Ruby directories to install into").clone()

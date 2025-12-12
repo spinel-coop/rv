@@ -26,7 +26,7 @@ pub enum Error {
     EnvError(#[from] std::env::VarError),
     #[error(transparent)]
     JoinPathsError(#[from] JoinPathsError),
-    #[error("No Ruby version found locally")]
+    #[error("No Ruby version found in .ruby-version or .tool-versions")]
     MissingRubyRequestError,
 }
 
