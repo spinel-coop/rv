@@ -49,10 +49,9 @@ pub async fn install(
 
     let version = version.or_else(|| config.ruby_request().ok()).unwrap_or_default();
 
-    let install_dir = match install_dir {
-        Some(dir) => Utf8PathBuf::from(dir),
-        None => config.ruby_dirs.first().expect("No Ruby directories to install into").clone()
-    };
+    let install_dir = install_dir.map(|d| Utf8PathBuf::from(d)).unwrap_or_else(||
+        config.ruby_dirs.first().expect("No Ruby directories to install into").clone()
+    );
 
     match tarball_path {
         Some(tarball_path) => {
