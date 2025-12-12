@@ -219,18 +219,6 @@ impl FromStr for RubyRequest {
     }
 }
 
-impl From<String> for RubyRequest {
-    fn from(val: String) -> Self {
-        Self::from_str(&val).expect("Failed to parse string: {val}")
-    }
-}
-
-impl From<&str> for RubyRequest {
-    fn from(val: &str) -> Self {
-        Self::from_str(val).expect("Failed to parse string: {val}")
-    }
-}
-
 impl Display for RubyRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.engine)?;
@@ -490,23 +478,11 @@ mod tests {
     #[test]
     fn test_ruby_request_from_str() {
         let version = "3";
-        let request = RubyRequest::from(version);
+        let request = RubyRequest::from_str(version).unwrap();
         let output = request.to_string();
         assert_eq!(
             output,
             format!("ruby-{}", version.trim()),
-            "Parsed output does not match input for {version}"
-        );
-    }
-
-    #[test]
-    fn test_ruby_request_from_string() {
-        let version = "3".to_string();
-        let request = RubyRequest::from(version.clone());
-        let output = request.to_string();
-        assert_eq!(
-            output,
-            format!("ruby-{}", version),
             "Parsed output does not match input for {version}"
         );
     }

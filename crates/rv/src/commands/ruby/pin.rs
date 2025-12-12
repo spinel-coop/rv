@@ -112,7 +112,7 @@ mod tests {
             ruby_dirs: indexset![ruby_dir],
             gemfile: None,
             current_exe: root.join("bin").join("rv"),
-            requested_ruby: Some(("3.5.0".into(), Source::Other)),
+            requested_ruby: Some(("3.5.0".parse().unwrap(), Source::Other)),
             current_dir,
             cache: rv_cache::Cache::temp().unwrap(),
             root,
@@ -133,7 +133,10 @@ mod tests {
         let mut config = test_config().unwrap();
 
         let ruby_version_file = config.current_dir.join(".ruby-version");
-        config.requested_ruby = Some(("3.2.0".into(), Source::DotRubyVersion(ruby_version_file)));
+        config.requested_ruby = Some((
+            "3.2.0".parse().unwrap(),
+            Source::DotRubyVersion(ruby_version_file),
+        ));
         pin(&config, None).unwrap();
     }
 
@@ -143,7 +146,10 @@ mod tests {
 
         pin(&config, None).unwrap();
         let version_file = config.current_dir.join(".tool-versions");
-        config.requested_ruby = Some(("3.2.0".into(), Source::DotToolVersions(version_file)));
+        config.requested_ruby = Some((
+            "3.2.0".parse().unwrap(),
+            Source::DotToolVersions(version_file),
+        ));
         pin(&config, None).unwrap();
     }
 
@@ -200,7 +206,7 @@ mod tests {
         let mut config = test_config().unwrap();
         let version_file = config.current_dir.join(".tool-versions");
         config.requested_ruby = Some((
-            "3.2.0".into(),
+            "3.2.0".parse().unwrap(),
             Source::DotToolVersions(version_file.clone()),
         ));
 
