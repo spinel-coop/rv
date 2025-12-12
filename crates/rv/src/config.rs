@@ -58,11 +58,16 @@ impl Config {
     }
 
     pub fn current_ruby(&self) -> Option<Ruby> {
-      self.ruby_request().ok().and_then(|r| self.matching_ruby(&r))
+        self.ruby_request()
+            .ok()
+            .and_then(|r| self.matching_ruby(&r))
     }
 
     pub fn ruby_request(&self) -> Result<RubyRequest> {
-        self.requested_ruby.as_ref().map(|r| r.0.clone()).ok_or(Error::MissingRubyRequestError)
+        self.requested_ruby
+            .as_ref()
+            .map(|r| r.0.clone())
+            .ok_or(Error::MissingRubyRequestError)
     }
 }
 

@@ -18,7 +18,9 @@ pub struct RubyRequest {
 }
 
 impl AsRef<RubyRequest> for RubyRequest {
-  fn as_ref(&self) -> &RubyRequest { &self }
+    fn as_ref(&self) -> &RubyRequest {
+        &self
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]

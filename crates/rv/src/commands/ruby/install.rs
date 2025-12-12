@@ -8,8 +8,8 @@ use tokio::io::AsyncWriteExt;
 
 use rv_ruby::request::RubyRequest;
 
-use crate::config::Config;
 use crate::config;
+use crate::config::Config;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -47,12 +47,18 @@ pub async fn install(
 ) -> Result<()> {
     let version: RubyRequest = match version {
         Some(v) => v.clone(),
-        None => config.ruby_request()?
+        None => config.ruby_request()?,
     };
 
-    let install_dir = install_dir.map(|d| Utf8PathBuf::from(d)).unwrap_or_else(||
-        config.ruby_dirs.first().expect("No Ruby directories to install into").clone()
-    );
+    let install_dir = install_dir
+        .map(|d| Utf8PathBuf::from(d))
+        .unwrap_or_else(|| {
+            config
+                .ruby_dirs
+                .first()
+                .expect("No Ruby directories to install into")
+                .clone()
+        });
 
     match tarball_path {
         Some(tarball_path) => {
@@ -61,7 +67,11 @@ pub async fn install(
         None => download_and_extract_remote_tarball(config, &install_dir, &version).await?,
     }
 
-    println!("Installed Ruby version {} to {}", version.to_string().cyan(), install_dir.cyan());
+    println!(
+        "Installed Ruby version {} to {}",
+        version.to_string().cyan(),
+        install_dir.cyan()
+    );
     Ok(())
 }
 
