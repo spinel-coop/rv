@@ -30,25 +30,33 @@ pub(crate) enum CaptureOutput {
     Both,
 }
 
-/// Shell out to the given ruby, run it with the given arguments.
+/// Shell out to the given ruby `version`, run it with the given arguments.
+/// If given `version` is `None`, shell out to whatever version is pinned in a version
+/// file, or to the default ruby version if no ruby version is found in version files.
 /// By default, if the ruby isn't installed, install it (disabled via `no_install`).
 /// The ruby's output may be captured, depending on `capture_output`. If you pass
 /// `CaptureOutput::No`, this returns an empty `Output` struct.
 pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
     config: &Config,
-    request: &RubyRequest,
+    version: Option<RubyRequest>,
     no_install: bool,
     args: &[A],
     capture_output: CaptureOutput,
     cwd: Option<&Path>,
 ) -> Result<Output> {
-    if config.matching_ruby(request).is_none() && !no_install {
+    let request = match version {
+        None => config.ruby_request()?,
+        Some(version) => version,
+    };
+    if config.matching_ruby(&request).is_none() && !no_install {
         // Not installed, try to install it.
         // None means it'll install in whatever default ruby location it chooses.
         let install_dir = None;
-        crate::commands::ruby::install::install(config, install_dir, request, None).await?
+        crate::commands::ruby::install::install(config, install_dir, &request, None).await?
     };
-    let ruby = config.matching_ruby(request).ok_or(Error::NoMatchingRuby)?;
+    let ruby = config
+        .matching_ruby(&request)
+        .ok_or(Error::NoMatchingRuby)?;
     let (unset, set) = config::env_for(Some(&ruby))?;
     let mut cmd = Command::new(ruby.executable_path());
     cmd.args(args);

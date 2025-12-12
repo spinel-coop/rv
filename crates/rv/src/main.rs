@@ -311,7 +311,7 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
                 args,
             } => ruby_run(
                 config,
-                &version,
+                version,
                 no_install,
                 &args,
                 Default::default(),
