@@ -26,3 +26,6 @@ name = "parse_gem_spec"
 [[bench]]
 name = "bench_parser"
 harness = false
+
+[lints]
+workspace = true

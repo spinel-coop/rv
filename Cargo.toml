@@ -84,7 +84,6 @@ lto = true
 debug = true
 
 [workspace.lints.clippy]
-assertions_on_result_states = "warn"
 dbg_macro = "warn"
 redundant_clone = "warn"
 result_large_err = "allow"
