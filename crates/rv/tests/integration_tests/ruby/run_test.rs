@@ -1,22 +1,21 @@
-use std::str::FromStr;
-
 use crate::common::{RvOutput, RvTest};
-use rv_ruby::request::RubyRequest;
-
 #[derive(Debug, Default)]
 pub struct RunOptions {
     pub set_no_install: bool,
 }
 
 impl RvTest {
-    pub fn ruby_run(&self, version: RubyRequest, options: RunOptions, args: &[&str]) -> RvOutput {
+    pub fn ruby_run(&self, version: Option<&str>, options: RunOptions, args: &[&str]) -> RvOutput {
         let RunOptions { set_no_install } = options;
         let mut cmd = self.rv_command();
         cmd.args(["ruby", "run"]);
         if set_no_install {
             cmd.arg("--no-install");
         }
-        cmd.args([&version.to_string(), "--"]);
+        if let Some(version) = version {
+            cmd.arg(version);
+        }
+        cmd.arg("--");
         cmd.args(args);
 
         let output = cmd.output().expect("Failed to execute rv run");
@@ -29,7 +28,7 @@ fn test_ruby_run_simple() {
     let test = RvTest::new();
     test.create_ruby_dir("ruby-3.3.5");
     let output = test.ruby_run(
-        RubyRequest::from_str("3.3.5").expect("this is a valid Ruby version"),
+        Some("3.3.5"),
         Default::default(),
         &["-e", "'puts \"Hello, World\"'"],
     );
@@ -49,7 +48,7 @@ fn test_ruby_run_simple_no_install() {
 
     // This should pass because we already installed 3.3.5
     let output = test.ruby_run(
-        RubyRequest::from_str("3.3.5").expect("this is a valid Ruby version"),
+        Some("3.3.5"),
         RunOptions {
             set_no_install: true,
         },
