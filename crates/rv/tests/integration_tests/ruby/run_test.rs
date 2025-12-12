@@ -62,3 +62,19 @@ fn test_ruby_run_simple_no_install() {
         "ruby\n3.3.5\naarch64-darwin23\naarch64\ndarwin23\n\n"
     );
 }
+
+#[test]
+fn test_ruby_run_invalid_version() {
+    let test = RvTest::new();
+    let output = test.ruby_run(
+        Some("3.4.5.6.7"),
+        Default::default(),
+        &["-e", "'puts \"Hello, World\"'"],
+    );
+
+    output.assert_failure();
+    assert_eq!(
+        output.normalized_stderr(),
+        "error: invalid value '3.4.5.6.7' for '<VERSION>': Could not parse version 3.4.5.6.7, no more than 4 numbers are allowed\n\nFor more information, try '--help'.\n",
+    );
+}
