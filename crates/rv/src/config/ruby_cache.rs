@@ -285,6 +285,6 @@ mod tests {
 
         // Should return cache miss for uncached Ruby
         let result = config.get_cached_ruby(&ruby_path);
-        assert!(result.is_err());
+        result.unwrap_err();
     }
 }
