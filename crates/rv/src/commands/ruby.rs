@@ -76,7 +76,7 @@ pub enum RubyCommand {
         no_install: bool,
 
         /// Ruby version to run
-        version: RubyRequest,
+        version: Option<RubyRequest>,
 
         /// Arguments passed to the `ruby` invocation
         #[arg(last = true, allow_hyphen_values = true)]
