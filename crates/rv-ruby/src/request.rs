@@ -19,7 +19,7 @@ pub struct RubyRequest {
 
 impl AsRef<RubyRequest> for RubyRequest {
     fn as_ref(&self) -> &RubyRequest {
-        &self
+        self
     }
 }
 
