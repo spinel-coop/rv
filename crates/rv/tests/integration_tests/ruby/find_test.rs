@@ -41,7 +41,7 @@ fn test_ruby_find_invalid_version() {
     find.assert_failure();
     assert_eq!(
         find.normalized_stderr(),
-        "Error: FindError(InvalidVersion(TooManySegments(\"3.4.5.6.7\")))\n"
+        "error: invalid value '3.4.5.6.7' for '[VERSION]': Could not parse version 3.4.5.6.7, no more than 4 numbers are allowed\n\nFor more information, try '--help'.\n",
     );
 }
 
