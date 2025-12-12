@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::{Requirement, Version};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -135,27 +137,43 @@ impl std::fmt::Display for Dependency {
     }
 }
 
-impl From<&str> for Dependency {
-    fn from(name: &str) -> Self {
-        Self::new(name.to_string(), vec![], None).unwrap()
+impl TryFrom<&str> for Dependency {
+    type Error = DependencyError;
+
+    fn try_from(name: &str) -> Result<Self, Self::Error> {
+        name.parse()
     }
 }
 
-impl From<String> for Dependency {
-    fn from(name: String) -> Self {
-        Self::new(name, vec![], None).unwrap()
+impl TryFrom<String> for Dependency {
+    type Error = DependencyError;
+
+    fn try_from(name: String) -> Result<Self, Self::Error> {
+        Self::new(name, vec![], None)
     }
 }
 
-impl From<(String, Vec<String>)> for Dependency {
-    fn from((name, requirements): (String, Vec<String>)) -> Self {
-        Self::new(name, requirements, None).unwrap()
+impl TryFrom<(String, Vec<String>)> for Dependency {
+    type Error = DependencyError;
+    fn try_from((name, requirements): (String, Vec<String>)) -> Result<Self, Self::Error> {
+        Self::new(name, requirements, None)
     }
 }
 
-impl From<(String, Vec<String>, DependencyType)> for Dependency {
-    fn from((name, requirements, dep_type): (String, Vec<String>, DependencyType)) -> Self {
-        Self::new(name, requirements, Some(dep_type)).unwrap()
+impl TryFrom<(String, Vec<String>, DependencyType)> for Dependency {
+    type Error = DependencyError;
+    fn try_from(
+        (name, requirements, dep_type): (String, Vec<String>, DependencyType),
+    ) -> Result<Self, Self::Error> {
+        Self::new(name, requirements, Some(dep_type))
+    }
+}
+
+impl FromStr for Dependency {
+    type Err = DependencyError;
+
+    fn from_str(name: &str) -> Result<Self, Self::Err> {
+        Self::new(name.to_owned(), vec![], None)
     }
 }
 
@@ -271,12 +289,14 @@ mod tests {
 
     #[test]
     fn test_dependency_from_conversions() {
-        let dep: Dependency = "test".into();
+        let dep: Dependency = "test".parse().unwrap();
         assert_eq!(dep.name, "test");
         assert!(dep.is_runtime());
         assert!(dep.is_latest_version());
 
-        let dep: Dependency = ("test".to_string(), vec![">= 1.0".to_string()]).into();
+        let dep: Dependency = ("test".to_string(), vec![">= 1.0".to_string()])
+            .try_into()
+            .unwrap();
         assert_eq!(dep.name, "test");
         assert!(dep.is_specific());
 
@@ -285,7 +305,8 @@ mod tests {
             vec![">= 1.0".to_string()],
             DependencyType::Development,
         )
-            .into();
+            .try_into()
+            .unwrap();
         assert_eq!(dep.name, "test");
         assert!(dep.is_development());
     }
