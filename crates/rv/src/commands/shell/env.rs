@@ -9,6 +9,8 @@ pub enum Error {
     ConfigError(#[from] config::Error),
     #[error("No Ruby installations found in configuration.")]
     NoRubyFound,
+    #[error("Could not serialize JSON: {0}")]
+    Serde(#[from] serde_json::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -43,7 +45,7 @@ pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
             // Emit JSON which will be run by `load-env`.
             // See <https://www.nushell.sh/commands/docs/load-env.html>
             let env_json = nu_env(unset, set);
-            let serialized = serde_json::to_string(&env_json).expect("serializing JSON");
+            let serialized = serde_json::to_string(&env_json)?;
             println!("{}", serialized);
             Ok(())
         }

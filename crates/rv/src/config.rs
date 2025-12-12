@@ -128,7 +128,7 @@ pub fn find_requested_ruby(
     root: Utf8PathBuf,
 ) -> Result<Option<(RubyRequest, Source)>> {
     debug!("Searching for project directory in {}", current_dir);
-    let mut project_dir = current_dir.clone();
+    let mut project_dir = current_dir;
 
     loop {
         let ruby_version = project_dir.join(".ruby-version");

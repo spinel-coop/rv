@@ -269,6 +269,6 @@ impl RvOutput {
             output = output.replace('\\', "/");
         }
 
-        output.to_string()
+        output
     }
 }
