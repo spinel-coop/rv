@@ -3,8 +3,11 @@ pub mod request;
 pub mod version;
 
 use camino::Utf8PathBuf;
+use once_cell::sync::Lazy;
+use regex::Regex;
 use rv_cache::{CacheKey, CacheKeyHasher};
 use serde::{Deserialize, Serialize};
+use std::env::consts::{ARCH, OS};
 use std::env::{self, home_dir};
 use std::process::{Command, ExitStatus};
 use std::str::FromStr;
@@ -12,6 +15,10 @@ use tracing::instrument;
 
 use crate::request::RubyRequest;
 use crate::version::RubyVersion;
+
+static RUBY_DESCRIPTION_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"ruby (?<version>[^ ]+) \((?<date>\d\d\d\d-\d\d-\d\d) (?<source>\S+) (?<revision>[0-9a-f]+)\) (?<prism>\+PRISM )?\[(?<arch>\w+)-(?<os>\w+)\]").unwrap()
+});
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Release {
@@ -107,13 +114,24 @@ impl Ruby {
 
     pub fn gem_home(&self) -> Option<Utf8PathBuf> {
         if let Some(home) = home_dir() {
-            Some(
-                home.join(".gem")
-                    .join(self.version.engine.name())
-                    .join(self.version.number())
-                    .to_str()
-                    .map(Utf8PathBuf::from)?,
-            )
+            let legacy_path = home
+                .join(".gem")
+                .join(self.version.engine.name())
+                .join(self.version.number());
+            if legacy_path.exists() {
+                Some(legacy_path.to_str().map(Utf8PathBuf::from)?)
+            } else {
+                Some(
+                    home.join(".local")
+                        .join("share")
+                        .join("rv")
+                        .join("gems")
+                        .join(self.version.engine.name())
+                        .join(self.version.number())
+                        .to_str()
+                        .map(Utf8PathBuf::from)?,
+                )
+            }
         } else {
             None
         }
@@ -165,27 +183,25 @@ pub enum RubyError {
 /// Extract all Ruby information from the executable in a single call
 #[instrument(skip_all)]
 fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
-    // First try the full script with all features (works for most Ruby implementations)
+    if ruby_bin.as_str().ends_with("0.49/bin/ruby") {
+        return ruby_049_version();
+    }
+
+    // try the full script with all features (works for most Ruby implementations)
     let full_script = r#"
         puts(Object.const_defined?(:RUBY_ENGINE) ? RUBY_ENGINE : 'ruby')
         puts(RUBY_VERSION)
         puts(Object.const_defined?(:RUBY_PLATFORM) ? RUBY_PLATFORM : 'unknown')
         puts(Object.const_defined?(:RbConfig) && RbConfig::CONFIG['host_cpu'] ? RbConfig::CONFIG['host_cpu'] : 'unknown')
         puts(Object.const_defined?(:RbConfig) && RbConfig::CONFIG['host_os'] ? RbConfig::CONFIG['host_os'] : 'unknown')
-        puts(begin; require 'rubygems'; puts Gem.default_dir; rescue ScriptError, NoMethodError; end)
+        puts(begin; require 'rubygems'; Gem.default_dir; rescue ScriptError, NoMethodError; end)
+        puts(Object.const_defined?(:RUBY_DESCRIPTION) ? RUBY_DESCRIPTION : '')
     "#;
 
     let output = Command::new(ruby_bin)
         .args(["-e", full_script])
         .output()
         .map_err(|_| RubyError::NoRubyExecutable)?;
-
-    if !output.status.success() {
-        return Err(RubyError::RubyFailed(
-            output.status,
-            String::from_utf8_lossy(&output.stderr).to_string(),
-        ));
-    }
 
     let info = String::from_utf8(output.stdout).unwrap();
     let mut lines = info.trim().lines();
@@ -196,6 +212,8 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
     let host_cpu = lines.next().unwrap_or("unknown");
     let host_os = lines.next().unwrap_or("unknown");
     let gem_root = lines.next().unwrap_or_default();
+    let description = lines.next().unwrap_or_default();
+    let ruby_description = parse_description(description);
 
     let host_cpu = if host_cpu != "unknown" {
         host_cpu.to_string()
@@ -211,7 +229,13 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
     // Normalize architecture and OS names to match common conventions
     let arch = normalize_arch(&host_cpu);
     let os = normalize_os(&host_os);
-    let version = format!("{ruby_engine}-{ruby_version}").parse()?;
+
+    let version: RubyVersion = if let Some(d) = ruby_description {
+        let desc_version = &d["version"];
+        format!("{ruby_engine}-{desc_version}").parse()?
+    } else {
+        format!("{ruby_engine}-{ruby_version}").parse()?
+    };
     let gem_root = if gem_root.is_empty() {
         None
     } else {
@@ -292,6 +316,28 @@ fn find_symlink_target(path: &Utf8PathBuf) -> Option<Utf8PathBuf> {
     }
 }
 
+fn ruby_049_version() -> Result<Ruby, RubyError> {
+    let version = "0.49".parse()?;
+    let arch = normalize_arch(ARCH);
+    let os = normalize_os(OS);
+    let key = format!("{version}-{os}-{arch}");
+
+    Ok(Ruby {
+        key,
+        version,
+        arch,
+        os,
+        gem_root: None,
+        // path and symlink are replaced in the caller
+        path: Default::default(),
+        symlink: Default::default(),
+    })
+}
+
+fn parse_description(description: &str) -> Option<regex::Captures<'_>> {
+    RUBY_DESCRIPTION_REGEX.captures(description)
+}
+
 /// Trait for environment variable access (allows mocking in tests)
 pub trait EnvProvider {
     fn get_var(&self, key: &str) -> Option<String>;
@@ -308,6 +354,7 @@ impl EnvProvider for SystemEnv {
 
 #[cfg(test)]
 mod tests {
+
     use std::str::FromStr;
 
     use super::*;
@@ -353,5 +400,92 @@ mod tests {
         // Test implementation priority: ruby comes before jruby
         assert!(ruby1 < jruby);
         assert!(ruby2 < jruby);
+    }
+
+    #[test]
+    fn test_extract_ruby_info() {
+        let ruby_path = Utf8PathBuf::from("/root/.local/share/rv/rubies/ruby-0.49/bin/ruby");
+        let ruby = extract_ruby_info(&ruby_path).unwrap();
+        assert_eq!(ruby.version.major, Some(0));
+        assert_eq!(ruby.version.minor, Some(49));
+        assert_eq!(ruby.version.patch, None);
+        assert_eq!(ruby.arch, ARCH);
+    }
+
+    #[test]
+    fn test_parse_description() {
+        let info =
+            parse_description("ruby 3.1.6p260 (2024-05-29 revision a777087be6) [arm64-darwin24]")
+                .unwrap();
+        assert_eq!(&info["version"], "3.1.6p260");
+        assert_eq!(&info["date"], "2024-05-29");
+        assert_eq!(&info["source"], "revision");
+        assert_eq!(&info["revision"], "a777087be6");
+        assert_eq!(&info["arch"], "arm64");
+        assert_eq!(&info["os"], "darwin24");
+
+        let info =
+            parse_description("ruby 3.2.9 (2025-07-24 revision 8f611e0c46) [arm64-darwin23]")
+                .unwrap();
+        assert_eq!(&info["version"], "3.2.9");
+        assert_eq!(&info["date"], "2025-07-24");
+        assert_eq!(&info["source"], "revision");
+        assert_eq!(&info["revision"], "8f611e0c46");
+        assert_eq!(&info["arch"], "arm64");
+        assert_eq!(&info["os"], "darwin23");
+
+        let info =
+            parse_description("ruby 3.3.9 (2025-07-24 revision f5c772fc7c) [arm64-darwin23]")
+                .unwrap();
+        assert_eq!(&info["version"], "3.3.9");
+        assert_eq!(&info["date"], "2025-07-24");
+        assert_eq!(&info["source"], "revision");
+        assert_eq!(&info["revision"], "f5c772fc7c");
+        assert_eq!(&info["arch"], "arm64");
+        assert_eq!(&info["os"], "darwin23");
+
+        let info = parse_description(
+            "ruby 3.4.0rc1 (2024-12-12 master 29caae9991) +PRISM [arm64-darwin25]",
+        )
+        .unwrap();
+        assert_eq!(&info["version"], "3.4.0rc1");
+        assert_eq!(&info["date"], "2024-12-12");
+        assert_eq!(&info["source"], "master");
+        assert_eq!(&info["revision"], "29caae9991");
+        assert_eq!(&info["arch"], "arm64");
+        assert_eq!(&info["os"], "darwin25");
+
+        let info = parse_description(
+            "ruby 3.4.7 (2025-10-08 revision 7a5688e2a2) +PRISM [arm64-darwin25]",
+        )
+        .unwrap();
+        assert_eq!(&info["version"], "3.4.7");
+        assert_eq!(&info["date"], "2025-10-08");
+        assert_eq!(&info["source"], "revision");
+        assert_eq!(&info["revision"], "7a5688e2a2");
+        assert_eq!(&info["arch"], "arm64");
+        assert_eq!(&info["os"], "darwin25");
+
+        let info = parse_description(
+            "ruby 3.5.0preview1 (2025-04-18 master d06ec25be4) +PRISM [arm64-darwin23]",
+        )
+        .unwrap();
+        assert_eq!(&info["version"], "3.5.0preview1");
+        assert_eq!(&info["date"], "2025-04-18");
+        assert_eq!(&info["source"], "master");
+        assert_eq!(&info["revision"], "d06ec25be4");
+        assert_eq!(&info["arch"], "arm64");
+        assert_eq!(&info["os"], "darwin23");
+
+        let info = parse_description(
+            "ruby 4.0.0preview2 (2025-11-17 master 4fa6e9938c) +PRISM [arm64-darwin23]",
+        )
+        .unwrap();
+        assert_eq!(&info["version"], "4.0.0preview2");
+        assert_eq!(&info["date"], "2025-11-17");
+        assert_eq!(&info["source"], "master");
+        assert_eq!(&info["revision"], "4fa6e9938c");
+        assert_eq!(&info["arch"], "arm64");
+        assert_eq!(&info["os"], "darwin23");
     }
 }

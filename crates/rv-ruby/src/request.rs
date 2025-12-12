@@ -150,6 +150,8 @@ impl FromStr for RubyRequest {
                 }
             } else if let Some(pos) = version.find('-') {
                 (Some(&version[..pos]), Some(&version[pos + 1..]))
+            } else if let Some(pos) = version.find(char::is_alphabetic) {
+                (Some(&version[..pos]), Some(&version[pos..]))
             } else {
                 (Some(version), None)
             };
@@ -308,6 +310,7 @@ mod tests {
     #[test]
     fn test_parsing_supported_ruby_versions() {
         let versions = [
+            "ruby-0.49",
             "ruby-3.2-dev",
             "ruby-3.2.0",
             "ruby-3.2.0-preview1",
@@ -350,6 +353,8 @@ mod tests {
             "ruby-3.4.5",
             "ruby-3.5-dev",
             "ruby-3.5.0-preview1",
+            "ruby-4.0.0-preview2",
+            "ruby-dev",
             "artichoke-dev",
             "jruby-9.4.0.0",
             "jruby-9.4.1.0",
@@ -372,7 +377,6 @@ mod tests {
             "mruby-3.4.0",
             "mruby-dev",
             "picoruby-3.0.0",
-            "ruby-dev",
             "truffleruby-24.1.0",
             "truffleruby-24.1.1",
             "truffleruby-24.1.2",
@@ -418,6 +422,18 @@ mod tests {
                 "Parsed output does not match input for {version}"
             );
         }
+    }
+
+    #[test]
+    fn test_parsing_ruby_description_versions() {
+        // in the RUBY_DESCRIPTION constant, printed for `ruby --version`, the version number for some reason
+        // does not include a dash before the prerelease version number.
+        let request = RubyRequest::from_str("ruby-4.0.0preview2").unwrap();
+        assert_eq!(request.to_string(), "ruby-4.0.0-preview2");
+        let request = RubyRequest::from_str("ruby-3.5.0preview1").unwrap();
+        assert_eq!(request.to_string(), "ruby-3.5.0-preview1");
+        let request = RubyRequest::from_str("ruby-3.4.0rc1").unwrap();
+        assert_eq!(request.to_string(), "ruby-3.4.0-rc1");
     }
 
     #[test]

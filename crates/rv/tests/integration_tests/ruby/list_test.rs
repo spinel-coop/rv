@@ -148,3 +148,12 @@ fn test_ruby_list_with_no_installed_rubies_is_empty() {
     // and the API is disabled.
     assert_eq!(output.normalized_stdout(), "");
 }
+
+#[test]
+fn test_ruby_list_without_updating_versions() {
+    let mut test = RvTest::new();
+    test.env.insert("RV_LIST_URL".into(), "-".into());
+    let output = test.rv(&["ruby", "list"]);
+    output.assert_success();
+    assert_eq!(output.normalized_stdout(), "");
+}

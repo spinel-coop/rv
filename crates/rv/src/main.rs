@@ -16,7 +16,8 @@ pub mod commands;
 pub mod config;
 
 use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir, cache_prune};
-use crate::commands::ci::{CiArgs, ci};
+#[cfg(unix)]
+use crate::commands::ci::{CleanInstallArgs, ci};
 use crate::commands::ruby::dir::dir as ruby_dir;
 use crate::commands::ruby::find::find as ruby_find;
 use crate::commands::ruby::install::install as ruby_install;
@@ -129,8 +130,13 @@ enum Commands {
     Cache(CacheCommandArgs),
     #[command(about = "Configure your shell to use rv")]
     Shell(ShellArgs),
-    #[command(about = "Clean install from a Gemfile.lock")]
-    Ci(CiArgs),
+    #[cfg(unix)]
+    #[command(
+        about = "Clean install from a Gemfile.lock",
+        visible_alias = "ci",
+        hide = true
+    )]
+    CleanInstall(CleanInstallArgs),
 }
 
 #[derive(Debug, Copy, Clone, clap::ValueEnum)]
@@ -193,6 +199,7 @@ pub enum Error {
     InstallError(#[from] commands::ruby::install::Error),
     #[error(transparent)]
     UninstallError(#[from] commands::ruby::uninstall::Error),
+    #[cfg(unix)]
     #[error(transparent)]
     CiError(#[from] commands::ci::Error),
     #[cfg(unix)]
@@ -272,48 +279,60 @@ async fn run() -> Result<()> {
     }
 
     let config = cli.config()?;
+    let Some(cmd) = cli.command else {
+        return Ok(());
+    };
+    run_cmd(&config, cmd).await
+}
 
-    match cli.command {
-        None => {}
-        Some(cmd) => match cmd {
-            Commands::Ruby(ruby) => match ruby.command {
-                RubyCommand::Find { request } => ruby_find(&config, &request)?,
-                RubyCommand::List {
-                    format,
-                    installed_only,
-                } => ruby_list(&config, format, installed_only).await?,
-                RubyCommand::Pin { version_request } => ruby_pin(&config, version_request)?,
-                RubyCommand::Dir => ruby_dir(&config),
-                RubyCommand::Install {
-                    version,
-                    install_dir,
-                    tarball_path,
-                } => ruby_install(&config, install_dir, version, tarball_path).await?,
-                RubyCommand::Uninstall {
-                    version: version_request,
-                } => ruby_uninstall(&config, version_request).await?,
-                #[cfg(unix)]
-                RubyCommand::Run {
-                    version,
-                    no_install,
-                    args,
-                } => ruby_run(&config, &version, no_install, &args).await?,
-            },
-            Commands::Ci(ci_args) => ci(&config, ci_args).await?,
-            Commands::Cache(cache) => match cache.command {
-                CacheCommand::Dir => cache_dir(&config)?,
-                CacheCommand::Clean => cache_clean(&config)?,
-                CacheCommand::Prune => cache_prune(&config)?,
-            },
-            Commands::Shell(shell) => match shell.command {
-                ShellCommand::Init { shell } => shell_init(&config, shell)?,
-                ShellCommand::Completions { shell } => {
-                    shell_completions(&mut Cli::command(), shell)
-                }
-                ShellCommand::Env { shell } => shell_env(&config, shell)?,
-            },
+/// Run an `rv` subcommand.
+/// This is like shelling out to `rv` except it reuses the current context
+/// and doesn't need to start a new process.
+async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
+    match command {
+        Commands::Ruby(ruby) => match ruby.command {
+            RubyCommand::Find { version } => ruby_find(config, version)?,
+            RubyCommand::List {
+                format,
+                installed_only,
+            } => ruby_list(config, format, installed_only).await?,
+            RubyCommand::Pin { version } => ruby_pin(config, version)?,
+            RubyCommand::Dir => ruby_dir(config),
+            RubyCommand::Install {
+                version,
+                install_dir,
+                tarball_path,
+            } => ruby_install(config, install_dir, &version, tarball_path).await?,
+            RubyCommand::Uninstall { version } => ruby_uninstall(config, version).await?,
+            #[cfg(unix)]
+            RubyCommand::Run {
+                version,
+                no_install,
+                args,
+            } => ruby_run(
+                config,
+                &version,
+                no_install,
+                &args,
+                Default::default(),
+                Default::default(),
+            )
+            .await
+            .map(|_| ())?,
         },
-    }
+        #[cfg(unix)]
+        Commands::CleanInstall(ci_args) => ci(config, ci_args).await?,
+        Commands::Cache(cache) => match cache.command {
+            CacheCommand::Dir => cache_dir(config)?,
+            CacheCommand::Clean => cache_clean(config)?,
+            CacheCommand::Prune => cache_prune(config)?,
+        },
+        Commands::Shell(shell) => match shell.command {
+            ShellCommand::Init { shell } => shell_init(config, shell)?,
+            ShellCommand::Completions { shell } => shell_completions(&mut Cli::command(), shell),
+            ShellCommand::Env { shell } => shell_env(config, shell)?,
+        },
+    };
 
     Ok(())
 }

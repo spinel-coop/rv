@@ -1,9 +1,12 @@
 #!/bin/bash
 set -euo pipefail
-set -x
-
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}"/ )/.." && pwd )"
-pushd "$DIR"
-cargo build --release -q --bin rv
-popd
+
+echo "+ cargo build --release -q --bin rv"
+(
+    cd "$DIR"
+    cargo build --release -q --bin rv
+)
+
+set -x
 exec "$DIR"/target/release/rv "$@"

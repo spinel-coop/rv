@@ -1,10 +1,12 @@
 use bytes::Bytes;
 use camino::Utf8Path;
 use camino::Utf8PathBuf;
+use current_platform::CURRENT_PLATFORM;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
 use owo_colors::OwoColorize;
+use rayon::ThreadPoolBuildError;
 use reqwest::Client;
 use rv_gem_types::Specification as GemSpecification;
 use rv_lockfile::datatypes::ChecksumAlgorithm;
@@ -19,6 +21,7 @@ use tracing::debug;
 use tracing::info;
 use url::Url;
 
+use crate::commands::ruby::run::CaptureOutput;
 use crate::config::Config;
 use std::collections::HashMap;
 use std::env::current_dir;
@@ -30,13 +33,20 @@ use std::ops::Not;
 use std::path::PathBuf;
 use std::process::Stdio;
 
-const FS_CONCURRENCY_LIMIT: usize = 20;
+const ARM_STRINGS: [&str; 3] = ["arm64", "arm", "aarch64"];
+const X86_STRINGS: [&str; 4] = ["x86", "i686", "win32", "win64"];
 
 #[derive(Debug, clap_derive::Args)]
-pub struct CiArgs {
+pub struct CleanInstallArgs {
     /// Maximum number of downloads that can be in flight at once.
     #[arg(short, long, default_value = "10")]
     pub max_concurrent_requests: usize,
+
+    /// Maximum number of gem installations that can be in flight at once.
+    /// This reduces concurrently-open files on your filesystem,
+    /// and concurrent disk operations.
+    #[arg(long, default_value = "20")]
+    pub max_concurrent_installs: usize,
 
     /// Validate the checksums from the gem server and gem itself.
     #[arg(long, default_value = "true")]
@@ -46,6 +56,7 @@ pub struct CiArgs {
 #[derive(Debug)]
 struct CiInnerArgs {
     pub max_concurrent_requests: usize,
+    pub max_concurrent_installs: usize,
     pub validate_checksums: bool,
     pub lockfile_path: Utf8PathBuf,
     pub install_path: Utf8PathBuf,
@@ -53,6 +64,10 @@ struct CiInnerArgs {
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
+    #[error(transparent)]
+    Config(#[from] crate::config::Error),
+    #[error(transparent)]
+    Run(#[from] crate::commands::ruby::run::Error),
     #[error(transparent)]
     Parse(#[from] rv_lockfile::ParseErrors),
     #[error(transparent)]
@@ -94,11 +109,12 @@ pub enum Error {
 
 type Result<T> = std::result::Result<T, Error>;
 
-pub async fn ci(config: &Config, args: CiArgs) -> Result<()> {
+pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     let lockfile_path = find_lockfile_path(config)?;
-    let install_path = find_install_path(&lockfile_path)?;
+    let install_path = find_install_path(config, &lockfile_path).await?;
     let inner_args = CiInnerArgs {
         max_concurrent_requests: args.max_concurrent_requests,
+        max_concurrent_installs: args.max_concurrent_installs,
         validate_checksums: args.validate_checksums,
         lockfile_path,
         install_path,
@@ -129,17 +145,26 @@ fn find_lockfile_path(config: &Config) -> Result<Utf8PathBuf> {
     Ok(lockfile_path)
 }
 
-fn find_install_path(lockfile_path: &Utf8PathBuf) -> Result<Utf8PathBuf> {
+/// Which path should `ci` install gems under?
+/// Uses Bundler's `bundle_path`.
+async fn find_install_path(config: &Config, lockfile_path: &Utf8PathBuf) -> Result<Utf8PathBuf> {
     let env_path = std::env::var("BUNDLE_PATH");
     if let Ok(bundle_path) = env_path {
         return Ok(Utf8PathBuf::from(&bundle_path));
     }
     let lockfile_dir = lockfile_path.parent().unwrap();
-    let bundle_path = std::process::Command::new("ruby")
-        .current_dir(lockfile_dir)
-        .args(["-rbundler", "-e", "puts Bundler.bundle_path"])
-        .output()?
-        .stdout;
+    let args = ["-rbundler", "-e", "puts Bundler.bundle_path"];
+    let bundle_path = crate::commands::ruby::run::run(
+        config,
+        &config.ruby_request()?,
+        Default::default(),
+        args.as_slice(),
+        CaptureOutput::Both,
+        Some(lockfile_dir.as_ref()),
+    )
+    .await?
+    .stdout;
+
     if bundle_path.is_empty() {
         return Err(Error::BadBundlePath);
     }
@@ -150,48 +175,55 @@ fn find_install_path(lockfile_path: &Utf8PathBuf) -> Result<Utf8PathBuf> {
     bundle_path
 }
 
+pub fn create_rayon_pool(
+    num_threads: usize,
+) -> std::result::Result<rayon::ThreadPool, ThreadPoolBuildError> {
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(num_threads)
+        .build()
+}
+
 async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiInnerArgs) -> Result<()> {
     let binstub_dir = args.install_path.join("bin");
     debug!("about to create {}", binstub_dir);
     tokio::fs::create_dir_all(&binstub_dir).await?;
     debug!("finished creating {}", binstub_dir);
-    use futures_util::stream::TryStreamExt;
-    futures_util::stream::iter(downloaded)
-        .map(Ok::<_, Error>)
-        .try_for_each_concurrent(FS_CONCURRENCY_LIMIT, |download| async {
-            let gv = download.spec.gem_version;
-            // Actually unpack the tarball here.
-            let dep_gemspec_res = download
-                .unpack_tarball(args.install_path.clone(), args)
-                .await?;
-            let Some(dep_gemspec) = dep_gemspec_res else {
-                eprintln!(
-                    "Warning: No gemspec found for downloaded dep {}",
-                    gv.yellow()
-                );
-                return Ok(());
-            };
+    use rayon::prelude::*;
+    let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
+    pool.install(|| {
+        downloaded
+            .into_iter()
+            .par_bridge()
+            .map(|download| {
+                let gv = download.spec.gem_version;
+                // Actually unpack the tarball here.
+                let dep_gemspec_res = download.unpack_tarball(args.install_path.clone(), args)?;
+                let Some(dep_gemspec) = dep_gemspec_res else {
+                    eprintln!(
+                        "Warning: No gemspec found for downloaded dep {}",
+                        gv.yellow()
+                    );
+                    return Ok::<_, Error>(());
+                };
 
-            // 3. Generate binstubs.
-            install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir).await?;
-            // 4. Handle compiling native extensions for gems with native extensions
-            compile_native_extensions(&dep_gemspec.extensions)?;
-            debug!("Installed {gv}");
-            Ok(())
-        })
-        .await?;
+                // 3. Generate binstubs.
+                install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir)?;
+                // 4. Handle compiling native extensions for gems with native extensions
+                compile_native_extensions(&dep_gemspec.extensions)?;
+                debug!("Installed {gv}");
+                Ok(())
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok::<_, Error>(())
+    })?;
 
     // 5. Copy the .gem files and the .gemspec files into cache and specificatiosn?
     Ok(())
 }
 
-async fn install_binstub(
-    dep_name: &str,
-    executables: &[String],
-    binstub_dir: &Utf8Path,
-) -> Result<()> {
+fn install_binstub(dep_name: &str, executables: &[String], binstub_dir: &Utf8Path) -> Result<()> {
     for exe_name in executables {
-        if let Err(error) = write_binstub(dep_name, exe_name, binstub_dir).await {
+        if let Err(error) = write_binstub(dep_name, exe_name, binstub_dir) {
             return Err(Error::CouldNotWriteBinstub {
                 dep_name: dep_name.to_owned(),
                 exe_name: exe_name.to_owned(),
@@ -383,7 +415,7 @@ impl ArchiveChecksums {
 }
 
 impl<'i> Downloaded<'i> {
-    async fn unpack_tarball(
+    fn unpack_tarball(
         self,
         bundle_path: Utf8PathBuf,
         args: &CiInnerArgs,
@@ -452,7 +484,7 @@ impl<'i> Downloaded<'i> {
                         return Err(Error::InvalidGemArchive("two metadata.gz found".to_owned()));
                     }
                     let UnpackedMetdata { hashed, gemspec } =
-                        unpack_metadata(&bundle_path, &nameversion, HashReader::new(entry)).await?;
+                        unpack_metadata(&bundle_path, &nameversion, HashReader::new(entry))?;
                     found_gemspec = Some(gemspec);
                     if args.validate_checksums
                         && let Some(ref checksums) = checksums
@@ -466,7 +498,7 @@ impl<'i> Downloaded<'i> {
                         return Err(Error::InvalidGemArchive("two data.tar.gz found".to_owned()));
                     }
                     let unpacked =
-                        unpack_data_tar(&bundle_path, &nameversion, HashReader::new(entry)).await?;
+                        unpack_data_tar(&bundle_path, &nameversion, HashReader::new(entry))?;
                     if args.validate_checksums
                         && let Some(ref checksums) = checksums
                     {
@@ -499,11 +531,38 @@ impl<'i> Downloaded<'i> {
     }
 }
 
-async fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -> io::Result<()> {
+fn generate_binstub_contents(gem_name: &str, exe_name: &str) -> String {
+    format!(
+        r#"#!/usr/bin/env ruby
+# This executable comes from the '{gem_name}' gem, generated by https://rv.dev
+
+require 'rubygems'
+
+Gem.use_gemdeps
+
+version = ">= 0.a"
+
+str = ARGV.first
+if str
+  str = str.b[/\A_(.*)_\z/, 1]
+  if str and Gem::Version.correct?(str)
+    version = str
+    ARGV.shift
+  end
+end
+
+if Gem.respond_to?(:activate_and_load_bin_path)
+  Gem.activate_and_load_bin_path('{gem_name}', '{exe_name}', version)
+else
+  load Gem.activate_bin_path('{gem_name}', '{exe_name}', version)
+end"#
+    )
+}
+
+fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -> io::Result<()> {
     let binstub_path = binstub_dir.join(exe_name);
-    let binstub_contents =
-        format!("require 'rubygems';\nGem.activate_and_load_bin_path('{gem_name}', '{exe_name}')",);
-    tokio::fs::write(binstub_path, binstub_contents).await
+    let binstub_contents = generate_binstub_contents(gem_name, exe_name);
+    std::fs::write(binstub_path, binstub_contents)
 }
 
 fn compile_native_extensions(_extensions: &[String]) -> Result<()> {
@@ -566,7 +625,7 @@ struct UnpackedData {
 /// Given the data.tar.gz from a gem, unpack its contents to the filesystem under
 /// BUNDLEPATH/gems/name-version/ENTRY
 /// Returns the checksum.
-async fn unpack_data_tar<R>(
+fn unpack_data_tar<R>(
     bundle_path: &Utf8Path,
     nameversion: &str,
     data_tar_gz: HashReader<R>,
@@ -576,7 +635,7 @@ where
 {
     // First, create the data's destination.
     let data_dir: PathBuf = bundle_path.join("gems").join(nameversion).into();
-    tokio::fs::create_dir_all(&data_dir).await?;
+    std::fs::create_dir_all(&data_dir)?;
     let mut gem_data_archive = tar::Archive::new(GzDecoder::new(data_tar_gz));
     for e in gem_data_archive.entries()? {
         let mut entry = e?;
@@ -586,7 +645,7 @@ where
         // Not sure if this is strictly necessary, or if we can know the
         // intermediate directories ahead of time.
         if let Some(dst_parent) = dst.parent() {
-            tokio::fs::create_dir_all(dst_parent).await?;
+            std::fs::create_dir_all(dst_parent)?;
         }
         entry.unpack(&dst)?;
     }
@@ -603,7 +662,7 @@ struct UnpackedMetdata {
 
 /// Given the metadata.gz from a gem, write it to the filesystem under
 /// BUNDLEPATH/specifications/name-version.gemspec
-async fn unpack_metadata<R>(
+fn unpack_metadata<R>(
     bundle_path: &Utf8Path,
     nameversion: &str,
     metadata_gz: HashReader<R>,
@@ -613,10 +672,10 @@ where
 {
     // First, create the metadata's destination.
     let metadata_dir = bundle_path.join("specifications/");
-    tokio::fs::create_dir_all(&metadata_dir).await?;
+    std::fs::create_dir_all(&metadata_dir)?;
     let filename = format!("{nameversion}.gemspec");
     let dst_path = metadata_dir.join(filename);
-    let mut dst = tokio::fs::File::create(&dst_path).await?;
+    let mut dst = std::fs::File::create(&dst_path)?;
 
     // Then write the (unzipped) source into the destination.
     let mut yaml_contents = String::new();
@@ -630,7 +689,7 @@ where
         }
     };
     let ruby_contents = convert_gemspec_yaml_to_ruby(yaml_contents);
-    tokio::io::copy(&mut Cursor::new(ruby_contents), &mut dst).await?;
+    std::io::copy(&mut Cursor::new(ruby_contents), &mut dst)?;
 
     let h = unzipper.into_inner();
     Ok(UnpackedMetdata {
@@ -661,6 +720,176 @@ fn convert_gemspec_yaml_to_ruby(contents: String) -> String {
     String::from_utf8_lossy(&output.stdout).to_string()
 }
 
+fn platform_for_gem(gem_version: &str) -> Platform {
+    let is_arm = ARM_STRINGS.iter().any(|s| gem_version.contains(s));
+    let is_x86 = X86_STRINGS.iter().any(|s| gem_version.contains(s));
+    // Comments starting with `when` are relevant examples from rubygems.
+    let (cpu, os) = if gem_version.contains("darwin") {
+        //        when /^i686-darwin(\d)/     then ["x86",       "darwin",  $1]
+        //        when "powerpc-darwin"       then ["powerpc",   "darwin",  nil]
+        //        when /powerpc-darwin(\d)/   then ["powerpc",   "darwin",  $1]
+        //        when /universal-darwin(\d)/ then ["universal", "darwin",  $1]
+        if is_x86 {
+            (Cpu::X86, Os::Darwin)
+        } else if gem_version.contains("powerpc") {
+            (Cpu::Powerpc, Os::Darwin)
+        } else if gem_version.contains("universal") {
+            (Cpu::Universal, Os::Darwin)
+        } else if is_arm {
+            (Cpu::Arm, Os::Darwin)
+        } else {
+            (Cpu::Unknown, Os::Darwin)
+        }
+    } else if gem_version.contains("linux") {
+        // when /^i\d86-linux/         then ["x86",       "linux",   nil]
+        if is_x86 {
+            (Cpu::X86, Os::Linux)
+        } else if is_arm {
+            (Cpu::Arm, Os::Linux)
+        } else {
+            (Cpu::Unknown, Os::Linux)
+        }
+    } else if gem_version.contains("sparc-solaris") {
+        // when /sparc-solaris2.8/     then ["sparc",     "solaris", "2.8"]
+        if gem_version.contains("sparc") {
+            (Cpu::Sparc, Os::Solaris)
+        } else {
+            (Cpu::Unknown, Os::Solaris)
+        }
+    } else if gem_version.contains("mswin") {
+        // when /mswin32(\_(\d+))?/    then ["x86",       "mswin32", $2]
+        // when /mswin64(\_(\d+))?/    then ["x64",       "mswin64", $2]
+        if is_x86 {
+            (Cpu::X86, Os::Windows)
+        } else if is_arm {
+            (Cpu::Arm, Os::Windows)
+        } else {
+            (Cpu::Unknown, Os::Windows)
+        }
+    } else if gem_version.contains("mingw") {
+        if gem_version.contains("32") || gem_version.contains("64") {
+            (Cpu::X86, Os::Mingw)
+        } else if is_arm {
+            (Cpu::Arm, Os::Mingw)
+        } else {
+            (Cpu::Unknown, Os::Mingw)
+        }
+    } else if gem_version.contains("java") || gem_version.contains("jruby") {
+        // when "java", "jruby"        then [nil,         "java",    nil]
+        (Cpu::Unknown, Os::Java)
+    } else if gem_version.contains("dalvik") {
+        // when /^dalvik(\d+)?$/       then [nil,         "dalvik",  $1]
+        (Cpu::Unknown, Os::Dalvik)
+    } else if gem_version.contains("dotnet") {
+        // when /dotnet(\-(\d+\.\d+))? then ["universal", "dotnet",  $2]
+        (Cpu::Universal, Os::Dotnet)
+    } else {
+        (Cpu::Unknown, Os::Unknown)
+    };
+    Platform { cpu, os }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+enum Cpu {
+    X86,
+    Arm,
+    Powerpc,
+    Unknown,
+    Universal,
+    Sparc,
+}
+
+impl Cpu {
+    fn matches(&self, other: &Self) -> bool {
+        match (self, other) {
+            // Err on the side of caution for unknown.
+            // And universal means it should match everything, right?
+            (Self::Universal, _)
+            | (Self::Unknown, _)
+            | (_, Self::Universal)
+            | (_, Self::Unknown) => true,
+            // Other types should be matched exactly, i.e. be the same enum variant.
+            (a, b) => a == b,
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+enum Os {
+    Darwin,
+    Windows,
+    Mingw,
+    Linux,
+    Solaris,
+    Java,
+    Dalvik,
+    Dotnet,
+    Unknown,
+}
+
+impl Os {
+    fn matches(&self, other: &Self) -> bool {
+        match (self, other) {
+            // Err on the side of caution for unknown.
+            (Self::Unknown, _) | (_, Self::Unknown) => true,
+            // Other types should be matched exactly, i.e. be the same enum variant.
+            (a, b) => a == b,
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+struct Platform {
+    cpu: Cpu,
+    os: Os,
+}
+
+impl Platform {
+    fn matches(&self, other: &Self) -> bool {
+        self.cpu.matches(&other.cpu) && self.os.matches(&other.os)
+    }
+}
+
+impl Platform {
+    fn current() -> Self {
+        match CURRENT_PLATFORM {
+            "aarch64-apple-darwin" => Platform {
+                os: Os::Darwin,
+                cpu: Cpu::Arm,
+            },
+            "x86_64-apple-darwin" => Platform {
+                os: Os::Darwin,
+                cpu: Cpu::X86,
+            },
+            "x86_64-unknown-linux-gnu" => Platform {
+                os: Os::Linux,
+                cpu: Cpu::X86,
+            },
+            "aarch64-unknown-linux-gnu" => Platform {
+                os: Os::Linux,
+                cpu: Cpu::Arm,
+            },
+            other => {
+                #[cfg(debug_assertions)]
+                {
+                    panic!(
+                        "Unknown target {}, please add it to the above match stmt",
+                        other
+                    );
+                }
+                #[cfg(not(debug_assertions))]
+                {
+                    eprintln!("Warning: unknown OS {}", other.yellow());
+                    Platform {
+                        os: Os::Unknown,
+                        cpu: Cpu::Unknown,
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn url_for_spec(remote: &str, spec: &Spec<'_>) -> Result<Url> {
     let gem_name = spec.gem_version.name;
     let gem_version = spec.gem_version.version;
@@ -686,7 +915,13 @@ async fn download_gem_source<'i>(
     let client = rv_http_client()?;
 
     // Download them all, concurrently.
-    let spec_stream = futures_util::stream::iter(gem_source.specs);
+
+    let gems_to_download = gem_source.specs.into_iter().filter(|spec| {
+        let arch = platform_for_gem(spec.gem_version.version);
+        let this_arch = Platform::current();
+        arch.matches(&this_arch)
+    });
+    let spec_stream = futures_util::stream::iter(gems_to_download);
     let downloaded_gems: Vec<_> = spec_stream
         .map(|spec| download_gem(gem_source.remote, spec, &client, cache, checksums))
         .buffered(max_concurrent_requests)
@@ -768,6 +1003,7 @@ mod tests {
             &cache,
             &CiInnerArgs {
                 max_concurrent_requests: 10,
+                max_concurrent_installs: 20,
                 validate_checksums: true,
                 install_path: dir.into(),
                 lockfile_path: file,
@@ -775,5 +1011,132 @@ mod tests {
         )
         .await?;
         Ok(())
+    }
+
+    #[test]
+    fn test_generate_binstub() {
+        let gem_name = "rake";
+        let exe_name = "rake";
+        let actual = generate_binstub_contents(gem_name, exe_name);
+        let expected = r#"#!/usr/bin/env ruby
+# This executable comes from the 'rake' gem, generated by https://rv.dev
+
+require 'rubygems'
+
+Gem.use_gemdeps
+
+version = ">= 0.a"
+
+str = ARGV.first
+if str
+  str = str.b[/\A_(.*)_\z/, 1]
+  if str and Gem::Version.correct?(str)
+    version = str
+    ARGV.shift
+  end
+end
+
+if Gem.respond_to?(:activate_and_load_bin_path)
+  Gem.activate_and_load_bin_path('rake', 'rake', version)
+else
+  load Gem.activate_bin_path('rake', 'rake', version)
+end"#;
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_matches() {
+        use Cpu::*;
+        use Os::*;
+        let should_match = [
+            // They're the same.
+            ((Arm, Darwin), (Arm, Darwin)),
+            // Unknown should always match a known.
+            ((Cpu::Unknown, Darwin), (Arm, Darwin)),
+            ((Arm, Darwin), (Cpu::Unknown, Darwin)),
+            ((Arm, Os::Unknown), (Arm, Darwin)),
+            ((Arm, Darwin), (Arm, Os::Unknown)),
+        ];
+        for input in should_match {
+            let p0 = Platform {
+                cpu: input.0.0,
+                os: input.0.1,
+            };
+            let p1 = Platform {
+                cpu: input.1.0,
+                os: input.1.1,
+            };
+            assert!(p0.matches(&p1));
+        }
+        let should_not_match = [
+            // Different OS, same CPU
+            ((Arm, Darwin), (Arm, Linux)),
+            // Different CPU, same OS
+            ((Arm, Linux), (X86, Linux)),
+            // Different CPU and OS
+            ((Arm, Darwin), (X86, Linux)),
+        ];
+        for input in should_not_match {
+            let p0 = Platform {
+                cpu: input.0.0,
+                os: input.0.1,
+            };
+            let p1 = Platform {
+                cpu: input.1.0,
+                os: input.1.1,
+            };
+            assert!(!p0.matches(&p1));
+        }
+    }
+
+    #[test]
+    fn test_platform_for_gem() {
+        use Cpu::*;
+        use Os::*;
+        for (gem_version, expected) in [
+            // Real gem versions taken from Discourse's gemfile.lock
+            ("1.17.2-arm64-darwin", (Arm, Darwin)),
+            ("1.17.2-x86_64-darwin", (X86, Darwin)),
+            ("2.7.4-x86_64-linux-gnu", (X86, Linux)),
+            ("2.7.4-x86_64-linux-musl", (X86, Linux)),
+            ("0.5.5-aarch64-linux-musl", (Arm, Linux)),
+            ("2.7.4-aarch64-linux-gnu", (Arm, Linux)),
+            ("1.17.2-arm-linux-gnu", (Arm, Linux)),
+        ] {
+            let actual = platform_for_gem(gem_version);
+            let expected = Platform {
+                cpu: expected.0,
+                os: expected.1,
+            };
+            assert_eq!(actual, expected);
+        }
+    }
+
+    #[test]
+    fn test_platform_current() {
+        use Cpu::*;
+        use Os::*;
+        #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+        let expected = Platform {
+            os: Darwin,
+            cpu: X86,
+        };
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        let expected = Platform {
+            os: Darwin,
+            cpu: Arm,
+        };
+        #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+        let expected = Platform {
+            os: Linux,
+            cpu: X86,
+        };
+        #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+        let expected = Platform {
+            os: Linux,
+            cpu: Arm,
+        };
+        let actual = Platform::current();
+        assert_eq!(actual, expected);
     }
 }

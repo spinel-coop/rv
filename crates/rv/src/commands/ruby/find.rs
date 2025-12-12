@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::str::FromStr;
 
 use anstream::println;
 use owo_colors::OwoColorize;
@@ -8,6 +8,8 @@ use crate::config::Config;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
+    #[error(transparent)]
+    InvalidVersion(#[from] rv_ruby::request::RequestError),
     #[error("no matching ruby version found")]
     NoMatchingRuby,
     #[error(transparent)]
@@ -16,11 +18,10 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
-pub fn find(config: &Config, request: &Option<RubyRequest>) -> Result<()> {
-    let request = if let Some(request) = request {
-        Cow::Borrowed(request)
-    } else {
-        Cow::Owned(config.ruby_request()?)
+pub fn find(config: &Config, version: Option<String>) -> Result<()> {
+    let request = match version {
+        None => config.ruby_request()?,
+        Some(version) => RubyRequest::from_str(&version)?,
     };
     if let Some(ruby) = config.matching_ruby(&request) {
         println!("{}", ruby.executable_path().cyan());

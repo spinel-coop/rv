@@ -38,7 +38,18 @@ impl RvTest {
         test.env.insert("RV_DISABLE_INDICATIF".into(), "1".into()); // Disable indicatif progress bars in tests due to a bug in tracing-indicatif
 
         // Disable network requests by default
-        test.env.insert("RV_RELEASES_URL".into(), test.server.url());
+        test.env.insert(
+            "RV_LIST_URL".into(),
+            format!(
+                "{}/{}",
+                test.server.url(),
+                "repos/spinel-coop/rv-ruby/releases/latest"
+            ),
+        );
+        test.env.insert(
+            "RV_INSTALL_URL".into(),
+            format!("{}/{}", test.server.url(), "latest/download"),
+        );
 
         // Disable caching for tests by default
         test.env.insert("RV_NO_CACHE".into(), "true".into());
@@ -238,6 +249,14 @@ impl RvOutput {
             full_test_root.insert_str(0, "/private");
         }
         output.replace(&full_test_root, "")
+    }
+
+    /// Perform the normalization of `.normalized_stdout()` and also replace
+    /// instances of the given temp dir with `/tmp`
+    pub fn normalized_stdout_with_temp_dir(&self, temp_dir_path: String) -> String {
+        assert!(!temp_dir_path.ends_with("/"));
+        let output = self.normalized_stdout();
+        output.replace(&temp_dir_path, "/tmp")
     }
 
     /// Normalize stderr for cross-platform snapshot testing

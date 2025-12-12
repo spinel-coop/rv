@@ -21,7 +21,7 @@ use crate::config::Config;
 const MINIMUM_CACHE_TTL: Duration = Duration::from_secs(60);
 
 static ARCH_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"ruby-[\d\.]+\.(?P<arch>[a-zA-Z0-9_]+)\.tar\.gz").unwrap());
+    Lazy::new(|| Regex::new(r"ruby-[\d\.a-z-]+\.(?P<arch>[a-zA-Z0-9_]+)\.tar\.gz").unwrap());
 
 static PARSE_MAX_AGE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"max-age=(\d+)").unwrap());
 
@@ -80,21 +80,24 @@ fn parse_max_age(header: &str) -> Option<Duration> {
 fn parse_arch_str(arch_str: &str) -> (&'static str, &'static str) {
     match arch_str {
         "arm64_sonoma" => ("macos", "aarch64"),
+        "ventura" => ("macos", "x86_64"),
+        "sequoia" => ("macos", "x86_64"),
         "x86_64_linux" => ("linux", "x86_64"),
         "arm64_linux" => ("linux", "aarch64"),
         _ => ("unknown", "unknown"),
     }
 }
 
-fn current_platform_arch_str() -> &'static str {
+fn current_platform_arch_str() -> Vec<&'static str> {
     let platform =
         std::env::var("RV_TEST_PLATFORM").unwrap_or_else(|_| CURRENT_PLATFORM.to_string());
 
     match platform.as_str() {
-        "aarch64-apple-darwin" => "arm64_sonoma",
-        "x86_64-unknown-linux-gnu" => "x86_64_linux",
-        "aarch64-unknown-linux-gnu" => "arm64_linux",
-        _ => "unsupported",
+        "aarch64-apple-darwin" => vec!["arm64_sonoma"],
+        "x86_64-apple-darwin" => vec!["sequoia", "ventura"],
+        "x86_64-unknown-linux-gnu" => vec!["x86_64_linux"],
+        "aarch64-unknown-linux-gnu" => vec!["arm64_linux"],
+        _ => vec!["unsupported"],
     }
 }
 
@@ -102,9 +105,10 @@ fn all_suffixes() -> impl IntoIterator<Item = &'static str> {
     [
         ".arm64_linux.tar.gz",
         ".arm64_sonoma.tar.gz",
-        "x86_64_linux.tar.gz",
+        ".x86_64_linux.tar.gz",
         // We follow the Homebrew convention that if there's no arch, it defaults to x86.
         ".ventura.tar.gz",
+        ".sequoia.tar.gz",
     ]
 }
 
@@ -146,17 +150,17 @@ pub(crate) async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Re
     );
     let client = reqwest::Client::new();
 
-    let api_base =
-        std::env::var("RV_RELEASES_URL").unwrap_or_else(|_| "https://api.github.com".to_string());
-    if api_base == "-" {
+    let url = std::env::var("RV_LIST_URL").unwrap_or_else(|_| {
+        "https://api.github.com/repos/spinel-coop/rv-ruby/releases/latest".to_string()
+    });
+    if url == "-" {
         // Special case to return empty list
-        tracing::debug!("RV_RELEASES_URL is '-', returning empty list without network request.");
+        tracing::debug!("RV_LIST_URL is '-', returning empty list without network request.");
         return Ok(Release {
             name: "Empty release".to_owned(),
             assets: Vec::new(),
         });
     }
-    let url = format!("{}/repos/spinel-coop/rv-ruby/releases/latest", api_base);
 
     // 1. Try to read from the disk cache.
     let cached_data: Option<CachedRelease> =
@@ -320,7 +324,7 @@ fn rubies_to_show(
     release: Release,
     installed_rubies: Vec<Ruby>,
     active_ruby: Option<Ruby>,
-    current_platform: &'static str,
+    current_platforms: Vec<&'static str>,
 ) -> Vec<JsonRubyEntry> {
     // Might have multiple installed rubies with the same version (e.g., "ruby-3.2.0" and "mruby-3.2.0").
     let mut rubies_map: BTreeMap<String, Vec<Ruby>> = BTreeMap::new();
@@ -331,23 +335,28 @@ fn rubies_to_show(
             .push(ruby);
     }
 
-    // Filter releases+assets for current platform
-    let (desired_os, desired_arch) = parse_arch_str(current_platform);
-    let rubies_for_this_platform: Vec<Ruby> = release
-        .assets
-        .iter()
-        .filter_map(|asset| ruby_from_asset(asset).ok())
-        .filter(|ruby| ruby.os == desired_os && ruby.arch == desired_arch)
-        .collect();
+    let mut available_rubies: Vec<Ruby> = vec![];
+    for platform in current_platforms {
+        // Filter releases+assets for current platform
+        let (desired_os, desired_arch) = parse_arch_str(platform);
+        let rubies_for_this_platform: Vec<Ruby> = release
+            .assets
+            .iter()
+            .filter_map(|asset| ruby_from_asset(asset).ok())
+            .filter(|ruby| ruby.os == desired_os && ruby.arch == desired_arch)
+            .collect();
 
-    let available_rubies = latest_patch_version(rubies_for_this_platform);
+        for ruby in latest_patch_version(rubies_for_this_platform) {
+            available_rubies.push(ruby)
+        }
 
-    debug!(
-        "Found {} available rubies for platform {}/{}",
-        available_rubies.len(),
-        desired_os,
-        desired_arch
-    );
+        debug!(
+            "Found {} available rubies for platform {}/{}",
+            available_rubies.len(),
+            desired_os,
+            desired_arch
+        );
+    }
 
     // Merge in installed rubies, replacing any available ones with the installed versions
     for ruby in available_rubies {
@@ -454,9 +463,9 @@ mod tests {
     fn test_config() -> Result<Config> {
         let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
         let ruby_dir = root.join("opt/rubies");
-        std::fs::create_dir_all(&ruby_dir)?;
+        fs_err::create_dir_all(&ruby_dir)?;
         let current_dir = root.join("project");
-        std::fs::create_dir_all(&current_dir)?;
+        fs_err::create_dir_all(&current_dir)?;
 
         let config = Config {
             ruby_dirs: indexset![ruby_dir],
@@ -486,7 +495,7 @@ mod tests {
 
     #[test]
     fn test_deser_release() {
-        let jtxt = std::fs::read_to_string("../../testdata/api.json").unwrap();
+        let jtxt = fs_err::read_to_string("../../testdata/api.json").unwrap();
         let release: Release = serde_json::from_str(&jtxt).unwrap();
         let actual = ruby_from_asset(&release.assets[0]).unwrap();
         let expected = Ruby {
@@ -547,19 +556,32 @@ mod tests {
                 test_name: "no local installs",
                 release: Release {
                     name: "latest".to_owned(),
-                    assets: vec![Asset {
-                        name: "ruby-3.3.0.arm64_sonoma.tar.gz".to_owned(),
-                        browser_download_url: u("3.3.0"),
-                    }],
+                    assets: vec![
+                        Asset {
+                            name: "ruby-3.3.0.arm64_sonoma.tar.gz".to_owned(),
+                            browser_download_url: u("3.3.0"),
+                        },
+                        Asset {
+                            name: "ruby-3.5.0-preview1.arm64_sonoma.tar.gz".to_owned(),
+                            browser_download_url: u("3.5.0-preview1"),
+                        },
+                    ],
                 },
                 installed_rubies: Vec::new(),
                 active_ruby: None,
                 current_platform_arch: "arm64_sonoma",
-                expected: vec![JsonRubyEntry {
-                    details: ruby("ruby-3.3.0"),
-                    installed: false,
-                    active: false,
-                }],
+                expected: vec![
+                    JsonRubyEntry {
+                        details: ruby("ruby-3.3.0"),
+                        installed: false,
+                        active: false,
+                    },
+                    JsonRubyEntry {
+                        details: ruby("ruby-3.5.0-preview1"),
+                        installed: false,
+                        active: false,
+                    },
+                ],
             },
             // Nothing weird should happen if there's no remotely-available versions.
             Test {
@@ -674,12 +696,8 @@ mod tests {
             expected,
         } in tests
         {
-            let actual = rubies_to_show(
-                release,
-                installed_rubies,
-                active_ruby,
-                current_platform_arch,
-            );
+            let current_platforms = vec![current_platform_arch];
+            let actual = rubies_to_show(release, installed_rubies, active_ruby, current_platforms);
             pretty_assertions::assert_eq!(actual, expected, "failed test case '{test_name}'");
         }
     }

@@ -17,7 +17,7 @@ resolver = "2"
 # External dependencies
 anstream = "0.6.19"
 assert_fs = "1.1.3"
-bytesize = "2.0.1"
+bytesize = "2.3.0"
 camino = "1.2.0"
 camino-tempfile-ext = "0.3.2"
 clap = "4.5.41"
@@ -25,19 +25,19 @@ clap_derive = "4.5.41"
 clap-verbosity-flag = "3.0.3"
 criterion = "0.7.0"
 current_platform = "0.2.0"
-etcetera = "0.10.0"
+etcetera = "0.11.0"
 flate2 = "1.1.2"
 fs-err = "3.1.1"
 futures-util = "0.3.31"
 indexmap = "2.0"
 indicatif = "0.18.0"
-indoc = "2.0.6"
-insta = "1.40"
+indoc = "2.0.7"
+insta = "1.44"
 miette = "7.6.0"
 once_cell = "1.20.1"
 owo-colors = "4.1.0"
 pretty_assertions = "1.4.1"
-rayon = "1.10.0"
+rayon = "1.11.0"
 rayon-tracing = { git = "https://github.com/danylaporte/rayon-tracing", version = "0.1.1", rev = "v0.1.1" }
 regex = "1.11.1"
 reqwest = { version = "0.12.22", default-features = false, features = [
@@ -51,13 +51,13 @@ saphyr-parser = "0.0.6"
 seahash = "4.1.0"
 serde = "1.0.219"
 serde_json = "1.0"
-serde_with = { version = "3.14.0", default-features = false, features = ["macros"] }
+serde_with = { version = "3.16.0", default-features = false, features = ["macros"] }
 sha1 = "0.10"
 sha2 = "0.10"
 shell-escape = "0.1.5"
 shellexpand = "3.1"
 tar = "0.4.44"
-tempfile = "3.0"
+tempfile = "3.23"
 thiserror = "2.0.12"
 tokio = "1.46.1"
 tracing = "0.1.41"
@@ -82,3 +82,10 @@ lto = true
 # The profile that benchmarks, and `cargo-flamegraph` will build with
 [profile.bench]
 debug = true
+
+[workspace.lints.clippy]
+assertions_on_result_states = "warn"
+dbg_macro = "warn"
+redundant_clone = "warn"
+result_large_err = "allow"
+

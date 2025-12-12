@@ -8,6 +8,8 @@ Welcome to `rv`, the Ruby version manager that revs your Ruby installs so [they 
 
 ## Why `rv`
 
+![rv installs ruby 3.4.7 in 1.8 seconds](docs/img/rv-ruby-install.svg)
+
 We precompile Ruby 3.2+ for [macOS & Linux](#requirements) to vastly improve install times & make a number of installation issues a thing of the past.
 
 - **Super fast install**: rv installs Ruby 3.2+ in seconds.
@@ -20,11 +22,11 @@ We precompile Ruby 3.2+ for [macOS & Linux](#requirements) to vastly improve ins
 
 Here's the install time difference running on a base M5 MacBook Pro in Low Power Mode and High Power Mode:
 
-| | time in seconds | times slower |
+| | seconds | times slower |
 | ---: | ---: | ---: |
-| rv | 2.479 | |
-| rbenv + ruby-build High Power Mode | 89.611 | 36.14x |
-| rbenv + ruby-build Low Power Mode | 159.752 | 64.44x |
+| rv | 2.479 | 1.0x |
+| ruby-build (High Power) | 89.611 | 36.14x |
+| ruby-build (Low Power) | 159.752 | 64.44x |
 
 We happen to be using `rbenv` here, but `chruby`, `mise` and other tools all use `ruby-build` under the hood to compile Ruby during install.
 

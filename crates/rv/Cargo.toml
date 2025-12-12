@@ -1,6 +1,6 @@
 [package]
 name = "rv"
-version = "0.2.0"
+version = "0.3.0"
 rust-version = "1.88.0"
 edition = "2024"
 repository = "https://github.com/spinel-coop/rv"
@@ -53,10 +53,10 @@ bytesize = { workspace = true }
 shell-escape = { workspace = true }
 once_cell = { workspace = true }
 rayon-tracing = { workspace = true }
-clap_complete = "4.5.57"
+clap_complete = "4.5.61"
 clap_complete_nushell = "4.5.8"
 url = "2.5.7"
-bytes = "1.10.1"
+bytes = "1.11.0"
 saphyr.workspace = true
 sha2.workspace = true
 hex = "0.4.3"
