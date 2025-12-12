@@ -110,9 +110,11 @@ impl From<(String, Version, Option<String>)> for NameTuple {
     }
 }
 
-impl From<&[String]> for NameTuple {
-    fn from(array: &[String]) -> Self {
-        Self::from_array(array).unwrap()
+impl TryFrom<&[String]> for NameTuple {
+    type Error = NameTupleError;
+
+    fn try_from(array: &[String]) -> Result<Self, Self::Error> {
+        Self::from_array(array)
     }
 }
 
