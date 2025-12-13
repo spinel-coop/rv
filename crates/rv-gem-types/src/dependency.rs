@@ -80,12 +80,15 @@ impl Dependency {
 
     pub fn is_latest_version(&self) -> bool {
         // Check if the requirement is just ">= 0"
+        let Some(constraint) = self.requirement.constraints.first() else {
+            return false;
+        };
         self.requirement.constraints.len() == 1
             && matches!(
-                self.requirement.constraints[0].operator,
+                constraint.operator,
                 crate::requirement::ComparisonOperator::GreaterEqual
             )
-            && self.requirement.constraints[0].version.to_string() == "0"
+            && constraint.version.to_string() == "0"
     }
 
     pub fn is_specific(&self) -> bool {

@@ -341,10 +341,7 @@ impl ArchiveChecksums {
     fn new(file: &str) -> Option<Self> {
         use saphyr::{LoadableYamlNode, Yaml};
         let contents_yaml = Yaml::load_from_str(file).ok()?;
-        if contents_yaml.is_empty() {
-            return None;
-        }
-        let root = &contents_yaml[0];
+        let root = contents_yaml.first()?;
         let mut out = ArchiveChecksums::default();
 
         if let Some(checksums) = root.as_mapping_get("SHA256") {
