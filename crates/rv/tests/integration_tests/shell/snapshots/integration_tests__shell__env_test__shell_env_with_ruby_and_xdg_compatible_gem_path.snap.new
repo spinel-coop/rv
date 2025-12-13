@@ -1,0 +1,8 @@
+---
+source: crates/rv/tests/integration_tests/shell/env_test.rs
+assertion_line: 121
+expression: output.normalized_stdout_with_temp_dir(temp_dir.path().to_string_lossy().to_string())
+---
+unset RUBY_ROOT RUBY_ENGINE RUBY_VERSION RUBYOPT GEM_ROOT GEM_HOME GEM_PATH
+export PATH=/tmp/bin
+hash -r

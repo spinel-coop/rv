@@ -1,6 +1,5 @@
 use anstream::println;
 use camino::{Utf8Path, Utf8PathBuf};
-use core::panic;
 use current_platform::CURRENT_PLATFORM;
 use futures_util::StreamExt;
 use owo_colors::OwoColorize;
@@ -9,6 +8,7 @@ use tokio::io::AsyncWriteExt;
 
 use rv_ruby::request::RubyRequest;
 
+use crate::config;
 use crate::config::Config;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -17,6 +17,8 @@ pub enum Error {
     ReqwestError(#[from] reqwest::Error),
     #[error(transparent)]
     IoError(#[from] std::io::Error),
+    #[error(transparent)]
+    ConfigError(#[from] config::Error),
     #[error(transparent)]
     StripPrefixError(#[from] std::path::StripPrefixError),
     #[error("Major, minor, and patch version is required, but got {0}")]
@@ -40,30 +42,36 @@ type Result<T> = miette::Result<T, Error>;
 pub async fn install(
     config: &Config,
     install_dir: Option<String>,
-    requested: &RubyRequest,
+    version: Option<&RubyRequest>,
     tarball_path: Option<String>,
 ) -> Result<()> {
-    let install_dir = match install_dir {
-        Some(dir) => Utf8PathBuf::from(dir),
-        None => match config.ruby_dirs.first() {
-            Some(dir) => dir.clone(),
-            None => panic!("No Ruby directories to install into"),
-        },
+    let version: RubyRequest = match version {
+        Some(v) => v.clone(),
+        None => config.ruby_request()?,
     };
+
+    let install_dir = install_dir
+        .map(|d| Utf8PathBuf::from(d))
+        .unwrap_or_else(|| {
+            config
+                .ruby_dirs
+                .first()
+                .expect("No Ruby directories to install into")
+                .clone()
+        });
 
     match tarball_path {
         Some(tarball_path) => {
-            extract_local_ruby_tarball(tarball_path, &install_dir, &requested.number()).await?
+            extract_local_ruby_tarball(tarball_path, &install_dir, &version.number()).await?
         }
-        None => download_and_extract_remote_tarball(config, &install_dir, requested).await?,
+        None => download_and_extract_remote_tarball(config, &install_dir, &version).await?,
     }
 
     println!(
         "Installed Ruby version {} to {}",
-        requested.to_string().cyan(),
+        version.to_string().cyan(),
         install_dir.cyan()
     );
-
     Ok(())
 }
 

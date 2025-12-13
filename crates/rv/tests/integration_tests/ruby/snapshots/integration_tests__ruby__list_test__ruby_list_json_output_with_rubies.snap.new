@@ -1,0 +1,27 @@
+---
+source: crates/rv/tests/integration_tests/ruby/list_test.rs
+assertion_line: 69
+expression: output.normalized_stdout()
+---
+[
+  {
+    "key": "ruby-3.1.4-macos-aarch64",
+    "version": "ruby-3.1.4",
+    "path": "/opt/rubies/ruby-3.1.4",
+    "arch": "aarch64",
+    "os": "macos",
+    "gem_root": null,
+    "installed": true,
+    "active": false
+  },
+  {
+    "key": "ruby-3.2.0-macos-aarch64",
+    "version": "ruby-3.2.0",
+    "path": "/opt/rubies/ruby-3.2.0",
+    "arch": "aarch64",
+    "os": "macos",
+    "gem_root": null,
+    "installed": true,
+    "active": false
+  }
+]
