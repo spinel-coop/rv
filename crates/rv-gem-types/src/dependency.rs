@@ -19,8 +19,8 @@ pub enum DependencyType {
 impl AsRef<str> for DependencyType {
     fn as_ref(&self) -> &str {
         match self {
-            DependencyType::Runtime => "runtime",
-            DependencyType::Development => "development",
+            Self::Runtime => "runtime",
+            Self::Development => "development",
         }
     }
 }
