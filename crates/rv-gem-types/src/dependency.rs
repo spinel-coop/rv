@@ -53,21 +53,14 @@ impl Dependency {
         Self::new(name, requirements, Some(DependencyType::Development))
     }
 
-    pub fn matches(&self, name: &str, version: &Version, allow_prerelease: bool) -> bool {
-        if self.name != name {
-            return false;
-        }
-
-        // Check prerelease logic
-        if version.is_prerelease() && !allow_prerelease && !self.requirement.is_prerelease() {
-            return false;
-        }
-
-        self.requirement.satisfied_by(version)
+    pub fn matches(&self, name: &str, version: &Version) -> bool {
+        self.name == name
+            && version.is_prerelease()
+            && self.requirement.satisfied_by(version)
     }
 
     pub fn matches_spec(&self, name: &str, version: &Version) -> bool {
-        self.matches(name, version, false)
+        self.name == name && self.requirement.satisfied_by(version)
     }
 
     pub fn is_runtime(&self) -> bool {
@@ -223,12 +216,12 @@ mod tests {
         let version_prerelease = Version::new("1.0.alpha").unwrap();
         let version_prerelease_higher = Version::new("1.1.alpha").unwrap();
 
-        assert!(dep.matches("test", &version_1_0, false));
-        assert!(!dep.matches("test", &version_0_9, false));
-        assert!(!dep.matches("other", &version_1_0, false));
-        assert!(!dep.matches("test", &version_prerelease, false));
-        assert!(!dep.matches("test", &version_prerelease, true)); // 1.0.alpha < 1.0
-        assert!(dep.matches("test", &version_prerelease_higher, true)); // 1.1.alpha >= 1.0
+        assert!(dep.matches_spec("test", &version_1_0));
+        assert!(!dep.matches_spec("test", &version_0_9));
+        assert!(!dep.matches_spec("other", &version_1_0));
+        assert!(!dep.matches_spec("test", &version_prerelease));
+        assert!(!dep.matches("test", &version_prerelease)); // 1.0.alpha < 1.0
+        assert!(dep.matches("test", &version_prerelease_higher)); // 1.1.alpha >= 1.0
     }
 
     #[test]
@@ -237,7 +230,7 @@ mod tests {
             Dependency::new("test".to_string(), vec![">= 1.0.alpha".to_string()], None).unwrap();
         let version_prerelease = Version::new("1.0.alpha").unwrap();
 
-        assert!(dep.matches("test", &version_prerelease, false));
+        assert!(dep.matches_spec("test", &version_prerelease));
     }
 
     #[test]
