@@ -54,9 +54,7 @@ impl Dependency {
     }
 
     pub fn matches(&self, name: &str, version: &Version) -> bool {
-        self.name == name
-            && version.is_prerelease()
-            && self.requirement.satisfied_by(version)
+        self.name == name && version.is_prerelease() && self.requirement.satisfied_by(version)
     }
 
     pub fn matches_spec(&self, name: &str, version: &Version) -> bool {
@@ -72,16 +70,7 @@ impl Dependency {
     }
 
     pub fn is_latest_version(&self) -> bool {
-        // Check if the requirement is just ">= 0"
-        let Some(constraint) = self.requirement.constraints.first() else {
-            return false;
-        };
-        self.requirement.constraints.len() == 1
-            && matches!(
-                constraint.operator,
-                crate::requirement::ComparisonOperator::GreaterEqual
-            )
-            && constraint.version.to_string() == "0"
+        self.requirement.is_latest_version()
     }
 
     pub fn is_specific(&self) -> bool {
