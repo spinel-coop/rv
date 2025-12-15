@@ -14,7 +14,7 @@ use rv_gem_types::{Dependency, DependencyType, Platform, Requirement, Specificat
 pub use error::DeserializationError;
 
 mod error;
-type AnchorMap<'a> = HashMap<usize, &'a str>;
+type AnchorMap = HashMap<usize, String>;
 
 // Helper function to parse YAML into events
 fn parse_yaml_events<'a>(source: &'a str) -> Result<Vec<(Event<'a>, Span)>> {
@@ -305,7 +305,7 @@ fn parse_metadata_as_map<'a>(
 }
 
 fn parse_requirement<'a>(
-    anchors: &AnchorMap,
+    anchors: &mut AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Requirement, ContextError> {
     tagged_mapping_start("ruby/object:Gem::Requirement").parse_next(input)?;
@@ -315,7 +315,7 @@ fn parse_requirement<'a>(
 }
 
 fn parse_requirement_fields<'a>(
-    anchors: &AnchorMap,
+    anchors: &mut AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Requirement, ContextError> {
     let mut constraints: Option<Vec<String>> = None;
@@ -356,8 +356,8 @@ fn parse_requirement_fields<'a>(
     Requirement::new(constraints).map_err(|_e| ErrMode::Cut(ContextError::new()))
 }
 
-    _anchors: &AnchorMap,
 fn parse_constraint_array<'a>(
+    anchors: &mut AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Vec<String>, ContextError> {
     sequence_start.parse_next(input)?;
@@ -381,7 +381,7 @@ fn parse_constraint_pair<'a>(
 }
 
 fn parse_dependency<'a>(
-    anchors: &AnchorMap,
+    anchors: &mut AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Dependency, ContextError> {
     tagged_mapping_start("ruby/object:Gem::Dependency").parse_next(input)?;
@@ -391,7 +391,7 @@ fn parse_dependency<'a>(
 }
 
 fn parse_dependency_fields<'a>(
-    anchors: &AnchorMap,
+    anchors: &mut AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Dependency, ContextError> {
     let mut name: Option<String> = None;
@@ -458,10 +458,10 @@ fn parse_dependency_fields<'a>(
 }
 
 fn parse_dependencies<'a>(
-    anchors: &AnchorMap,
+    anchors: &mut AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Vec<Dependency>, ContextError> {
-    let _start = sequence_start.parse_next(input)?;
+    let _ = sequence_start.parse_next(input)?;
     let mut deps = Vec::new();
     while let Ok(dep) = parse_dependency(anchors, input) {
         deps.push(dep);
@@ -473,7 +473,7 @@ fn parse_dependencies<'a>(
 fn parse_gem_specification_winnow<'a>(
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Specification, ContextError> {
-    let anchors: HashMap<usize, &str> = HashMap::new();
+    let anchors: &mut AnchorMap = &mut Default::default();
 
     // Skip stream/document start events
     let _ = opt(stream_start).parse_next(input)?;
@@ -557,7 +557,7 @@ fn parse_gem_specification_winnow<'a>(
                 authors = parse_optional_string_array.parse_next(input)?;
             }
             "dependencies" => {
-                dependencies = parse_dependencies(&anchors, input)?;
+                dependencies = parse_dependencies(anchors, input)?;
             }
             "cert_chain" => {
                 cert_chain = parse_string_array.parse_next(input)?;
@@ -590,10 +590,10 @@ fn parse_gem_specification_winnow<'a>(
                 test_files = parse_string_array.parse_next(input)?;
             }
             "required_ruby_version" => {
-                required_ruby_version = Some(parse_requirement(&anchors, input)?);
+                required_ruby_version = Some(parse_requirement(anchors, input)?);
             }
             "required_rubygems_version" => {
-                required_rubygems_version = Some(parse_requirement(&anchors, input)?);
+                required_rubygems_version = Some(parse_requirement(anchors, input)?);
             }
             "metadata" => {
                 metadata = parse_metadata_as_map.parse_next(input)?;
