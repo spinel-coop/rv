@@ -361,23 +361,51 @@ fn parse_constraint_array<'a>(
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Vec<String>, ContextError> {
     sequence_start.parse_next(input)?;
-    let pairs = repeat(0.., parse_constraint_pair)
-        .context(StrContext::Label("requirements array"))
-        .parse_next(input)?;
+    let mut constraints = Vec::new();
+    loop {
+        match peek(any::<_, ContextError>).parse_next(input) {
+            Ok((Event::SequenceEnd, _)) => break,
+            Ok(_) => {
+                let context = StrContext::Label("constraint array");
+                constraints.push(parse_constraint_pair(input, anchors, context)?);
+            }
+            Err(_) => break,
+        }
+    }
     sequence_end.parse_next(input)?;
-    Ok(pairs)
+    Ok(constraints)
 }
 
 fn parse_constraint_pair<'a>(
     input: &mut &'a [(Event<'a>, Span)],
+    anchors: &mut AnchorMap,
+    context: StrContext,
 ) -> ModalResult<String, ContextError> {
-    // Parse a sequence like [">=", version_object]
-    sequence_start.parse_next(input)?;
-    let v = (string, parse_version)
-        .map(|(op, version)| format!("{op} {version}"))
-        .parse_next(input)?;
-    sequence_end.parse_next(input)?;
-    Ok(v)
+    // Check what kind of event we have
+    match peek(any::<_, ContextError>)
+        .context(context)
+        .parse_next(input)
+    {
+        Ok((Event::Alias(anchor_id), _)) => {
+            // Consume the alias event
+            let _ = any::<_, ContextError>.parse_next(input)?;
+            match anchors.get(&anchor_id) {
+                Some(source) => Ok(source.to_string()),
+                _ => Err(ErrMode::Backtrack(ContextError::new())),
+            }
+        }
+        Ok((Event::SequenceStart(_, _), _)) => {
+            // Parse a sequence like [">=", "2.0"]
+            let anchor_id = sequence_start.parse_next(input)?;
+            let constraint = (string, parse_version)
+                .map(|(op, version)| format!("{op} {version}"))
+                .parse_next(input)?;
+            anchors.insert(anchor_id, constraint.to_string());
+            sequence_end.parse_next(input)?;
+            Ok(constraint)
+        }
+        _ => Err(ErrMode::Backtrack(ContextError::new())),
+    }
 }
 
 fn parse_dependency<'a>(
