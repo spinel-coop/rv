@@ -156,7 +156,7 @@ async fn find_install_path(config: &Config, lockfile_path: &Utf8PathBuf) -> Resu
     let args = ["-rbundler", "-e", "puts Bundler.bundle_path"];
     let bundle_path = crate::commands::ruby::run::run(
         config,
-        &config.ruby_request()?,
+        None,
         Default::default(),
         args.as_slice(),
         CaptureOutput::Both,
