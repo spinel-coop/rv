@@ -339,7 +339,7 @@ fn parse_requirement_fields<'a>(
             .parse_next(input)?;
         match key.as_str() {
             "requirements" => {
-                constraints = Some(parse_requirement_array(anchors, input)?);
+                constraints = Some(parse_constraint_array(anchors, input)?);
             }
             "none" => {
                 // Skip the 'none' field - it's legacy metadata
@@ -356,8 +356,8 @@ fn parse_requirement_fields<'a>(
     Requirement::new(constraints).map_err(|_e| ErrMode::Cut(ContextError::new()))
 }
 
-fn parse_requirement_array<'a>(
     _anchors: &AnchorMap,
+fn parse_constraint_array<'a>(
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Vec<String>, ContextError> {
     sequence_start.parse_next(input)?;
