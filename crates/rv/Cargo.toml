@@ -1,7 +1,7 @@
 [package]
 name = "rv"
 version = "0.3.0"
-rust-version = "1.88.0"
+rust-version = "1.90.0"
 edition = "2024"
 repository = "https://github.com/spinel-coop/rv"
 description = "Ruby version management, but fast"
@@ -40,11 +40,11 @@ reqwest = { workspace = true, features = ["stream", "socks"] }
 flate2 = { workspace = true }
 tar = { workspace = true }
 rv-cache = { workspace = true, features = ["clap"] }
-rv-gem-specification-yaml = { workspace = true  }
-rv-gem-types = { workspace = true  }
+rv-gem-specification-yaml = { workspace = true }
+rv-gem-types = { workspace = true }
 rv-ruby = { workspace = true }
 rv-dirs = { workspace = true }
-rv-lockfile= { workspace = true }
+rv-lockfile = { workspace = true }
 camino = { workspace = true }
 futures-util = { workspace = true }
 current_platform = { workspace = true }
