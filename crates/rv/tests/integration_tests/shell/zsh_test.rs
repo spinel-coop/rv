@@ -34,17 +34,14 @@ fn test_switching_rubies() -> Result<(), Box<dyn std::error::Error>> {
     let test = RvTest::new();
     test.create_ruby_dir("3.3.4");
     test.create_ruby_dir("3.4.1");
-    let subdir = test.temp_dir.path().join("foobartest");
-    std::fs::create_dir_all(&subdir).expect("Failed to create ruby directory");
-    std::fs::write(subdir.join(".ruby-version"), b"3.3").unwrap();
 
     let mut session = make_session(&test)?;
-    session.send_line("cd foobartest")?;
+    session.send_line(r"echo '3.3' > .ruby-version")?;
     session.wait_for_prompt()?;
     session.send_line("ruby")?;
     session.exp_string("ruby\r\n3.3.4\r\naarch64-darwin23\r\naarch64\r\ndarwin23")?;
     session.wait_for_prompt()?;
-    session.send_line("cd ..")?;
+    session.send_line(r"echo '3.4' > .ruby-version")?;
     session.wait_for_prompt()?;
     session.send_line("ruby")?;
     session.exp_string("ruby\r\n3.4.1\r\naarch64-darwin23\r\naarch64\r\ndarwin23")?;

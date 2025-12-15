@@ -6,5 +6,5 @@ autoload -U add-zsh-hook
 _rv_autoload_hook () {
     eval "$(/tmp/bin/rv shell env zsh)"
 }
-add-zsh-hook chpwd _rv_autoload_hook
+add-zsh-hook preexec _rv_autoload_hook
 _rv_autoload_hook

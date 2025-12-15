@@ -18,7 +18,7 @@ pub fn init(config: &Config, shell: Shell) -> Result<()> {
                     "_rv_autoload_hook () {{\n",
                     "    eval \"$({} shell env zsh)\"\n",
                     "}}\n",
-                    "add-zsh-hook chpwd _rv_autoload_hook\n",
+                    "add-zsh-hook preexec _rv_autoload_hook\n",
                     "_rv_autoload_hook\n",
                 ),
                 config.current_exe
@@ -31,15 +31,8 @@ pub fn init(config: &Config, shell: Shell) -> Result<()> {
                     "_rv_autoload_hook() {{\n",
                     "    eval \"$({} shell env bash)\"\n",
                     "}}\n",
+                    "trap '[[ \"$BASH_COMMAND\" != \"$PROMPT_COMMAND\" ]] && _rv_autoload_hook' DEBUG\n",
                     "_rv_autoload_hook\n",
-                    "_chpwd_hook() {{\n",
-                    "    if [[ \"$PWD\" != \"$_OLDPWD\" ]]; then\n",
-                    "        _rv_autoload_hook\n",
-                    "        _OLDPWD=\"$PWD\"\n",
-                    "    fi\n",
-                    "}}\n",
-                    "_OLDPWD=\"$PWD\"\n",
-                    "PROMPT_COMMAND=\"_chpwd_hook${{PROMPT_COMMAND:+; $PROMPT_COMMAND}}\"\n",
                 ),
                 config.current_exe
             );
@@ -48,8 +41,7 @@ pub fn init(config: &Config, shell: Shell) -> Result<()> {
         Shell::Fish => {
             print!(
                 concat!(
-                    "function _rv_autoload_hook --on-variable PWD --description 'Change Ruby version on directory change using rv'\n",
-                    "    status --is-command-substitution; and return\n",
+                    "function _rv_autoload_hook --on-event fish_preexec --description 'Change Ruby version before running every command'\n",
                     "    {} shell env fish | source\n",
                     "end\n",
                     "_rv_autoload_hook\n"
@@ -59,14 +51,12 @@ pub fn init(config: &Config, shell: Shell) -> Result<()> {
             Ok(())
         }
         Shell::Nu => {
-            // See Nushell's example for a change-of-directory hook:
-            // <https://www.nushell.sh/book/hooks.html#automatically-activating-an-environment-when-entering-a-directory>
             print!(
                 concat!(
-                    "$env.config = ($env.config | upsert hooks.env_change.PWD {{\n",
+                    "$env.config = ($env.config | upsert hooks.pre_execution {{\n",
                     "    [\n",
-                    "        {{\n",
-                    "            |_, _| {} shell env nu | from json | load-env\n",
+                    "        {{||\n",
+                    "            {} shell env nu | from json | load-env\n",
                     "        }}\n",
                     "    ]\n",
                     "}})\n",
