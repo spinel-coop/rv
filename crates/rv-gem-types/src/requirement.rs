@@ -41,6 +41,31 @@ pub enum ComparisonOperator {
     Pessimistic,
 }
 
+impl TryFrom<&str> for ComparisonOperator {
+    type Error = RequirementError;
+
+    fn try_from(str: &str) -> Result<Self, Self::Error> {
+        match &str[0..2] {
+            ">=" => Ok(ComparisonOperator::GreaterEqual),
+            "<=" => Ok(ComparisonOperator::LessEqual),
+            "!=" => Ok(ComparisonOperator::NotEqual),
+            "~>" => Ok(ComparisonOperator::Pessimistic),
+            _ => match &str[0..1] {
+                ">" => Ok(ComparisonOperator::Greater),
+                "<" => Ok(ComparisonOperator::Less),
+                "=" => Ok(ComparisonOperator::Equal),
+                "!" => {
+                    // Handle invalid operators like "! 1"
+                    Err(RequirementError::InvalidOperator {
+                        operator: str.chars().take(2).collect(),
+                    })
+                }
+                _ => Ok(ComparisonOperator::Equal),
+            }
+        }
+    }
+}
+
 impl Requirement {
     pub fn new(requirements: Vec<impl AsRef<str>>) -> Result<Self, RequirementError> {
         let mut constraints = Vec::new();
@@ -102,29 +127,11 @@ impl Requirement {
         requirement: &str,
     ) -> Result<Option<(ComparisonOperator, &str)>, RequirementError> {
         let requirement = requirement.trim();
+        let operator = ComparisonOperator::try_from(requirement)?;
 
-        if let Some(stripped) = requirement.strip_prefix(">=") {
-            Ok(Some((ComparisonOperator::GreaterEqual, stripped.trim())))
-        } else if let Some(stripped) = requirement.strip_prefix("<=") {
-            Ok(Some((ComparisonOperator::LessEqual, stripped.trim())))
-        } else if let Some(stripped) = requirement.strip_prefix("!=") {
-            Ok(Some((ComparisonOperator::NotEqual, stripped.trim())))
-        } else if let Some(stripped) = requirement.strip_prefix("~>") {
-            Ok(Some((ComparisonOperator::Pessimistic, stripped.trim())))
-        } else if let Some(stripped) = requirement.strip_prefix('>') {
-            Ok(Some((ComparisonOperator::Greater, stripped.trim())))
-        } else if let Some(stripped) = requirement.strip_prefix('<') {
-            Ok(Some((ComparisonOperator::Less, stripped.trim())))
-        } else if let Some(stripped) = requirement.strip_prefix('=') {
-            Ok(Some((ComparisonOperator::Equal, stripped.trim())))
-        } else if requirement.starts_with('!') {
-            // Handle invalid operators like "! 1"
-            Err(RequirementError::InvalidOperator {
-                operator: requirement.chars().take(2).collect(),
-            })
-        } else {
-            Ok(None)
-        }
+        requirement
+            .strip_prefix(&operator.to_string())
+            .map_or_else(|| Ok(None), |s| Ok(Some((operator, s.trim()))))
     }
 
     pub fn satisfied_by(&self, version: &Version) -> bool {
