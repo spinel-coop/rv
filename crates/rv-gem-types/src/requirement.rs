@@ -55,7 +55,7 @@ impl TryFrom<&str> for ComparisonOperator {
                     })
                 }
                 _ => Ok(ComparisonOperator::Equal),
-            }
+            },
         }
     }
 }
