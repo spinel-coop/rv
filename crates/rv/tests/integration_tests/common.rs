@@ -1,7 +1,14 @@
 use camino::Utf8PathBuf;
 use camino_tempfile_ext::camino_tempfile::Utf8TempDir;
 use mockito::Mock;
+use rexpect::{reader::Options, session::PtyReplSession};
 use std::{collections::HashMap, process::Command};
+
+pub struct Shell {
+    pub name: &'static str,
+    pub startup_flag: &'static str,
+    pub prompt_setter: &'static str,
+}
 
 pub struct RvTest {
     pub temp_dir: Utf8TempDir,
@@ -67,6 +74,38 @@ impl RvTest {
 
     pub fn rv_command(&self) -> Command {
         self.command(env!("CARGO_BIN_EXE_rv"))
+    }
+
+    pub fn make_session(&self, shell: Shell) -> Result<PtyReplSession, Box<dyn std::error::Error>> {
+        let mut cmd = self.command(shell.name);
+        cmd.arg(shell.startup_flag);
+        cmd.env("TERM", "xterm-256color").env_remove("RV_TEST_EXE");
+
+        let pty_session = rexpect::spawn_with_options(
+            cmd,
+            Options {
+                timeout_ms: Some(4000),
+                strip_ansi_escape_codes: true,
+            },
+        )?;
+        let mut session = PtyReplSession {
+            prompt: "PEXPECT>".to_owned(),
+            pty_session,
+            quit_command: Some("builtin exit".to_owned()),
+            echo_on: false,
+        };
+
+        session.send_line(shell.prompt_setter)?;
+        session.wait_for_prompt()?;
+
+        session.send_line(&format!(
+            "eval \"$({} shell init {})\"",
+            self.rv_command().get_program().display(),
+            shell.name,
+        ))?;
+        session.wait_for_prompt()?;
+
+        Ok(session)
     }
 
     pub fn command<S: AsRef<std::ffi::OsStr>>(&self, program: S) -> Command {
