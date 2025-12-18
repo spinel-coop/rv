@@ -154,3 +154,31 @@ fn test_shell_env_with_ruby_and_legacy_gem_path() {
         output.normalized_stdout_with_temp_dir(temp_dir.path().to_string_lossy().to_string())
     );
 }
+
+#[test]
+fn test_shell_env_with_existing_manpath() {
+    let mut test = RvTest::new();
+    test.create_ruby_dir("ruby-3.3.5");
+    let temp_dir = tempdir().unwrap();
+    let temp_dir_home = temp_dir.path().join("home");
+    test.env
+        .insert("HOME".into(), temp_dir_home.to_string_lossy().to_string());
+
+    // Set existing MANPATH to test prepending behavior
+    test.env.insert(
+        "MANPATH".into(),
+        "/usr/share/man:/usr/local/share/man".into(),
+    );
+
+    // Ensure the legacy path is present.
+    create_dir_all(temp_dir_home.join(".gem").join("ruby").join("3.3.5")).unwrap();
+
+    test.env.insert("PATH".into(), "/tmp/bin".into());
+
+    let output = test.rv(&["shell", "env", "zsh"]);
+    output.assert_success();
+
+    assert_snapshot!(
+        output.normalized_stdout_with_temp_dir(temp_dir.path().to_string_lossy().to_string())
+    );
+}

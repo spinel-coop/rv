@@ -120,6 +120,9 @@ impl RvTest {
         let bin_dir = ruby_dir.join("bin");
         std::fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
 
+        let man_dir = ruby_dir.join("share/man");
+        std::fs::create_dir_all(&man_dir).expect("Failed to create man directory");
+
         // Extract Ruby information from directory name
         // Extract version from directory name: ruby-3.1.4 -> 3.1.4
         let version = if let Some(dash_pos) = name.find('-') {

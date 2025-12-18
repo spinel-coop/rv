@@ -177,7 +177,7 @@ pub fn find_requested_ruby(
     }
 }
 
-const ENV_VARS: [&str; 7] = [
+const ENV_VARS: [&str; 8] = [
     "RUBY_ROOT",
     "RUBY_ENGINE",
     "RUBY_VERSION",
@@ -185,6 +185,7 @@ const ENV_VARS: [&str; 7] = [
     "GEM_ROOT",
     "GEM_HOME",
     "GEM_PATH",
+    "MANPATH",
 ];
 
 #[allow(clippy::type_complexity)]
@@ -235,6 +236,13 @@ pub fn env_for(ruby: Option<&Ruby>) -> Result<(Vec<&'static str>, Vec<(&'static 
         let gem_path = join_paths(gem_paths)?;
         if let Some(gem_path) = gem_path.to_str() {
             insert("GEM_PATH", gem_path.into());
+        }
+
+        // Set MANPATH so `man ruby`, `man irb`, etc. work correctly.
+        // A trailing colon means "also search system man directories".
+        if let Some(man_path) = ruby.man_path() {
+            let existing = std::env::var("MANPATH").unwrap_or_default();
+            insert("MANPATH", format!("{}:{}", man_path, existing));
         }
     }
 
