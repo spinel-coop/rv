@@ -136,6 +136,15 @@ impl Ruby {
             None
         }
     }
+
+    pub fn man_path(&self) -> Option<Utf8PathBuf> {
+        let man_path = self.path.join("share/man");
+        if man_path.is_dir() {
+            Some(man_path)
+        } else {
+            None
+        }
+    }
 }
 
 impl PartialOrd for Ruby {

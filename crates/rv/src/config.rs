@@ -240,12 +240,10 @@ pub fn env_for(ruby: Option<&Ruby>) -> Result<(Vec<&'static str>, Vec<(&'static 
 
         // Set MANPATH so `man ruby`, `man irb`, etc. work correctly.
         // A trailing colon means "also search system man directories".
-        let ruby_manpath = ruby.path.join("share/man");
-        let manpath = match std::env::var("MANPATH") {
-            Ok(existing) => format!("{}:{}", ruby_manpath, existing),
-            Err(_) => format!("{}:", ruby_manpath),
-        };
-        insert("MANPATH", manpath);
+        if let Some(man_path) = ruby.man_path() {
+            let existing = std::env::var("MANPATH").unwrap_or_default();
+            insert("MANPATH", format!("{}:{}", man_path, existing));
+        }
     }
 
     let path = join_paths(paths)?;
