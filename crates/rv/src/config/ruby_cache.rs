@@ -170,7 +170,6 @@ mod tests {
 
         let config = Config {
             ruby_dirs: indexset![ruby_dir],
-            gemfile: None,
             root: root.clone(),
             current_dir: root.clone(),
             cache: Cache::temp().unwrap(),

@@ -469,7 +469,6 @@ mod tests {
 
         let config = Config {
             ruby_dirs: indexset![ruby_dir],
-            gemfile: None,
             current_exe: root.join("bin").join("rv"),
             requested_ruby: Some(("3.5.0".parse().unwrap(), Source::Other)),
             current_dir,

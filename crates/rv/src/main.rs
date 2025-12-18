@@ -52,10 +52,6 @@ struct Cli {
     #[arg(long = "ruby-dir", env = "RUBIES_PATH", value_delimiter = ':')]
     ruby_dir: Vec<Utf8PathBuf>,
 
-    /// Path to Gemfile
-    #[arg(long, env = "BUNDLE_GEMFILE")]
-    gemfile: Option<Utf8PathBuf>,
-
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity<clap_verbosity_flag::InfoLevel>,
 
@@ -112,7 +108,6 @@ impl Cli {
 
         Ok(Config {
             ruby_dirs,
-            gemfile: self.gemfile.clone(),
             root,
             current_dir,
             cache,
