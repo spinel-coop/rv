@@ -70,7 +70,7 @@ struct Cli {
     cache_args: CacheArgs,
 
     #[command(subcommand)]
-    command: Option<Commands>,
+    command: Commands,
 
     /// Root directory for testing (hidden)
     #[arg(long, hide = true, env = "RV_ROOT_DIR")]
@@ -279,10 +279,7 @@ async fn run() -> Result<()> {
     }
 
     let config = cli.config()?;
-    let Some(cmd) = cli.command else {
-        return Ok(());
-    };
-    run_cmd(&config, cmd).await
+    run_cmd(&config, cli.command).await
 }
 
 /// Run an `rv` subcommand.
