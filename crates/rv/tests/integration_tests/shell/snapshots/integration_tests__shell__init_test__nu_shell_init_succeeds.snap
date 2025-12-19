@@ -2,10 +2,10 @@
 source: crates/rv/tests/integration_tests/shell/init_test.rs
 expression: output.normalized_stdout()
 ---
-$env.config = ($env.config | upsert hooks.env_change.PWD {
+$env.config = ($env.config | upsert hooks.pre_execution {
     [
-        {
-            |_, _| /tmp/bin/rv shell env nu | from json | load-env
+        {||
+            /tmp/bin/rv shell env nu | from json | load-env
         }
     ]
 })
