@@ -1,0 +1,126 @@
+--- !ruby/object:Gem::Specification
+name: lz4-ruby
+version: !ruby/object:Gem::Version
+  version: 0.3.3
+platform: ruby
+authors:
+- KOMIYA Atsushi
+autorequire:
+bindir: bin
+cert_chain: []
+
+date: 2014-07-10 00:00:00 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: rspec
+  prerelease: false
+  requirement: &id001 !ruby/object:Gem::Requirement
+    requirements:
+    - &id003
+      - ">="
+      - !ruby/object:Gem::Version
+        version: "0"
+  type: :development
+  version_requirements: *id001
+- !ruby/object:Gem::Dependency
+  name: rdoc
+  prerelease: false
+  requirement: &id002 !ruby/object:Gem::Requirement
+    requirements:
+    - - ~>
+      - !ruby/object:Gem::Version
+        version: "3.12"
+  type: :development
+  version_requirements: *id002
+- !ruby/object:Gem::Dependency
+  name: bundler
+  prerelease: false
+  requirement: &id004 !ruby/object:Gem::Requirement
+    requirements:
+    - *id003
+  type: :development
+  version_requirements: *id004
+- !ruby/object:Gem::Dependency
+  name: jeweler
+  prerelease: false
+  requirement: &id005 !ruby/object:Gem::Requirement
+    requirements:
+    - - ~>
+      - !ruby/object:Gem::Version
+        version: 1.8.3
+  type: :development
+  version_requirements: *id005
+- !ruby/object:Gem::Dependency
+  name: rake-compiler
+  prerelease: false
+  requirement: &id006 !ruby/object:Gem::Requirement
+    requirements:
+    - *id003
+  type: :development
+  version_requirements: *id006
+description: Ruby bindings for LZ4. LZ4 is a very fast lossless compression algorithm.
+email: komiya.atsushi@gmail.com
+executables: []
+
+extensions:
+- ext/lz4ruby/extconf.rb
+extra_rdoc_files:
+- LICENSE.txt
+- README.rdoc
+files:
+- .document
+- CHANGELOG.rdoc
+- Gemfile
+- LICENSE.txt
+- README.rdoc
+- Rakefile
+- VERSION
+- benchmarking/bench.rb
+- benchmarking/bench_all.sh
+- benchmarking/compressor.rb
+- benchmarking/compressor_lz4.rb
+- benchmarking/compressor_lzo.rb
+- benchmarking/compressor_snappy.rb
+- ext/lz4ruby/extconf.rb
+- ext/lz4ruby/lz4.c
+- ext/lz4ruby/lz4.h
+- ext/lz4ruby/lz4hc.c
+- ext/lz4ruby/lz4hc.h
+- ext/lz4ruby/lz4ruby.c
+- lib/lz4-jruby.rb
+- lib/lz4-ruby.rb
+- pom.xml
+- spec/helper.rb
+- spec/lz4_compressHC_spec.rb
+- spec/lz4_compress_spec.rb
+- spec/lz4_raw_compress_spec.rb
+- spec/lz4_raw_decompress_spec.rb
+- spec/lz4_raw_spec.rb
+- src/main/java/com/headius/jruby/lz4/LZ4Internal.java
+- src/main/java/com/headius/jruby/lz4/LZ4Library.java
+homepage: http://github.com/komiya-atsushi/lz4-ruby
+licenses:
+- MIT
+metadata: {}
+
+post_install_message:
+rdoc_options: []
+
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: "1.9"
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - *id003
+requirements: []
+
+rubyforge_project:
+rubygems_version: 2.0.14
+signing_key:
+specification_version: 4
+summary: Ruby bindings for LZ4 (Extremely Fast Compression algorithm).
+test_files: []
