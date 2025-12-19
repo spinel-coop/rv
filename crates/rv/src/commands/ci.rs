@@ -621,36 +621,44 @@ fn compile_native_extensions(
 
         output = Command::new("make")
             .current_dir(&this_gems_dir)
-            .env("DESTDIR", "")
-            .env("sitearchdir", tmpdir.path())
-            .env("sitelibdir", tmpdir.path())
-            .args(["clean"])
+            .args([
+                "DESTDIR=''",
+                &format!("sitearchdir={}", tmpdir.path()),
+                &format!("sitelibdir={}", tmpdir.path()),
+                "clean",
+            ])
             .output()?;
         compile_results.push(CompileNativeExtResult { extension, output });
 
         output = Command::new("make")
             .current_dir(&this_gems_dir)
-            .env("DESTDIR", "")
-            .env("sitearchdir", tmpdir.path())
-            .env("sitelibdir", tmpdir.path())
+            .args([
+                "DESTDIR=''",
+                &format!("sitearchdir={}", tmpdir.path()),
+                &format!("sitelibdir={}", tmpdir.path()),
+            ])
             .output()?;
         compile_results.push(CompileNativeExtResult { extension, output });
 
         output = Command::new("make")
             .current_dir(&this_gems_dir)
-            .env("DESTDIR", "")
-            .env("sitearchdir", tmpdir.path())
-            .env("sitelibdir", tmpdir.path())
-            .args(["install"])
+            .args([
+                "DESTDIR=''",
+                &format!("sitearchdir={}", tmpdir.path()),
+                &format!("sitelibdir={}", tmpdir.path()),
+                "install",
+            ])
             .output()?;
         compile_results.push(CompileNativeExtResult { extension, output });
 
         output = Command::new("make")
             .current_dir(&this_gems_dir)
-            .env("DESTDIR", "")
-            .env("sitearchdir", tmpdir.path())
-            .env("sitelibdir", tmpdir.path())
-            .args(["clean"])
+            .args([
+                "DESTDIR=''",
+                &format!("sitearchdir={}", tmpdir.path()),
+                &format!("sitelibdir={}", tmpdir.path()),
+                "clean",
+            ])
             .output()?;
         compile_results.push(CompileNativeExtResult { extension, output });
 
@@ -679,6 +687,7 @@ fn compile_native_extensions(
         // Write the stdout from the shelling out process(es) into gem_make.out
 
         // Touch the file gem.build_complete so RubyGems knows it worked.
+        std::fs::write(ext_path.join("gem.build_complete"), "")?;
     }
 
     for res in compile_results
