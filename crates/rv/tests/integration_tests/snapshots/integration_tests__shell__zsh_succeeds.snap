@@ -1,0 +1,10 @@
+---
+source: crates/rv/tests/integration_tests/shell.rs
+assertion_line: 13
+expression: output.normalized_stdout()
+---
+Install rv's shell integration into zsh by running the commands below,
+or configuring your shell to do the equivalent.
+
+echo 'eval "$(/tmp/bin/rv shell init zsh)"' >> ~/.zshrc
+echo 'eval "$(/tmp/bin/rv shell completions zsh)"' >> ~/.zshrc
