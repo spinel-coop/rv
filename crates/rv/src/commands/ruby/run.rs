@@ -5,6 +5,7 @@ use std::{
 
 use camino::Utf8Path;
 use rv_ruby::request::RubyRequest;
+use tracing::debug;
 
 use crate::config::{self, Config};
 
@@ -79,6 +80,7 @@ pub(crate) fn run_no_install<A: AsRef<std::ffi::OsStr>>(
         cmd.current_dir(path);
     }
 
+    debug!("Running command: {:?}", cmd);
     match capture_output {
         CaptureOutput::No => {
             exec(cmd).map(|()| Output {
