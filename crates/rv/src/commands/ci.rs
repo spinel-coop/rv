@@ -1,7 +1,7 @@
 use bytes::Bytes;
 use camino::Utf8Path;
 use camino::Utf8PathBuf;
-use camino_tempfile::tempdir_in;
+use camino_tempfile::Utf8TempDir;
 use current_platform::CURRENT_PLATFORM;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
@@ -605,9 +605,29 @@ fn compile_native_extensions(
     extensions: &[String],
 ) -> Result<bool> {
     let mut compile_results = Vec::with_capacity(extensions.len());
+    let this_gems_dir = args.install_path.join("gems").join(gv.to_string());
+
+    let ext_path = crate::commands::ruby::run::run_no_install(
+        config,
+        &config.ruby_request()?,
+        &[
+            "-rbundler",
+            "-e",
+            "puts Gem.default_ext_dir_for(Bundler.bundle_path) || File.join(Bundler.bundle_path, 'extensions', Gem::Platform.local.to_s, Gem.extension_api_version)",
+        ],
+        CaptureOutput::Both,
+        Some(&this_gems_dir),
+    )?
+    .stdout;
+    if ext_path.is_empty() {
+        return Err(Error::BadBundlePath);
+    }
+    let ext_path = String::from_utf8(ext_path)
+        .map(|s| Utf8PathBuf::from(s.trim()))
+        .map_err(|_| Error::BadBundlePath)?;
+
     for extension in extensions {
-        let this_gems_dir = args.install_path.join("gems").join(gv.to_string());
-        let tmpdir = tempdir_in(&this_gems_dir)?;
+        let tmpdir = Utf8TempDir::with_prefix_in("build", &this_gems_dir)?;
         let mut output;
 
         output = crate::commands::ruby::run::run_no_install(
@@ -662,32 +682,14 @@ fn compile_native_extensions(
             .output()?;
         compile_results.push(CompileNativeExtResult { extension, output });
 
-        let args = [
-            "-rbundler",
-            "-e",
-            "puts Gem.default_ext_dir_for(Bundler.bundle_path) || File.join(Bundler.bundle_path, 'extensions', Gem::Platform.local.to_s, Gem.extension_api_version)",
-        ];
-        let ext_path = crate::commands::ruby::run::run_no_install(
-            config,
-            &config.ruby_request()?,
-            args.as_slice(),
-            CaptureOutput::Both,
-            Some(&this_gems_dir),
-        )?
-        .stdout;
-
-        if ext_path.is_empty() {
-            return Err(Error::BadBundlePath);
-        }
-        let ext_path = String::from_utf8(ext_path)
-            .map(|s| Utf8PathBuf::from(s.trim()))
-            .map_err(|_| Error::BadBundlePath)?;
+        let log_path = ext_path.join("gem_build.out");
+        compile_results.iter().for_each(|r| {
+            let out = String::from_utf8_lossy(&r.output.stdout);
+            let err = String::from_utf8_lossy(&r.output.stderr);
+            let log = out + err;
+            let _ = std::fs::write(&log_path, log.as_ref());
+        });
         dircpy::copy_dir(tmpdir.path(), &ext_path)?;
-
-        // Write the stdout from the shelling out process(es) into gem_make.out
-
-        // Touch the file gem.build_complete so RubyGems knows it worked.
-        std::fs::write(ext_path.join("gem.build_complete"), "")?;
     }
 
     for res in compile_results
@@ -715,6 +717,11 @@ fn compile_native_extensions(
     }
 
     let all_ok = compile_results.iter().all(|res| res.success());
+    if all_ok {
+        // Touch the file gem.build_complete so RubyGems knows it worked.
+        std::fs::write(ext_path.join("gem.build_complete"), "")?;
+    }
+
     Ok(all_ok)
 }
 
