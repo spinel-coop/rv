@@ -33,7 +33,6 @@ type Result<T> = miette::Result<T, Error>;
 #[derive(Debug)]
 pub struct Config {
     pub ruby_dirs: IndexSet<Utf8PathBuf>,
-    pub gemfile: Option<Utf8PathBuf>,
     pub root: Utf8PathBuf,
     pub current_dir: Utf8PathBuf,
     pub cache: rv_cache::Cache,
@@ -271,7 +270,6 @@ mod tests {
 
         Config {
             ruby_dirs: indexset![ruby_dir],
-            gemfile: None,
             current_exe: root.join("bin").join("rv"),
             requested_ruby: Some(("3.5.0".parse().unwrap(), Source::Other)),
             current_dir,

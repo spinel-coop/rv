@@ -38,6 +38,10 @@ const X86_STRINGS: [&str; 4] = ["x86", "i686", "win32", "win64"];
 
 #[derive(Debug, clap_derive::Args)]
 pub struct CleanInstallArgs {
+    /// Path to Gemfile
+    #[arg(long, env = "BUNDLE_GEMFILE")]
+    gemfile: Option<Utf8PathBuf>,
+
     /// Maximum number of downloads that can be in flight at once.
     #[arg(short, long, default_value = "10")]
     pub max_concurrent_requests: usize,
@@ -110,7 +114,7 @@ pub enum Error {
 type Result<T> = std::result::Result<T, Error>;
 
 pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
-    let lockfile_path = find_lockfile_path(config)?;
+    let lockfile_path = find_lockfile_path(args.gemfile)?;
     let install_path = find_install_path(config, &lockfile_path).await?;
     let inner_args = CiInnerArgs {
         max_concurrent_requests: args.max_concurrent_requests,
@@ -130,10 +134,10 @@ async fn ci_inner(cache: &rv_cache::Cache, args: &CiInnerArgs) -> Result<()> {
     Ok(())
 }
 
-fn find_lockfile_path(config: &Config) -> Result<Utf8PathBuf> {
+fn find_lockfile_path(gemfile: Option<Utf8PathBuf>) -> Result<Utf8PathBuf> {
     let lockfile_name: Utf8PathBuf;
-    if let Some(path) = &config.gemfile {
-        lockfile_name = format!("{}.lock", path.clone()).into();
+    if let Some(path) = gemfile {
+        lockfile_name = format!("{}.lock", path).into();
     } else {
         lockfile_name = "Gemfile.lock".into();
     }

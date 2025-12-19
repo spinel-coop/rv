@@ -18,3 +18,15 @@ fn test_no_command() {
         "error: 'rv' requires a subcommand but one was not provided",
     );
 }
+
+#[test]
+fn test_global_flags() {
+    let test = RvTest::new();
+    let result = test.rv(&["--help"]);
+    result.assert_success();
+    let stdout = result.stdout();
+    assert!(
+        !stdout.contains("--gemfile"),
+        "--gemfile should not be a global flag"
+    );
+}
