@@ -3,6 +3,7 @@ use camino::Utf8Path;
 use camino::Utf8PathBuf;
 use camino_tempfile::Utf8TempDir;
 use current_platform::CURRENT_PLATFORM;
+use dircpy::copy_dir;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
@@ -34,6 +35,8 @@ use std::ops::Not;
 use std::path::PathBuf;
 use std::process::Command;
 use std::process::Stdio;
+use std::str::FromStr;
+use std::vec;
 
 const ARM_STRINGS: [&str; 3] = ["arm64", "arm", "aarch64"];
 const X86_STRINGS: [&str; 4] = ["x86", "i686", "win32", "win64"];
@@ -75,6 +78,8 @@ struct CiInnerArgs {
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
+    #[error(transparent)]
+    Infallible(#[from] std::convert::Infallible),
     #[error("Some gems did not compile their extensions")]
     CompileFailures,
     #[error(transparent)]
@@ -598,6 +603,24 @@ impl<'a> CompileNativeExtResult<'a> {
     }
 }
 
+fn exts_dir(config: &Config, gv: GemVersion) -> Result<Utf8PathBuf> {
+    let exts_dir = crate::commands::ruby::run::run_no_install(
+        config,
+        &config.ruby_request()?,
+        &[
+            "-e",
+            "puts File.join(Gem::Platform.local.to_s, Gem.extension_api_version)",
+        ],
+        CaptureOutput::Both,
+        None,
+    )?
+    .stdout;
+
+    String::from_utf8(exts_dir)
+        .map(|s| Utf8PathBuf::from(s.trim()))
+        .map_err(|_| Error::BadBundlePath)
+}
+
 fn compile_native_extensions(
     config: &Config,
     args: &CiInnerArgs,
@@ -605,91 +628,66 @@ fn compile_native_extensions(
     extensions: &[String],
 ) -> Result<bool> {
     let mut compile_results = Vec::with_capacity(extensions.len());
-    let this_gems_dir = args.install_path.join("gems").join(gv.to_string());
 
-    let ext_path = crate::commands::ruby::run::run_no_install(
-        config,
-        &config.ruby_request()?,
-        &[
-            "-rbundler",
-            "-e",
-            "puts Gem.default_ext_dir_for(Bundler.bundle_path) || File.join(Bundler.bundle_path, 'extensions', Gem::Platform.local.to_s, Gem.extension_api_version)",
-        ],
-        CaptureOutput::Both,
-        Some(&this_gems_dir),
-    )?
-    .stdout;
-    if ext_path.is_empty() {
-        return Err(Error::BadBundlePath);
-    }
-    let ext_path = String::from_utf8(ext_path)
-        .map(|s| Utf8PathBuf::from(s.trim()))
-        .map_err(|_| Error::BadBundlePath)?;
+    let gem_path = args.install_path.join("gems").join(gv.to_string());
+    let lib_dest = gem_path.join("lib");
+    let ext_dest = args
+        .install_path
+        .join(exts_dir(config, gv)?)
+        .join(gv.to_string());
 
     for extension in extensions {
-        let tmpdir = Utf8TempDir::with_prefix_in("build", &this_gems_dir)?;
+        let ext_path = Utf8PathBuf::from_str(extension)?;
+        let ext_dir = gem_path.join(ext_path.parent().expect("extconf has no parent"));
+        let ext_file = ext_path.file_name().expect("extconf has no filename");
         let mut output;
 
+        // 1. Run the extconf.rb file with the current ruby
         output = crate::commands::ruby::run::run_no_install(
             config,
             &config.ruby_request()?,
-            &[extension],
+            &[ext_file],
             CaptureOutput::Both,
-            Some(&this_gems_dir),
+            Some(&ext_dir),
         )?;
         compile_results.push(CompileNativeExtResult { extension, output });
 
+        // 2. Save the mkmf.log file if it exists
+        let mkmf_log = ext_dir.join("mkmf.log");
+        if mkmf_log.exists() {
+            fs_err::rename("mkmf.log", &ext_dest)?;
+        }
+
+        // 3. Run make clean / make / make install
+        let tmp_dir = camino_tempfile::tempdir_in(&gem_path)?;
+        let sitearchdir = format!("sitearchdir={}", tmp_dir.path());
+        let sitelibdir = format!("sitelibdir={}", tmp_dir.path());
+        let args = vec!["DESTDIR=''", &sitearchdir, &sitelibdir];
+
         output = Command::new("make")
-            .current_dir(&this_gems_dir)
-            .args([
-                "DESTDIR=''",
-                &format!("sitearchdir={}", tmpdir.path()),
-                &format!("sitelibdir={}", tmpdir.path()),
-                "clean",
-            ])
+            .args([vec!["clean"], args.clone()].concat())
+            .current_dir(&gem_path)
             .output()?;
         compile_results.push(CompileNativeExtResult { extension, output });
 
         output = Command::new("make")
-            .current_dir(&this_gems_dir)
-            .args([
-                "DESTDIR=''",
-                &format!("sitearchdir={}", tmpdir.path()),
-                &format!("sitelibdir={}", tmpdir.path()),
-            ])
+            .args(&args)
+            .current_dir(&gem_path)
             .output()?;
         compile_results.push(CompileNativeExtResult { extension, output });
 
         output = Command::new("make")
-            .current_dir(&this_gems_dir)
-            .args([
-                "DESTDIR=''",
-                &format!("sitearchdir={}", tmpdir.path()),
-                &format!("sitelibdir={}", tmpdir.path()),
-                "install",
-            ])
+            .args([vec!["install"], args.clone()].concat())
+            .current_dir(&gem_path)
             .output()?;
         compile_results.push(CompileNativeExtResult { extension, output });
 
-        output = Command::new("make")
-            .current_dir(&this_gems_dir)
-            .args([
-                "DESTDIR=''",
-                &format!("sitearchdir={}", tmpdir.path()),
-                &format!("sitelibdir={}", tmpdir.path()),
-                "clean",
-            ])
-            .output()?;
-        compile_results.push(CompileNativeExtResult { extension, output });
+        // 4. Copy the resulting files to ext and lib dirs
+        copy_dir(&tmp_dir, &lib_dest)?;
+        copy_dir(&tmp_dir, &ext_dest)?;
 
-        let log_path = ext_path.join("gem_build.out");
-        compile_results.iter().for_each(|r| {
-            let out = String::from_utf8_lossy(&r.output.stdout);
-            let err = String::from_utf8_lossy(&r.output.stderr);
-            let log = out + err;
-            let _ = std::fs::write(&log_path, log.as_ref());
-        });
-        dircpy::copy_dir(tmpdir.path(), &ext_path)?;
+        // 5. Mark the gem as built
+        std::fs::write(ext_dest.join("gem.build_complete"), "")?;
     }
 
     for res in compile_results
@@ -706,22 +704,21 @@ fn compile_native_extensions(
                 .map(|c| c.to_string())
                 .unwrap_or("<unknown>".to_owned()),
         );
-        eprintln!(
-            "stdout was:\n{}",
-            String::from_utf8_lossy(&res.output.stdout)
-        );
-        eprintln!(
-            "stderr was:\n{}",
-            String::from_utf8_lossy(&res.output.stderr)
-        );
+        if (!res.output.stdout.is_empty()) {
+            eprintln!(
+                "stdout was:\n{}",
+                String::from_utf8_lossy(&res.output.stdout)
+            );
+        }
+        if (!res.output.stderr.is_empty()) {
+            eprintln!(
+                "stderr was:\n{}",
+                String::from_utf8_lossy(&res.output.stderr)
+            );
+        }
     }
 
     let all_ok = compile_results.iter().all(|res| res.success());
-    if all_ok {
-        // Touch the file gem.build_complete so RubyGems knows it worked.
-        std::fs::write(ext_path.join("gem.build_complete"), "")?;
-    }
-
     Ok(all_ok)
 }
 
