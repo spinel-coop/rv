@@ -671,11 +671,10 @@ fn compile_native_extensions(
         let sitelibdir = format!("sitelibdir={}", tmp_dir.path());
         let args = vec!["DESTDIR=''", &sitearchdir, &sitelibdir];
 
-        output = Command::new("make")
+        Command::new("make")
             .args([vec!["clean"], args.clone()].concat())
             .current_dir(&gem_path)
             .output()?;
-        compile_results.push(CompileNativeExtResult { extension, output });
 
         output = Command::new("make")
             .args(&args)
