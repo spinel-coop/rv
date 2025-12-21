@@ -593,7 +593,7 @@ end"#
 fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -> io::Result<()> {
     let binstub_path = binstub_dir.join(exe_name);
     let binstub_contents = generate_binstub_contents(gem_name, exe_name);
-    std::fs::write(binstub_path, binstub_contents)
+    fs_err::write(binstub_path, binstub_contents)
 }
 
 struct CompileNativeExtResult<'a> {
@@ -701,7 +701,7 @@ fn compile_native_extensions(
         copy_dir(&tmp_dir, &ext_dest)?;
 
         // 5. Mark the gem as built
-        std::fs::write(ext_dest.join("gem.build_complete"), "")?;
+        fs_err::write(ext_dest.join("gem.build_complete"), "")?;
     }
 
     for res in compile_results
@@ -801,7 +801,7 @@ where
 {
     // First, create the data's destination.
     let data_dir: PathBuf = bundle_path.join("gems").join(nameversion).into();
-    std::fs::create_dir_all(&data_dir)?;
+    fs_err::create_dir_all(&data_dir)?;
     let mut gem_data_archive = tar::Archive::new(GzDecoder::new(data_tar_gz));
     for e in gem_data_archive.entries()? {
         let mut entry = e?;
@@ -811,7 +811,7 @@ where
         // Not sure if this is strictly necessary, or if we can know the
         // intermediate directories ahead of time.
         if let Some(dst_parent) = dst.parent() {
-            std::fs::create_dir_all(dst_parent)?;
+            fs_err::create_dir_all(dst_parent)?;
         }
         entry.unpack(&dst)?;
     }
@@ -838,10 +838,10 @@ where
 {
     // First, create the metadata's destination.
     let metadata_dir = bundle_path.join("specifications/");
-    std::fs::create_dir_all(&metadata_dir)?;
+    fs_err::create_dir_all(&metadata_dir)?;
     let filename = format!("{nameversion}.gemspec");
     let dst_path = metadata_dir.join(filename);
-    let mut dst = std::fs::File::create(&dst_path)?;
+    let mut dst = fs_err::File::create(&dst_path)?;
 
     // Then write the (unzipped) source into the destination.
     let mut yaml_contents = String::new();
