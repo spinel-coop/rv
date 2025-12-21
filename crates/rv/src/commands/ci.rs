@@ -673,18 +673,18 @@ fn compile_native_extensions(
 
         Command::new("make")
             .args([vec!["clean"], args.clone()].concat())
-            .current_dir(&gem_path)
+            .current_dir(&ext_dir)
             .output()?;
 
         output = Command::new("make")
             .args(&args)
-            .current_dir(&gem_path)
+            .current_dir(&ext_dir)
             .output()?;
         compile_results.push(CompileNativeExtResult { extension, output });
 
         output = Command::new("make")
             .args([vec!["install"], args.clone()].concat())
-            .current_dir(&gem_path)
+            .current_dir(&ext_dir)
             .output()?;
         compile_results.push(CompileNativeExtResult { extension, output });
 
