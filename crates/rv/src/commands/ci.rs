@@ -655,7 +655,8 @@ fn compile_native_extensions(
         // 2. Save the mkmf.log file if it exists
         let mkmf_log = ext_dir.join("mkmf.log");
         if mkmf_log.exists() {
-            fs_err::rename("mkmf.log", &ext_dest)?;
+            fs_err::create_dir_all(&ext_dest)?;
+            fs_err::rename(mkmf_log, &ext_dest.join("mkmf.log"))?;
         }
 
         // 3. Run make clean / make / make install
