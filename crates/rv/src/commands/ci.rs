@@ -704,6 +704,7 @@ fn compile_native_extensions(
         fs_err::write(ext_dest.join("gem.build_complete"), "")?;
     }
 
+    fs_err::create_dir_all(&ext_dest)?;
     let mut log = fs_err::File::create(ext_dest.join("build_ext.log"))?;
     for res in compile_results.iter() {
         log.write_all(&res.output.stdout)?;
