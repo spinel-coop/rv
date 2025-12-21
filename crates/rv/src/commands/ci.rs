@@ -608,7 +608,7 @@ impl<'a> CompileNativeExtResult<'a> {
     }
 }
 
-fn exts_dir(config: &Config, gv: GemVersion) -> Result<Utf8PathBuf> {
+fn exts_dir(config: &Config) -> Result<Utf8PathBuf> {
     let exts_dir = crate::commands::ruby::run::run_no_install(
         config,
         &config.ruby_request()?,
@@ -638,7 +638,8 @@ fn compile_native_extensions(
     let lib_dest = gem_path.join("lib");
     let ext_dest = args
         .install_path
-        .join(exts_dir(config, gv)?)
+        .join("extensions")
+        .join(exts_dir(config)?)
         .join(gv.to_string());
 
     for extension in extensions {
