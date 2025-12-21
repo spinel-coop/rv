@@ -665,7 +665,7 @@ fn compile_native_extensions(
             fs_err::rename(mkmf_log, &ext_dest.join("mkmf.log"))?;
         }
 
-        // 3. Run make clean / make / make install
+        // 3. Run make clean / make / make install / make clean
         let tmp_dir = camino_tempfile::tempdir_in(&gem_path)?;
         let sitearchdir = format!("sitearchdir={}", tmp_dir.path());
         let sitelibdir = format!("sitelibdir={}", tmp_dir.path());
@@ -687,6 +687,11 @@ fn compile_native_extensions(
             .current_dir(&ext_dir)
             .output()?;
         compile_results.push(CompileNativeExtResult { extension, output });
+
+        Command::new("make")
+            .args([vec!["clean"], args.clone()].concat())
+            .current_dir(&ext_dir)
+            .output()?;
 
         // 4. Copy the resulting files to ext and lib dirs
         copy_dir(&tmp_dir, &lib_dest)?;
