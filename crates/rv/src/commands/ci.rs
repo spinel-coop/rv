@@ -231,7 +231,7 @@ async fn install_gems<'i>(
                 // 3. Generate binstubs.
                 install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir)?;
                 // 4. Handle compiling native extensions for gems with native extensions
-                if !args.skip_compile_extensions {
+                if !args.skip_compile_extensions && !dep_gemspec.extensions.is_empty() {
                     debug!("compiling native extensions for {gv}");
                     let compiled_ok =
                         compile_native_extensions(config, args, gv, &dep_gemspec.extensions)?;
