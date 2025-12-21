@@ -247,6 +247,11 @@ async fn install_gems<'i>(
         Ok::<_, Error>(())
     })?;
 
+    // Remove the binstubs dir if we didn't generate any binstubs
+    if fs_err::read_dir(&binstub_dir)?.next().is_none() {
+        fs_err::remove_dir(&binstub_dir)?;
+    }
+
     // 5. Copy the .gem files and the .gemspec files into cache and specificatiosn?
     Ok(())
 }
