@@ -1,7 +1,6 @@
 use bytes::Bytes;
 use camino::Utf8Path;
 use camino::Utf8PathBuf;
-use camino_tempfile::Utf8TempDir;
 use current_platform::CURRENT_PLATFORM;
 use dircpy::copy_dir;
 use flate2::read::GzDecoder;
@@ -662,7 +661,7 @@ fn compile_native_extensions(
         let mkmf_log = ext_dir.join("mkmf.log");
         if mkmf_log.exists() {
             fs_err::create_dir_all(&ext_dest)?;
-            fs_err::rename(mkmf_log, &ext_dest.join("mkmf.log"))?;
+            fs_err::rename(mkmf_log, ext_dest.join("mkmf.log"))?;
         }
 
         // 3. Run make clean / make / make install / make clean
@@ -719,13 +718,13 @@ fn compile_native_extensions(
                 .map(|c| c.to_string())
                 .unwrap_or("<unknown>".to_owned()),
         );
-        if (!res.output.stdout.is_empty()) {
+        if !res.output.stdout.is_empty() {
             eprintln!(
                 "stdout was:\n{}",
                 String::from_utf8_lossy(&res.output.stdout)
             );
         }
-        if (!res.output.stderr.is_empty()) {
+        if !res.output.stderr.is_empty() {
             eprintln!(
                 "stderr was:\n{}",
                 String::from_utf8_lossy(&res.output.stderr)
