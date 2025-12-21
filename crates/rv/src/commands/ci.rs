@@ -680,7 +680,11 @@ fn compile_native_extensions(
             .args(&args)
             .current_dir(&ext_dir)
             .output()?;
+        let success = output.status.success();
         compile_results.push(CompileNativeExtResult { extension, output });
+        if !success {
+            continue;
+        }
 
         output = Command::new("make")
             .args([vec!["install"], args.clone()].concat())
