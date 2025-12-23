@@ -48,10 +48,7 @@ impl Config {
 
     pub fn matching_ruby(&self, request: &RubyRequest) -> Option<Ruby> {
         let rubies = self.rubies();
-        rubies
-            .into_iter()
-            .rev()
-            .find(|ruby| request.satisfied_by(ruby))
+        request.find_match_in(rubies)
     }
 
     pub fn current_ruby(&self) -> Option<Ruby> {
