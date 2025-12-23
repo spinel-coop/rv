@@ -6,8 +6,10 @@ use dircpy::copy_dir;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
+use once_cell::sync::Lazy;
 use owo_colors::OwoColorize;
 use rayon::ThreadPoolBuildError;
+use regex::Regex;
 use reqwest::Client;
 use rv_gem_types::Specification as GemSpecification;
 use rv_lockfile::datatypes::ChecksumAlgorithm;
@@ -79,6 +81,8 @@ struct CiInnerArgs {
 pub enum Error {
     #[error(transparent)]
     Infallible(#[from] std::convert::Infallible),
+    #[error("Cannot build unknown native extension {filename} from gem {gemname}")]
+    UnknownExtension { filename: String, gemname: String },
     #[error("Some gems did not compile their extensions")]
     CompileFailures,
     #[error(transparent)]
@@ -625,10 +629,78 @@ fn exts_dir(config: &Config) -> Result<Utf8PathBuf> {
         .map_err(|_| Error::BadBundlePath)
 }
 
-fn build_extconf(
+static EXTCONF_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)extconf").unwrap());
+static RAKE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)rakefile").unwrap());
+
+fn compile_native_extensions(
+    config: &Config,
+    args: &CiInnerArgs,
+    gv: GemVersion,
+    extensions: &[String],
+) -> Result<bool> {
+    let mut compile_results = Vec::with_capacity(extensions.len());
+
+    let gem_path = args.install_path.join("gems").join(gv.to_string());
+    let lib_dest = gem_path.join("lib");
+    let ext_dest = args
+        .install_path
+        .join("extensions")
+        .join(exts_dir(config)?)
+        .join(gv.to_string());
+
+    for extension in extensions {
+        if EXTCONF_REGEX.is_match(extension) {
+            if let Ok(outputs) = build_extconf(config, extension, &gem_path, &ext_dest, &lib_dest) {
+                compile_results.push(CompileNativeExtResult { extension, outputs });
+            }
+        } else {
+            return Err(Error::UnknownExtension {
+                filename: extension.clone(),
+                gemname: gv.to_string(),
+            });
+        }
+    }
+
+    fs_err::create_dir_all(&ext_dest)?;
+    let mut log = fs_err::File::create(ext_dest.join("build_ext.log"))?;
+    for res in compile_results.iter() {
+        for out in res.outputs.iter() {
+            log.write_all(&out.stdout)?;
+            log.write_all(&out.stderr)?;
+            log.write_all(b"\n\n")?;
+        }
+
+        if res.success() {
+            continue;
+        }
+
+        for out in res.outputs.iter() {
+            eprintln!(
+                "Warning: Could not compile gem {}'s extension {}. Got exit code {}.",
+                gv.to_string().yellow(),
+                res.extension.yellow(),
+                out.status
+                    .code()
+                    .map(|c| c.to_string())
+                    .unwrap_or("<unknown>".to_owned()),
+            );
+            if !out.stdout.is_empty() {
+                eprintln!("stdout was:\n{}", String::from_utf8_lossy(&out.stdout));
+            }
+            if !out.stderr.is_empty() {
+                eprintln!("stderr was:\n{}", String::from_utf8_lossy(&out.stderr));
+            }
+        }
+    }
+
+    let all_ok = compile_results.iter().all(|res| res.success());
+    Ok(all_ok)
+}
+
+fn build_rakefile(
+    config: &Config,
     extension: &str,
     gem_path: &Utf8PathBuf,
-    config: &Config,
     ext_dest: &Utf8PathBuf,
     lib_dest: &Utf8PathBuf,
 ) -> Result<Vec<std::process::Output>> {
@@ -697,62 +769,76 @@ fn build_extconf(
     Ok(outputs)
 }
 
-fn compile_native_extensions(
+fn build_extconf(
     config: &Config,
-    args: &CiInnerArgs,
-    gv: GemVersion,
-    extensions: &[String],
-) -> Result<bool> {
-    let mut compile_results = Vec::with_capacity(extensions.len());
+    extension: &str,
+    gem_path: &Utf8PathBuf,
+    ext_dest: &Utf8PathBuf,
+    lib_dest: &Utf8PathBuf,
+) -> Result<Vec<std::process::Output>> {
+    let ext_path = Utf8PathBuf::from_str(extension)?;
+    let ext_dir = gem_path.join(ext_path.parent().expect("extconf has no parent"));
+    let ext_file = ext_path.file_name().expect("extconf has no filename");
+    let mut output;
+    let mut outputs = vec![];
 
-    let gem_path = args.install_path.join("gems").join(gv.to_string());
-    let lib_dest = gem_path.join("lib");
-    let ext_dest = args
-        .install_path
-        .join("extensions")
-        .join(exts_dir(config)?)
-        .join(gv.to_string());
+    // 1. Run the extconf.rb file with the current ruby
+    output = crate::commands::ruby::run::run_no_install(
+        config,
+        &config.ruby_request()?,
+        &[ext_file],
+        CaptureOutput::Both,
+        Some(&ext_dir),
+    )?;
+    outputs.push(output);
 
-    for extension in extensions {
-        if let Ok(outputs) = build_extconf(extension, &gem_path, config, &ext_dest, &lib_dest) {
-            compile_results.push(CompileNativeExtResult { extension, outputs });
-        }
+    // 2. Save the mkmf.log file if it exists
+    let mkmf_log = ext_dir.join("mkmf.log");
+    if mkmf_log.exists() {
+        fs_err::create_dir_all(ext_dest)?;
+        fs_err::rename(mkmf_log, ext_dest.join("mkmf.log"))?;
     }
 
-    fs_err::create_dir_all(&ext_dest)?;
-    let mut log = fs_err::File::create(ext_dest.join("build_ext.log"))?;
-    for res in compile_results.iter() {
-        for out in res.outputs.iter() {
-            log.write_all(&out.stdout)?;
-            log.write_all(&out.stderr)?;
-            log.write_all(b"\n\n")?;
-        }
+    // 3. Run make clean / make / make install / make clean
+    let tmp_dir = camino_tempfile::tempdir_in(gem_path)?;
+    let sitearchdir = format!("sitearchdir={}", tmp_dir.path());
+    let sitelibdir = format!("sitelibdir={}", tmp_dir.path());
+    let args = vec!["DESTDIR=''", &sitearchdir, &sitelibdir];
 
-        if res.success() {
-            continue;
-        }
+    Command::new("make")
+        .args([vec!["clean"], args.clone()].concat())
+        .current_dir(&ext_dir)
+        .output()?;
 
-        for out in res.outputs.iter() {
-            eprintln!(
-                "Warning: Could not compile gem {}'s extension {}. Got exit code {}.",
-                gv.to_string().yellow(),
-                res.extension.yellow(),
-                out.status
-                    .code()
-                    .map(|c| c.to_string())
-                    .unwrap_or("<unknown>".to_owned()),
-            );
-            if !out.stdout.is_empty() {
-                eprintln!("stdout was:\n{}", String::from_utf8_lossy(&out.stdout));
-            }
-            if !out.stderr.is_empty() {
-                eprintln!("stderr was:\n{}", String::from_utf8_lossy(&out.stderr));
-            }
-        }
+    output = Command::new("make")
+        .args(&args)
+        .current_dir(&ext_dir)
+        .output()?;
+    let success = output.status.success();
+    outputs.push(output);
+    if !success {
+        return Ok(outputs);
     }
 
-    let all_ok = compile_results.iter().all(|res| res.success());
-    Ok(all_ok)
+    output = Command::new("make")
+        .args([vec!["install"], args.clone()].concat())
+        .current_dir(&ext_dir)
+        .output()?;
+    outputs.push(output);
+
+    Command::new("make")
+        .args([vec!["clean"], args.clone()].concat())
+        .current_dir(&ext_dir)
+        .output()?;
+
+    // 4. Copy the resulting files to ext and lib dirs
+    copy_dir(&tmp_dir, lib_dest)?;
+    copy_dir(&tmp_dir, ext_dest)?;
+
+    // 5. Mark the gem as built
+    fs_err::write(ext_dest.join("gem.build_complete"), "")?;
+
+    Ok(outputs)
 }
 
 /// Wrapper around some reader type `R`
