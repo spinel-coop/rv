@@ -88,16 +88,16 @@ fn parse_arch_str(arch_str: &str) -> (&'static str, &'static str) {
     }
 }
 
-fn current_platform_arch_str() -> Vec<&'static str> {
+fn current_os_and_arch() -> (&'static str, &'static str) {
     let platform =
         std::env::var("RV_TEST_PLATFORM").unwrap_or_else(|_| CURRENT_PLATFORM.to_string());
 
     match platform.as_str() {
-        "aarch64-apple-darwin" => vec!["arm64_sonoma"],
-        "x86_64-apple-darwin" => vec!["sequoia", "ventura"],
-        "x86_64-unknown-linux-gnu" => vec!["x86_64_linux"],
-        "aarch64-unknown-linux-gnu" => vec!["arm64_linux"],
-        _ => vec!["unsupported"],
+        "aarch64-apple-darwin" => ("macos", "aarch64"),
+        "x86_64-apple-darwin" => ("macos", "x86_64"),
+        "x86_64-unknown-linux-gnu" => ("linux", "x86_64"),
+        "aarch64-unknown-linux-gnu" => ("linux", "aarch64"),
+        _ => ("unknown", "unknown"),
     }
 }
 
@@ -303,12 +303,24 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
         }
     };
 
-    let entries = rubies_to_show(
-        release,
-        installed_rubies,
-        active_ruby,
-        current_platform_arch_str(),
+    // Filter releases+assets for current platform
+    let (desired_os, desired_arch) = current_os_and_arch();
+
+    let rubies_for_this_platform: Vec<Ruby> = release
+        .assets
+        .iter()
+        .filter_map(|asset| ruby_from_asset(asset).ok())
+        .filter(|ruby| ruby.os == desired_os && ruby.arch == desired_arch)
+        .collect();
+
+    debug!(
+        "Found {} available rubies for platform {}/{}",
+        rubies_for_this_platform.len(),
+        desired_os,
+        desired_arch
     );
+
+    let entries = rubies_to_show(rubies_for_this_platform, installed_rubies, active_ruby);
     if entries.is_empty() && format == OutputFormat::Text {
         warn!("No rubies found for your platform.");
         return Ok(());
@@ -321,10 +333,9 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
 /// E.g. don't show rv-ruby installable 3.3.2 if a later patch 3.3.9 is available.
 /// Don't show duplicates, etc.
 fn rubies_to_show(
-    release: Release,
+    rubies_for_this_platform: Vec<Ruby>,
     installed_rubies: Vec<Ruby>,
     active_ruby: Option<Ruby>,
-    current_platforms: Vec<&'static str>,
 ) -> Vec<JsonRubyEntry> {
     // Might have multiple installed rubies with the same version (e.g., "ruby-3.2.0" and "mruby-3.2.0").
     let mut rubies_map: BTreeMap<String, Vec<Ruby>> = BTreeMap::new();
@@ -336,26 +347,9 @@ fn rubies_to_show(
     }
 
     let mut available_rubies: Vec<Ruby> = vec![];
-    for platform in current_platforms {
-        // Filter releases+assets for current platform
-        let (desired_os, desired_arch) = parse_arch_str(platform);
-        let rubies_for_this_platform: Vec<Ruby> = release
-            .assets
-            .iter()
-            .filter_map(|asset| ruby_from_asset(asset).ok())
-            .filter(|ruby| ruby.os == desired_os && ruby.arch == desired_arch)
-            .collect();
 
-        for ruby in latest_patch_version(rubies_for_this_platform) {
-            available_rubies.push(ruby)
-        }
-
-        debug!(
-            "Found {} available rubies for platform {}/{}",
-            available_rubies.len(),
-            desired_os,
-            desired_arch
-        );
+    for ruby in latest_patch_version(rubies_for_this_platform) {
+        available_rubies.push(ruby)
     }
 
     // Merge in installed rubies, replacing any available ones with the installed versions
@@ -541,39 +535,19 @@ mod tests {
     fn test_rubies_to_show() {
         struct Test {
             test_name: &'static str,
-            release: Release,
+            rubies_for_this_platform: Vec<Ruby>,
             installed_rubies: Vec<Ruby>,
             active_ruby: Option<Ruby>,
-            current_platform_arch: &'static str,
             expected: Vec<JsonRubyEntry>,
-        }
-
-        fn u(version: &str) -> String {
-            format!(
-                "https://github.com/spinel-coop/rv-ruby/releases/download/latest/ruby-{version}.arm64_linux.tar.gz"
-            )
         }
 
         let tests = vec![
             // Nothing weird should happen if there's no locally-installed versions.
             Test {
                 test_name: "no local installs",
-                release: Release {
-                    name: "latest".to_owned(),
-                    assets: vec![
-                        Asset {
-                            name: "ruby-3.3.0.arm64_sonoma.tar.gz".to_owned(),
-                            browser_download_url: u("3.3.0"),
-                        },
-                        Asset {
-                            name: "ruby-4.0.0.arm64_sonoma.tar.gz".to_owned(),
-                            browser_download_url: u("4.0.0"),
-                        },
-                    ],
-                },
+                rubies_for_this_platform: vec![ruby("ruby-3.3.0"), ruby("ruby-4.0.0")],
                 installed_rubies: Vec::new(),
                 active_ruby: None,
-                current_platform_arch: "arm64_sonoma",
                 expected: vec![
                     JsonRubyEntry {
                         details: ruby("ruby-3.3.0"),
@@ -590,22 +564,9 @@ mod tests {
             // Ruby 3.5 is skipped
             Test {
                 test_name: "Ruby 3.5 is skipped",
-                release: Release {
-                    name: "latest".to_owned(),
-                    assets: vec![
-                        Asset {
-                            name: "ruby-3.5.0-preview1.arm64_sonoma.tar.gz".to_owned(),
-                            browser_download_url: u("3.5.0-preview1"),
-                        },
-                        Asset {
-                            name: "ruby-4.0.0.arm64_sonoma.tar.gz".to_owned(),
-                            browser_download_url: u("4.0.0"),
-                        },
-                    ],
-                },
+                rubies_for_this_platform: vec![ruby("ruby-3.5.0-preview1"), ruby("ruby-4.0.0")],
                 installed_rubies: Vec::new(),
                 active_ruby: None,
-                current_platform_arch: "arm64_sonoma",
                 expected: vec![JsonRubyEntry {
                     details: ruby("ruby-4.0.0"),
                     installed: false,
@@ -615,13 +576,9 @@ mod tests {
             // Nothing weird should happen if there's no remotely-available versions.
             Test {
                 test_name: "only local installs, no remote available",
-                release: Release {
-                    name: "latest".to_owned(),
-                    assets: Vec::new(),
-                },
+                rubies_for_this_platform: Vec::new(),
                 installed_rubies: vec![ruby("ruby-3.3.0")],
                 active_ruby: None,
-                current_platform_arch: "arm64_sonoma",
                 expected: vec![JsonRubyEntry {
                     details: ruby("ruby-3.3.0"),
                     installed: false,
@@ -631,16 +588,9 @@ mod tests {
             // Locally-installed and remotely-available both get merged together.
             Test {
                 test_name: "both local and remote, different minor versions",
-                release: Release {
-                    name: "latest".to_owned(),
-                    assets: vec![Asset {
-                        name: "ruby-3.4.0.arm64_sonoma.tar.gz".to_owned(),
-                        browser_download_url: u("3.4.0"),
-                    }],
-                },
+                rubies_for_this_platform: vec![ruby("ruby-3.4.0")],
                 installed_rubies: vec![ruby("ruby-3.3.0")],
                 active_ruby: None,
-                current_platform_arch: "arm64_sonoma",
                 expected: vec![
                     JsonRubyEntry {
                         details: ruby("ruby-3.3.0"),
@@ -659,16 +609,9 @@ mod tests {
             // on remote.
             Test {
                 test_name: "both local and remote, different patch versions",
-                release: Release {
-                    name: "latest".to_owned(),
-                    assets: vec![Asset {
-                        name: "ruby-3.4.0.arm64_sonoma.tar.gz".to_owned(),
-                        browser_download_url: u("3.4.0"),
-                    }],
-                },
+                rubies_for_this_platform: vec![ruby("ruby-3.4.0")],
                 installed_rubies: vec![ruby("ruby-3.4.1")],
                 active_ruby: None,
-                current_platform_arch: "arm64_sonoma",
                 expected: vec![
                     JsonRubyEntry {
                         details: ruby("ruby-3.4.0"),
@@ -685,22 +628,9 @@ mod tests {
             // Only the remote with the latest version should be shown.
             Test {
                 test_name: "both local and remote, different patch versions",
-                release: Release {
-                    name: "latest".to_owned(),
-                    assets: vec![
-                        Asset {
-                            name: "ruby-3.4.0.arm64_sonoma.tar.gz".to_owned(),
-                            browser_download_url: u("3.4.0"),
-                        },
-                        Asset {
-                            name: "ruby-3.4.1.arm64_sonoma.tar.gz".to_owned(),
-                            browser_download_url: u("3.4.1"),
-                        },
-                    ],
-                },
+                rubies_for_this_platform: vec![ruby("ruby-3.4.0"), ruby("ruby-3.4.1")],
                 installed_rubies: vec![ruby("ruby-3.3.1")],
                 active_ruby: None,
-                current_platform_arch: "arm64_sonoma",
                 expected: vec![
                     JsonRubyEntry {
                         details: ruby("ruby-3.3.1"),
@@ -718,15 +648,13 @@ mod tests {
 
         for Test {
             test_name,
-            release,
+            rubies_for_this_platform,
             installed_rubies,
             active_ruby,
-            current_platform_arch,
             expected,
         } in tests
         {
-            let current_platforms = vec![current_platform_arch];
-            let actual = rubies_to_show(release, installed_rubies, active_ruby, current_platforms);
+            let actual = rubies_to_show(rubies_for_this_platform, installed_rubies, active_ruby);
             pretty_assertions::assert_eq!(actual, expected, "failed test case '{test_name}'");
         }
     }
