@@ -141,8 +141,55 @@ fn ruby_from_asset(asset: &Asset) -> Result<Ruby> {
     })
 }
 
+pub(crate) async fn find_rubies_for_this_platform(config: &Config) -> Vec<Ruby> {
+    let release = match fetch_available_rubies(&config.cache).await {
+        Ok(release) => release,
+        Err(e) => {
+            warn!(
+                "Could not fetch or re-validate available Ruby versions: {}",
+                e
+            );
+            let cache_entry = config.cache.entry(
+                rv_cache::CacheBucket::Ruby,
+                "releases",
+                "available_rubies.json",
+            );
+            if let Ok(content) = fs::read_to_string(cache_entry.path())
+                && let Ok(cached_data) = serde_json::from_str::<CachedRelease>(&content)
+            {
+                warn!("Displaying stale list of available rubies from cache.");
+                cached_data.release
+            } else {
+                Release {
+                    name: "Empty".to_owned(),
+                    assets: Vec::new(),
+                }
+            }
+        }
+    };
+
+    // Filter releases+assets for current platform
+    let (desired_os, desired_arch) = current_os_and_arch();
+
+    let rubies: Vec<Ruby> = release
+        .assets
+        .iter()
+        .filter_map(|asset| ruby_from_asset(asset).ok())
+        .filter(|ruby| ruby.os == desired_os && ruby.arch == desired_arch)
+        .collect();
+
+    debug!(
+        "Found {} available rubies for platform {}/{}",
+        rubies.len(),
+        desired_os,
+        desired_arch
+    );
+
+    rubies
+}
+
 /// Fetches available rubies
-pub(crate) async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Release> {
+async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Release> {
     let cache_entry = cache.entry(
         rv_cache::CacheBucket::Ruby,
         "releases",
@@ -277,48 +324,7 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
         return print_entries(&entries, format);
     }
 
-    let release = match fetch_available_rubies(&config.cache).await {
-        Ok(release) => release,
-        Err(e) => {
-            warn!(
-                "Could not fetch or re-validate available Ruby versions: {}",
-                e
-            );
-            let cache_entry = config.cache.entry(
-                rv_cache::CacheBucket::Ruby,
-                "releases",
-                "available_rubies.json",
-            );
-            if let Ok(content) = fs::read_to_string(cache_entry.path())
-                && let Ok(cached_data) = serde_json::from_str::<CachedRelease>(&content)
-            {
-                warn!("Displaying stale list of available rubies from cache.");
-                cached_data.release
-            } else {
-                Release {
-                    name: "Empty".to_owned(),
-                    assets: Vec::new(),
-                }
-            }
-        }
-    };
-
-    // Filter releases+assets for current platform
-    let (desired_os, desired_arch) = current_os_and_arch();
-
-    let rubies_for_this_platform: Vec<Ruby> = release
-        .assets
-        .iter()
-        .filter_map(|asset| ruby_from_asset(asset).ok())
-        .filter(|ruby| ruby.os == desired_os && ruby.arch == desired_arch)
-        .collect();
-
-    debug!(
-        "Found {} available rubies for platform {}/{}",
-        rubies_for_this_platform.len(),
-        desired_os,
-        desired_arch
-    );
+    let rubies_for_this_platform = find_rubies_for_this_platform(config).await;
 
     let entries = rubies_to_show(rubies_for_this_platform, installed_rubies, active_ruby);
     if entries.is_empty() && format == OutputFormat::Text {

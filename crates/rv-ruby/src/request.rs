@@ -60,6 +60,10 @@ impl Default for RubyRequest {
 }
 
 impl RubyRequest {
+    pub fn is_specific(&self) -> bool {
+        self.major.is_some() && self.minor.is_some() && self.patch.is_some()
+    }
+
     pub fn find_match_in(&self, rubies: Vec<Ruby>) -> Option<Ruby> {
         rubies.into_iter().rev().find(|r| self.satisfied_by(r))
     }
@@ -82,7 +86,7 @@ impl RubyRequest {
         if self.tiny.is_some() && self.tiny != version.tiny {
             return false;
         }
-        if self.prerelease.is_some() && self.prerelease != version.prerelease {
+        if self.prerelease != version.prerelease {
             return false;
         }
 
