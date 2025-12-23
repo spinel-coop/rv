@@ -30,6 +30,7 @@ use crate::commands::ruby::{RubyArgs, RubyCommand};
 use crate::commands::shell::completions::shell_completions;
 use crate::commands::shell::env::env as shell_env;
 use crate::commands::shell::init::init as shell_init;
+use crate::commands::shell::setup as shell_setup;
 use crate::commands::shell::{ShellArgs, ShellCommand};
 
 const STYLES: Styles = Styles::styled()
@@ -203,7 +204,9 @@ pub enum Error {
     #[error(transparent)]
     NonUtf8Path(#[from] FromPathBufError),
     #[error(transparent)]
-    InitError(#[from] commands::shell::init::Error),
+    Error(#[from] commands::shell::init::Error),
+    #[error(transparent)]
+    ShellError(#[from] commands::shell::Error),
     #[error(transparent)]
     EnvError(#[from] commands::shell::env::Error),
 }
@@ -319,10 +322,13 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
             CacheCommand::Clean => cache_clean(config)?,
             CacheCommand::Prune => cache_prune(config)?,
         },
-        Commands::Shell(shell) => match shell.command {
-            ShellCommand::Init { shell } => shell_init(config, shell)?,
-            ShellCommand::Completions { shell } => shell_completions(&mut Cli::command(), shell),
-            ShellCommand::Env { shell } => shell_env(config, shell)?,
+        Commands::Shell(shell_args) => match shell_args.command {
+            None => shell_setup(config, shell_args.shell.unwrap())?,
+            Some(ShellCommand::Init { shell }) => shell_init(config, shell)?,
+            Some(ShellCommand::Completions { shell }) => {
+                shell_completions(&mut Cli::command(), shell)
+            }
+            Some(ShellCommand::Env { shell }) => shell_env(config, shell)?,
         },
     };
 

@@ -61,13 +61,13 @@ saphyr.workspace = true
 sha2.workspace = true
 hex = "0.4.3"
 assert_fs.workspace = true
+indoc.workspace = true
 
 [dev-dependencies]
 insta = { workspace = true }
 tracing-test = { workspace = true }
 tempfile = { workspace = true }
 assert_fs = { workspace = true }
-indoc = { workspace = true }
 fs-err = { workspace = true }
 camino-tempfile-ext = { workspace = true }
 mockito = "1.4.0"
