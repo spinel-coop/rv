@@ -630,7 +630,7 @@ fn exts_dir(config: &Config) -> Result<Utf8PathBuf> {
 }
 
 static EXTCONF_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)extconf").unwrap());
-static RAKE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)rakefile").unwrap());
+static RAKE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)rakefile|mkrf_conf").unwrap());
 
 fn compile_native_extensions(
     config: &Config,
@@ -647,12 +647,22 @@ fn compile_native_extensions(
         .join("extensions")
         .join(exts_dir(config)?)
         .join(gv.to_string());
+    let mut ran_rake = false;
 
     for extension in extensions {
         if EXTCONF_REGEX.is_match(extension) {
             if let Ok(outputs) = build_extconf(config, extension, &gem_path, &ext_dest, &lib_dest) {
                 compile_results.push(CompileNativeExtResult { extension, outputs });
             }
+        } else if RAKE_REGEX.is_match(extension) {
+            if !ran_rake
+                && let Ok(outputs) =
+                    build_rakefile(config, extension, &gem_path, &ext_dest, &lib_dest)
+            {
+                compile_results.push(CompileNativeExtResult { extension, outputs });
+            }
+            // Ensure that we only run the Rake builder once, even if we have both a `Rakefile` and `mkrf_conf` file
+            ran_rake = true;
         } else {
             return Err(Error::UnknownExtension {
                 filename: extension.clone(),
@@ -710,60 +720,34 @@ fn build_rakefile(
     let mut output;
     let mut outputs = vec![];
 
-    // 1. Run the extconf.rb file with the current ruby
-    output = crate::commands::ruby::run::run_no_install(
-        config,
-        &config.ruby_request()?,
-        &[ext_file],
-        CaptureOutput::Both,
-        Some(&ext_dir),
-    )?;
-    outputs.push(output);
-
-    // 2. Save the mkmf.log file if it exists
-    let mkmf_log = ext_dir.join("mkmf.log");
-    if mkmf_log.exists() {
-        fs_err::create_dir_all(ext_dest)?;
-        fs_err::rename(mkmf_log, ext_dest.join("mkmf.log"))?;
+    // 1. Run mkrf if needed to create the Rakefile
+    if ext_file.to_lowercase().contains("mkrf_conf") {
+        output = crate::commands::ruby::run::run_no_install(
+            config,
+            &config.ruby_request()?,
+            &[ext_file],
+            CaptureOutput::Both,
+            Some(&ext_dir),
+        )?;
+        outputs.push(output);
     }
 
-    // 3. Run make clean / make / make install / make clean
+    // 2. Run Rake with the args
     let tmp_dir = camino_tempfile::tempdir_in(gem_path)?;
-    let sitearchdir = format!("sitearchdir={}", tmp_dir.path());
-    let sitelibdir = format!("sitelibdir={}", tmp_dir.path());
-    let args = vec!["DESTDIR=''", &sitearchdir, &sitelibdir];
-
-    Command::new("make")
-        .args([vec!["clean"], args.clone()].concat())
-        .current_dir(&ext_dir)
-        .output()?;
-
-    output = Command::new("make")
+    let sitearchdir = format!("RUBYARCHDIR={}", tmp_dir.path());
+    let sitelibdir = format!("RUBYLIBDIR={}", tmp_dir.path());
+    let args = vec![sitearchdir, sitelibdir];
+    output = Command::new("rake")
         .args(&args)
         .current_dir(&ext_dir)
         .output()?;
-    let success = output.status.success();
-    outputs.push(output);
-    if !success {
-        return Ok(outputs);
-    }
-
-    output = Command::new("make")
-        .args([vec!["install"], args.clone()].concat())
-        .current_dir(&ext_dir)
-        .output()?;
     outputs.push(output);
 
-    Command::new("make")
-        .args([vec!["clean"], args.clone()].concat())
-        .current_dir(&ext_dir)
-        .output()?;
-
-    // 4. Copy the resulting files to ext and lib dirs
+    // 3. Copy the resulting files to ext and lib dirs
     copy_dir(&tmp_dir, lib_dest)?;
     copy_dir(&tmp_dir, ext_dest)?;
 
-    // 5. Mark the gem as built
+    // 4. Mark the gem as built
     fs_err::write(ext_dest.join("gem.build_complete"), "")?;
 
     Ok(outputs)
