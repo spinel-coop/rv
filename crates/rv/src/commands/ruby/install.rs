@@ -19,8 +19,8 @@ pub enum Error {
     IoError(#[from] std::io::Error),
     #[error(transparent)]
     StripPrefixError(#[from] std::path::StripPrefixError),
-    #[error("Major, minor, and patch version is required, but got {0}")]
-    IncompleteVersion(RubyRequest),
+    #[error("no matching ruby version found")]
+    NoMatchingRuby,
     #[error("Download from URL {url} failed with status code {status}. Response body was {body}")]
     DownloadFailed {
         url: String,
@@ -40,9 +40,24 @@ type Result<T> = miette::Result<T, Error>;
 pub async fn install(
     config: &Config,
     install_dir: Option<String>,
-    requested: &RubyRequest,
+    version: Option<RubyRequest>,
     tarball_path: Option<String>,
 ) -> Result<()> {
+    let mut requested = match version {
+        None => config.ruby_request(),
+        Some(version) => version,
+    };
+
+    if !requested.is_specific() {
+        let mut rubies_for_this_platform = config.remote_rubies().await;
+        rubies_for_this_platform.sort();
+
+        requested = match requested.find_match_in(rubies_for_this_platform) {
+            None => return Err(Error::NoMatchingRuby),
+            Some(ruby) => ruby.version,
+        }
+    }
+
     let install_dir = match install_dir {
         Some(dir) => Utf8PathBuf::from(dir),
         None => match config.ruby_dirs.first() {
@@ -55,7 +70,9 @@ pub async fn install(
         Some(tarball_path) => {
             extract_local_ruby_tarball(tarball_path, &install_dir, &requested.number()).await?
         }
-        None => download_and_extract_remote_tarball(config, &install_dir, requested).await?,
+        None => {
+            download_and_extract_remote_tarball(config, &install_dir, &requested.number()).await?
+        }
     }
 
     println!(
@@ -71,13 +88,9 @@ pub async fn install(
 async fn download_and_extract_remote_tarball(
     config: &Config,
     install_dir: &Utf8PathBuf,
-    requested: &RubyRequest,
+    version: &str,
 ) -> Result<()> {
-    if requested.major > Some(0) && requested.patch.is_none() {
-        Err(Error::IncompleteVersion(requested.clone()))?;
-    }
-
-    let url = ruby_url(requested)?;
+    let url = ruby_url(version)?;
     let tarball_path = tarball_path(config, &url);
 
     let new_dir = tarball_path.parent().unwrap();
@@ -94,7 +107,7 @@ async fn download_and_extract_remote_tarball(
         download_ruby_tarball(config, &url, &tarball_path).await?;
     }
 
-    extract_ruby_tarball(&tarball_path, install_dir, &requested.number())?;
+    extract_ruby_tarball(&tarball_path, install_dir, version)?;
 
     Ok(())
 }
@@ -115,11 +128,7 @@ fn valid_tarball_exists(path: &Utf8Path) -> bool {
     fs_err::metadata(path).is_ok_and(|m| m.is_file() && m.len() > 0)
 }
 
-fn ruby_url(ruby_request: &RubyRequest) -> Result<String> {
-    let version_str = ruby_request.to_string();
-    let version = version_str
-        .strip_prefix("ruby-")
-        .ok_or(Error::IncompleteVersion(ruby_request.to_owned()))?;
+fn ruby_url(version: &str) -> Result<String> {
     let arch = match CURRENT_PLATFORM {
         "aarch64-apple-darwin" => "arm64_sonoma",
         "x86_64-apple-darwin" => "ventura",

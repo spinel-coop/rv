@@ -53,7 +53,7 @@ pub enum RubyCommand {
         install_dir: Option<String>,
 
         /// Ruby version to install
-        version: RubyRequest,
+        version: Option<RubyRequest>,
 
         /// Path to a local ruby tarball
         #[arg(long, value_name = "TARBALL_PATH")]

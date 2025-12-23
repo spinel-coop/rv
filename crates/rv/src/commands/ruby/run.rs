@@ -56,7 +56,13 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
         debug!("Ruby not found, so installing {request}");
         let install_dir = None;
         let tarball_path = None;
-        crate::commands::ruby::install::install(config, install_dir, &request, tarball_path).await?
+        crate::commands::ruby::install::install(
+            config,
+            install_dir,
+            Some(request.clone()),
+            tarball_path,
+        )
+        .await?
     };
     run_no_install(config, &request, args, capture_output, cwd, vec![])
 }
