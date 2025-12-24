@@ -111,7 +111,7 @@ impl RubyRequest {
         if self.tiny.is_some() && self.tiny != version.tiny {
             return false;
         }
-        if self.prerelease.is_some() && self.prerelease != version.prerelease {
+        if self.prerelease != version.prerelease {
             return false;
         }
 
@@ -515,5 +515,16 @@ mod tests {
     fn test_version_comparisons() {
         assert!(v("3.3.9") < v("3.3.10"));
         assert!(v("4.0.0-preview3") < v("4.0.0"));
+    }
+
+    #[test]
+    fn test_ruby_request_satisfied_by() {
+        let request = RubyRequest::default();
+
+        let mut version = v("3");
+        assert!(request.satisfied_by(&version));
+
+        version = v("4.0.0-preview3");
+        assert!(!request.satisfied_by(&version));
     }
 }
