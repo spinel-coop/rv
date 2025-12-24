@@ -56,6 +56,21 @@ fn test_ruby_run_default() {
 }
 
 #[test]
+fn test_ruby_run_default_skips_prereleases() {
+    let test = RvTest::new();
+    test.create_ruby_dir("ruby-3.4.8");
+    test.create_ruby_dir("ruby-4.0.0-preview3");
+    let output = test.ruby_run(None, Default::default(), &["-e", "'puts \"Hello, World\"'"]);
+
+    output.assert_success();
+    assert!(output.stderr().is_empty());
+    assert_eq!(
+        output.normalized_stdout(),
+        "ruby\n3.4.8\naarch64-darwin23\naarch64\ndarwin23\n\n"
+    );
+}
+
+#[test]
 fn test_ruby_run_simple_no_install() {
     let test = RvTest::new();
     test.create_ruby_dir("ruby-3.3.5");
