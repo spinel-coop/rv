@@ -89,12 +89,13 @@ impl Ord for RubyRequest {
 
 impl RubyRequest {
     pub fn find_match_in(&self, rubies: Vec<Ruby>) -> Option<Ruby> {
-        rubies.into_iter().rev().find(|r| self.satisfied_by(r))
+        rubies
+            .into_iter()
+            .rev()
+            .find(|r| self.satisfied_by(&r.version))
     }
 
-    pub fn satisfied_by(&self, ruby: &Ruby) -> bool {
-        let version = &ruby.version;
-
+    pub fn satisfied_by(&self, version: &RubyRequest) -> bool {
         if self.engine != version.engine {
             return false;
         }
