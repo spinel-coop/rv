@@ -147,8 +147,14 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
 async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     let lockfile_contents = tokio::fs::read_to_string(&args.lockfile_path).await?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
-    let gems = download_gems(lockfile, &config.cache, args).await?;
-    install_gems(config, gems, args).await?;
+    if lockfile.git.is_empty().not() {
+        tracing::warn!("rv ci does not support git deps yet");
+    }
+    if lockfile.path.is_empty().not() {
+        tracing::warn!("rv ci does not support path deps yet");
+    }
+    let gems = download_rubygems_gems(lockfile.clone(), &config.cache, args).await?;
+    install_rubygems_gems(config, gems, args).await?;
     Ok(())
 }
 
@@ -205,7 +211,7 @@ pub fn create_rayon_pool(
         .build()
 }
 
-async fn install_gems<'i>(
+async fn install_rubygems_gems<'i>(
     config: &Config,
     downloaded: Vec<Downloaded<'i>>,
     args: &CiInnerArgs,
@@ -298,18 +304,12 @@ struct HowToChecksum {
     value: Vec<u8>,
 }
 
-/// Downloads all gems from a Gemfile.lock
-async fn download_gems<'i>(
+/// Downloads all Rubygem server gems from a Gemfile.lock
+async fn download_rubygems_gems<'i>(
     lockfile: GemfileDotLock<'i>,
     cache: &rv_cache::Cache,
     args: &CiInnerArgs,
 ) -> Result<Vec<Downloaded<'i>>> {
-    if lockfile.git.is_empty().not() {
-        tracing::warn!("rv ci does not support git deps yet");
-    }
-    if lockfile.path.is_empty().not() {
-        tracing::warn!("rv ci does not support path deps yet");
-    }
     let all_sources = futures_util::stream::iter(lockfile.gem);
     let checksums = if args.validate_checksums
         && let Some(checks) = lockfile.checksums
