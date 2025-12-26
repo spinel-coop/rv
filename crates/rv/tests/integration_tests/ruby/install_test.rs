@@ -73,7 +73,7 @@ fn test_ruby_install_from_tarball() {
     let mocked_ruby_path = test
         .temp_dir
         .path()
-        .join("tmp/home/.data/rv/rubies/portable-ruby/bin/ruby");
+        .join("tmp/home/.local/share/rv/rubies/portable-ruby/bin/ruby");
     let mut command = Command::new(mocked_ruby_path);
     command.output().expect("mock ruby");
 }

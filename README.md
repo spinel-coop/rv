@@ -40,7 +40,7 @@ We happen to be using `rbenv` here, but `chruby`, `mise` and other tools all use
 ```bash
 time rv ruby install 3.4.7
 Downloaded https://github.com/spinel-coop/rv-ruby/releases/latest/download/ruby-3.4.7.arm64_sonoma.tar.gz to ~/.cache/rv/ruby-v0/tarballs/8758fed525bd3750.tar.gz
-Installed Ruby version ruby-3.4.7 to ~/.data/rv/rubies
+Installed Ruby version ruby-3.4.7 to ~/.local/share/rv/rubies
 
 real 0m2.479s
 user 0m0.362s

@@ -71,10 +71,11 @@ impl Config {
     }
 }
 
-fn xdg_env_var_path() -> Option<String> {
-    let xdg_data_home = env::var("XDG_DATA_HOME").ok()?;
+fn xdg_data_path() -> String {
+    let xdg_data_home =
+        env::var("XDG_DATA_HOME").unwrap_or(shellexpand::tilde("~/.local/share").into());
     let path_buf = Path::new(&xdg_data_home).join("rv/rubies");
-    Some(path_buf.to_str()?.to_owned())
+    path_buf.to_string_lossy().to_string()
 }
 
 struct PathInfo<'a> {
@@ -95,14 +96,13 @@ impl<'a> PathInfo<'a> {
 /// Default Ruby installation directories
 pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
     let mut paths: Vec<PathInfo> = vec![];
-    let xdg_path = xdg_env_var_path();
-    if let Some(xdg_path) = &xdg_path {
-        paths.push(PathInfo::new(xdg_path, true));
-    }
-    let default_path = shellexpand::tilde("~/.data/rv/rubies");
+    let xdg_path = xdg_data_path();
+    paths.push(PathInfo::new(&xdg_path, true));
+
+    let legacy_default_data_path = shellexpand::tilde("~/.data/rv/rubies");
     let legacy_default_path = shellexpand::tilde("~/.rubies");
 
-    paths.push(PathInfo::new(default_path.as_ref(), true));
+    paths.push(PathInfo::new(legacy_default_data_path.as_ref(), false));
     paths.push(PathInfo::new(legacy_default_path.as_ref(), false));
     paths.push(PathInfo::new("/opt/rubies", false));
     paths.push(PathInfo::new("/usr/local/rubies", false));
