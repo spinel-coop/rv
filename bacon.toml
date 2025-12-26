@@ -28,6 +28,11 @@ command = ["cargo", "install", "--path", "crates/rv", "--locked", "--offline", "
 need_stdout = false
 
 
+[jobs.install]
+command = ["cargo", "install", "--path", "crates/rv", "--locked", "--quiet"]
+need_stdout = false
+
+
 # Run clippy on all targets
 # To disable some lints, you may change the job this way:
 #    [jobs.clippy-all]
