@@ -126,6 +126,8 @@ pub enum Error {
         exe_name: String,
         error: io::Error,
     },
+    #[error("Could not download a git dependency: {error}")]
+    Git { error: String },
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -147,15 +149,95 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
 async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     let lockfile_contents = tokio::fs::read_to_string(&args.lockfile_path).await?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
-    if lockfile.git.is_empty().not() {
-        tracing::warn!("rv ci does not support git deps yet");
-    }
     if lockfile.path.is_empty().not() {
         tracing::warn!("rv ci does not support path deps yet");
     }
+    let gems = download_git_gems(lockfile.clone(), &config.cache, args).await?;
+    install_git_gems(config, gems, args).await?;
     let gems = download_rubygems_gems(lockfile.clone(), &config.cache, args).await?;
     install_rubygems_gems(config, gems, args).await?;
     Ok(())
+}
+
+async fn install_git_gems<'i>(
+    _config: &Config,
+    _gems: Vec<DownloadedGit<'i>>,
+    _args: &CiInnerArgs,
+) -> Result<()> {
+    // TODO
+    Ok(())
+}
+
+async fn download_git_gems<'i>(
+    lockfile: GemfileDotLock<'i>,
+    cache: &rv_cache::Cache,
+    _args: &CiInnerArgs,
+) -> Result<Vec<DownloadedGit<'i>>> {
+    let num_specs: usize = lockfile.git.iter().map(|source| source.specs.len()).sum();
+    let mut downloads = Vec::with_capacity(num_specs);
+
+    // Download git repos to this dir.
+    let git_clone_dir = cache
+        .shard(rv_cache::CacheBucket::Git, "gits")
+        .into_path_buf();
+    std::fs::create_dir_all(&git_clone_dir)?;
+
+    for git_source in lockfile.git {
+        // This will be the subdir within `git_clone_dir` that the git cloned repos are written to.
+        let cache_key = rv_cache::cache_digest((git_source.remote, git_source.revision));
+        let git_repo_dir = git_clone_dir.clone().join(&cache_key);
+
+        // Clone the repo without checking it out, to save bandwidth.
+        tracing::event!(tracing::Level::DEBUG, %git_clone_dir, %git_source.remote, %git_source.revision, "Cloning gem");
+        let git_cloned = std::process::Command::new("git")
+            .current_dir(&git_clone_dir)
+            .args([
+                "clone",
+                "--no-checkout",
+                git_source.remote,
+                cache_key.as_ref(),
+            ])
+            .spawn()?
+            .wait()?;
+        if !git_cloned.success() {
+            return Err(Error::Git {
+                error: format!("git clone had exit code {}", git_cloned),
+            });
+        }
+
+        // Fetch only the commit we're going to use.
+        tracing::event!(tracing::Level::DEBUG, %git_repo_dir, %git_source.remote, %git_source.revision, "Fetching gem");
+        let git_fetched = std::process::Command::new("git")
+            .args(["fetch", "--depth", "1", "origin", git_source.revision])
+            .current_dir(&git_repo_dir)
+            .spawn()?
+            .wait()?;
+        if !git_fetched.success() {
+            return Err(Error::Git {
+                error: format!("git fetch had exit code {}", git_fetched),
+            });
+        }
+
+        // Check out that commit.
+        tracing::event!(tracing::Level::DEBUG, %git_repo_dir, %git_source.remote, %git_source.revision, "Checking out gem");
+        let git_checked_out = std::process::Command::new("git")
+            .args(["checkout", git_source.revision])
+            .current_dir(&git_repo_dir)
+            .spawn()?
+            .wait()?;
+        if !git_checked_out.success() {
+            return Err(Error::Git {
+                error: format!("git fetch had exit code {}", git_checked_out),
+            });
+        }
+
+        // Success! Save the paths of all the gems we just cloned.
+        downloads.extend(git_source.specs.iter().map(|spec| DownloadedGit {
+            path: git_repo_dir.clone(),
+            spec: spec.clone(),
+        }));
+    }
+    Ok(downloads)
 }
 
 fn find_lockfile_path(gemfile: Option<Utf8PathBuf>) -> Result<Utf8PathBuf> {
@@ -213,7 +295,7 @@ pub fn create_rayon_pool(
 
 async fn install_rubygems_gems<'i>(
     config: &Config,
-    downloaded: Vec<Downloaded<'i>>,
+    downloaded: Vec<DownloadedRubygems<'i>>,
     args: &CiInnerArgs,
 ) -> Result<()> {
     let binstub_dir = args.install_path.join("bin");
@@ -309,7 +391,7 @@ async fn download_rubygems_gems<'i>(
     lockfile: GemfileDotLock<'i>,
     cache: &rv_cache::Cache,
     args: &CiInnerArgs,
-) -> Result<Vec<Downloaded<'i>>> {
+) -> Result<Vec<DownloadedRubygems<'i>>> {
     let all_sources = futures_util::stream::iter(lockfile.gem);
     let checksums = if args.validate_checksums
         && let Some(checks) = lockfile.checksums
@@ -349,8 +431,24 @@ async fn download_rubygems_gems<'i>(
     Ok(downloaded)
 }
 
-struct Downloaded<'i> {
+/// A gem downloaded from a RubyGems source.
+struct DownloadedRubygems<'i> {
     contents: Bytes,
+    spec: Spec<'i>,
+}
+
+/// A gem downloaded from a git source.
+#[derive(Debug)]
+struct DownloadedGit<'i> {
+    #[expect(
+        dead_code,
+        reason = "TODO: Actually read this repo and install its gem."
+    )]
+    path: Utf8PathBuf,
+    #[expect(
+        dead_code,
+        reason = "TODO: Actually read this repo and install its gem."
+    )]
     spec: Spec<'i>,
 }
 
@@ -449,7 +547,7 @@ impl ArchiveChecksums {
     }
 }
 
-impl<'i> Downloaded<'i> {
+impl<'i> DownloadedRubygems<'i> {
     fn unpack_tarball(
         self,
         bundle_path: Utf8PathBuf,
@@ -1165,7 +1263,7 @@ async fn download_gem_source<'i>(
     checksums: &HashMap<GemVersion<'i>, HowToChecksum>,
     cache: &rv_cache::Cache,
     max_concurrent_requests: usize,
-) -> Result<Vec<Downloaded<'i>>> {
+) -> Result<Vec<DownloadedRubygems<'i>>> {
     // TODO: If the gem server needs user credentials, accept them and add them to this client.
     let client = rv_http_client()?;
 
@@ -1196,7 +1294,7 @@ async fn download_gem<'i>(
     client: &Client,
     cache: &rv_cache::Cache,
     checksums: &HashMap<GemVersion<'i>, HowToChecksum>,
-) -> Result<Downloaded<'i>> {
+) -> Result<DownloadedRubygems<'i>> {
     let url = url_for_spec(remote, &spec)?;
     let cache_key = rv_cache::cache_digest(url.as_ref());
     let cache_path = cache
@@ -1242,7 +1340,7 @@ async fn download_gem<'i>(
         tokio::fs::write(&cache_path, &contents).await?;
         debug!("Cached {}", spec.gem_version);
     }
-    Ok(Downloaded { contents, spec })
+    Ok(DownloadedRubygems { contents, spec })
 }
 
 #[cfg(test)]
