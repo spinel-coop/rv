@@ -26,7 +26,7 @@ pub struct VersionConstraint {
 
 impl VersionConstraint {
     pub fn is_latest(&self) -> bool {
-        matches!(self.operator, ComparisonOperator::GreaterEqual) && self.version.to_string() == "0"
+        matches!(self.operator, ComparisonOperator::GreaterEqual) && self.version.version == "0"
     }
 }
 
