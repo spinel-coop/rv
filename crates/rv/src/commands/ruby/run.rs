@@ -1,10 +1,11 @@
 use std::{
     io,
-    path::Path,
     process::{Command, ExitStatus, Output},
 };
 
+use camino::Utf8Path;
 use rv_ruby::request::RubyRequest;
+use tracing::debug;
 
 use crate::config::{self, Config};
 
@@ -42,7 +43,7 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
     no_install: bool,
     args: &[A],
     capture_output: CaptureOutput,
-    cwd: Option<&Path>,
+    cwd: Option<&Utf8Path>,
 ) -> Result<Output> {
     let request = match version {
         None => config.ruby_request()?,
@@ -54,9 +55,18 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
         let install_dir = None;
         crate::commands::ruby::install::install(config, install_dir, &request, None).await?
     };
-    let ruby = config
-        .matching_ruby(&request)
-        .ok_or(Error::NoMatchingRuby)?;
+    run_no_install(config, &request, args, capture_output, cwd)
+}
+
+/// Run, without installing the Ruby version if necessary.
+pub(crate) fn run_no_install<A: AsRef<std::ffi::OsStr>>(
+    config: &Config,
+    request: &RubyRequest,
+    args: &[A],
+    capture_output: CaptureOutput,
+    cwd: Option<&Utf8Path>,
+) -> Result<Output> {
+    let ruby = config.matching_ruby(request).ok_or(Error::NoMatchingRuby)?;
     let (unset, set) = config::env_for(Some(&ruby))?;
     let mut cmd = Command::new(ruby.executable_path());
     cmd.args(args);
@@ -70,6 +80,7 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
         cmd.current_dir(path);
     }
 
+    debug!("Running command: {:?}", cmd);
     match capture_output {
         CaptureOutput::No => {
             exec(cmd).map(|()| Output {

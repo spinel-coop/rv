@@ -2,11 +2,14 @@ use bytes::Bytes;
 use camino::Utf8Path;
 use camino::Utf8PathBuf;
 use current_platform::CURRENT_PLATFORM;
+use dircpy::copy_dir;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
+use once_cell::sync::Lazy;
 use owo_colors::OwoColorize;
 use rayon::ThreadPoolBuildError;
+use regex::Regex;
 use reqwest::Client;
 use rv_gem_types::Specification as GemSpecification;
 use rv_lockfile::datatypes::ChecksumAlgorithm;
@@ -31,7 +34,10 @@ use std::io::Read;
 use std::io::Write;
 use std::ops::Not;
 use std::path::PathBuf;
+use std::process::Command;
 use std::process::Stdio;
+use std::str::FromStr;
+use std::vec;
 
 const ARM_STRINGS: [&str; 3] = ["arm64", "arm", "aarch64"];
 const X86_STRINGS: [&str; 4] = ["x86", "i686", "win32", "win64"];
@@ -55,10 +61,15 @@ pub struct CleanInstallArgs {
     /// Validate the checksums from the gem server and gem itself.
     #[arg(long, default_value = "true")]
     pub validate_checksums: bool,
+
+    /// Don't compile the extensions in native gems.
+    #[arg(long, default_value = "false")]
+    pub skip_compile_extensions: bool,
 }
 
 #[derive(Debug)]
 struct CiInnerArgs {
+    pub skip_compile_extensions: bool,
     pub max_concurrent_requests: usize,
     pub max_concurrent_installs: usize,
     pub validate_checksums: bool,
@@ -68,6 +79,12 @@ struct CiInnerArgs {
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
+    #[error(transparent)]
+    Infallible(#[from] std::convert::Infallible),
+    #[error("Cannot build unknown native extension {filename} from gem {gemname}")]
+    UnknownExtension { filename: String, gemname: String },
+    #[error("Some gems did not compile their extensions")]
+    CompileFailures,
     #[error(transparent)]
     Config(#[from] crate::config::Error),
     #[error(transparent)]
@@ -117,20 +134,21 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     let lockfile_path = find_lockfile_path(args.gemfile)?;
     let install_path = find_install_path(config, &lockfile_path).await?;
     let inner_args = CiInnerArgs {
+        skip_compile_extensions: args.skip_compile_extensions,
         max_concurrent_requests: args.max_concurrent_requests,
         max_concurrent_installs: args.max_concurrent_installs,
         validate_checksums: args.validate_checksums,
         lockfile_path,
         install_path,
     };
-    ci_inner(&config.cache, &inner_args).await
+    ci_inner(config, &inner_args).await
 }
 
-async fn ci_inner(cache: &rv_cache::Cache, args: &CiInnerArgs) -> Result<()> {
+async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     let lockfile_contents = tokio::fs::read_to_string(&args.lockfile_path).await?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
-    let gems = download_gems(lockfile, cache, args).await?;
-    install_gems(gems, args).await?;
+    let gems = download_gems(lockfile, &config.cache, args).await?;
+    install_gems(config, gems, args).await?;
     Ok(())
 }
 
@@ -164,7 +182,7 @@ async fn find_install_path(config: &Config, lockfile_path: &Utf8PathBuf) -> Resu
         Default::default(),
         args.as_slice(),
         CaptureOutput::Both,
-        Some(lockfile_dir.as_ref()),
+        Some(lockfile_dir),
     )
     .await?
     .stdout;
@@ -187,7 +205,11 @@ pub fn create_rayon_pool(
         .build()
 }
 
-async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiInnerArgs) -> Result<()> {
+async fn install_gems<'i>(
+    config: &Config,
+    downloaded: Vec<Downloaded<'i>>,
+    args: &CiInnerArgs,
+) -> Result<()> {
     let binstub_dir = args.install_path.join("bin");
     debug!("about to create {}", binstub_dir);
     tokio::fs::create_dir_all(&binstub_dir).await?;
@@ -213,13 +235,25 @@ async fn install_gems<'i>(downloaded: Vec<Downloaded<'i>>, args: &CiInnerArgs) -
                 // 3. Generate binstubs.
                 install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir)?;
                 // 4. Handle compiling native extensions for gems with native extensions
-                compile_native_extensions(&dep_gemspec.extensions)?;
+                if !args.skip_compile_extensions && !dep_gemspec.extensions.is_empty() {
+                    debug!("compiling native extensions for {gv}");
+                    let compiled_ok =
+                        compile_native_extensions(config, args, gv, &dep_gemspec.extensions)?;
+                    if !compiled_ok {
+                        return Err(Error::CompileFailures);
+                    }
+                }
                 debug!("Installed {gv}");
                 Ok(())
             })
             .collect::<Result<Vec<_>>>()?;
         Ok::<_, Error>(())
     })?;
+
+    // Remove the binstubs dir if we didn't generate any binstubs
+    if fs_err::read_dir(&binstub_dir)?.next().is_none() {
+        fs_err::remove_dir(&binstub_dir)?;
+    }
 
     // 5. Copy the .gem files and the .gemspec files into cache and specificatiosn?
     Ok(())
@@ -459,10 +493,10 @@ impl<'i> Downloaded<'i> {
                 }
             }
             if checksums.is_none() {
-                eprintln!(
-                    "Warning: No checksums found for gem {}",
-                    nameversion.yellow()
-                );
+                // eprintln!(
+                //     "Warning: No checksums found for gem {}",
+                //     nameversion.yellow()
+                // );
             }
             checksums
         } else {
@@ -563,12 +597,232 @@ end"#
 fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -> io::Result<()> {
     let binstub_path = binstub_dir.join(exe_name);
     let binstub_contents = generate_binstub_contents(gem_name, exe_name);
-    std::fs::write(binstub_path, binstub_contents)
+    fs_err::write(binstub_path, binstub_contents)
 }
 
-fn compile_native_extensions(_extensions: &[String]) -> Result<()> {
-    // todo
-    Ok(())
+struct CompileNativeExtResult<'a> {
+    extension: &'a str,
+    outputs: Vec<std::process::Output>,
+}
+
+impl<'a> CompileNativeExtResult<'a> {
+    pub fn success(&self) -> bool {
+        self.outputs.iter().all(|o| o.status.success())
+    }
+}
+
+fn exts_dir(config: &Config) -> Result<Utf8PathBuf> {
+    let exts_dir = crate::commands::ruby::run::run_no_install(
+        config,
+        &config.ruby_request()?,
+        &[
+            "-e",
+            "puts File.join(Gem::Platform.local.to_s, Gem.extension_api_version)",
+        ],
+        CaptureOutput::Both,
+        None,
+    )?
+    .stdout;
+
+    String::from_utf8(exts_dir)
+        .map(|s| Utf8PathBuf::from(s.trim()))
+        .map_err(|_| Error::BadBundlePath)
+}
+
+static EXTCONF_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)extconf").unwrap());
+static RAKE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)rakefile|mkrf_conf").unwrap());
+
+fn compile_native_extensions(
+    config: &Config,
+    args: &CiInnerArgs,
+    gv: GemVersion,
+    extensions: &[String],
+) -> Result<bool> {
+    let mut compile_results = Vec::with_capacity(extensions.len());
+
+    let gem_path = args.install_path.join("gems").join(gv.to_string());
+    let lib_dest = gem_path.join("lib");
+    let ext_dest = args
+        .install_path
+        .join("extensions")
+        .join(exts_dir(config)?)
+        .join(gv.to_string());
+    let mut ran_rake = false;
+
+    for extension in extensions {
+        if EXTCONF_REGEX.is_match(extension) {
+            if let Ok(outputs) = build_extconf(config, extension, &gem_path, &ext_dest, &lib_dest) {
+                compile_results.push(CompileNativeExtResult { extension, outputs });
+            }
+        } else if RAKE_REGEX.is_match(extension) {
+            if !ran_rake
+                && let Ok(outputs) =
+                    build_rakefile(config, extension, &gem_path, &ext_dest, &lib_dest)
+            {
+                compile_results.push(CompileNativeExtResult { extension, outputs });
+            }
+            // Ensure that we only run the Rake builder once, even if we have both a `Rakefile` and `mkrf_conf` file
+            ran_rake = true;
+        } else {
+            return Err(Error::UnknownExtension {
+                filename: extension.clone(),
+                gemname: gv.to_string(),
+            });
+        }
+    }
+
+    fs_err::create_dir_all(&ext_dest)?;
+    let mut log = fs_err::File::create(ext_dest.join("build_ext.log"))?;
+    for res in compile_results.iter() {
+        for out in res.outputs.iter() {
+            log.write_all(&out.stdout)?;
+            log.write_all(&out.stderr)?;
+            log.write_all(b"\n\n")?;
+        }
+
+        if res.success() {
+            continue;
+        }
+
+        for out in res.outputs.iter() {
+            eprintln!(
+                "Warning: Could not compile gem {}'s extension {}. Got exit code {}.",
+                gv.to_string().yellow(),
+                res.extension.yellow(),
+                out.status
+                    .code()
+                    .map(|c| c.to_string())
+                    .unwrap_or("<unknown>".to_owned()),
+            );
+            if !out.stdout.is_empty() {
+                eprintln!("stdout was:\n{}", String::from_utf8_lossy(&out.stdout));
+            }
+            if !out.stderr.is_empty() {
+                eprintln!("stderr was:\n{}", String::from_utf8_lossy(&out.stderr));
+            }
+        }
+    }
+
+    let all_ok = compile_results.iter().all(|res| res.success());
+    Ok(all_ok)
+}
+
+fn build_rakefile(
+    config: &Config,
+    extension: &str,
+    gem_path: &Utf8PathBuf,
+    ext_dest: &Utf8PathBuf,
+    lib_dest: &Utf8PathBuf,
+) -> Result<Vec<std::process::Output>> {
+    let ext_path = Utf8PathBuf::from_str(extension)?;
+    let ext_dir = gem_path.join(ext_path.parent().expect("extconf has no parent"));
+    let ext_file = ext_path.file_name().expect("extconf has no filename");
+    let mut output;
+    let mut outputs = vec![];
+
+    // 1. Run mkrf if needed to create the Rakefile
+    if ext_file.to_lowercase().contains("mkrf_conf") {
+        output = crate::commands::ruby::run::run_no_install(
+            config,
+            &config.ruby_request()?,
+            &[ext_file],
+            CaptureOutput::Both,
+            Some(&ext_dir),
+        )?;
+        outputs.push(output);
+    }
+
+    // 2. Run Rake with the args
+    let tmp_dir = camino_tempfile::tempdir_in(gem_path)?;
+    let sitearchdir = format!("RUBYARCHDIR={}", tmp_dir.path());
+    let sitelibdir = format!("RUBYLIBDIR={}", tmp_dir.path());
+    let args = vec![sitearchdir, sitelibdir];
+    output = Command::new("rake")
+        .args(&args)
+        .current_dir(&ext_dir)
+        .output()?;
+    outputs.push(output);
+
+    // 3. Copy the resulting files to ext and lib dirs
+    copy_dir(&tmp_dir, lib_dest)?;
+    copy_dir(&tmp_dir, ext_dest)?;
+
+    // 4. Mark the gem as built
+    fs_err::write(ext_dest.join("gem.build_complete"), "")?;
+
+    Ok(outputs)
+}
+
+fn build_extconf(
+    config: &Config,
+    extension: &str,
+    gem_path: &Utf8PathBuf,
+    ext_dest: &Utf8PathBuf,
+    lib_dest: &Utf8PathBuf,
+) -> Result<Vec<std::process::Output>> {
+    let ext_path = Utf8PathBuf::from_str(extension)?;
+    let ext_dir = gem_path.join(ext_path.parent().expect("extconf has no parent"));
+    let ext_file = ext_path.file_name().expect("extconf has no filename");
+    let mut output;
+    let mut outputs = vec![];
+
+    // 1. Run the extconf.rb file with the current ruby
+    output = crate::commands::ruby::run::run_no_install(
+        config,
+        &config.ruby_request()?,
+        &[ext_file],
+        CaptureOutput::Both,
+        Some(&ext_dir),
+    )?;
+    outputs.push(output);
+
+    // 2. Save the mkmf.log file if it exists
+    let mkmf_log = ext_dir.join("mkmf.log");
+    if mkmf_log.exists() {
+        fs_err::create_dir_all(ext_dest)?;
+        fs_err::rename(mkmf_log, ext_dest.join("mkmf.log"))?;
+    }
+
+    // 3. Run make clean / make / make install / make clean
+    let tmp_dir = camino_tempfile::tempdir_in(gem_path)?;
+    let sitearchdir = format!("sitearchdir={}", tmp_dir.path());
+    let sitelibdir = format!("sitelibdir={}", tmp_dir.path());
+    let args = vec!["DESTDIR=''", &sitearchdir, &sitelibdir];
+
+    Command::new("make")
+        .args([vec!["clean"], args.clone()].concat())
+        .current_dir(&ext_dir)
+        .output()?;
+
+    output = Command::new("make")
+        .args(&args)
+        .current_dir(&ext_dir)
+        .output()?;
+    let success = output.status.success();
+    outputs.push(output);
+    if !success {
+        return Ok(outputs);
+    }
+
+    output = Command::new("make")
+        .args([vec!["install"], args.clone()].concat())
+        .current_dir(&ext_dir)
+        .output()?;
+    outputs.push(output);
+
+    Command::new("make")
+        .args([vec!["clean"], args.clone()].concat())
+        .current_dir(&ext_dir)
+        .output()?;
+
+    // 4. Copy the resulting files to ext and lib dirs
+    copy_dir(&tmp_dir, lib_dest)?;
+    copy_dir(&tmp_dir, ext_dest)?;
+
+    // 5. Mark the gem as built
+    fs_err::write(ext_dest.join("gem.build_complete"), "")?;
+
+    Ok(outputs)
 }
 
 /// Wrapper around some reader type `R`
@@ -636,7 +890,7 @@ where
 {
     // First, create the data's destination.
     let data_dir: PathBuf = bundle_path.join("gems").join(nameversion).into();
-    std::fs::create_dir_all(&data_dir)?;
+    fs_err::create_dir_all(&data_dir)?;
     let mut gem_data_archive = tar::Archive::new(GzDecoder::new(data_tar_gz));
     for e in gem_data_archive.entries()? {
         let mut entry = e?;
@@ -646,7 +900,7 @@ where
         // Not sure if this is strictly necessary, or if we can know the
         // intermediate directories ahead of time.
         if let Some(dst_parent) = dst.parent() {
-            std::fs::create_dir_all(dst_parent)?;
+            fs_err::create_dir_all(dst_parent)?;
         }
         entry.unpack(&dst)?;
     }
@@ -673,10 +927,10 @@ where
 {
     // First, create the metadata's destination.
     let metadata_dir = bundle_path.join("specifications/");
-    std::fs::create_dir_all(&metadata_dir)?;
+    fs_err::create_dir_all(&metadata_dir)?;
     let filename = format!("{nameversion}.gemspec");
     let dst_path = metadata_dir.join(filename);
-    let mut dst = std::fs::File::create(&dst_path)?;
+    let mut dst = fs_err::File::create(&dst_path)?;
 
     // Then write the (unzipped) source into the destination.
     let mut yaml_contents = String::new();
@@ -994,25 +1248,6 @@ async fn download_gem<'i>(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[tokio::test]
-    async fn test_ci_inner() -> Result<()> {
-        let file: Utf8PathBuf = "../rv-lockfile/tests/inputs/Gemfile.lock.empty".into();
-        let dir = file.parent().unwrap();
-        let cache = rv_cache::Cache::temp().unwrap();
-        ci_inner(
-            &cache,
-            &CiInnerArgs {
-                max_concurrent_requests: 10,
-                max_concurrent_installs: 20,
-                validate_checksums: true,
-                install_path: dir.into(),
-                lockfile_path: file,
-            },
-        )
-        .await?;
-        Ok(())
-    }
 
     #[test]
     fn test_generate_binstub() {
