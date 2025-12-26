@@ -57,7 +57,7 @@ fn test_clean_install_download_faker() {
     // https://github.com/faker-ruby/faker/blob/2f8b18b112fb3b7d2750321a8e574518cfac0d53/Gemfile.lock
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.lock.faker");
 
-    let output = test.rv(&["ci"]);
+    let output = test.rv(&["ci", "--skip-compile-extensions"]);
     output.assert_success();
 
     // Store a snapshot of all the files `rv ci` created.
