@@ -138,7 +138,8 @@ impl Requirement {
     }
 
     pub fn is_latest_version(&self) -> bool {
-        self.sole().is_some_and(|constraint| constraint.is_latest())
+        self.as_sole_constraint()
+            .is_some_and(|constraint| constraint.is_latest())
     }
 
     pub fn is_prerelease(&self) -> bool {
@@ -148,7 +149,8 @@ impl Requirement {
             .any(|constraint| constraint.version.is_prerelease())
     }
 
-    fn sole(&self) -> Option<&VersionConstraint> {
+    /// If this has exactly 1 constraint, return it.
+    fn as_sole_constraint(&self) -> Option<&VersionConstraint> {
         (self.constraints.len() == 1).then(|| self.constraints.first())?
     }
 }
