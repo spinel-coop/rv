@@ -24,6 +24,12 @@ pub struct VersionConstraint {
     pub version: Version,
 }
 
+impl VersionConstraint {
+    pub fn is_latest(&self) -> bool {
+        matches!(self.operator, ComparisonOperator::GreaterEqual) && self.version.version == "0"
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ComparisonOperator {
     Equal,
@@ -132,13 +138,8 @@ impl Requirement {
     }
 
     pub fn is_latest_version(&self) -> bool {
-        // Check if the requirement is just ">= 0"
-        self.constraints.len() == 1
-            && matches!(
-                self.constraints[0].operator,
-                ComparisonOperator::GreaterEqual
-            )
-            && self.constraints[0].version.to_string() == "0"
+        self.as_sole_constraint()
+            .is_some_and(|constraint| constraint.is_latest())
     }
 
     pub fn is_prerelease(&self) -> bool {
@@ -146,6 +147,11 @@ impl Requirement {
         self.constraints
             .iter()
             .any(|constraint| constraint.version.is_prerelease())
+    }
+
+    /// If this has exactly 1 constraint, return it.
+    fn as_sole_constraint(&self) -> Option<&VersionConstraint> {
+        (self.constraints.len() == 1).then(|| self.constraints.first())?
     }
 }
 

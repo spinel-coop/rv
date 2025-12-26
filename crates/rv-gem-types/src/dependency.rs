@@ -19,8 +19,8 @@ pub enum DependencyType {
 impl AsRef<str> for DependencyType {
     fn as_ref(&self) -> &str {
         match self {
-            DependencyType::Runtime => "runtime",
-            DependencyType::Development => "development",
+            Self::Runtime => "runtime",
+            Self::Development => "development",
         }
     }
 }
@@ -79,16 +79,7 @@ impl Dependency {
     }
 
     pub fn is_latest_version(&self) -> bool {
-        // Check if the requirement is just ">= 0"
-        let Some(constraint) = self.requirement.constraints.first() else {
-            return false;
-        };
-        self.requirement.constraints.len() == 1
-            && matches!(
-                constraint.operator,
-                crate::requirement::ComparisonOperator::GreaterEqual
-            )
-            && constraint.version.to_string() == "0"
+        self.requirement.is_latest_version()
     }
 
     pub fn is_specific(&self) -> bool {
