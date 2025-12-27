@@ -67,6 +67,7 @@ rv combines several functions that have previously been separate tools:
 - [ ] `rv add`
 - [ ] `rv remove`
 - [ ] `rv tree`
+- [ ] `rv eol`
 
 ### Gems
 
