@@ -179,24 +179,6 @@ This is roughly the equivalent of `cargo install` or `go install`, but taking ca
 
 Notes about the functionality and implementation of each command.
 
-### run
-
-The `run` command executes commands and files provided by the current project or filesystem. Contrast to `exec`, below, which executes commands provided by installing gems. There are several sources of commands for `run`: 1) the $PATH, 2) your project, 3) a file
-
-1. Anything in your `$PATH` can be run by `rv run`, including `ruby`! In practice, this sets up a Ruby environment and then runs your command. For example `rv run --ruby 3.4.2 -- ruby` will run ruby 3.4.2 regardless of which ruby version is currently activated by the environment and the current project. Similarly, if you run `rv run bash` and then try to run `ruby`, you will get the Ruby version configured by rv.
-
-2. Your project can provide commands for `run` in two ways: 1) by defining named commands in the `gem.kdl` configuration file, like `npm run` with `package.json`, or 2) declaring your project provides binaries, like the `gist` gem provides the `gist` command. If you are working on the `gist` gem, you can `rv run gist` to run the current project's command.
-
-3. You can write a Ruby script and then run it with `rv run script.rb`. Scripts can optionally contain their own required ruby versions and rubygems dependencies, as a magic comment with the same structure as `gem.kdl`. If the script has configuration comments setting a required ruby version or depending on gems, rv will install that ruby version and those gems and then run thes cript. If the script does not declare any Ruby or gem dependencies, rv will simply ensure a Ruby is installed and use it to run the script.
-
-### exec
-
-The `exec` command runs commands provided by gems. Contrast with `run`, above, which executes commands provided by the current project or filesystem.
-
-Just like `npm exec`, `uv exec`, and `gem exec`, `rv exec` will: find a package with the given name, install it, and run the executable inside that package with the same name. For example, `rv exec rails new .` will install ruby if needed, install rails if needed, and then run `rails new .`.
-
-Similar to npm and uv, `rv exec rails@latest new .` will check for the newest version of Rails and make sure that is what gets run. Without the `@latest` included at the end of the package name, `exec` will prioritize speed and run an already-installed rails if it exists.
-
 ### ruby
 
 The `ruby` subcommand manages ruby versions, using subcommands `install`, `uninstall`, `pin`, and `find`.
@@ -214,6 +196,24 @@ Pin with a version argument tries to set that version for the current project, v
 #### find
 
 The `ruby find` subcommand returns the full path to the currently chosen Ruby interpreter. If passed an argument, it interprets that argument as a version request and prints the full path to a Ruby interpreter that satisfies the version request.
+
+### run
+
+The `run` command executes commands and files provided by the current project or filesystem. Contrast to `exec`, below, which executes commands provided by installing gems. There are several sources of commands for `run`: 1) the $PATH, 2) your project, 3) a file
+
+1. Anything in your `$PATH` can be run by `rv run`, including `ruby`! In practice, this sets up a Ruby environment and then runs your command. For example `rv run --ruby 3.4.2 -- ruby` will run ruby 3.4.2 regardless of which ruby version is currently activated by the environment and the current project. Similarly, if you run `rv run bash` and then try to run `ruby`, you will get the Ruby version configured by rv.
+
+2. Your project can provide commands for `run` in two ways: 1) by defining named commands in the `gem.kdl` configuration file, like `npm run` with `package.json`, or 2) declaring your project provides binaries, like the `gist` gem provides the `gist` command. If you are working on the `gist` gem, you can `rv run gist` to run the current project's command.
+
+3. You can write a Ruby script and then run it with `rv run script.rb`. Scripts can optionally contain their own required ruby versions and rubygems dependencies, as a magic comment with the same structure as `gem.kdl`. If the script has configuration comments setting a required ruby version or depending on gems, rv will install that ruby version and those gems and then run thes cript. If the script does not declare any Ruby or gem dependencies, rv will simply ensure a Ruby is installed and use it to run the script.
+
+### exec
+
+The `exec` command runs commands provided by gems. Contrast with `run`, above, which executes commands provided by the current project or filesystem.
+
+Just like `npm exec`, `uv exec`, and `gem exec`, `rv exec` will: find a package with the given name, install it, and run the executable inside that package with the same name. For example, `rv exec rails new .` will install ruby if needed, install rails if needed, and then run `rails new .`.
+
+Similar to npm and uv, `rv exec rails@latest new .` will check for the newest version of Rails and make sure that is what gets run. Without the `@latest` included at the end of the package name, `exec` will prioritize speed and run an already-installed rails if it exists.
 
 ### shell
 
