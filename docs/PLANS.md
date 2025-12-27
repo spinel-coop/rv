@@ -15,6 +15,19 @@ All-in-one tooling for Ruby developers.
 - Manage project gems with `rv install`, `rv add`, and `rv remove`.
 - Create gems with `rv gem`, and publish them with `rv publish`.
 
+## similar tools
+
+rv combines several functions that have previously been separate tools:
+
+- ruby version manager (like `rvm`, `rbenv`, `chruby`)
+- ruby version installer (like `ruby-build`, `ruby-install`)
+- gem installer (like `rubygems`)
+- dependency installer (like `bundler`)
+- project runner (like `npm`, `make`, `rake`)
+- package dev & publishing (like `rubygems` & `bundler`)
+- running packages (like `gemx` or `npx`)
+- installing tools (like `uv tool`, ruby and node lack this today)
+
 ## commands
 
 ### Ruby versions
@@ -22,14 +35,8 @@ All-in-one tooling for Ruby developers.
 - [x] `rv ruby list`
 - [x] `rv ruby pin`
 - [x] `rv ruby dir`
-- [ ] `rv ruby install`
-  - [x] `rv ruby install 3.4.x`
-  - [x] `rv ruby install 3.3.x`
-  - [x] `rv ruby install 3.2.x`
-  - [ ] `rv ruby install jruby 10`
-  - [ ] `rv ruby install truffleruby 24`
-  - [ ] `rv ruby install truffleruby+graalvm 24`
-  - [ ] `rv ruby install mruby 3.3`
+- [x] `rv ruby run`
+- [x] `rv ruby install`
 - [x] `rv ruby uninstall`
 
 ### Gem CLI tools
@@ -38,14 +45,9 @@ All-in-one tooling for Ruby developers.
 - [ ] `rv tool install`
 - [ ] `rv tool uninstall`
 
-### Ruby scripts
-
-- [ ] `rvr` / `rv run`
-- [ ] `rv add --script`
-- [ ] `rv remove --script`
-
 ### Projects
 
+- [ ] `rv clean-install` / `rv ci`
 - [ ] `rv install`
 - [ ] `rv run`
 - [ ] `rv list`
@@ -54,6 +56,12 @@ All-in-one tooling for Ruby developers.
 - [ ] `rv add`
 - [ ] `rv remove`
 - [ ] `rv tree`
+- [ ] `rv eol`
+
+  #### Single-file projects (scripts)
+
+- [ ] `rv add --script`
+- [ ] `rv remove --script`
 
 ### Gems
 
@@ -63,25 +71,46 @@ All-in-one tooling for Ruby developers.
 
 ### Shell integration
 
+- [x] `rv shell zsh`
+- [x] `rv shell bash`
+- [x] `rv shell fish`
+- [x] `rv shell nushell`
+- [ ] `rv shell powershell`
+
+#### Shell integration internal commands
+
 - [x] `rv shell init`
-  - [x] `rv shell init zsh`
-  - [x] `rv shell init bash`
-  - [x] `rv shell init fish`
 - [x] `rv shell env`
 - [x] `rv shell completions`
 
-## functionality
+## interpreter support
 
-rv combines several things that have previously been separate tools:
+- [ ] MRI HEAD
+- [x] MRI 4.0
+- [x] MRI 3.4
+- [x] MRI 3.3
+- [x] MRI 3.2
+- [ ] JRuby 10
+- [ ] TruffleRuby 24
+- [ ] MRuby 3.3
+- [ ] Artichoke Ruby
 
-- ruby version manager (like rvm, rbenv, chruby)
-- ruby version installer (like ruby-build, ruby-install)
-- gem installer (like rubygems)
-- dependency installer (like bundler)
-- project runner (like bundler, npm, make, rake)
-- package dev & publishing (like rubygems+bundler)
-- running packages (like gemx or npx)
-- installing tools (like `uv tool`, ruby and node lack this today)
+### EOL interpreters (maybe)
+
+- [ ] MRI 2.x
+- [ ] MRI 1.8
+- [ ] MRI 1.6
+- [ ] MRI 1.4
+- [ ] MRI 1.2
+- [ ] MRI 1.0
+- [x] MRI 0.49
+
+## supported platforms
+
+- [x] macOS 15+
+- [x] Linux (glibc 2.35+)
+- [ ] Alpine (musl 1.2.5+)
+- [ ] Windows 11+
 
 ## configuration
 
@@ -95,9 +124,9 @@ settings we know we want to support include:
 
 ## projects
 
-Projects are libraries, or packages, or applications. The required file indicating a project root is a `Gemfile`, but a project with a `Gemfile` might still be inside a workspace that aggregates together several projects.
+Projects are libraries, or packages, or applications. A project might be inside a workspace that aggregates together several projects.
 
-A project root may be indicated by a `Gemfile`, an `rbproject.kdl` config file, a `.git` directory, a `.jj` directory, or other files to be added in the future.
+A project root may be indicated by a `Gemfile` or a `gem.kdl` config file.
 
 Most `rv` commands (like `add,` `remove,` `install,` and `lock`) are scoped to a project and that project's dependencies. Some commands also interact with the user or global state, like `ruby install`, `tool install`, etc.
 
@@ -106,12 +135,12 @@ Most `rv` commands (like `add,` `remove,` `install,` and `lock`) are scoped to a
 Projects can be one or more of:
 
 - application (like a Rails or Hanami app)
-- gem (published library)
+- gem (library for publishing)
 - library (structured like a gem but not published)
 
 We may want to provide explicit support for libraries vs gems, although today Bundler treats them as the same.
 
-Applications typically have their own framework generators, so it's unlikely we will need to build any application-specific functionality. On the other hand, gems and libraries are typically generated using `bundle gem` so we will likely want to support generation for that. On the third hand, we may want to offer an extremely fast templating and generator framework that applications could use instead of Thor.
+Applications typically have their own framework generators, so it's unlikely we will need to build any application-specific functionality. On the other hand, gems and libraries are typically generated using `bundle gem` so we will likely want to support generation for that. On the third hand, we may even want to offer an extremely fast templating and generator framework that applications could use instead of Thor.
 
 ## workspaces
 
@@ -129,9 +158,9 @@ Finally, the ruby version can also be provided by `rbproject.kdl`, although tool
 
 ## ruby locations
 
-By default, we look for rubies in `$XDG_DATA_HOME/rv/rubies`, `~/.data/rv/rubies`, `~/.rubies`, `/opt/rubies`, `/usr/local/rubies`.
+By default, we look for rubies in `$XDG_DATA_HOME/rv/rubies`, `~/.data/rv/rubies`, `~/.rubies`, `/opt/rubies`, `/opt/homebrew/Cellar/ruby/`, `/usr/local/rubies`, and `/usr/local/Cellar/ruby`.
 
-By default, we install rubies into `~/.data/rv/rubies`.
+Sincew we respect `$XDG_DATA_HOME`, we install rubies into `~/.local/share/rv/rubies` on macOS and `~/.data/rv/rubies` on Linux by default.
 
 ## `run` vs `exec`
 
@@ -151,20 +180,6 @@ This is roughly the equivalent of `cargo install` or `go install`, but taking ca
 
 Notes about the functionality and implementation of each command.
 
-### run
-
-The `run` command does (at least) three separate things:
-
-1. Dynamically changes the ruby version for just one command. For example `rv run --ruby 3.4.2 -- ruby` will run ruby 3.4.2 regardless of which ruby version is currently activated by the environment and the current project.
-
-2. Runs executables provided by dependencies of the current project. For example, if you run `rv add gist` and then `rv run gist`, you will get the `gist` executable provided by the gist package that is a dependency of the current project. If you want to run `gist` without making it a dependency of the current project, you should use `rv exec gist` instead.
-
-3. Runs scripts that contain their own required ruby versions and rubygems dependencies, installing the ruby and gems as needed. For example, if you run `rv run myscript.rb`, if that script has configuration comments setting a required ruby version or depending on gems, rv will install that ruby version and those gems and then execute the script on that ruby with those gems available.
-
-### exec
-
-The `exec` command works the same way as `npm exec`, `uv exec`, and `gem exec`: find a package with that name, install it, and run the executable inside that package with the same name. For example, `rv exec rails new .` will install ruby if needed, install rails if needed, and then run `rails new .`. Similar to npm and uv, `rv exec rails@latest new .` will check for the newest version of Rails and make sure that is what gets run. Without the `@latest` included at the end of the package name, `exec` will prioritize speed and run an already-installed rails if it exists.
-
 ### ruby
 
 The `ruby` subcommand manages ruby versions, using subcommands `install`, `uninstall`, `pin`, and `find`.
@@ -182,6 +197,28 @@ Pin with a version argument tries to set that version for the current project, v
 #### find
 
 The `ruby find` subcommand returns the full path to the currently chosen Ruby interpreter. If passed an argument, it interprets that argument as a version request and prints the full path to a Ruby interpreter that satisfies the version request.
+
+### clean-install
+
+The `clean-install` or `ci` command is mainly inspired by `npm ci`, and is functionally very similar to `bundle install --frozen`. It installs dependencies as described by the lockfile, and does not interact with the Gemfile.
+
+### run
+
+The `run` command executes commands and files provided by the current project or filesystem. Contrast to `exec`, below, which executes commands provided by installing gems. There are several sources of commands for `run`: 1) the $PATH, 2) your project, 3) a file
+
+1. Anything in your `$PATH` can be run by `rv run`, including `ruby`! In practice, this sets up a Ruby environment and then runs your command. For example `rv run --ruby 3.4.2 -- ruby` will run ruby 3.4.2 regardless of which ruby version is currently activated by the environment and the current project. Similarly, if you run `rv run bash` and then try to run `ruby`, you will get the Ruby version configured by rv.
+
+2. Your project can provide commands for `run` in two ways: 1) by defining named commands in the `gem.kdl` configuration file, like `npm run` with `package.json`, or 2) declaring your project provides binaries, like the `gist` gem provides the `gist` command. If you are working on the `gist` gem, you can `rv run gist` to run the current project's command.
+
+3. You can write a Ruby script and then run it with `rv run script.rb`. Scripts can optionally contain their own required ruby versions and rubygems dependencies, as a magic comment with the same structure as `gem.kdl`. If the script has configuration comments setting a required ruby version or depending on gems, rv will install that ruby version and those gems and then run thes cript. If the script does not declare any Ruby or gem dependencies, rv will simply ensure a Ruby is installed and use it to run the script.
+
+### exec
+
+The `exec` command runs commands provided by gems. Contrast with `run`, above, which executes commands provided by the current project or filesystem.
+
+Just like `npm exec`, `uv exec`, and `gem exec`, `rv exec` will: find a package with the given name, install it, and run the executable inside that package with the same name. For example, `rv exec rails new .` will install ruby if needed, install rails if needed, and then run `rails new .`.
+
+Similar to npm and uv, `rv exec rails@latest new .` will check for the newest version of Rails and make sure that is what gets run. Without the `@latest` included at the end of the package name, `exec` will prioritize speed and run an already-installed rails if it exists.
 
 ### shell
 
