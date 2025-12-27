@@ -46,12 +46,6 @@ pub enum RequestError {
     InvalidPart(&'static str, String),
 }
 
-#[derive(Debug, thiserror::Error, PartialEq, Eq)]
-pub enum MatchError {
-    #[error("Ruby version {0} could not be found")]
-    NotFound(String),
-}
-
 impl Default for RubyRequest {
     fn default() -> Self {
         RubyRequest {
@@ -66,16 +60,14 @@ impl Default for RubyRequest {
 }
 
 impl RubyRequest {
-    pub fn find_match_in(self, rubies: &[Ruby]) -> Result<&Ruby, MatchError> {
+    pub fn find_match_in(&self, rubies: Vec<Ruby>) -> Option<Ruby> {
         rubies
-            .iter()
-            .find(|r| self.satisfied_by(r))
-            .ok_or(MatchError::NotFound(self.to_string()))
+            .into_iter()
+            .rev()
+            .find(|r| self.satisfied_by(&r.version))
     }
 
-    pub fn satisfied_by(&self, ruby: &Ruby) -> bool {
-        let version = &ruby.version;
-
+    pub fn satisfied_by(&self, version: &RubyRequest) -> bool {
         if self.engine != version.engine {
             return false;
         }
@@ -91,7 +83,7 @@ impl RubyRequest {
         if self.tiny.is_some() && self.tiny != version.tiny {
             return false;
         }
-        if self.prerelease.is_some() && self.prerelease != version.prerelease {
+        if self.prerelease != version.prerelease {
             return false;
         }
 
@@ -485,5 +477,16 @@ mod tests {
             format!("ruby-{}", version.trim()),
             "Parsed output does not match input for {version}"
         );
+    }
+
+    #[test]
+    fn test_ruby_request_satisfied_by() {
+        let request = RubyRequest::default();
+
+        let mut version = RubyRequest::from_str("3").unwrap();
+        assert!(request.satisfied_by(&version));
+
+        version = RubyRequest::from_str("4.0.0-preview3").unwrap();
+        assert!(!request.satisfied_by(&version));
     }
 }
