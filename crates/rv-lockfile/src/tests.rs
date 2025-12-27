@@ -1,41 +1,41 @@
 #[test]
 fn test_parse_file() {
-    let input = include_str!("../tests/inputs/Gemfile.lock.test0");
+    let input = include_str!("../tests/inputs/Gemfile.tapioca.lock");
     let output = crate::parse(input).unwrap();
     insta::assert_yaml_snapshot!(output);
 }
 
 #[test]
 fn test_parse_file_two_sources() {
-    let input = include_str!("../tests/inputs/Gemfile.lock.twosources");
+    let input = include_str!("../tests/inputs/Gemfile.twosources.lock");
     let output = must_parse(input);
     insta::assert_yaml_snapshot!(output);
 }
 
 #[test]
 fn test_parse_empty_sections() {
-    let input = include_str!("../tests/inputs/Gemfile.lock.empty");
+    let input = include_str!("../tests/inputs/Gemfile.empty.lock");
     let output = must_parse(input);
     insta::assert_yaml_snapshot!(output);
 }
 
 #[test]
 fn test_parse_with_checksums() {
-    let input = include_str!("../tests/inputs/Gemfile.lock.withchecksums");
+    let input = include_str!("../tests/inputs/Gemfile.withchecksums.lock");
     let output = must_parse(input);
     insta::assert_yaml_snapshot!(output);
 }
 
 #[test]
 fn test_parse_with_paths() {
-    let input = include_str!("../tests/inputs/Gemfile.lock.withpath");
+    let input = include_str!("../tests/inputs/Gemfile.withpath.lock");
     let output = must_parse(input);
     insta::assert_yaml_snapshot!(output);
 }
 
 #[test]
 fn test_parse_feedyouremail() {
-    let input = include_str!("../tests/inputs/Gemfile.lock.feedyouremail");
+    let input = include_str!("../tests/inputs/Gemfile.feedyouremail.lock");
     let output = must_parse(input);
     assert_eq!(output.dependencies.len(), 52);
     insta::assert_yaml_snapshot!(output);
@@ -43,21 +43,21 @@ fn test_parse_feedyouremail() {
 
 #[test]
 fn test_parse_gitlab() {
-    let input = include_str!("../tests/inputs/Gemfile.lock.gitlab");
+    let input = include_str!("../tests/inputs/Gemfile.gitlab.lock");
     let output = must_parse(input);
     insta::assert_yaml_snapshot!(output);
 }
 
 #[test]
 fn test_parse_gemdir() {
-    let input = include_str!("../tests/inputs/Gemfile.lock.gemdir");
+    let input = include_str!("../tests/inputs/Gemfile.gemdir.lock");
     let output = must_parse(input);
     insta::assert_yaml_snapshot!(output);
 }
 
 #[test]
 fn test_parse_discourse() {
-    let input = include_str!("../tests/inputs/Gemfile.lock.discourse");
+    let input = include_str!("../tests/inputs/Gemfile.discourse.lock");
     let output = must_parse(input);
     insta::assert_yaml_snapshot!(output);
 }
@@ -67,7 +67,7 @@ fn test_parse_withoutsource() {
     // If the Gemfile has no declared source, Bundler will default to http://rubygems.org,
     // which provides the endpoints needed to resolve a lockfile successfully, but does not
     // provide the endpoints needed to record checksums. So this lock has empty checksums.
-    let input = include_str!("../tests/inputs/Gemfile.lock.withoutsource");
+    let input = include_str!("../tests/inputs/Gemfile.withoutsource.lock");
     let output = must_parse(input);
     insta::assert_yaml_snapshot!(output);
 }

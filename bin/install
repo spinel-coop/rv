@@ -2,4 +2,4 @@
 set -euo pipefail
 set -x
 
-cargo install --path crates/rv
+cargo install --path crates/rv --locked
