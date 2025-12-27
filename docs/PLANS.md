@@ -135,9 +135,9 @@ Finally, the ruby version can also be provided by `rbproject.kdl`, although tool
 
 ## ruby locations
 
-By default, we look for rubies in `$XDG_DATA_HOME/rv/rubies`, `~/.data/rv/rubies`, `~/.rubies`, `/opt/rubies`, `/usr/local/rubies`.
+By default, we look for rubies in `$XDG_DATA_HOME/rv/rubies`, `~/.data/rv/rubies`, `~/.rubies`, `/opt/rubies`, `/opt/homebrew/Cellar/ruby/`, `/usr/local/rubies`, and `/usr/local/Cellar/ruby`.
 
-By default, we install rubies into `~/.data/rv/rubies`.
+Sincew we respect `$XDG_DATA_HOME`, we install rubies into `~/.local/share/rv/rubies` on macOS and `~/.data/rv/rubies` on Linux by default.
 
 ## `run` vs `exec`
 
