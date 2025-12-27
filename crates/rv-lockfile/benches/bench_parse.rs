@@ -16,11 +16,11 @@ fn run_bench(c: &mut Criterion, name: &str) {
 }
 
 fn parse_gitlab(c: &mut Criterion) {
-    run_bench(c, "Gemfile.lock.gitlab");
+    run_bench(c, "Gemfile.gitlab.lock");
 }
 
 fn parse_feedyouremail(c: &mut Criterion) {
-    run_bench(c, "Gemfile.lock.feedyouremail");
+    run_bench(c, "Gemfile.feedyouremail.lock");
 }
 
 criterion_group!(benches, parse_gitlab, parse_feedyouremail);

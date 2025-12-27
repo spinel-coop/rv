@@ -4,7 +4,7 @@ use crate::common::RvTest;
 fn test_clean_install_download_test_gem() {
     let mut test = RvTest::new();
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testsource");
-    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.lock.testsource");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testsource.lock");
     test.replace_source("http://gems.example.com", &test.server_url());
 
     let gemfile = fs_err::read_to_string(test.cwd.join("Gemfile")).unwrap();
@@ -26,7 +26,7 @@ fn test_clean_install_download_test_gem() {
 fn test_clean_install_native_macos_aarch64() {
     let test = RvTest::new();
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
-    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.lock.testwithnative");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative.lock");
     let output = test.rv(&["ci", "--skip-compile-extensions"]);
     output.assert_success();
 
@@ -40,7 +40,7 @@ fn test_clean_install_native_macos_aarch64() {
 fn test_clean_install_native_linux_x86_64() {
     let test = RvTest::new();
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
-    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.lock.testwithnative");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative.lock");
     let output = test.rv(&["ci", "--skip-compile-extensions"]);
     output.assert_success();
 
@@ -55,7 +55,7 @@ fn test_clean_install_download_faker() {
     // https://github.com/faker-ruby/faker/blob/2f8b18b112fb3b7d2750321a8e574518cfac0d53/Gemfile
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.faker");
     // https://github.com/faker-ruby/faker/blob/2f8b18b112fb3b7d2750321a8e574518cfac0d53/Gemfile.lock
-    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.lock.faker");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.faker.lock");
 
     let output = test.rv(&["ci", "--skip-compile-extensions"]);
     output.assert_success();
