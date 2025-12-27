@@ -76,10 +76,15 @@ rv combines several functions that have previously been separate tools:
 
 ### Shell integration
 
+- [x] `rv shell zsh`
+- [x] `rv shell bash`
+- [x] `rv shell fish`
+- [x] `rv shell nushell`
+- [ ] `rv shell powershell`
+
+#### Shell integration internal commands
+
 - [x] `rv shell init`
-  - [x] `rv shell init zsh`
-  - [x] `rv shell init bash`
-  - [x] `rv shell init fish`
 - [x] `rv shell env`
 - [x] `rv shell completions`
 
