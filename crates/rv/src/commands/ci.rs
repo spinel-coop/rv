@@ -187,22 +187,24 @@ async fn download_git_gems<'i>(
         let cache_key = rv_cache::cache_digest((git_source.remote, git_source.revision));
         let git_repo_dir = git_clone_dir.clone().join(&cache_key);
 
-        // Clone the repo without checking it out, to save bandwidth.
-        tracing::event!(tracing::Level::DEBUG, %git_clone_dir, %git_source.remote, %git_source.revision, "Cloning gem");
-        let git_cloned = std::process::Command::new("git")
-            .current_dir(&git_clone_dir)
-            .args([
-                "clone",
-                "--no-checkout",
-                git_source.remote,
-                cache_key.as_ref(),
-            ])
-            .spawn()?
-            .wait()?;
-        if !git_cloned.success() {
-            return Err(Error::Git {
-                error: format!("git clone had exit code {}", git_cloned),
-            });
+        if std::fs::exists(&git_repo_dir)?.not() {
+            // Clone the repo without checking it out, to save bandwidth.
+            tracing::event!(tracing::Level::DEBUG, %git_clone_dir, %git_source.remote, %git_source.revision, "Cloning gem");
+            let git_cloned = std::process::Command::new("git")
+                .current_dir(&git_clone_dir)
+                .args([
+                    "clone",
+                    "--no-checkout",
+                    git_source.remote,
+                    cache_key.as_ref(),
+                ])
+                .spawn()?
+                .wait()?;
+            if !git_cloned.success() {
+                return Err(Error::Git {
+                    error: format!("git clone had exit code {}", git_cloned),
+                });
+            }
         }
 
         // Fetch only the commit we're going to use.
