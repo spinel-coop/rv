@@ -15,6 +15,19 @@ All-in-one tooling for Ruby developers.
 - Manage project gems with `rv install`, `rv add`, and `rv remove`.
 - Create gems with `rv gem`, and publish them with `rv publish`.
 
+## similar tools
+
+rv combines several functions that have previously been separate tools:
+
+- ruby version manager (like `rvm`, `rbenv`, `chruby`)
+- ruby version installer (like `ruby-build`, `ruby-install`)
+- gem installer (like `rubygems`)
+- dependency installer (like `bundler`)
+- project runner (like `npm`, `make`, `rake`)
+- package dev & publishing (like `rubygems` & `bundler`)
+- running packages (like `gemx` or `npx`)
+- installing tools (like `uv tool`, ruby and node lack this today)
+
 ## commands
 
 ### Ruby versions
@@ -70,18 +83,6 @@ All-in-one tooling for Ruby developers.
 - [x] `rv shell env`
 - [x] `rv shell completions`
 
-## functionality
-
-rv combines several things that have previously been separate tools:
-
-- ruby version manager (like rvm, rbenv, chruby)
-- ruby version installer (like ruby-build, ruby-install)
-- gem installer (like rubygems)
-- dependency installer (like bundler)
-- project runner (like bundler, npm, make, rake)
-- package dev & publishing (like rubygems+bundler)
-- running packages (like gemx or npx)
-- installing tools (like `uv tool`, ruby and node lack this today)
 
 ## configuration
 
