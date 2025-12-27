@@ -161,9 +161,28 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
 
 async fn install_git_gems<'i>(
     _config: &Config,
-    _gems: Vec<DownloadedGit<'i>>,
-    _args: &CiInnerArgs,
+    downloaded: Vec<DownloadedGit<'i>>,
+    args: &CiInnerArgs,
 ) -> Result<()> {
+    let git_gems_dir = args.install_path.join("bundler/gems");
+
+    use rayon::prelude::*;
+    let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
+    pool.install(|| {
+        downloaded
+            .into_iter()
+            .par_bridge()
+            .map(|download| {
+                let git_name = format!("{}-{:.12}", download.spec.gem_version.name, download.sha);
+                let dest_dir = git_gems_dir.join(git_name);
+                dircpy::copy_dir(download.path, dest_dir)?;
+                debug!("Installed {}", download.spec.gem_version);
+                Ok(())
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok::<_, Error>(())
+    })?;
+
     // TODO
     Ok(())
 }
@@ -237,6 +256,7 @@ async fn download_git_gems<'i>(
         downloads.extend(git_source.specs.iter().map(|spec| DownloadedGit {
             path: git_repo_dir.clone(),
             spec: spec.clone(),
+            sha: git_source.revision.to_string(),
         }));
     }
     Ok(downloads)
@@ -345,7 +365,7 @@ async fn install_rubygems_gems<'i>(
         fs_err::remove_dir(&binstub_dir)?;
     }
 
-    // 5. Copy the .gem files and the .gemspec files into cache and specificatiosn?
+    // 5. Copy the .gem files and the .gemspec files into cache and specification?
     Ok(())
 }
 
@@ -442,16 +462,9 @@ struct DownloadedRubygems<'i> {
 /// A gem downloaded from a git source.
 #[derive(Debug)]
 struct DownloadedGit<'i> {
-    #[expect(
-        dead_code,
-        reason = "TODO: Actually read this repo and install its gem."
-    )]
     path: Utf8PathBuf,
-    #[expect(
-        dead_code,
-        reason = "TODO: Actually read this repo and install its gem."
-    )]
     spec: Spec<'i>,
+    sha: String,
 }
 
 /// Checksums found in the gem under checksums.yaml
