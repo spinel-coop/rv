@@ -46,12 +46,6 @@ pub enum RequestError {
     InvalidPart(&'static str, String),
 }
 
-#[derive(Debug, thiserror::Error, PartialEq, Eq)]
-pub enum MatchError {
-    #[error("Ruby version {0} could not be found")]
-    NotFound(String),
-}
-
 impl Default for RubyRequest {
     fn default() -> Self {
         RubyRequest {
@@ -66,11 +60,12 @@ impl Default for RubyRequest {
 }
 
 impl RubyRequest {
-    pub fn find_match_in(self, rubies: &[Ruby]) -> Result<&Ruby, MatchError> {
-        rubies
-            .iter()
-            .find(|r| self.satisfied_by(r))
-            .ok_or(MatchError::NotFound(self.to_string()))
+    pub fn is_specific(&self) -> bool {
+        self.major.is_some() && self.minor.is_some() && self.patch.is_some()
+    }
+
+    pub fn find_match_in(&self, rubies: Vec<Ruby>) -> Option<Ruby> {
+        rubies.into_iter().rev().find(|r| self.satisfied_by(r))
     }
 
     pub fn satisfied_by(&self, ruby: &Ruby) -> bool {
@@ -91,7 +86,7 @@ impl RubyRequest {
         if self.tiny.is_some() && self.tiny != version.tiny {
             return false;
         }
-        if self.prerelease.is_some() && self.prerelease != version.prerelease {
+        if self.prerelease != version.prerelease {
             return false;
         }
 

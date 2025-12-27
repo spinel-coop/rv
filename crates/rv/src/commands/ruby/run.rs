@@ -46,14 +46,15 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
     cwd: Option<&Utf8Path>,
 ) -> Result<Output> {
     let request = match version {
-        None => config.ruby_request()?,
+        None => config.ruby_request(),
         Some(version) => version,
     };
     if config.matching_ruby(&request).is_none() && !no_install {
         // Not installed, try to install it.
         // None means it'll install in whatever default ruby location it chooses.
         let install_dir = None;
-        crate::commands::ruby::install::install(config, install_dir, &request, None).await?
+        crate::commands::ruby::install::install(config, install_dir, Some(request.clone()), None)
+            .await?
     };
     run_no_install(config, &request, args, capture_output, cwd)
 }

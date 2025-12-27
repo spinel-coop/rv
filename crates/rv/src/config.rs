@@ -48,25 +48,18 @@ impl Config {
 
     pub fn matching_ruby(&self, request: &RubyRequest) -> Option<Ruby> {
         let rubies = self.rubies();
-        rubies
-            .into_iter()
-            .rev()
-            .find(|ruby| request.satisfied_by(ruby))
+        request.find_match_in(rubies)
     }
 
     pub fn current_ruby(&self) -> Option<Ruby> {
-        if let Ok(request) = self.ruby_request() {
-            self.matching_ruby(&request)
-        } else {
-            None
-        }
+        self.matching_ruby(&self.ruby_request())
     }
 
-    pub fn ruby_request(&self) -> Result<RubyRequest> {
+    pub fn ruby_request(&self) -> RubyRequest {
         if let Some(request) = &self.requested_ruby {
-            Ok(request.0.clone())
+            request.0.clone()
         } else {
-            Ok(RubyRequest::default())
+            RubyRequest::default()
         }
     }
 }

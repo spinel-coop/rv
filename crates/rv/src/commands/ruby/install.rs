@@ -9,7 +9,7 @@ use tokio::io::AsyncWriteExt;
 
 use rv_ruby::request::RubyRequest;
 
-use crate::config::Config;
+use crate::{commands::ruby::list::find_rubies_for_this_platform, config::Config};
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -19,8 +19,6 @@ pub enum Error {
     IoError(#[from] std::io::Error),
     #[error(transparent)]
     StripPrefixError(#[from] std::path::StripPrefixError),
-    #[error("Major, minor, and patch version is required, but got {0}")]
-    IncompleteVersion(RubyRequest),
     #[error("Download from URL {url} failed with status code {status}. Response body was {body}")]
     DownloadFailed {
         url: String,
@@ -40,9 +38,24 @@ type Result<T> = miette::Result<T, Error>;
 pub async fn install(
     config: &Config,
     install_dir: Option<String>,
-    requested: &RubyRequest,
+    version: Option<RubyRequest>,
     tarball_path: Option<String>,
 ) -> Result<()> {
+    let mut requested = match version {
+        None => config.ruby_request(),
+        Some(version) => version,
+    };
+
+    if !requested.is_specific() {
+        let mut rubies_for_this_platform = find_rubies_for_this_platform(config).await;
+        rubies_for_this_platform.sort();
+
+        requested = match requested.find_match_in(rubies_for_this_platform) {
+            None => panic!("No matching rubies found!"),
+            Some(ruby) => ruby.version,
+        }
+    }
+
     let install_dir = match install_dir {
         Some(dir) => Utf8PathBuf::from(dir),
         None => match config.ruby_dirs.first() {
@@ -55,7 +68,7 @@ pub async fn install(
         Some(tarball_path) => {
             extract_local_ruby_tarball(tarball_path, &install_dir, &requested.number()).await?
         }
-        None => download_and_extract_remote_tarball(config, &install_dir, requested).await?,
+        None => download_and_extract_remote_tarball(config, &install_dir, &requested).await?,
     }
 
     println!(
@@ -73,10 +86,6 @@ async fn download_and_extract_remote_tarball(
     install_dir: &Utf8PathBuf,
     requested: &RubyRequest,
 ) -> Result<()> {
-    if requested.major > Some(0) && requested.patch.is_none() {
-        Err(Error::IncompleteVersion(requested.clone()))?;
-    }
-
     let url = ruby_url(&requested.to_string())?;
     let tarball_path = tarball_path(config, &url);
 
