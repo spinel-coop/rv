@@ -35,14 +35,7 @@ rv combines several functions that have previously been separate tools:
 - [x] `rv ruby list`
 - [x] `rv ruby pin`
 - [x] `rv ruby dir`
-- [ ] `rv ruby install`
-  - [x] `rv ruby install 3.4.x`
-  - [x] `rv ruby install 3.3.x`
-  - [x] `rv ruby install 3.2.x`
-  - [ ] `rv ruby install jruby 10`
-  - [ ] `rv ruby install truffleruby 24`
-  - [ ] `rv ruby install truffleruby+graalvm 24`
-  - [ ] `rv ruby install mruby 3.3`
+- [x] `rv ruby install`
 - [x] `rv ruby uninstall`
 
 ### Gem CLI tools
@@ -89,6 +82,34 @@ rv combines several functions that have previously been separate tools:
 - [x] `rv shell env`
 - [x] `rv shell completions`
 
+## interpreter support
+
+- [ ] MRI HEAD
+- [x] MRI 4.0
+- [x] MRI 3.4
+- [x] MRI 3.3
+- [x] MRI 3.2
+- [ ] JRuby 10
+- [ ] TruffleRuby 24
+- [ ] MRuby 3.3
+- [ ] Artichoke Ruby
+
+### EOL interpreters (maybe)
+
+- [ ] MRI 2.x
+- [ ] MRI 1.8
+- [ ] MRI 1.6
+- [ ] MRI 1.4
+- [ ] MRI 1.2
+- [ ] MRI 1.0
+- [x] MRI 0.49
+
+## supported platforms
+
+- [x] macOS 15+
+- [x] Linux (glibc 2.35+)
+- [ ] Alpine (musl 1.2.5+)
+- [ ] Windows 11+
 
 ## configuration
 
