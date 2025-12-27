@@ -35,6 +35,7 @@ rv combines several functions that have previously been separate tools:
 - [x] `rv ruby list`
 - [x] `rv ruby pin`
 - [x] `rv ruby dir`
+- [x] `rv ruby run`
 - [x] `rv ruby install`
 - [x] `rv ruby uninstall`
 
@@ -43,12 +44,6 @@ rv combines several functions that have previously been separate tools:
 - [ ] `rvx` / `rv exec` / `rv tool run`
 - [ ] `rv tool install`
 - [ ] `rv tool uninstall`
-
-### Ruby scripts
-
-- [ ] `rvr` / `rv run`
-- [ ] `rv add --script`
-- [ ] `rv remove --script`
 
 ### Projects
 
@@ -61,6 +56,11 @@ rv combines several functions that have previously been separate tools:
 - [ ] `rv remove`
 - [ ] `rv tree`
 - [ ] `rv eol`
+
+  #### Single-file projects (scripts)
+
+- [ ] `rv add --script`
+- [ ] `rv remove --script`
 
 ### Gems
 
