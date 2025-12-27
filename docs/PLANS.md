@@ -47,6 +47,7 @@ rv combines several functions that have previously been separate tools:
 
 ### Projects
 
+- [ ] `rv clean-install` / `rv ci`
 - [ ] `rv install`
 - [ ] `rv run`
 - [ ] `rv list`
@@ -196,6 +197,10 @@ Pin with a version argument tries to set that version for the current project, v
 #### find
 
 The `ruby find` subcommand returns the full path to the currently chosen Ruby interpreter. If passed an argument, it interprets that argument as a version request and prints the full path to a Ruby interpreter that satisfies the version request.
+
+### clean-install
+
+The `clean-install` or `ci` command is mainly inspired by `npm ci`, and is functionally very similar to `bundle install --frozen`. It installs dependencies as described by the lockfile, and does not interact with the Gemfile.
 
 ### run
 
