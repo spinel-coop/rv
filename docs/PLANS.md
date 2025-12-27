@@ -124,9 +124,9 @@ settings we know we want to support include:
 
 ## projects
 
-Projects are libraries, or packages, or applications. The required file indicating a project root is a `Gemfile`, but a project with a `Gemfile` might still be inside a workspace that aggregates together several projects.
+Projects are libraries, or packages, or applications. A project might be inside a workspace that aggregates together several projects.
 
-A project root may be indicated by a `Gemfile`, an `rbproject.kdl` config file, a `.git` directory, a `.jj` directory, or other files to be added in the future.
+A project root may be indicated by a `Gemfile` or a `gem.kdl` config file.
 
 Most `rv` commands (like `add,` `remove,` `install,` and `lock`) are scoped to a project and that project's dependencies. Some commands also interact with the user or global state, like `ruby install`, `tool install`, etc.
 
@@ -135,12 +135,12 @@ Most `rv` commands (like `add,` `remove,` `install,` and `lock`) are scoped to a
 Projects can be one or more of:
 
 - application (like a Rails or Hanami app)
-- gem (published library)
+- gem (library for publishing)
 - library (structured like a gem but not published)
 
 We may want to provide explicit support for libraries vs gems, although today Bundler treats them as the same.
 
-Applications typically have their own framework generators, so it's unlikely we will need to build any application-specific functionality. On the other hand, gems and libraries are typically generated using `bundle gem` so we will likely want to support generation for that. On the third hand, we may want to offer an extremely fast templating and generator framework that applications could use instead of Thor.
+Applications typically have their own framework generators, so it's unlikely we will need to build any application-specific functionality. On the other hand, gems and libraries are typically generated using `bundle gem` so we will likely want to support generation for that. On the third hand, we may even want to offer an extremely fast templating and generator framework that applications could use instead of Thor.
 
 ## workspaces
 
