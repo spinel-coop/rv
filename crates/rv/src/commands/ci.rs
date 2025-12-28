@@ -199,6 +199,13 @@ async fn install_git_gems<'i>(
             .collect::<Result<Vec<_>>>()?;
         Ok::<_, Error>(())
     })?;
+    // TODO: Install gems
+    // - iterate over each git/path gem directory
+    // - find the .gemspec file
+    // - shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
+    // - (maybe?) cache the YAML gemspec somewhere
+    // - parse the YAML gemspec to get the executable names
+    // - pass the executable names to the existing binstub generation code
     Ok(())
 }
 
