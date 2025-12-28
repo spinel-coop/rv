@@ -55,7 +55,7 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
         let install_dir = None;
         crate::commands::ruby::install::install(config, install_dir, &request, None).await?
     };
-    run_no_install(config, &request, args, capture_output, cwd)
+    run_no_install(config, &request, args, capture_output, cwd, vec![])
 }
 
 /// Run, without installing the Ruby version if necessary.
@@ -65,6 +65,7 @@ pub(crate) fn run_no_install<A: AsRef<std::ffi::OsStr>>(
     args: &[A],
     capture_output: CaptureOutput,
     cwd: Option<&Utf8Path>,
+    env: Vec<(&str, &str)>,
 ) -> Result<Output> {
     let ruby = config.matching_ruby(request).ok_or(Error::NoMatchingRuby)?;
     let (unset, set) = config::env_for(Some(&ruby))?;
@@ -73,8 +74,11 @@ pub(crate) fn run_no_install<A: AsRef<std::ffi::OsStr>>(
     for var in unset {
         cmd.env_remove(var);
     }
-    for (var, val) in set {
-        cmd.env(var, val);
+    for (key, val) in set {
+        cmd.env(key, val);
+    }
+    for (key, val) in env {
+        cmd.env(key, val);
     }
     if let Some(path) = cwd {
         cmd.current_dir(path);

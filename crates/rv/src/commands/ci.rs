@@ -746,6 +746,7 @@ fn exts_dir(config: &Config) -> Result<Utf8PathBuf> {
         ],
         CaptureOutput::Both,
         None,
+        vec![],
     )?
     .stdout;
 
@@ -760,7 +761,8 @@ static RAKE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)rakefile|mkrf_con
 fn compile_gem(config: &Config, args: &CiInnerArgs, spec: GemSpecification) -> Result<bool> {
     let mut compile_results = Vec::with_capacity(spec.extensions.len());
 
-    let gem_path = args.install_path.join("gems").join(spec.full_name());
+    let gem_home = &args.install_path;
+    let gem_path = gem_home.join("gems").join(spec.full_name());
     let lib_dest = gem_path.join("lib");
     let ext_dest = args
         .install_path
@@ -772,7 +774,9 @@ fn compile_gem(config: &Config, args: &CiInnerArgs, spec: GemSpecification) -> R
     for extstr in spec.extensions.clone() {
         let extension = extstr.as_ref();
         if EXTCONF_REGEX.is_match(extension) {
-            if let Ok(outputs) = build_extconf(config, extension, &gem_path, &ext_dest, &lib_dest) {
+            if let Ok(outputs) =
+                build_extconf(config, extension, gem_home, &gem_path, &ext_dest, &lib_dest)
+            {
                 compile_results.push(CompileNativeExtResult {
                     extension: extension.to_string(),
                     outputs,
@@ -855,6 +859,7 @@ fn build_rakefile(
             &[ext_file],
             CaptureOutput::Both,
             Some(&ext_dir),
+            vec![],
         )?;
         outputs.push(output);
     }
@@ -883,6 +888,7 @@ fn build_rakefile(
 fn build_extconf(
     config: &Config,
     extension: &str,
+    gem_home: &Utf8PathBuf,
     gem_path: &Utf8PathBuf,
     ext_dest: &Utf8PathBuf,
     lib_dest: &Utf8PathBuf,
@@ -900,6 +906,7 @@ fn build_extconf(
         &[ext_file],
         CaptureOutput::Both,
         Some(&ext_dir),
+        vec![("GEM_HOME", gem_home.as_str())],
     )?;
     outputs.push(output);
 
