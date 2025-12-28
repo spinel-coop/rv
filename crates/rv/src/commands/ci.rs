@@ -2,8 +2,8 @@ use bytes::Bytes;
 use camino::Utf8Path;
 use camino::Utf8PathBuf;
 use current_platform::CURRENT_PLATFORM;
-use dircpy::copy_dir;
 use flate2::read::GzDecoder;
+use fs_err::hard_link;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
 use once_cell::sync::Lazy;
@@ -73,7 +73,9 @@ struct CiInnerArgs {
     pub max_concurrent_requests: usize,
     pub max_concurrent_installs: usize,
     pub validate_checksums: bool,
+    /// Path to the lockfile being installed.
     pub lockfile_path: Utf8PathBuf,
+    /// Which path should `ci` install gems under?
     pub install_path: Utf8PathBuf,
 }
 
@@ -169,6 +171,7 @@ async fn install_git_gems<'i>(
 
     use rayon::prelude::*;
     let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
+    // Unpack gems
     pool.install(|| {
         downloaded
             .into_iter()
@@ -176,7 +179,7 @@ async fn install_git_gems<'i>(
             .map(|download| {
                 let git_name = format!("{}-{:.12}", download.spec.gem_version.name, download.sha);
                 let dest_dir = git_gems_dir.join(git_name);
-                dircpy::copy_dir(download.path, dest_dir)?;
+                hard_link(download.path, dest_dir)?;
                 debug!("Installed {}", download.spec.gem_version);
                 Ok(())
             })
@@ -184,7 +187,7 @@ async fn install_git_gems<'i>(
         Ok::<_, Error>(())
     })?;
 
-    // TODO
+    // TODO: Install gems
     Ok(())
 }
 
@@ -200,7 +203,7 @@ async fn download_git_gems<'i>(
     let git_clone_dir = cache
         .shard(rv_cache::CacheBucket::Git, "gits")
         .into_path_buf();
-    std::fs::create_dir_all(&git_clone_dir)?;
+    fs_err::create_dir_all(&git_clone_dir)?;
 
     for git_source in lockfile.git {
         // This will be the subdir within `git_clone_dir` that the git cloned repos are written to.
@@ -876,8 +879,8 @@ fn build_rakefile(
     outputs.push(output);
 
     // 3. Copy the resulting files to ext and lib dirs
-    copy_dir(&tmp_dir, lib_dest)?;
-    copy_dir(&tmp_dir, ext_dest)?;
+    hard_link(&tmp_dir, lib_dest)?;
+    hard_link(&tmp_dir, ext_dest)?;
 
     // 4. Mark the gem as built
     fs_err::write(ext_dest.join("gem.build_complete"), "")?;
@@ -950,8 +953,8 @@ fn build_extconf(
         .output()?;
 
     // 4. Copy the resulting files to ext and lib dirs
-    copy_dir(&tmp_dir, lib_dest)?;
-    copy_dir(&tmp_dir, ext_dest)?;
+    hard_link(&tmp_dir, lib_dest)?;
+    hard_link(&tmp_dir, ext_dest)?;
 
     // 5. Mark the gem as built
     fs_err::write(ext_dest.join("gem.build_complete"), "")?;
