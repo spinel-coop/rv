@@ -155,7 +155,8 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     let gems = download_git_gems(lockfile.clone(), &config.cache, args).await?;
     install_git_gems(config, gems, args).await?;
     let gems = download_rubygems_gems(lockfile.clone(), &config.cache, args).await?;
-    install_rubygems_gems(config, gems, args).await?;
+    let specs = install_rubygems_gems(config, gems, args).await?;
+    compile_rubygems_gems(config, specs, args).await?;
     Ok(())
 }
 
@@ -316,17 +317,17 @@ pub fn create_rayon_pool(
 }
 
 async fn install_rubygems_gems<'i>(
-    config: &Config,
+    _config: &Config,
     downloaded: Vec<DownloadedRubygems<'i>>,
     args: &CiInnerArgs,
-) -> Result<()> {
+) -> Result<Vec<GemSpecification>> {
     let binstub_dir = args.install_path.join("bin");
     debug!("about to create {}", binstub_dir);
     tokio::fs::create_dir_all(&binstub_dir).await?;
     debug!("finished creating {}", binstub_dir);
     use rayon::prelude::*;
     let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
-    pool.install(|| {
+    let specs = pool.install(|| {
         downloaded
             .into_iter()
             .par_bridge()
@@ -335,29 +336,16 @@ async fn install_rubygems_gems<'i>(
                 // Actually unpack the tarball here.
                 let dep_gemspec_res = download.unpack_tarball(args.install_path.clone(), args)?;
                 let Some(dep_gemspec) = dep_gemspec_res else {
-                    eprintln!(
-                        "Warning: No gemspec found for downloaded dep {}",
+                    panic!(
+                        "Warning: No gemspec found for downloaded gem {}",
                         gv.yellow()
                     );
-                    return Ok::<_, Error>(());
                 };
-
-                // 3. Generate binstubs.
                 install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir)?;
-                // 4. Handle compiling native extensions for gems with native extensions
-                if !args.skip_compile_extensions && !dep_gemspec.extensions.is_empty() {
-                    debug!("compiling native extensions for {gv}");
-                    let compiled_ok =
-                        compile_native_extensions(config, args, gv, &dep_gemspec.extensions)?;
-                    if !compiled_ok {
-                        return Err(Error::CompileFailures);
-                    }
-                }
-                debug!("Installed {gv}");
-                Ok(())
+                debug!("Unpacked {gv}");
+                Ok(dep_gemspec)
             })
-            .collect::<Result<Vec<_>>>()?;
-        Ok::<_, Error>(())
+            .collect::<Result<Vec<GemSpecification>>>()
     })?;
 
     // Remove the binstubs dir if we didn't generate any binstubs
@@ -366,6 +354,30 @@ async fn install_rubygems_gems<'i>(
     }
 
     // 5. Copy the .gem files and the .gemspec files into cache and specification?
+    Ok(specs)
+}
+
+async fn compile_rubygems_gems(
+    config: &Config,
+    specs: Vec<GemSpecification>,
+    args: &CiInnerArgs,
+) -> Result<()> {
+    use rayon::prelude::*;
+    let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
+    pool.install(|| {
+        specs.into_iter().par_bridge().map(|spec| {
+            // 4. Handle compiling native extensions for gems with native extensions
+            if !args.skip_compile_extensions && !spec.extensions.is_empty() {
+                debug!("compiling native extensions for {}", spec.full_name());
+                let compiled_ok = compile_gem(config, args, spec)?;
+                if !compiled_ok {
+                    return Err(Error::CompileFailures);
+                }
+            }
+            Ok(())
+        })
+    })
+    .collect::<Result<()>>()?;
     Ok(())
 }
 
@@ -713,12 +725,12 @@ fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -> io::
     fs_err::write(binstub_path, binstub_contents)
 }
 
-struct CompileNativeExtResult<'a> {
-    extension: &'a str,
+struct CompileNativeExtResult {
+    extension: String,
     outputs: Vec<std::process::Output>,
 }
 
-impl<'a> CompileNativeExtResult<'a> {
+impl CompileNativeExtResult {
     pub fn success(&self) -> bool {
         self.outputs.iter().all(|o| o.status.success())
     }
@@ -745,41 +757,43 @@ fn exts_dir(config: &Config) -> Result<Utf8PathBuf> {
 static EXTCONF_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)extconf").unwrap());
 static RAKE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)rakefile|mkrf_conf").unwrap());
 
-fn compile_native_extensions(
-    config: &Config,
-    args: &CiInnerArgs,
-    gv: GemVersion,
-    extensions: &[String],
-) -> Result<bool> {
-    let mut compile_results = Vec::with_capacity(extensions.len());
+fn compile_gem(config: &Config, args: &CiInnerArgs, spec: GemSpecification) -> Result<bool> {
+    let mut compile_results = Vec::with_capacity(spec.extensions.len());
 
-    let gem_path = args.install_path.join("gems").join(gv.to_string());
+    let gem_path = args.install_path.join("gems").join(spec.full_name());
     let lib_dest = gem_path.join("lib");
     let ext_dest = args
         .install_path
         .join("extensions")
         .join(exts_dir(config)?)
-        .join(gv.to_string());
+        .join(spec.full_name());
     let mut ran_rake = false;
 
-    for extension in extensions {
+    for extstr in spec.extensions.clone() {
+        let extension = extstr.as_ref();
         if EXTCONF_REGEX.is_match(extension) {
             if let Ok(outputs) = build_extconf(config, extension, &gem_path, &ext_dest, &lib_dest) {
-                compile_results.push(CompileNativeExtResult { extension, outputs });
+                compile_results.push(CompileNativeExtResult {
+                    extension: extension.to_string(),
+                    outputs,
+                });
             }
         } else if RAKE_REGEX.is_match(extension) {
             if !ran_rake
                 && let Ok(outputs) =
                     build_rakefile(config, extension, &gem_path, &ext_dest, &lib_dest)
             {
-                compile_results.push(CompileNativeExtResult { extension, outputs });
+                compile_results.push(CompileNativeExtResult {
+                    extension: extension.to_string(),
+                    outputs,
+                });
             }
             // Ensure that we only run the Rake builder once, even if we have both a `Rakefile` and `mkrf_conf` file
             ran_rake = true;
         } else {
             return Err(Error::UnknownExtension {
-                filename: extension.clone(),
-                gemname: gv.to_string(),
+                filename: extension.to_string(),
+                gemname: spec.full_name(),
             });
         }
     }
@@ -800,7 +814,7 @@ fn compile_native_extensions(
         for out in res.outputs.iter() {
             eprintln!(
                 "Warning: Could not compile gem {}'s extension {}. Got exit code {}.",
-                gv.to_string().yellow(),
+                spec.full_name().yellow(),
                 res.extension.yellow(),
                 out.status
                     .code()
