@@ -1,0 +1,76 @@
+---
+source: crates/rv-lockfile/src/tests.rs
+expression: output
+---
+git:
+  - remote: "https://github.com/indirect/indirect.git"
+    revision: ee7de5322965eb4e756454a66039a2d2a3395509
+    branch: ~
+    specs:
+      - gem_version:
+          name: indirect
+          version: 1.2.0
+        deps:
+          - name: ostruct
+            semver:
+              - semver_constraint: Pessimistic
+                version: 0.6.3
+            nonstandard: false
+gem:
+  - remote: "https://gem.coop/"
+    specs:
+      - gem_version:
+          name: ostruct
+          version: 0.6.3
+        deps: []
+platforms:
+  - arm64-darwin-23
+  - ruby
+dependencies:
+  - name: indirect
+    semver: ~
+    nonstandard: true
+bundled_with: 4.0.3
+checksums:
+  - gem_version:
+      name: indirect
+      version: 1.2.0
+    algorithm: None
+    value: []
+  - gem_version:
+      name: ostruct
+      version: 0.6.3
+    algorithm: SHA256
+    value:
+      - 149
+      - 162
+      - 237
+      - 74
+      - 75
+      - 209
+      - 209
+      - 144
+      - 120
+      - 78
+      - 102
+      - 107
+      - 71
+      - 178
+      - 211
+      - 240
+      - 120
+      - 228
+      - 169
+      - 239
+      - 218
+      - 47
+      - 204
+      - 241
+      - 143
+      - 132
+      - 221
+      - 198
+      - 83
+      - 142
+      - 217
+      - 18

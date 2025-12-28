@@ -56,6 +56,19 @@ fn test_parse_gemdir() {
 }
 
 #[test]
+fn test_parse_git_gem() {
+    let input = include_str!("../tests/inputs/Gemfile.git.lock");
+    let output = must_parse(input);
+    insta::assert_yaml_snapshot!(output);
+}
+
+#[test]
+fn test_parse_git_rails() {
+    let input = include_str!("../tests/inputs/Gemfile.git-rails.lock");
+    let output = must_parse(input);
+    insta::assert_yaml_snapshot!(output);
+}
+#[test]
 fn test_parse_discourse() {
     let input = include_str!("../tests/inputs/Gemfile.discourse.lock");
     let output = must_parse(input);

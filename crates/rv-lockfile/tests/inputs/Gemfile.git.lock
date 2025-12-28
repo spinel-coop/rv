@@ -1,0 +1,25 @@
+GIT
+  remote: https://github.com/indirect/indirect.git
+  revision: ee7de5322965eb4e756454a66039a2d2a3395509
+  specs:
+    indirect (1.2.0)
+      ostruct (~> 0.6.3)
+
+GEM
+  remote: https://gem.coop/
+  specs:
+    ostruct (0.6.3)
+
+PLATFORMS
+  arm64-darwin-23
+  ruby
+
+DEPENDENCIES
+  indirect!
+
+CHECKSUMS
+  indirect (1.2.0)
+  ostruct (0.6.3) sha256=95a2ed4a4bd1d190784e666b47b2d3f078e4a9efda2fccf18f84ddc6538ed912
+
+BUNDLED WITH
+  4.0.3
