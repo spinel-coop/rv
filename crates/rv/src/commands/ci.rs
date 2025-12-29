@@ -6,6 +6,7 @@ use dircpy::copy_dir;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
+use glob::glob;
 use once_cell::sync::Lazy;
 use owo_colors::OwoColorize;
 use rayon::ThreadPoolBuildError;
@@ -181,19 +182,23 @@ async fn install_git_gems<'i>(
                 let dest_dir = git_gems_dir.join(git_name);
                 dircpy::copy_dir(repo.path, &dest_dir)?;
                 debug!("Installed repo {}", &repo_name);
+
+                let pattern = dest_dir.join("**/*.gemspec").to_string();
+                for path in glob(&pattern).expect("invalid glob pattern").flatten() {
+                    println!("{:?}", path);
+                    // find the .gemspec file(s)
+                    // check the cache for "gitsha-gemname.gemspec", if not:
+                    // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
+                    // cache the YAML gemspec as "gitsha-gemname.gemspec"
+                    // parse the YAML gemspec to get the executable names
+                    // pass the executable names to the existing binstub generation code
+                }
+
                 Ok(())
             })
             .collect::<Result<Vec<_>>>()?;
         Ok::<_, Error>(())
     })?;
-
-    // TODO: Generate Binstubs
-    // check the cache for "gitsha-gemname.gemspec", if not:
-    //   find the .gemspec file
-    //   shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
-    //   cache the YAML gemspec as "gitsha-gemname.gemspec"
-    // parse the YAML gemspec to get the executable names
-    // pass the executable names to the existing binstub generation code
     Ok(())
 }
 
