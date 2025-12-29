@@ -75,7 +75,7 @@ fn xdg_data_path() -> String {
     let xdg_data_home =
         env::var("XDG_DATA_HOME").unwrap_or(shellexpand::tilde("~/.local/share").into());
     let path_buf = Path::new(&xdg_data_home).join("rv/rubies");
-    path_buf.to_string_lossy().to_string()
+    path_buf.to_str().unwrap().to_owned()
 }
 
 struct PathInfo<'a> {
