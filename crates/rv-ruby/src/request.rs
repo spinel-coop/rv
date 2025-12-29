@@ -7,7 +7,7 @@ use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 pub type VersionPart = u32;
 
-#[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay)]
 pub struct RubyRequest {
     pub engine: RubyEngine,
     pub major: Option<VersionPart>,
@@ -61,6 +61,40 @@ impl Default for RubyRequest {
             patch: None,
             tiny: None,
             prerelease: None,
+        }
+    }
+}
+impl PartialOrd for RubyRequest {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for RubyRequest {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        use std::cmp::Ordering;
+
+        if self.major == other.major {
+            if self.minor == other.minor {
+                if self.patch == other.patch {
+                    if self.tiny == other.tiny {
+                        match (&self.prerelease, &other.prerelease) {
+                            (None, None) => Ordering::Equal,
+                            (None, Some(_prerelease)) => Ordering::Greater,
+                            (Some(_prerelease), None) => Ordering::Less,
+                            (prerelease, other_prerelease) => prerelease.cmp(other_prerelease),
+                        }
+                    } else {
+                        self.tiny.cmp(&other.tiny)
+                    }
+                } else {
+                    self.patch.cmp(&other.patch)
+                }
+            } else {
+                self.minor.cmp(&other.minor)
+            }
+        } else {
+            self.major.cmp(&other.major)
         }
     }
 }
@@ -489,5 +523,11 @@ mod tests {
             format!("ruby-{}", version.trim()),
             "Parsed output does not match input for {version}"
         );
+    }
+
+    #[test]
+    fn test_version_comparisons() {
+        assert!(v("3.3.9") < v("3.3.10"));
+        assert!(v("4.0.0-preview3") < v("4.0.0"));
     }
 }

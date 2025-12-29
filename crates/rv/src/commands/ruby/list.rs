@@ -730,6 +730,15 @@ mod tests {
                 expected: vec![ruby("ruby-3.2.0-rc1")],
             },
             Test {
+                name: "prefers_stable_release_over_any_prerelease",
+                input: vec![
+                    ruby("ruby-3.2.0-preview1"),
+                    ruby("ruby-3.2.0"),
+                    ruby("ruby-3.2.0-preview3"),
+                ],
+                expected: vec![ruby("ruby-3.2.0")],
+            },
+            Test {
                 name: "respects_engine_boundaries",
                 input: vec![
                     ruby("jruby-9.4.12.0"),
