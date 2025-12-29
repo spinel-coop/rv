@@ -10,10 +10,8 @@ use serde::{Deserialize, Serialize};
 use std::env::consts::{ARCH, OS};
 use std::env::{self, home_dir};
 use std::process::{Command, ExitStatus};
-use std::str::FromStr;
 use tracing::instrument;
 
-use crate::request::RubyRequest;
 use crate::version::RubyVersion;
 
 static RUBY_DESCRIPTION_REGEX: Lazy<Regex> = Lazy::new(|| {
@@ -102,10 +100,6 @@ impl Ruby {
 
     pub fn bin_path(&self) -> Utf8PathBuf {
         self.path.join("bin")
-    }
-
-    pub fn is_active(&self, active_version: &str) -> bool {
-        RubyRequest::from_str(active_version).is_ok_and(|request| request.satisfied_by(self))
     }
 
     pub fn gem_root(&self) -> Option<Utf8PathBuf> {
