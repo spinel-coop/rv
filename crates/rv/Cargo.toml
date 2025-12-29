@@ -63,6 +63,7 @@ hex = "0.4.3"
 assert_fs.workspace = true
 indoc.workspace = true
 camino-tempfile = "1.4.1"
+dircpy = "0.3.19"
 
 [dev-dependencies]
 insta = { workspace = true }
