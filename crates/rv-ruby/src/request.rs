@@ -260,6 +260,10 @@ impl CacheKey for RubyRequest {
 mod tests {
     use super::*;
 
+    fn v(version: &str) -> RubyRequest {
+        RubyRequest::from_str(version).unwrap()
+    }
+
     #[test]
     fn test_empty_version() {
         let request = RubyRequest::from_str("").expect_err("Expected error for empty version");
@@ -275,7 +279,7 @@ mod tests {
 
     #[test]
     fn test_adding_ruby_engine() {
-        let request = RubyRequest::from_str("3.0.0").expect("Failed to parse version");
+        let request = v("3.0.0");
         assert_eq!(request.engine, "ruby".into());
         assert_eq!(request.major, Some(3));
         assert_eq!(request.minor, Some(0));
@@ -286,7 +290,7 @@ mod tests {
 
     #[test]
     fn test_major_only() {
-        let request = RubyRequest::from_str("3").expect("Failed to parse version");
+        let request = v("3");
         assert_eq!(request.engine, "ruby".into());
         assert_eq!(request.major, Some(3));
         assert_eq!(request.minor, None);
@@ -380,7 +384,7 @@ mod tests {
         ];
 
         for version in versions {
-            let request = RubyRequest::from_str(version).expect("Failed to parse version");
+            let request = v(version);
             let output = request.to_string();
             assert_eq!(
                 output, version,
@@ -403,7 +407,7 @@ mod tests {
             "jruby",
         ];
         for version in versions {
-            let request = RubyRequest::from_str(version).expect("Failed to parse version");
+            let request = v(version);
             let output = request.to_string();
             assert_eq!(
                 output, version,
@@ -416,17 +420,17 @@ mod tests {
     fn test_parsing_ruby_description_versions() {
         // in the RUBY_DESCRIPTION constant, printed for `ruby --version`, the version number for some reason
         // does not include a dash before the prerelease version number.
-        let request = RubyRequest::from_str("ruby-4.0.0preview2").unwrap();
+        let request = v("ruby-4.0.0preview2");
         assert_eq!(request.to_string(), "ruby-4.0.0-preview2");
-        let request = RubyRequest::from_str("ruby-3.5.0preview1").unwrap();
+        let request = v("ruby-3.5.0preview1");
         assert_eq!(request.to_string(), "ruby-3.5.0-preview1");
-        let request = RubyRequest::from_str("ruby-3.4.0rc1").unwrap();
+        let request = v("ruby-3.4.0rc1");
         assert_eq!(request.to_string(), "ruby-3.4.0-rc1");
     }
 
     #[test]
     fn test_parsing_engine_without_version() {
-        let request = RubyRequest::from_str("jruby-").unwrap();
+        let request = v("jruby-");
         assert_eq!(request.engine, "jruby".into());
         assert_eq!(request.major, None);
         assert_eq!(request.minor, None);
@@ -451,7 +455,7 @@ mod tests {
             "truffleruby+graalvm-24.1.0\n",
         ];
         for version in versions {
-            let request = RubyRequest::from_str(version).expect("Failed to parse version");
+            let request = v(version);
             let output = request.to_string();
             assert_eq!(
                 output,
@@ -465,7 +469,7 @@ mod tests {
     fn test_parsing_ruby_version_files_without_engine() {
         let versions = ["3\n", "3.4\n", "3.4.5\n", "3.4.5-rc1\n", "3.4-dev\n"];
         for version in versions {
-            let request = RubyRequest::from_str(version).expect("Failed to parse version");
+            let request = v(version);
             let output = request.to_string();
             assert_eq!(
                 output,
@@ -478,7 +482,7 @@ mod tests {
     #[test]
     fn test_ruby_request_from_str() {
         let version = "3";
-        let request = RubyRequest::from_str(version).unwrap();
+        let request = v(version);
         let output = request.to_string();
         assert_eq!(
             output,
