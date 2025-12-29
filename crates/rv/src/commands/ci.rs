@@ -150,18 +150,22 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
 async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     let lockfile_contents = tokio::fs::read_to_string(&args.lockfile_path).await?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
+
     if lockfile.path.is_empty().not() {
         tracing::warn!("rv ci does not support path deps yet");
     }
-    let gems = download_git_gems(lockfile.clone(), &config.cache, args).await?;
-    install_git_gems(config, gems, args).await?;
-    let gems = download_rubygems_gems(lockfile.clone(), &config.cache, args).await?;
-    let specs = install_rubygems_gems(config, gems, args).await?;
-    compile_rubygems_gems(config, specs, args).await?;
+
+    let repos = download_git_repos(lockfile.clone(), &config.cache, args).await?;
+    install_git_repos(config, repos, args).await?;
+
+    let gems = download_gems(lockfile.clone(), &config.cache, args).await?;
+    let specs = install_gems(config, gems, args).await?;
+    compile_gems(config, specs, args).await?;
+
     Ok(())
 }
 
-async fn install_git_gems<'i>(
+async fn install_git_repos<'i>(
     _config: &Config,
     repos: Vec<DownloadedGitRepo<'i>>,
     args: &CiInnerArgs,
@@ -180,7 +184,67 @@ async fn install_git_gems<'i>(
                 let repo_name = repo_name.strip_suffix(".git").unwrap_or(repo_name);
                 let git_name = format!("{}-{:.12}", repo_name, repo.sha);
                 let dest_dir = git_gems_dir.join(git_name);
-                dircpy::copy_dir(repo.path, &dest_dir)?;
+
+                if std::fs::exists(&dest_dir)?.not() {
+                    tracing::event!(tracing::Level::DEBUG, %repo_path, %dest_dir, "Cloning from cached repo");
+                    let git_cloned = std::process::Command::new("git")
+                        .args([
+                            "clone",
+                            "--quiet",
+                            "--no-checkout",
+                            repo_path.as_ref(),
+                            dest_dir.as_ref(),
+                        ])
+                        .spawn()?
+                        .wait()?;
+                    if !git_cloned.success() {
+                        return Err(Error::Git {
+                            error: format!("git clone had exit code {}", git_cloned),
+                        });
+                    }
+                }
+
+                // Dir.chdir install_dir do
+                //   system git_command, "fetch", "--quiet", "--force", "--tags", install_dir
+                tracing::event!(tracing::Level::DEBUG, %repo_path, %dest_dir, "Cloning from cached repo");
+                let git_cloned = std::process::Command::new("git")
+                    .current_dir(&dest_dir)
+                    .args([
+                        "fetch",
+                        "--quiet",
+                        "--force",
+                        "--tags",
+                        dest_dir.as_ref(),
+                    ])
+                    .spawn()?
+                    .wait()?;
+                if !git_cloned.success() {
+                    return Err(Error::Git {
+                        error: format!("git clone had exit code {}", git_cloned),
+                    });
+                }
+
+                //   success = system git_command, "reset", "--quiet", "--hard", rev_parse
+                tracing::event!(tracing::Level::DEBUG, %repo_path, %dest_dir, "Cloning from cached repo");
+                let git_cloned = std::process::Command::new("git")
+                    .current_dir(&dest_dir)
+                    .args([
+                        "reset",
+                        "--quiet",
+                        "--hard",
+                        &repo.sha,
+                    ])
+                    .spawn()?
+                    .wait()?;
+                if !git_cloned.success() {
+                    return Err(Error::Git {
+                        error: format!("git clone had exit code {}", git_cloned),
+                    });
+                }
+
+                // TODO: if the git source in the lockfile has submodules: true, then we should
+                //   "git", "submodule", "update", "--quiet", "--init", "--recursive"
+
                 debug!("Installed repo {}", &repo_name);
 
                 let pattern = dest_dir.join("**/*.gemspec").to_string();
@@ -209,7 +273,7 @@ async fn install_git_gems<'i>(
     Ok(())
 }
 
-async fn download_git_gems<'i>(
+async fn download_git_repos<'i>(
     lockfile: GemfileDotLock<'i>,
     cache: &rv_cache::Cache,
     _args: &CiInnerArgs,
@@ -228,14 +292,34 @@ async fn download_git_gems<'i>(
         let cache_key = rv_cache::cache_digest((git_source.remote, git_source.revision));
         let git_repo_dir = git_clone_dir.clone().join(&cache_key);
 
-        if std::fs::exists(&git_repo_dir)?.not() {
-            // Clone the repo without checking it out, to save bandwidth.
+        if std::fs::exists(&git_repo_dir)? {
+            tracing::event!(tracing::Level::DEBUG, %git_repo_dir, %git_source.remote, %git_source.revision, "updating repo");
+            let git_fetch = std::process::Command::new("git")
+                .current_dir(&git_repo_dir)
+                .args([
+                    "fetch",
+                    "--quiet",
+                    "--force",
+                    "--tags",
+                    git_source.remote,
+                    "refs/heads/*:refs/heads/*",
+                ])
+                .spawn()?
+                .wait()?;
+            if !git_fetch.success() {
+                return Err(Error::Git {
+                    error: format!("git fetch had exit code {}", git_fetch),
+                });
+            }
+        } else {
             tracing::event!(tracing::Level::DEBUG, %git_clone_dir, %git_source.remote, %git_source.revision, "Cloning repo");
             let git_cloned = std::process::Command::new("git")
                 .current_dir(&git_clone_dir)
                 .args([
                     "clone",
-                    "--no-checkout",
+                    "--quiet",
+                    "--bare",
+                    "--no-hardlinks",
                     git_source.remote,
                     cache_key.as_ref(),
                 ])
@@ -246,32 +330,6 @@ async fn download_git_gems<'i>(
                     error: format!("git clone had exit code {}", git_cloned),
                 });
             }
-        }
-
-        // Fetch only the commit we're going to use.
-        tracing::event!(tracing::Level::DEBUG, %git_repo_dir, %git_source.remote, %git_source.revision, "Fetching repo");
-        let git_fetched = std::process::Command::new("git")
-            .args(["fetch", "--depth", "1", "origin", git_source.revision])
-            .current_dir(&git_repo_dir)
-            .spawn()?
-            .wait()?;
-        if !git_fetched.success() {
-            return Err(Error::Git {
-                error: format!("git fetch had exit code {}", git_fetched),
-            });
-        }
-
-        // Check out that commit.
-        tracing::event!(tracing::Level::DEBUG, %git_repo_dir, %git_source.remote, %git_source.revision, "Checking out repo");
-        let git_checked_out = std::process::Command::new("git")
-            .args(["checkout", git_source.revision])
-            .current_dir(&git_repo_dir)
-            .spawn()?
-            .wait()?;
-        if !git_checked_out.success() {
-            return Err(Error::Git {
-                error: format!("git fetch had exit code {}", git_checked_out),
-            });
         }
 
         // Success! Save the paths of all the repos we just cloned.
@@ -338,7 +396,7 @@ pub fn create_rayon_pool(
         .build()
 }
 
-async fn install_rubygems_gems<'i>(
+async fn install_gems<'i>(
     _config: &Config,
     downloaded: Vec<DownloadedRubygems<'i>>,
     args: &CiInnerArgs,
@@ -379,7 +437,7 @@ async fn install_rubygems_gems<'i>(
     Ok(specs)
 }
 
-async fn compile_rubygems_gems(
+async fn compile_gems(
     config: &Config,
     specs: Vec<GemSpecification>,
     args: &CiInnerArgs,
@@ -443,7 +501,7 @@ struct HowToChecksum {
 }
 
 /// Downloads all Rubygem server gems from a Gemfile.lock
-async fn download_rubygems_gems<'i>(
+async fn download_gems<'i>(
     lockfile: GemfileDotLock<'i>,
     cache: &rv_cache::Cache,
     args: &CiInnerArgs,
