@@ -7,19 +7,17 @@ pub struct RunOptions {
 impl RvTest {
     pub fn ruby_run(&self, version: Option<&str>, options: RunOptions, args: &[&str]) -> RvOutput {
         let RunOptions { set_no_install } = options;
-        let mut cmd = self.rv_command();
-        cmd.args(["ruby", "run"]);
+        let mut run_args = vec!["ruby", "run"];
+
         if set_no_install {
-            cmd.arg("--no-install");
+            run_args.push("--no-install");
         }
         if let Some(version) = version {
-            cmd.arg(version);
+            run_args.push(version);
         }
-        cmd.arg("--");
-        cmd.args(args);
+        run_args.push("--");
 
-        let output = cmd.output().expect("Failed to execute rv run");
-        RvOutput::new(self.temp_dir.path().as_str(), output)
+        self.rv(&[&run_args, args].concat())
     }
 }
 

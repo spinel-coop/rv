@@ -2,12 +2,7 @@ use crate::common::{RvOutput, RvTest};
 
 impl RvTest {
     pub fn ruby_uninstall(&self, args: &[&str]) -> RvOutput {
-        let mut cmd = self.rv_command();
-        cmd.args(["ruby", "uninstall"]);
-        cmd.args(args);
-
-        let output = cmd.output().expect("Failed to execute rv command");
-        RvOutput::new(self.temp_dir.path().as_str(), output)
+        self.rv(&[&["ruby", "uninstall"], args].concat())
     }
 }
 
