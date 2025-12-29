@@ -187,6 +187,7 @@ async fn install_git_repos<'i>(
                 let repo_name = repo_name.strip_suffix(".git").unwrap_or(repo_name);
                 let git_name = format!("{}-{:.12}", repo_name, repo.sha);
                 let dest_dir = git_gems_dir.join(git_name);
+                let mut just_cloned = false;
 
                 if std::fs::exists(&dest_dir)?.not() {
                     tracing::event!(tracing::Level::DEBUG, %repo_path, %dest_dir, "Cloning from cached repo");
@@ -205,30 +206,30 @@ async fn install_git_repos<'i>(
                             error: format!("git clone had exit code {}", git_cloned),
                         });
                     }
+                    just_cloned = true
                 }
 
-                // Dir.chdir install_dir do
-                //   system git_command, "fetch", "--quiet", "--force", "--tags", install_dir
-                tracing::event!(tracing::Level::DEBUG, %repo_path, %dest_dir, "Cloning from cached repo");
-                let git_cloned = std::process::Command::new("git")
-                    .current_dir(&dest_dir)
-                    .args([
-                        "fetch",
-                        "--quiet",
-                        "--force",
-                        "--tags",
-                        dest_dir.as_ref(),
-                    ])
-                    .spawn()?
-                    .wait()?;
-                if !git_cloned.success() {
-                    return Err(Error::Git {
-                        error: format!("git clone had exit code {}", git_cloned),
-                    });
+                if !just_cloned {
+                    tracing::event!(tracing::Level::DEBUG, %repo_path, %dest_dir, "Fetching from cached repo");
+                    let git_cloned = std::process::Command::new("git")
+                        .current_dir(&dest_dir)
+                        .args([
+                            "fetch",
+                            "--quiet",
+                            "--force",
+                            "--tags",
+                            dest_dir.as_ref(),
+                        ])
+                        .spawn()?
+                        .wait()?;
+                    if !git_cloned.success() {
+                        return Err(Error::Git {
+                            error: format!("git fetch had exit code {}", git_cloned),
+                        });
+                    }
                 }
 
-                //   success = system git_command, "reset", "--quiet", "--hard", rev_parse
-                tracing::event!(tracing::Level::DEBUG, %repo_path, %dest_dir, "Cloning from cached repo");
+                tracing::event!(tracing::Level::DEBUG, %repo_path, %dest_dir, %repo.sha, "resetting to the locked sha");
                 let git_cloned = std::process::Command::new("git")
                     .current_dir(&dest_dir)
                     .args([
@@ -241,7 +242,7 @@ async fn install_git_repos<'i>(
                     .wait()?;
                 if !git_cloned.success() {
                     return Err(Error::Git {
-                        error: format!("git clone had exit code {}", git_cloned),
+                        error: format!("git reset had exit code {}", git_cloned),
                     });
                 }
 
@@ -266,13 +267,6 @@ async fn install_git_repos<'i>(
             .collect::<Result<Vec<_>>>()?;
         Ok::<_, Error>(())
     })?;
-    // TODO: Install gems
-    // - iterate over each git/path gem directory
-    // - find the .gemspec file
-    // - shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
-    // - (maybe?) cache the YAML gemspec somewhere
-    // - parse the YAML gemspec to get the executable names
-    // - pass the executable names to the existing binstub generation code
     Ok(())
 }
 
@@ -444,12 +438,6 @@ async fn install_gems<'i>(
             .collect::<Result<Vec<GemSpecification>>>()
     })?;
 
-    // Remove the binstubs dir if we didn't generate any binstubs
-    if fs_err::read_dir(&binstub_dir)?.next().is_none() {
-        fs_err::remove_dir(&binstub_dir)?;
-    }
-
-    // 5. Copy the .gem files and the .gemspec files into cache and specification?
     Ok(specs)
 }
 
