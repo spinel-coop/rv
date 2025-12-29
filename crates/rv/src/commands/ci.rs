@@ -179,10 +179,10 @@ async fn install_git_repos<'i>(
     let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
     pool.install(|| {
         repos
-            .into_iter()
+            .iter()
             .par_bridge()
             .map(|repo| {
-                let repo_path = Utf8PathBuf::from(repo.remote);
+                let repo_path = Utf8PathBuf::from(&repo.remote);
                 let repo_name = repo_path.file_name().expect("repo has no filename?");
                 let repo_name = repo_name.strip_suffix(".git").unwrap_or(repo_name);
                 let git_name = format!("{}-{:.12}", repo_name, repo.sha);
