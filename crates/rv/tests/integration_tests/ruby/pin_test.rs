@@ -14,13 +14,13 @@ fn test_ruby_pin_ruby_output_format_consistency() {
     assert!(set_pin.success());
     assert_eq!(
         set_pin.normalized_stdout(),
-        "/.ruby-version pinned to ruby-3.4.7\n"
+        "/tmp/.ruby-version pinned to ruby-3.4.7\n"
     );
 
     let show_pin = test.ruby_pin(&[]);
     assert!(show_pin.success());
     assert_eq!(
         show_pin.normalized_stdout(),
-        "/.ruby-version is pinned to ruby-3.4.7\n"
+        "/tmp/.ruby-version is pinned to ruby-3.4.7\n"
     );
 }

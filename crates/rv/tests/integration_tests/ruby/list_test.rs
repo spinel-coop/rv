@@ -68,7 +68,7 @@ fn test_ruby_list_json_output_with_rubies() {
 fn test_ruby_list_multiple_matching_rubies() {
     let mut test = RvTest::new();
 
-    let project_dir = test.temp_dir.path().join("project");
+    let project_dir = test.temp_root().join("project");
     std::fs::create_dir_all(project_dir.as_path()).unwrap();
     std::fs::write(project_dir.join(".ruby-version"), b"3").unwrap();
     test.cwd = project_dir;
@@ -81,31 +81,31 @@ fn test_ruby_list_multiple_matching_rubies() {
     let output = test.ruby_list(&[]);
     output.assert_success();
     assert_snapshot!(output.normalized_stdout(), @r"
-      ruby-3.1.4 [installed] /opt/rubies/3.1.4/bin/ruby
-      ruby-3.1.4 [installed] /opt/rubies/ruby-3.1.4/bin/ruby
-    * ruby-3.2.0 [installed] /opt/rubies/ruby-3.2.0/bin/ruby
+      ruby-3.1.4 [installed] /tmp/opt/rubies/3.1.4/bin/ruby
+      ruby-3.1.4 [installed] /tmp/opt/rubies/ruby-3.1.4/bin/ruby
+    * ruby-3.2.0 [installed] /tmp/opt/rubies/ruby-3.2.0/bin/ruby
     ");
 
     test.create_ruby_dir("3.2.0");
     let output = test.ruby_list(&[]);
     output.assert_success();
     assert_snapshot!(output.normalized_stdout(), @r"
-      ruby-3.1.4 [installed] /opt/rubies/3.1.4/bin/ruby
-      ruby-3.1.4 [installed] /opt/rubies/ruby-3.1.4/bin/ruby
-      ruby-3.2.0 [installed] /opt/rubies/3.2.0/bin/ruby
-    * ruby-3.2.0 [installed] /opt/rubies/ruby-3.2.0/bin/ruby
+      ruby-3.1.4 [installed] /tmp/opt/rubies/3.1.4/bin/ruby
+      ruby-3.1.4 [installed] /tmp/opt/rubies/ruby-3.1.4/bin/ruby
+      ruby-3.2.0 [installed] /tmp/opt/rubies/3.2.0/bin/ruby
+    * ruby-3.2.0 [installed] /tmp/opt/rubies/ruby-3.2.0/bin/ruby
     ");
 
     test.env
-        .insert("PATH".into(), "/opt/rubies/3.1.4/bin".into());
+        .insert("PATH".into(), "/tmp/opt/rubies/3.1.4/bin".into());
 
     let output = test.ruby_list(&[]);
     output.assert_success();
     assert_snapshot!(output.normalized_stdout(), @r"
-      ruby-3.1.4 [installed] /opt/rubies/3.1.4/bin/ruby
-      ruby-3.1.4 [installed] /opt/rubies/ruby-3.1.4/bin/ruby
-      ruby-3.2.0 [installed] /opt/rubies/3.2.0/bin/ruby
-    * ruby-3.2.0 [installed] /opt/rubies/ruby-3.2.0/bin/ruby
+      ruby-3.1.4 [installed] /tmp/opt/rubies/3.1.4/bin/ruby
+      ruby-3.1.4 [installed] /tmp/opt/rubies/ruby-3.1.4/bin/ruby
+      ruby-3.2.0 [installed] /tmp/opt/rubies/3.2.0/bin/ruby
+    * ruby-3.2.0 [installed] /tmp/opt/rubies/ruby-3.2.0/bin/ruby
     ");
 }
 

@@ -25,7 +25,7 @@ fn test_ruby_install_successful_download() {
         .create();
 
     test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_dir.path().join("cache");
+    let cache_dir = test.temp_root().join("cache");
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
@@ -71,8 +71,7 @@ fn test_ruby_install_from_tarball() {
 
     // is the mocked ruby from the tarball actually installed
     let mocked_ruby_path = test
-        .temp_dir
-        .path()
+        .temp_root()
         .join("tmp/home/.local/share/rv/rubies/portable-ruby/bin/ruby");
     let mut command = Command::new(mocked_ruby_path);
     command.output().expect("mock ruby");
@@ -104,7 +103,7 @@ fn test_ruby_install_http_failure_no_empty_file() {
         .create();
 
     test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_dir.path().join("cache");
+    let cache_dir = test.temp_root().join("cache");
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
@@ -175,7 +174,7 @@ fn test_ruby_install_interrupted_download_cleanup() {
         .create();
 
     test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_dir.path().join("cache");
+    let cache_dir = test.temp_root().join("cache");
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
@@ -218,7 +217,7 @@ fn test_ruby_install_cached_file_reused() {
         .create();
 
     test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_dir.path().join("cache");
+    let cache_dir = test.temp_root().join("cache");
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
@@ -247,7 +246,7 @@ fn test_ruby_install_invalid_url() {
     );
 
     test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_dir.path().join("cache");
+    let cache_dir = test.temp_root().join("cache");
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
@@ -299,7 +298,7 @@ fn test_ruby_install_atomic_rename_behavior() {
         .create();
 
     test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_dir.path().join("cache");
+    let cache_dir = test.temp_root().join("cache");
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
@@ -374,7 +373,7 @@ fn test_ruby_install_temp_file_cleanup_on_extraction_failure() {
         .create();
 
     test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_dir.path().join("cache");
+    let cache_dir = test.temp_root().join("cache");
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
