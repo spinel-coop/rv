@@ -280,6 +280,7 @@ impl CacheKey for RubyRequest {
 mod tests {
     use super::*;
 
+    #[track_caller]
     fn v(version: &str) -> RubyRequest {
         RubyRequest::from_str(version).unwrap()
     }
