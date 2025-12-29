@@ -181,92 +181,83 @@ async fn install_git_repos<'i>(
         repos
             .iter()
             .par_bridge()
-            .map(|repo| {
-                let repo_path = Utf8PathBuf::from(&repo.remote);
-                let repo_name = repo_path.file_name().expect("repo has no filename?");
-                let repo_name = repo_name.strip_suffix(".git").unwrap_or(repo_name);
-                let git_name = format!("{}-{:.12}", repo_name, repo.sha);
-                let dest_dir = git_gems_dir.join(git_name);
-                let mut just_cloned = false;
-
-                if std::fs::exists(&dest_dir)?.not() {
-                    tracing::event!(tracing::Level::DEBUG, %repo_path, %dest_dir, "Cloning from cached repo");
-                    let git_cloned = std::process::Command::new("git")
-                        .args([
-                            "clone",
-                            "--quiet",
-                            "--no-checkout",
-                            repo_path.as_ref(),
-                            dest_dir.as_ref(),
-                        ])
-                        .spawn()?
-                        .wait()?;
-                    if !git_cloned.success() {
-                        return Err(Error::Git {
-                            error: format!("git clone had exit code {}", git_cloned),
-                        });
-                    }
-                    just_cloned = true
-                }
-
-                if !just_cloned {
-                    tracing::event!(tracing::Level::DEBUG, %repo_path, %dest_dir, "Fetching from cached repo");
-                    let git_cloned = std::process::Command::new("git")
-                        .current_dir(&dest_dir)
-                        .args([
-                            "fetch",
-                            "--quiet",
-                            "--force",
-                            "--tags",
-                            dest_dir.as_ref(),
-                        ])
-                        .spawn()?
-                        .wait()?;
-                    if !git_cloned.success() {
-                        return Err(Error::Git {
-                            error: format!("git fetch had exit code {}", git_cloned),
-                        });
-                    }
-                }
-
-                tracing::event!(tracing::Level::DEBUG, %repo_path, %dest_dir, %repo.sha, "resetting to the locked sha");
-                let git_cloned = std::process::Command::new("git")
-                    .current_dir(&dest_dir)
-                    .args([
-                        "reset",
-                        "--quiet",
-                        "--hard",
-                        &repo.sha,
-                    ])
-                    .spawn()?
-                    .wait()?;
-                if !git_cloned.success() {
-                    return Err(Error::Git {
-                        error: format!("git reset had exit code {}", git_cloned),
-                    });
-                }
-
-                // TODO: if the git source in the lockfile has submodules: true, then we should
-                //   "git", "submodule", "update", "--quiet", "--init", "--recursive"
-
-                debug!("Installed repo {}", &repo_name);
-
-                let pattern = dest_dir.join("**/*.gemspec").to_string();
-                for path in glob(&pattern).expect("invalid glob pattern").flatten() {
-                    println!("{:?}", path);
-                    // find the .gemspec file(s)
-                    // check the cache for "gitsha-gemname.gemspec", if not:
-                    // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
-                    // cache the YAML gemspec as "gitsha-gemname.gemspec"
-                    // parse the YAML gemspec to get the executable names
-                    // pass the executable names to the existing binstub generation code
-                }
-
-                Ok(())
-            })
+            .map(|repo| install_git_dep(repo, &git_gems_dir))
             .collect::<Result<Vec<_>>>()?;
         Ok::<_, Error>(())
     })?;
+    Ok(())
+}
+
+fn install_git_dep(repo: &DownloadedGitRepo, git_gems_dir: &Utf8Path) -> Result<()> {
+    let repo_path = Utf8PathBuf::from(&repo.remote);
+    let repo_name = repo_path.file_name().expect("repo has no filename?");
+    let repo_name = repo_name.strip_suffix(".git").unwrap_or(repo_name);
+    let git_name = format!("{}-{:.12}", repo_name, repo.sha);
+    let dest_dir = git_gems_dir.join(git_name);
+    let mut just_cloned = false;
+
+    if std::fs::exists(&dest_dir)?.not() {
+        tracing::event!(tracing::Level::DEBUG, %repo_path, %dest_dir, "Cloning from cached repo");
+        let git_cloned = std::process::Command::new("git")
+            .args([
+                "clone",
+                "--quiet",
+                "--no-checkout",
+                repo_path.as_ref(),
+                dest_dir.as_ref(),
+            ])
+            .spawn()?
+            .wait()?;
+        if !git_cloned.success() {
+            return Err(Error::Git {
+                error: format!("git clone had exit code {}", git_cloned),
+            });
+        }
+        just_cloned = true
+    }
+
+    if !just_cloned {
+        tracing::event!(tracing::Level::DEBUG, %repo_path, %dest_dir, "Fetching from cached repo");
+        let git_cloned = std::process::Command::new("git")
+            .current_dir(&dest_dir)
+            .args(["fetch", "--quiet", "--force", "--tags", dest_dir.as_ref()])
+            .spawn()?
+            .wait()?;
+        if !git_cloned.success() {
+            return Err(Error::Git {
+                error: format!("git fetch had exit code {}", git_cloned),
+            });
+        }
+    }
+
+    tracing::event!(tracing::Level::DEBUG, %repo_path, %dest_dir, %repo.sha, "resetting to the locked sha");
+    let git_cloned = std::process::Command::new("git")
+        .current_dir(&dest_dir)
+        .args(["reset", "--quiet", "--hard", &repo.sha])
+        .spawn()?
+        .wait()?;
+    if !git_cloned.success() {
+        return Err(Error::Git {
+            error: format!("git reset had exit code {}", git_cloned),
+        });
+    }
+
+    // TODO: if the git source in the lockfile has submodules: true, then we should
+    //   "git", "submodule", "update", "--quiet", "--init", "--recursive"
+
+    debug!("Installed repo {}", &repo_name);
+
+    let pattern = dest_dir.join("**/*.gemspec").to_string();
+    for path in glob(&pattern).expect("invalid glob pattern").flatten() {
+        println!("{:?}", path);
+        // find the .gemspec file(s)
+        // check the cache for "gitsha-gemname.gemspec", if not:
+        // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
+        // cache the YAML gemspec as "gitsha-gemname.gemspec"
+        // parse the YAML gemspec to get the executable names
+        // pass the executable names to the existing binstub generation code
+    }
+
     Ok(())
 }
 
