@@ -293,23 +293,36 @@ async fn download_git_repos<'i>(
         let git_repo_dir = git_clone_dir.clone().join(&cache_key);
 
         if std::fs::exists(&git_repo_dir)? {
-            tracing::event!(tracing::Level::DEBUG, %git_repo_dir, %git_source.remote, %git_source.revision, "updating repo");
-            let git_fetch = std::process::Command::new("git")
+            tracing::event!(tracing::Level::DEBUG, %git_repo_dir, %git_source.remote, %git_source.revision, "checking for revision");
+            let sha_check = std::process::Command::new("git")
                 .current_dir(&git_repo_dir)
                 .args([
-                    "fetch",
-                    "--quiet",
-                    "--force",
-                    "--tags",
-                    git_source.remote,
-                    "refs/heads/*:refs/heads/*",
+                    "--no-lazy-fetch",
+                    "cat-file",
+                    "-e",
+                    &format!("{}^{{commit}}", git_source.revision),
                 ])
                 .spawn()?
                 .wait()?;
-            if !git_fetch.success() {
-                return Err(Error::Git {
-                    error: format!("git fetch had exit code {}", git_fetch),
-                });
+            if !sha_check.success() {
+                tracing::event!(tracing::Level::DEBUG, %git_repo_dir, %git_source.remote, %git_source.revision, "updating repo");
+                let git_fetch = std::process::Command::new("git")
+                    .current_dir(&git_repo_dir)
+                    .args([
+                        "fetch",
+                        "--quiet",
+                        "--force",
+                        "--tags",
+                        git_source.remote,
+                        "refs/heads/*:refs/heads/*",
+                    ])
+                    .spawn()?
+                    .wait()?;
+                if !git_fetch.success() {
+                    return Err(Error::Git {
+                        error: format!("git fetch had exit code {}", git_fetch),
+                    });
+                }
             }
         } else {
             tracing::event!(tracing::Level::DEBUG, %git_clone_dir, %git_source.remote, %git_source.revision, "Cloning repo");
@@ -851,6 +864,10 @@ fn compile_gem(config: &Config, args: &CiInnerArgs, spec: GemSpecification) -> R
         .join(exts_dir(config)?)
         .join(spec.full_name());
     let mut ran_rake = false;
+
+    if std::fs::exists(ext_dest.join("gem.build_complete"))? {
+        return Ok(true);
+    }
 
     for extstr in spec.extensions.clone() {
         let extension = extstr.as_ref();
