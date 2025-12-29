@@ -76,24 +76,18 @@ impl Ord for RubyRequest {
 
         if self.major != other.major {
             self.major.cmp(&other.major)
+        } else if self.minor != other.minor {
+            self.minor.cmp(&other.minor)
+        } else if self.patch != other.patch {
+            self.patch.cmp(&other.patch)
+        } else if self.tiny != other.tiny {
+            self.tiny.cmp(&other.tiny)
         } else {
-            if self.minor != other.minor {
-                self.minor.cmp(&other.minor)
-            } else {
-                if self.patch != other.patch {
-                    self.patch.cmp(&other.patch)
-                } else {
-                    if self.tiny != other.tiny {
-                        self.tiny.cmp(&other.tiny)
-                    } else {
-                        match (&self.prerelease, &other.prerelease) {
-                            (None, None) => Ordering::Equal,
-                            (None, Some(_prerelease)) => Ordering::Greater,
-                            (Some(_prerelease), None) => Ordering::Less,
-                            (prerelease, other_prerelease) => prerelease.cmp(other_prerelease),
-                        }
-                    }
-                }
+            match (&self.prerelease, &other.prerelease) {
+                (None, None) => Ordering::Equal,
+                (None, Some(_prerelease)) => Ordering::Greater,
+                (Some(_prerelease), None) => Ordering::Less,
+                (prerelease, other_prerelease) => prerelease.cmp(other_prerelease),
             }
         }
     }
