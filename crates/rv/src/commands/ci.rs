@@ -76,6 +76,7 @@ struct CiInnerArgs {
     pub validate_checksums: bool,
     pub lockfile_path: Utf8PathBuf,
     pub install_path: Utf8PathBuf,
+    pub exts_dir: Utf8PathBuf,
 }
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -136,6 +137,7 @@ type Result<T> = std::result::Result<T, Error>;
 pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     let lockfile_path = find_lockfile_path(args.gemfile)?;
     let install_path = find_install_path(config, &lockfile_path).await?;
+    let exts_dir = exts_dir(config)?;
     let inner_args = CiInnerArgs {
         skip_compile_extensions: args.skip_compile_extensions,
         max_concurrent_requests: args.max_concurrent_requests,
@@ -143,6 +145,7 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         validate_checksums: args.validate_checksums,
         lockfile_path,
         install_path,
+        exts_dir,
     };
     ci_inner(config, &inner_args).await
 }
@@ -861,7 +864,7 @@ fn compile_gem(config: &Config, args: &CiInnerArgs, spec: GemSpecification) -> R
     let ext_dest = args
         .install_path
         .join("extensions")
-        .join(exts_dir(config)?)
+        .join(&args.exts_dir)
         .join(spec.full_name());
     let mut ran_rake = false;
 
