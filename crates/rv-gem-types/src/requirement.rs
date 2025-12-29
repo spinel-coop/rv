@@ -241,10 +241,12 @@ impl FromStr for Requirement {
 mod tests {
     use super::*;
 
+    #[track_caller]
     fn v(version: &str) -> Version {
         Version::new(version).unwrap()
     }
 
+    #[track_caller]
     fn req(requirement: &str) -> Requirement {
         Requirement::parse(requirement).unwrap()
     }
