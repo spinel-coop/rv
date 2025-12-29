@@ -74,27 +74,27 @@ impl Ord for RubyRequest {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         use std::cmp::Ordering;
 
-        if self.major == other.major {
-            if self.minor == other.minor {
-                if self.patch == other.patch {
-                    if self.tiny == other.tiny {
+        if self.major != other.major {
+            self.major.cmp(&other.major)
+        } else {
+            if self.minor != other.minor {
+                self.minor.cmp(&other.minor)
+            } else {
+                if self.patch != other.patch {
+                    self.patch.cmp(&other.patch)
+                } else {
+                    if self.tiny != other.tiny {
+                        self.tiny.cmp(&other.tiny)
+                    } else {
                         match (&self.prerelease, &other.prerelease) {
                             (None, None) => Ordering::Equal,
                             (None, Some(_prerelease)) => Ordering::Greater,
                             (Some(_prerelease), None) => Ordering::Less,
                             (prerelease, other_prerelease) => prerelease.cmp(other_prerelease),
                         }
-                    } else {
-                        self.tiny.cmp(&other.tiny)
                     }
-                } else {
-                    self.patch.cmp(&other.patch)
                 }
-            } else {
-                self.minor.cmp(&other.minor)
             }
-        } else {
-            self.major.cmp(&other.major)
         }
     }
 }
