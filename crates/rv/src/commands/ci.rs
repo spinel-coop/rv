@@ -162,7 +162,7 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
 
 async fn install_git_gems<'i>(
     _config: &Config,
-    downloaded: Vec<DownloadedGit<'i>>,
+    repos: Vec<DownloadedGitRepo<'i>>,
     args: &CiInnerArgs,
 ) -> Result<()> {
     let git_gems_dir = args.install_path.join("bundler/gems");
@@ -170,14 +170,17 @@ async fn install_git_gems<'i>(
     use rayon::prelude::*;
     let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
     pool.install(|| {
-        downloaded
+        repos
             .into_iter()
             .par_bridge()
-            .map(|download| {
-                let git_name = format!("{}-{:.12}", download.spec.gem_version.name, download.sha);
+            .map(|repo| {
+                let repo_path = Utf8PathBuf::from(repo.remote);
+                let repo_name = repo_path.file_name().expect("repo has no filename?");
+                let repo_name = repo_name.strip_suffix(".git").unwrap_or(repo_name);
+                let git_name = format!("{}-{:.12}", repo_name, repo.sha);
                 let dest_dir = git_gems_dir.join(git_name);
-                dircpy::copy_dir(download.path, dest_dir)?;
-                debug!("Installed {}", download.spec.gem_version);
+                dircpy::copy_dir(repo.path, &dest_dir)?;
+                debug!("Installed repo {}", &repo_name);
                 Ok(())
             })
             .collect::<Result<Vec<_>>>()?;
@@ -198,7 +201,7 @@ async fn download_git_gems<'i>(
     lockfile: GemfileDotLock<'i>,
     cache: &rv_cache::Cache,
     _args: &CiInnerArgs,
-) -> Result<Vec<DownloadedGit<'i>>> {
+) -> Result<Vec<DownloadedGitRepo<'i>>> {
     let num_specs: usize = lockfile.git.iter().map(|source| source.specs.len()).sum();
     let mut downloads = Vec::with_capacity(num_specs);
 
@@ -215,7 +218,7 @@ async fn download_git_gems<'i>(
 
         if std::fs::exists(&git_repo_dir)?.not() {
             // Clone the repo without checking it out, to save bandwidth.
-            tracing::event!(tracing::Level::DEBUG, %git_clone_dir, %git_source.remote, %git_source.revision, "Cloning gem");
+            tracing::event!(tracing::Level::DEBUG, %git_clone_dir, %git_source.remote, %git_source.revision, "Cloning repo");
             let git_cloned = std::process::Command::new("git")
                 .current_dir(&git_clone_dir)
                 .args([
@@ -234,7 +237,7 @@ async fn download_git_gems<'i>(
         }
 
         // Fetch only the commit we're going to use.
-        tracing::event!(tracing::Level::DEBUG, %git_repo_dir, %git_source.remote, %git_source.revision, "Fetching gem");
+        tracing::event!(tracing::Level::DEBUG, %git_repo_dir, %git_source.remote, %git_source.revision, "Fetching repo");
         let git_fetched = std::process::Command::new("git")
             .args(["fetch", "--depth", "1", "origin", git_source.revision])
             .current_dir(&git_repo_dir)
@@ -247,7 +250,7 @@ async fn download_git_gems<'i>(
         }
 
         // Check out that commit.
-        tracing::event!(tracing::Level::DEBUG, %git_repo_dir, %git_source.remote, %git_source.revision, "Checking out gem");
+        tracing::event!(tracing::Level::DEBUG, %git_repo_dir, %git_source.remote, %git_source.revision, "Checking out repo");
         let git_checked_out = std::process::Command::new("git")
             .args(["checkout", git_source.revision])
             .current_dir(&git_repo_dir)
@@ -259,12 +262,13 @@ async fn download_git_gems<'i>(
             });
         }
 
-        // Success! Save the paths of all the gems we just cloned.
-        downloads.extend(git_source.specs.iter().map(|spec| DownloadedGit {
-            path: git_repo_dir.clone(),
-            spec: spec.clone(),
+        // Success! Save the paths of all the repos we just cloned.
+        downloads.push(DownloadedGitRepo {
+            remote: git_source.remote.to_string(),
+            specs: git_source.specs.clone(),
             sha: git_source.revision.to_string(),
-        }));
+            path: git_repo_dir.clone(),
+        });
     }
     Ok(downloads)
 }
@@ -479,9 +483,10 @@ struct DownloadedRubygems<'i> {
 
 /// A gem downloaded from a git source.
 #[derive(Debug)]
-struct DownloadedGit<'i> {
+struct DownloadedGitRepo<'i> {
+    remote: String,
     path: Utf8PathBuf,
-    spec: Spec<'i>,
+    specs: Vec<Spec<'i>>,
     sha: String,
 }
 
