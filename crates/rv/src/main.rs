@@ -88,7 +88,7 @@ impl Cli {
 
         let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
         let ruby_dirs = if self.ruby_dir.is_empty() {
-            config::default_ruby_dirs(&root)
+            config::default_ruby_dirs()
         } else {
             self.ruby_dir
                 .iter()

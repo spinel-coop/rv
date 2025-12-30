@@ -84,11 +84,9 @@ fn test_shell_env_clear_gem_vars() {
 fn test_shell_env_with_ruby_and_xdg_compatible_gem_path() {
     let mut test = RvTest::new();
     test.create_ruby_dir("ruby-3.3.5");
-    let temp_dir_home = test.temp_root().join("home");
-    test.env.insert("HOME".into(), temp_dir_home.to_string());
 
     // Ensure the legacy path is not present.
-    rm_rf(temp_dir_home.join(".gem").join("ruby").join("3.3.5")).unwrap();
+    rm_rf(test.temp_home().join(".gem").join("ruby").join("3.3.5")).unwrap();
 
     test.env.insert("PATH".into(), "/tmp/bin".into());
     test.env.insert("RUBY_ROOT".into(), "/tmp/ruby".into());
@@ -112,11 +110,9 @@ fn test_shell_env_with_ruby_and_xdg_compatible_gem_path() {
 fn test_shell_env_with_ruby_and_legacy_gem_path() {
     let mut test = RvTest::new();
     test.create_ruby_dir("ruby-3.3.5");
-    let temp_dir_home = test.temp_root().join("home");
-    test.env.insert("HOME".into(), temp_dir_home.to_string());
 
     // Ensure the legacy path is present.
-    create_dir_all(temp_dir_home.join(".gem").join("ruby").join("3.3.5")).unwrap();
+    create_dir_all(test.temp_home().join(".gem").join("ruby").join("3.3.5")).unwrap();
 
     test.env.insert("PATH".into(), "/tmp/bin".into());
     test.env.insert("RUBY_ROOT".into(), "/tmp/ruby".into());
@@ -140,8 +136,6 @@ fn test_shell_env_with_ruby_and_legacy_gem_path() {
 fn test_shell_env_with_existing_manpath() {
     let mut test = RvTest::new();
     test.create_ruby_dir("ruby-3.3.5");
-    let temp_dir_home = test.temp_root().join("home");
-    test.env.insert("HOME".into(), temp_dir_home.to_string());
 
     // Set existing MANPATH to test prepending behavior
     test.env.insert(
@@ -150,7 +144,7 @@ fn test_shell_env_with_existing_manpath() {
     );
 
     // Ensure the legacy path is present.
-    create_dir_all(temp_dir_home.join(".gem").join("ruby").join("3.3.5")).unwrap();
+    create_dir_all(test.temp_home().join(".gem").join("ruby").join("3.3.5")).unwrap();
 
     test.env.insert("PATH".into(), "/tmp/bin".into());
 

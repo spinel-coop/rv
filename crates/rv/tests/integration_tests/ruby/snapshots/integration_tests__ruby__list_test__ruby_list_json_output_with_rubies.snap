@@ -6,7 +6,7 @@ expression: output.normalized_stdout()
   {
     "key": "ruby-3.1.4-macos-aarch64",
     "version": "ruby-3.1.4",
-    "path": "/tmp/opt/rubies/ruby-3.1.4",
+    "path": "/tmp/home/.local/share/rv/rubies/ruby-3.1.4",
     "arch": "aarch64",
     "os": "macos",
     "gem_root": null,
@@ -16,7 +16,7 @@ expression: output.normalized_stdout()
   {
     "key": "ruby-3.2.0-macos-aarch64",
     "version": "ruby-3.2.0",
-    "path": "/tmp/opt/rubies/ruby-3.2.0",
+    "path": "/tmp/home/.local/share/rv/rubies/ruby-3.2.0",
     "arch": "aarch64",
     "os": "macos",
     "gem_root": null,

@@ -48,7 +48,7 @@ fn test_ruby_find_matching_request() {
     find.assert_success();
     assert_eq!(
         find.normalized_stdout(),
-        "/tmp/opt/rubies/ruby-3.3.5/bin/ruby\n"
+        "/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin/ruby\n"
     );
 }
 
@@ -60,7 +60,7 @@ fn test_ruby_find_default() {
     find.assert_success();
     assert_eq!(
         find.normalized_stdout(),
-        "/tmp/opt/rubies/ruby-3.3.5/bin/ruby\n"
+        "/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin/ruby\n"
     );
 }
 
@@ -88,7 +88,7 @@ fn test_ruby_find_dot_ruby_version_matching() {
     find.assert_success();
     assert_eq!(
         find.normalized_stdout(),
-        "/tmp/opt/rubies/ruby-3.3.5/bin/ruby\n"
+        "/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin/ruby\n"
     );
 }
 
@@ -101,13 +101,13 @@ fn test_ruby_find_multiple_matching() {
     find.assert_success();
     assert_eq!(
         find.normalized_stdout(),
-        "/tmp/opt/rubies/ruby-3.3.5/bin/ruby\n"
+        "/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin/ruby\n"
     );
     let find = test.ruby_find(&["ruby-3.3.5"]);
     find.assert_success();
     assert_eq!(
         find.normalized_stdout(),
-        "/tmp/opt/rubies/ruby-3.3.5/bin/ruby\n"
+        "/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin/ruby\n"
     );
 }
 
@@ -121,12 +121,12 @@ fn test_ruby_find_matching_jruby() {
     find.assert_success();
     assert_eq!(
         find.normalized_stdout(),
-        "/tmp/opt/rubies/jruby-10.0.1.0/bin/ruby\n"
+        "/tmp/home/.local/share/rv/rubies/jruby-10.0.1.0/bin/ruby\n"
     );
     let find = test.ruby_find(&["jruby-9"]);
     find.assert_success();
     assert_eq!(
         find.normalized_stdout(),
-        "/tmp/opt/rubies/jruby-9.4.8.0/bin/ruby\n"
+        "/tmp/home/.local/share/rv/rubies/jruby-9.4.8.0/bin/ruby\n"
     );
 }

@@ -71,8 +71,8 @@ fn test_ruby_install_from_tarball() {
 
     // is the mocked ruby from the tarball actually installed
     let mocked_ruby_path = test
-        .temp_root()
-        .join("tmp/home/.local/share/rv/rubies/portable-ruby/bin/ruby");
+        .temp_home()
+        .join(".local/share/rv/rubies/portable-ruby/bin/ruby");
     let mut command = Command::new(mocked_ruby_path);
     command.output().expect("mock ruby");
 }

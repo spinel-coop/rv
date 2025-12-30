@@ -39,7 +39,7 @@ impl RvTest {
         test.env.insert("RV_TEST_OS".into(), "macos".into());
 
         test.env.insert("RV_TEST_EXE".into(), "/tmp/bin/rv".into());
-        test.env.insert("HOME".into(), "/tmp/home".into());
+        test.env.insert("HOME".into(), test.temp_home().into());
         test.env
             .insert("BUNDLE_PATH".into(), test.cwd.join("app").into());
         test.env.insert("RV_DISABLE_INDICATIF".into(), "1".into()); // Disable indicatif progress bars in tests due to a bug in tracing-indicatif
@@ -66,6 +66,10 @@ impl RvTest {
 
     pub fn temp_root(&self) -> Utf8PathBuf {
         self.temp_dir.path().canonicalize_utf8().unwrap()
+    }
+
+    pub fn temp_home(&self) -> Utf8PathBuf {
+        self.temp_root().join("home")
     }
 
     pub fn rv(&self, args: &[&str]) -> RvOutput {
@@ -161,7 +165,7 @@ impl RvTest {
     }
 
     pub fn create_ruby_dir(&self, name: &str) -> Utf8PathBuf {
-        let ruby_dir = self.temp_root().join("opt").join("rubies").join(name);
+        let ruby_dir = self.temp_home().join(".local/share/rv/rubies").join(name);
         std::fs::create_dir_all(&ruby_dir).expect("Failed to create ruby directory");
 
         let bin_dir = ruby_dir.join("bin");
