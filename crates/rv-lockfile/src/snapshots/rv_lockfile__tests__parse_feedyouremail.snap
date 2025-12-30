@@ -6,6 +6,7 @@ git:
   - remote: "https://github.com/Driversnote-Dev/guard-erb_lint.git"
     revision: 2ba3c5d21f5e891df97a3b7c03e56d7d19bf15a2
     branch: ~
+    submodules: false
     specs:
       - gem_version:
           name: guard-erb_lint
@@ -25,6 +26,7 @@ git:
   - remote: "https://github.com/arthurnn/code-scanning-rubocop.git"
     revision: 3077502361b66fd7e73b056a917649e40f87eb03
     branch: ~
+    submodules: false
     specs:
       - gem_version:
           name: code-scanning-rubocop
@@ -38,6 +40,7 @@ git:
   - remote: "https://github.com/indirect/cloudflare.git"
     revision: 82641303470f1de68d6b9ad25636e53e1e0325f9
     branch: ~
+    submodules: false
     specs:
       - gem_version:
           name: cloudflare
@@ -51,6 +54,7 @@ git:
   - remote: "https://github.com/oldmoe/litestack.git"
     revision: e598e1b1f0d46f45df1e2c6213ff9b136b63d9bf
     branch: ~
+    submodules: false
     specs:
       - gem_version:
           name: litestack

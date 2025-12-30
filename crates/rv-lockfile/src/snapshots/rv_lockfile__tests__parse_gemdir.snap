@@ -6,6 +6,7 @@ git:
   - remote: "https://github.com/omniauth/omniauth-github.git"
     revision: f27bb4e018150d87e9444ad13955acfc9e76f4d7
     branch: master
+    submodules: false
     specs:
       - gem_version:
           name: omniauth-github
