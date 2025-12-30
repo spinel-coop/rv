@@ -262,6 +262,8 @@ pub enum CacheBucket {
     Gem,
     /// Git repos for Git gem deps.
     Git,
+    /// YAML-format gemspec.
+    Gemspec,
 }
 
 impl CacheBucket {
@@ -270,6 +272,7 @@ impl CacheBucket {
             Self::Ruby => "ruby-v0",
             Self::Gem => "gem-v0",
             Self::Git => "git-v0",
+            Self::Gemspec => "gemspec-v0",
         }
     }
 

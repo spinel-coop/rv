@@ -169,7 +169,7 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
 }
 
 async fn install_git_repos<'i>(
-    _config: &Config,
+    config: &Config,
     repos: Vec<DownloadedGitRepo<'i>>,
     args: &CiInnerArgs,
 ) -> Result<()> {
@@ -178,17 +178,25 @@ async fn install_git_repos<'i>(
     use rayon::prelude::*;
     let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
     pool.install(|| {
+        let lockfile_dir = args.lockfile_path.parent().unwrap(); // todo: put this in a property somewhere
+
         repos
             .iter()
             .par_bridge()
-            .map(|repo| install_git_dep(repo, &git_gems_dir))
+            .map(|repo| install_git_dep(repo, &git_gems_dir, &config, &lockfile_dir, args))
             .collect::<Result<Vec<_>>>()?;
         Ok::<_, Error>(())
     })?;
     Ok(())
 }
 
-fn install_git_dep(repo: &DownloadedGitRepo, git_gems_dir: &Utf8Path) -> Result<()> {
+fn install_git_dep(
+    repo: &DownloadedGitRepo,
+    git_gems_dir: &Utf8Path,
+    config: &Config,
+    lockfile_dir: &Utf8Path,
+    args: &CiInnerArgs,
+) -> Result<()> {
     let repo_path = Utf8PathBuf::from(&repo.remote);
     let repo_name = repo_path.file_name().expect("repo has no filename?");
     let repo_name = repo_name.strip_suffix(".git").unwrap_or(repo_name);
@@ -249,13 +257,50 @@ fn install_git_dep(repo: &DownloadedGitRepo, git_gems_dir: &Utf8Path) -> Result<
 
     let pattern = dest_dir.join("**/*.gemspec").to_string();
     for path in glob(&pattern).expect("invalid glob pattern").flatten() {
-        println!("{:?}", path);
+        println!("{:?}", path); // todo: remove this print
         // find the .gemspec file(s)
-        // check the cache for "gitsha-gemname.gemspec", if not:
-        // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
-        // cache the YAML gemspec as "gitsha-gemname.gemspec"
-        // parse the YAML gemspec to get the executable names
-        // pass the executable names to the existing binstub generation code
+        let gitsha = &repo.sha;
+        let cached_gemspecs_dir = config
+            .cache
+            .shard(rv_cache::CacheBucket::Gemspec, "gemspecs")
+            .into_path_buf();
+        let binstub_dir = args.install_path.join("bin");
+        for dep in repo.specs.iter() {
+            // check the cache for "gitsha-gemname.gemspec", if not:
+            let gemname = dep.gem_version;
+            let cache_key = format!("{gitsha}-{gemname}.gemspec");
+            let cached_gemspec_path = cached_gemspecs_dir.join(format!("{cache_key}.gem"));
+            let cached = std::fs::exists(&cached_gemspec_path).is_ok_and(|exists| exists);
+            if !cached {
+                // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
+                let yaml_format_gemspec = crate::commands::ruby::run::run_no_install(
+                    config,
+                    &config.ruby_request().unwrap(), // TODO: remove the unwrap
+                    &[
+                        "-rbundler",
+                        "-e",
+                        "puts Gem::Specification.load(\"name.gemspec\").to_yaml",
+                    ],
+                    CaptureOutput::Both,
+                    Some(lockfile_dir),
+                    Vec::new(),
+                )?
+                .stdout;
+                // cache the YAML gemspec as "gitsha-gemname.gemspec"
+                fs_err::write(&cached_gemspec_path, yaml_format_gemspec)?;
+            }
+            // parse the YAML gemspec to get the executable names
+            let yaml_contents = std::fs::read_to_string(cached_gemspec_path)?;
+            let dep_gemspec = match rv_gem_specification_yaml::parse(&yaml_contents) {
+                Ok(parsed) => parsed,
+                Err(e) => {
+                    eprintln!("Warning: specification of {gemname} was invalid: {e}");
+                    return Ok(());
+                }
+            };
+            // pass the executable names to the existing binstub generation code
+            install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir)?;
+        }
     }
 
     Ok(())
