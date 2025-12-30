@@ -75,7 +75,6 @@ struct CiInnerArgs {
     pub max_concurrent_installs: usize,
     pub validate_checksums: bool,
     pub lockfile_path: Utf8PathBuf,
-    pub lockfile_path_parent: Utf8PathBuf,
     pub install_path: Utf8PathBuf,
     pub exts_dir: Utf8PathBuf,
 }
@@ -153,7 +152,6 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         max_concurrent_installs: args.max_concurrent_installs,
         validate_checksums: args.validate_checksums,
         lockfile_path,
-        lockfile_path_parent,
         install_path,
         exts_dir,
     };
@@ -188,23 +186,20 @@ async fn install_git_repos<'i>(
     use rayon::prelude::*;
     let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
     pool.install(|| {
-        let lockfile_dir = &args.lockfile_path_parent;
-
         repos
             .iter()
             .par_bridge()
-            .map(|repo| install_git_dep(repo, &git_gems_dir, &config, &lockfile_dir, args))
+            .map(|repo| install_git_repo(repo, &git_gems_dir, config, args))
             .collect::<Result<Vec<_>>>()?;
         Ok::<_, Error>(())
     })?;
     Ok(())
 }
 
-fn install_git_dep(
+fn install_git_repo(
     repo: &DownloadedGitRepo,
     git_gems_dir: &Utf8Path,
     config: &Config,
-    lockfile_dir: &Utf8Path,
     args: &CiInnerArgs,
 ) -> Result<()> {
     let repo_path = Utf8PathBuf::from(&repo.remote);
@@ -265,40 +260,53 @@ fn install_git_dep(
 
     debug!("Installed repo {}", &repo_name);
 
+    let cached_gemspecs_dir = config
+        .cache
+        .shard(rv_cache::CacheBucket::Gemspec, "gemspecs")
+        .into_path_buf();
+    fs_err::create_dir_all(&cached_gemspecs_dir)?;
+
     let pattern = dest_dir.join("**/*.gemspec").to_string();
     for path in glob(&pattern).expect("invalid glob pattern").flatten() {
-        println!("{:?}", path); // todo: remove this print
+        debug!("found gemspec at {:?}", path);
         // find the .gemspec file(s)
         let gitsha = &repo.sha;
         let cached_gemspecs_dir = config
             .cache
             .shard(rv_cache::CacheBucket::Gemspec, "gemspecs")
             .into_path_buf();
-        fs_err::create_dir_all(&cached_gemspecs_dir)?;
-        let binstub_dir = args.install_path.join("bin");
-        for dep in repo.specs.iter() {
+        let dep = repo
+            .specs
+            .iter()
+            .find(|s| path.to_string_lossy().contains(s.gem_version.name));
+        if let Some(dep) = dep {
             // check the cache for "gitsha-gemname.gemspec", if not:
             let gemname = dep.gem_version;
             let cache_key = format!("{gitsha}-{gemname}.gemspec");
-            let cached_gemspec_path = cached_gemspecs_dir.join(format!("{cache_key}.gem"));
-            let cached = std::fs::exists(&cached_gemspec_path).is_ok_and(|exists| exists);
+            let cached_gemspec_path = cached_gemspecs_dir.join(&cache_key);
+            // let cached = std::fs::exists(&cached_gemspec_path).is_ok_and(|exists| exists);
+            let cached = false;
             if !cached {
                 // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
-                let yaml_format_gemspec = crate::commands::ruby::run::run_no_install(
+                let yaml_gemspec_vec = crate::commands::ruby::run::run_no_install(
                     config,
                     &config.ruby_request().unwrap(), // TODO: remove the unwrap
                     &[
-                        "-rbundler",
                         "-e",
-                        "puts Gem::Specification.load(\"name.gemspec\").to_yaml",
+                        &format!(
+                            "puts Gem::Specification.load(\"{}\").to_yaml",
+                            path.to_string_lossy() // TODO: how do I interpolate an os_str into a shell arg :(
+                        ),
                     ],
                     CaptureOutput::Both,
-                    Some(lockfile_dir),
+                    Some(&repo.path),
                     Vec::new(),
                 )?
                 .stdout;
+                let yaml_gemspec = String::try_from(yaml_gemspec_vec).unwrap(); // arghhhhhhh
+                debug!("evaluated gemspec into YAML:\n{}", yaml_gemspec);
                 // cache the YAML gemspec as "gitsha-gemname.gemspec"
-                fs_err::write(&cached_gemspec_path, yaml_format_gemspec)?;
+                fs_err::write(&cached_gemspec_path, yaml_gemspec)?;
             }
             // parse the YAML gemspec to get the executable names
             let yaml_contents = std::fs::read_to_string(cached_gemspec_path)?;
@@ -310,6 +318,7 @@ fn install_git_dep(
                 }
             };
             // pass the executable names to the existing binstub generation code
+            let binstub_dir = args.install_path.join("bin");
             install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir)?;
         }
     }
