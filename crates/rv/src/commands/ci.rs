@@ -75,6 +75,7 @@ struct CiInnerArgs {
     pub max_concurrent_installs: usize,
     pub validate_checksums: bool,
     pub lockfile_path: Utf8PathBuf,
+    pub lockfile_path_parent: Utf8PathBuf,
     pub install_path: Utf8PathBuf,
     pub exts_dir: Utf8PathBuf,
 }
@@ -130,13 +131,21 @@ pub enum Error {
     },
     #[error("Could not download a git dependency: {error}")]
     Git { error: String },
+    #[error(
+        "The lockfile path must be inside a directory with a parent, but it wasn't. Path was {0}"
+    )]
+    InvalidLockfilePath(String),
 }
 
 type Result<T> = std::result::Result<T, Error>;
 
 pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     let lockfile_path = find_lockfile_path(args.gemfile)?;
-    let install_path = find_install_path(config, &lockfile_path).await?;
+    let lockfile_path_parent = lockfile_path
+        .parent()
+        .ok_or(Error::InvalidLockfilePath(lockfile_path.to_string()))?
+        .to_path_buf();
+    let install_path = find_install_path(config, &lockfile_path_parent).await?;
     let exts_dir = exts_dir(config)?;
     let inner_args = CiInnerArgs {
         skip_compile_extensions: args.skip_compile_extensions,
@@ -144,6 +153,7 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         max_concurrent_installs: args.max_concurrent_installs,
         validate_checksums: args.validate_checksums,
         lockfile_path,
+        lockfile_path_parent,
         install_path,
         exts_dir,
     };
@@ -178,7 +188,7 @@ async fn install_git_repos<'i>(
     use rayon::prelude::*;
     let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
     pool.install(|| {
-        let lockfile_dir = args.lockfile_path.parent().unwrap(); // todo: put this in a property somewhere
+        let lockfile_dir = &args.lockfile_path_parent;
 
         repos
             .iter()
@@ -406,12 +416,11 @@ fn find_lockfile_path(gemfile: Option<Utf8PathBuf>) -> Result<Utf8PathBuf> {
 
 /// Which path should `ci` install gems under?
 /// Uses Bundler's `bundle_path`.
-async fn find_install_path(config: &Config, lockfile_path: &Utf8PathBuf) -> Result<Utf8PathBuf> {
+async fn find_install_path(config: &Config, lockfile_dir: &Utf8Path) -> Result<Utf8PathBuf> {
     let env_path = std::env::var("BUNDLE_PATH");
     if let Ok(bundle_path) = env_path {
         return Ok(Utf8PathBuf::from(&bundle_path));
     }
-    let lockfile_dir = lockfile_path.parent().unwrap();
     let args = ["-rbundler", "-e", "puts Bundler.bundle_path"];
     let bundle_path = crate::commands::ruby::run::run(
         config,
