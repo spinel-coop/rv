@@ -46,6 +46,9 @@ pub struct GitSection<'i> {
     pub revision: &'i str,
     /// Branch used from the Git repo.
     pub branch: Option<&'i str>,
+    /// Includes git submodules, or not.
+    /// Optional, defaults to false.
+    pub submodules: bool,
     /// All gems which came from this source in particular.
     pub specs: Vec<Spec<'i>>,
 }

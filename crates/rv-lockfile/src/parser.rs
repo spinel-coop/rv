@@ -295,6 +295,10 @@ fn parse_hex_string<'i>(i: &mut Input<'i>) -> Res<&'i str> {
     take_while(1.., |c: char| c.is_hex_digit()).parse_next(i)
 }
 
+fn parse_bool<'i>(i: &mut Input<'i>) -> Res<bool> {
+    alt(("true".map(|_| true), "false".map(|_| false))).parse_next(i)
+}
+
 fn parse_checksum<'i>(i: &mut Input<'i>) -> Res<Checksum<'i>> {
     // nokogiri (1.18.10-arm-linux-gnu) sha256=51f4f25ab5d5ba1012d6b16aad96b840a10b067b93f35af6a55a2c104a7ee322
     // rack (3.2.3)
@@ -338,12 +342,15 @@ fn parse_git_section<'i>(i: &mut Input<'i>) -> Res<GitSection<'i>> {
         line_ending,
     ))
     .parse_next(i)?;
+    let submodules: Option<bool> =
+        opt(delimited("  submodules: ", parse_bool, line_ending)).parse_next(i)?;
     "  specs:\n".parse_next(i)?;
     let specs = repeat(0.., parse_spec).parse_next(i)?;
     Ok(GitSection {
         branch,
         remote,
         revision,
+        submodules: submodules.unwrap_or_default(),
         specs,
     })
 }
@@ -478,8 +485,14 @@ GEM
     #[test]
     fn test_git_section() {
         for (test_num, input) in [
-            "\
-GIT
+            "GIT
+  remote: git://github.com/libgit2/rugged.git
+  revision: 34a492ec7c5165824f39d8027d73712b0346aac2
+  submodules: true
+  specs:
+    rugged (0.26.0)
+",
+            "GIT
   remote: https://github.com/Driversnote-Dev/guard-erb_lint.git
   revision: 2ba3c5d21f5e891df97a3b7c03e56d7d19bf15a2
   specs:
