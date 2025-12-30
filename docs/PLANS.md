@@ -158,9 +158,9 @@ Finally, the ruby version can also be provided by `rbproject.kdl`, although tool
 
 ## ruby locations
 
-By default, we look for rubies in `$XDG_DATA_HOME/rv/rubies`, `~/.data/rv/rubies`, `~/.rubies`, `/opt/rubies`, `/opt/homebrew/Cellar/ruby/`, `/usr/local/rubies`, and `/usr/local/Cellar/ruby`.
+By default, we look for rubies in `$XDG_DATA_HOME/rv/rubies`, `~/.local/share/rv/rubies`, `~/.data/rv/rubies`, `~/.rubies`, `/opt/rubies`, `/opt/homebrew/Cellar/ruby/`, `/usr/local/rubies`, and `/usr/local/Cellar/ruby`.
 
-Sincew we respect `$XDG_DATA_HOME`, we install rubies into `~/.local/share/rv/rubies` on macOS and `~/.data/rv/rubies` on Linux by default.
+Since we respect `$XDG_DATA_HOME`, we install rubies into `~/.local/share/rv/rubies` by default.
 
 ## `run` vs `exec`
 
@@ -186,7 +186,7 @@ The `ruby` subcommand manages ruby versions, using subcommands `install`, `unins
 
 #### [install](/docs/rv/ruby/install.md)
 
-The install command downloads a precompiled ruby for the current architecture and operating system, installing it into the rubies directory (which defaults to `~/.data/rv/rubies`).
+The install command downloads a precompiled ruby for the current architecture and operating system, installing it into the rubies directory (which defaults to `~/.local/share/rv/rubies`).
 
 #### [pin](/docs/rv/ruby/pin.md)
 
