@@ -175,7 +175,9 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
         tracing::warn!("rv ci does not support path deps yet");
     }
 
+    debug!("Downloading git deps");
     let repos = download_git_repos(lockfile.clone(), &config.cache, args)?;
+    debug!("Installing git deps");
     install_git_repos(config, repos, args).await?;
 
     debug!("Downloading gems");
