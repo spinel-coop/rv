@@ -357,26 +357,31 @@ fn install_git_repo(
     Ok(())
 }
 
+/// Note this is not async, it shells out to `git clone` so it will block.
 fn download_git_repos<'i>(
     lockfile: GemfileDotLock<'i>,
     cache: &rv_cache::Cache,
-    _args: &CiInnerArgs,
+    args: &CiInnerArgs,
 ) -> Result<Vec<DownloadedGitRepo<'i>>> {
-    let num_specs: usize = lockfile.git.iter().map(|source| source.specs.len()).sum();
-    let mut downloads = Vec::with_capacity(num_specs);
-
     // Download git repos to this dir.
     let git_clone_dir = cache
         .shard(rv_cache::CacheBucket::Git, "gits")
         .into_path_buf();
     fs_err::create_dir_all(&git_clone_dir)?;
 
-    for git_source in lockfile.git {
-        downloads.push(download_git_repo(&git_clone_dir, &git_source)?);
-    }
+    let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
+    use rayon::prelude::*;
+    let downloads = pool.install(|| {
+        lockfile
+            .git
+            .par_iter()
+            .map(|git_source| download_git_repo(&git_clone_dir, &git_source))
+            .collect::<Result<Vec<_>>>()
+    })?;
     Ok(downloads)
 }
 
+/// Clones git repos from their remote, or looks them up in the cache if they're already downloaded.
 fn download_git_repo<'i>(
     git_clone_dir: &Utf8Path,
     git_source: &GitSection<'i>,
