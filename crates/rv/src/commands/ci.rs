@@ -34,6 +34,7 @@ use std::io::Cursor;
 use std::io::Read;
 use std::io::Write;
 use std::ops::Not;
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Command;
 use std::process::Stdio;
@@ -319,7 +320,7 @@ fn install_git_repo(
                     return Ok(());
                 }
             };
-            // pass the executable names to the existing binstub generation code
+            // pass the executable names to generate binstubs
             let binstub_dir = args.install_path.join("bin");
             install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir)?;
         }
@@ -864,7 +865,8 @@ end"#
 fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -> io::Result<()> {
     let binstub_path = binstub_dir.join(exe_name);
     let binstub_contents = generate_binstub_contents(gem_name, exe_name);
-    fs_err::write(binstub_path, binstub_contents)
+    fs_err::write(&binstub_path, binstub_contents)?;
+    fs_err::set_permissions(binstub_path, PermissionsExt::from_mode(0o755))
 }
 
 struct CompileNativeExtResult {
