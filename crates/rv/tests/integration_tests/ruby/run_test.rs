@@ -56,6 +56,14 @@ fn test_ruby_run_default() {
 }
 
 #[test]
+fn test_ruby_run_default_nothing_installed() {
+    let test = RvTest::new();
+    let output = test.ruby_run(None, Default::default(), &["-e", "'puts \"Hello, World\"'"]);
+
+    output.assert_success();
+    assert!(output.stderr().is_empty());
+}
+#[test]
 fn test_ruby_run_default_skips_prereleases() {
     let test = RvTest::new();
     test.create_ruby_dir("ruby-3.4.8");
