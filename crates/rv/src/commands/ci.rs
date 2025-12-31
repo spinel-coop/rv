@@ -77,6 +77,7 @@ struct CiInnerArgs {
     pub validate_checksums: bool,
     pub lockfile_path: Utf8PathBuf,
     pub install_path: Utf8PathBuf,
+    pub extensions_dir: Utf8PathBuf,
 }
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -139,6 +140,7 @@ pub enum Error {
 type Result<T> = std::result::Result<T, Error>;
 
 pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
+    let extensions_dir = exts_dir(config).await?;
     let lockfile_path = find_lockfile_path(args.gemfile)?;
     let lockfile_dir = lockfile_path
         .parent()
@@ -152,6 +154,7 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         validate_checksums: args.validate_checksums,
         lockfile_path,
         install_path,
+        extensions_dir,
     };
     ci_inner(config, &inner_args).await
 }
@@ -170,8 +173,11 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     let repos = download_git_repos(lockfile.clone(), &config.cache, args).await?;
     install_git_repos(config, repos, args).await?;
 
+    debug!("Downloading gems");
     let gems = download_gems(lockfile.clone(), &config.cache, args).await?;
+    debug!("Installing gems");
     let specs = install_gems(config, gems, args).await?;
+    debug!("Compiling gems");
     compile_gems(config, specs, args).await?;
 
     Ok(())
@@ -484,13 +490,16 @@ async fn install_gems<'i>(
                 let gv = download.spec.gem_version;
                 // Actually unpack the tarball here.
                 let dep_gemspec_res = download.unpack_tarball(args.install_path.clone(), args)?;
+                debug!("Unpacked tarball {gv}");
                 let Some(dep_gemspec) = dep_gemspec_res else {
                     panic!(
                         "Warning: No gemspec found for downloaded gem {}",
                         gv.yellow()
                     );
                 };
+                debug!("Installing binstubs for {gv}");
                 install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir)?;
+                debug!("Installed {gv}");
                 Ok(dep_gemspec)
             })
             .collect::<Result<Vec<GemSpecification>>>()
@@ -508,13 +517,13 @@ async fn compile_gems(
         return Ok(());
     }
 
-    let exts_dir = exts_dir(config)?;
     use rayon::prelude::*;
     let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
     pool.install(|| {
         specs.into_iter().par_bridge().map(|spec| {
+            debug!("Compiling gem extension {}-{}", spec.name, spec.version);
             if !spec.extensions.is_empty() {
-                let compiled_ok = compile_gem(config, args, spec, &exts_dir)?;
+                let compiled_ok = compile_gem(config, args, spec, &args.extensions_dir)?;
                 if !compiled_ok {
                     return Err(Error::CompileFailures);
                 }
@@ -528,6 +537,7 @@ async fn compile_gems(
 
 fn install_binstub(dep_name: &str, executables: &[String], binstub_dir: &Utf8Path) -> Result<()> {
     for exe_name in executables {
+        debug!("Creating binstub {dep_name}-{exe_name}");
         if let Err(error) = write_binstub(dep_name, exe_name, binstub_dir) {
             return Err(Error::CouldNotWriteBinstub {
                 dep_name: dep_name.to_owned(),
@@ -885,23 +895,27 @@ impl CompileNativeExtResult {
     }
 }
 
-fn exts_dir(config: &Config) -> Result<Utf8PathBuf> {
-    let exts_dir = crate::commands::ruby::run::run_no_install(
+async fn exts_dir(config: &Config) -> Result<Utf8PathBuf> {
+    debug!("Finding extensions dir");
+    let exts_dir = crate::commands::ruby::run::run(
         config,
-        &config.ruby_request()?,
+        config.ruby_request().ok(),
+        false,
         &[
             "-e",
             "puts File.join(Gem::Platform.local.to_s, Gem.extension_api_version)",
         ],
         CaptureOutput::Both,
         None,
-        vec![],
-    )?
+    )
+    .await?
     .stdout;
 
-    String::from_utf8(exts_dir)
+    let extensions_dir = String::from_utf8(exts_dir)
         .map(|s| Utf8PathBuf::from(s.trim()))
-        .map_err(|_| Error::BadBundlePath)
+        .map_err(|_| Error::BadBundlePath)?;
+    debug!("Found extensions dir: {extensions_dir}");
+    Ok(extensions_dir)
 }
 
 static EXTCONF_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)extconf").unwrap());
