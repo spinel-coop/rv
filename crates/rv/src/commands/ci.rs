@@ -285,9 +285,10 @@ fn install_git_repo(
             let gemname = dep.gem_version;
             let cache_key = format!("{gitsha}-{gemname}.gemspec");
             let cached_gemspec_path = cached_gemspecs_dir.join(&cache_key);
-            // let cached = std::fs::exists(&cached_gemspec_path).is_ok_and(|exists| exists);
-            let cached = false;
-            if !cached {
+            let cached = std::fs::exists(&cached_gemspec_path).is_ok_and(|exists| exists);
+            let yaml_contents = if cached {
+                std::fs::read_to_string(cached_gemspec_path)?
+            } else {
                 // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
                 let yaml_gemspec_vec = crate::commands::ruby::run::run_no_install(
                     config,
@@ -305,12 +306,12 @@ fn install_git_repo(
                 )?
                 .stdout;
                 let yaml_gemspec = String::try_from(yaml_gemspec_vec).unwrap(); // arghhhhhhh
-                debug!("evaluated gemspec into YAML:\n{}", yaml_gemspec);
                 // cache the YAML gemspec as "gitsha-gemname.gemspec"
-                fs_err::write(&cached_gemspec_path, yaml_gemspec)?;
-            }
+                debug!("writing YAML gemspec to {}", &cached_gemspec_path);
+                fs_err::write(&cached_gemspec_path, &yaml_gemspec)?;
+                yaml_gemspec
+            };
             // parse the YAML gemspec to get the executable names
-            let yaml_contents = std::fs::read_to_string(cached_gemspec_path)?;
             let dep_gemspec = match rv_gem_specification_yaml::parse(&yaml_contents) {
                 Ok(parsed) => parsed,
                 Err(e) => {
