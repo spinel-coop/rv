@@ -901,9 +901,15 @@ impl CompileNativeExtResult {
 
 async fn find_exts_dir(config: &Config) -> Result<Utf8PathBuf> {
     debug!("Finding extensions dir");
+    let version = Some(RubyRequest {
+        major: Some(4),
+        minor: Some(0),
+        patch: Some(0),
+        ..Default::default()
+    });
     let exts_dir = crate::commands::ruby::run::run(
         config,
-        None,
+        version,
         false,
         &[
             "-e",
