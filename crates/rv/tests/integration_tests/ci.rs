@@ -1,12 +1,27 @@
 use crate::common::RvTest;
 
+fn install_real_ruby(test: &mut RvTest, ruby_version: &str) {
+    // Install a Ruby version first.
+    // Remove the mock, because we need a real Ruby.
+    let env_var_list = test.env.remove("RV_LIST_URL");
+    let env_var_install = test.env.remove("RV_INSTALL_URL");
+    test.rv(&["ruby", "install", ruby_version]).assert_success();
+
+    // Put the Ruby install mocks back now.
+    if let Some(ev) = env_var_list {
+        test.env.insert("RV_LIST_URL".to_owned(), ev);
+    }
+    if let Some(ev) = env_var_install {
+        test.env.insert("RV_INSTALL_URL".to_owned(), ev);
+    }
+}
 #[test]
 fn test_clean_install_download_test_gem() {
     let mut test = RvTest::new();
-    // Install some Ruby first.
-    // test.rv(&["ruby", "install", "4.0.0"]).assert_success();
 
-    // Now we can use rv.
+    install_real_ruby(&mut test, "4.0.0");
+
+    // Now we can use rv ci.
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testsource");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testsource.lock");
     test.replace_source("http://gems.example.com", &test.server_url());
@@ -28,7 +43,8 @@ fn test_clean_install_download_test_gem() {
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #[test]
 fn test_clean_install_native_macos_aarch64() {
-    let test = RvTest::new();
+    let mut test = RvTest::new();
+    install_real_ruby(&mut test, "4.0.0");
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative.lock");
     let output = test.rv(&["ci", "--skip-compile-extensions"]);
@@ -42,7 +58,8 @@ fn test_clean_install_native_macos_aarch64() {
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 #[test]
 fn test_clean_install_native_linux_x86_64() {
-    let test = RvTest::new();
+    let mut test = RvTest::new();
+    install_real_ruby(&mut test, "4.0.0");
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative.lock");
     let output = test.rv(&["ci", "--skip-compile-extensions"]);
@@ -55,7 +72,8 @@ fn test_clean_install_native_linux_x86_64() {
 
 #[test]
 fn test_clean_install_download_faker() {
-    let test = RvTest::new();
+    let mut test = RvTest::new();
+    install_real_ruby(&mut test, "4.0.0");
     // https://github.com/faker-ruby/faker/blob/2f8b18b112fb3b7d2750321a8e574518cfac0d53/Gemfile
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.faker");
     // https://github.com/faker-ruby/faker/blob/2f8b18b112fb3b7d2750321a8e574518cfac0d53/Gemfile.lock
@@ -82,6 +100,8 @@ fn find_all_files_in_dir(cwd: &std::path::Path) -> String {
         .lines()
         // This file is created when running with coverage, we don't want to include it.
         .filter(|line| !line.ends_with("profraw"))
+        // We don't want to test how rv installs ruby, just the CI files.
+        .filter(|line| !line.contains("rv/rubies/ruby-4.0.0"))
         .collect();
     lines.sort();
     lines.join("\n")

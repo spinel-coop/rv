@@ -77,7 +77,7 @@ async fn download_and_extract_remote_tarball(
         Err(Error::IncompleteVersion(requested.clone()))?;
     }
 
-    let url = ruby_url(&requested)?;
+    let url = ruby_url(requested)?;
     let tarball_path = tarball_path(config, &url);
 
     let new_dir = tarball_path.parent().unwrap();
