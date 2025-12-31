@@ -267,8 +267,25 @@ fn install_git_repo(
         });
     }
 
-    // TODO: if the git source in the lockfile has submodules: true, then we should
-    //   "git", "submodule", "update", "--quiet", "--init", "--recursive"
+    if repo.submodules {
+        let get_submodules = std::process::Command::new("git")
+            .current_dir(&dest_dir)
+            .args([
+                "git",
+                "submodule",
+                "update",
+                "--quiet",
+                "--init",
+                "--recursive",
+            ])
+            .spawn()?
+            .wait()?;
+        if !get_submodules.success() {
+            return Err(Error::Git {
+                error: format!("git submodule update had exit code {}", get_submodules),
+            });
+        }
+    }
 
     debug!("Installed repo {}", &repo_name);
 
@@ -417,6 +434,7 @@ async fn download_git_repos<'i>(
             specs: git_source.specs.clone(),
             sha: git_source.revision.to_string(),
             path: git_repo_dir.clone(),
+            submodules: git_source.submodules,
         });
     }
     Ok(downloads)
@@ -637,6 +655,7 @@ struct DownloadedGitRepo<'i> {
     path: Utf8PathBuf,
     specs: Vec<Spec<'i>>,
     sha: String,
+    submodules: bool,
 }
 
 /// Checksums found in the gem under checksums.yaml
