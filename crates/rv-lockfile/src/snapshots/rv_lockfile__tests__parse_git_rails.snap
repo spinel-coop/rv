@@ -6,6 +6,7 @@ git:
   - remote: "https://github.com/indirect/indirect.git"
     revision: ee7de5322965eb4e756454a66039a2d2a3395509
     branch: ~
+    submodules: false
     specs:
       - gem_version:
           name: indirect
@@ -19,6 +20,7 @@ git:
   - remote: "https://github.com/rails/rails.git"
     revision: 80570a6dd73d632738ed86561b10d33217c6fa7e
     branch: ~
+    submodules: false
     specs:
       - gem_version:
           name: actioncable
