@@ -87,7 +87,7 @@ fn test_parse_withoutsource() {
 
 #[test]
 fn test_parse_commit_watcher() {
-    let input = include_str!("../tests/inputs/Gemfile.lock.commit-watcher");
+    let input = include_str!("../tests/inputs/Gemfile.commit-watcher.lock");
     let output = must_parse(input);
     insta::assert_yaml_snapshot!(output);
 }
