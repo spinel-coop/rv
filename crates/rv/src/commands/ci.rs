@@ -141,12 +141,12 @@ type Result<T> = std::result::Result<T, Error>;
 
 pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     let lockfile_path = find_lockfile_path(args.gemfile)?;
-    let lockfile_path_parent = lockfile_path
+    let lockfile_dir = lockfile_path
         .parent()
         .ok_or(Error::InvalidLockfilePath(lockfile_path.to_string()))?
         .to_path_buf();
-    let install_path = find_install_path(config, &lockfile_path_parent).await?;
     let exts_dir = exts_dir(config)?;
+    let install_path = find_install_path(config, &lockfile_dir).await?;
     let inner_args = CiInnerArgs {
         skip_compile_extensions: args.skip_compile_extensions,
         max_concurrent_requests: args.max_concurrent_requests,
