@@ -274,6 +274,7 @@ fn install_git_dep(
             .cache
             .shard(rv_cache::CacheBucket::Gemspec, "gemspecs")
             .into_path_buf();
+        fs_err::create_dir_all(&cached_gemspecs_dir)?;
         let binstub_dir = args.install_path.join("bin");
         for dep in repo.specs.iter() {
             // check the cache for "gitsha-gemname.gemspec", if not:
