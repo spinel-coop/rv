@@ -18,6 +18,7 @@ use rv_lockfile::datatypes::GemSection;
 use rv_lockfile::datatypes::GemVersion;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_lockfile::datatypes::Spec;
+use rv_ruby::request::RubyRequest;
 use sha2::Digest;
 use sha2::Sha256;
 use sha2::Sha512;
@@ -78,6 +79,7 @@ struct CiInnerArgs {
     pub lockfile_path: Utf8PathBuf,
     pub install_path: Utf8PathBuf,
     pub extensions_dir: Utf8PathBuf,
+    pub ruby_request: RubyRequest,
 }
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -140,7 +142,8 @@ pub enum Error {
 type Result<T> = std::result::Result<T, Error>;
 
 pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
-    let extensions_dir = exts_dir(config).await?;
+    let ruby_request = config.ruby_request()?;
+    let extensions_dir = find_exts_dir(config).await?;
     let lockfile_path = find_lockfile_path(args.gemfile)?;
     let lockfile_dir = lockfile_path
         .parent()
@@ -155,6 +158,7 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         lockfile_path,
         install_path,
         extensions_dir,
+        ruby_request,
     };
     ci_inner(config, &inner_args).await
 }
@@ -299,7 +303,7 @@ fn install_git_repo(
                 // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
                 let yaml_gemspec_vec = crate::commands::ruby::run::run_no_install(
                     config,
-                    &config.ruby_request().unwrap(), // TODO: remove the unwrap
+                    &args.ruby_request,
                     &[
                         "-e",
                         &format!(
@@ -312,7 +316,7 @@ fn install_git_repo(
                     Vec::new(),
                 )?
                 .stdout;
-                let yaml_gemspec = String::try_from(yaml_gemspec_vec).unwrap(); // arghhhhhhh
+                let yaml_gemspec = String::from_utf8(yaml_gemspec_vec).unwrap(); // arghhhhhhh
                 // cache the YAML gemspec as "gitsha-gemname.gemspec"
                 debug!("writing YAML gemspec to {}", &cached_gemspec_path);
                 fs_err::write(&cached_gemspec_path, &yaml_gemspec)?;
@@ -895,11 +899,11 @@ impl CompileNativeExtResult {
     }
 }
 
-async fn exts_dir(config: &Config) -> Result<Utf8PathBuf> {
+async fn find_exts_dir(config: &Config) -> Result<Utf8PathBuf> {
     debug!("Finding extensions dir");
     let exts_dir = crate::commands::ruby::run::run(
         config,
-        config.ruby_request().ok(),
+        None,
         false,
         &[
             "-e",
@@ -948,9 +952,9 @@ fn compile_gem(
     for extstr in spec.extensions.clone() {
         let extension = extstr.as_ref();
         if EXTCONF_REGEX.is_match(extension) {
-            if let Ok(outputs) =
-                build_extconf(config, extension, gem_home, &gem_path, &ext_dest, &lib_dest)
-            {
+            if let Ok(outputs) = build_extconf(
+                config, extension, gem_home, &gem_path, &ext_dest, &lib_dest, args,
+            ) {
                 compile_results.push(CompileNativeExtResult {
                     extension: extension.to_string(),
                     outputs,
@@ -959,7 +963,7 @@ fn compile_gem(
         } else if RAKE_REGEX.is_match(extension) {
             if !ran_rake
                 && let Ok(outputs) =
-                    build_rakefile(config, extension, &gem_path, &ext_dest, &lib_dest)
+                    build_rakefile(config, extension, &gem_path, &ext_dest, &lib_dest, args)
             {
                 compile_results.push(CompileNativeExtResult {
                     extension: extension.to_string(),
@@ -1018,6 +1022,7 @@ fn build_rakefile(
     gem_path: &Utf8PathBuf,
     ext_dest: &Utf8PathBuf,
     lib_dest: &Utf8PathBuf,
+    args: &CiInnerArgs,
 ) -> Result<Vec<std::process::Output>> {
     let ext_path = Utf8PathBuf::from_str(extension)?;
     let ext_dir = gem_path.join(ext_path.parent().expect("extconf has no parent"));
@@ -1029,7 +1034,7 @@ fn build_rakefile(
     if ext_file.to_lowercase().contains("mkrf_conf") {
         output = crate::commands::ruby::run::run_no_install(
             config,
-            &config.ruby_request()?,
+            &args.ruby_request,
             &[ext_file],
             CaptureOutput::Both,
             Some(&ext_dir),
@@ -1066,6 +1071,7 @@ fn build_extconf(
     gem_path: &Utf8PathBuf,
     ext_dest: &Utf8PathBuf,
     lib_dest: &Utf8PathBuf,
+    args: &CiInnerArgs,
 ) -> Result<Vec<std::process::Output>> {
     let ext_path = Utf8PathBuf::from_str(extension)?;
     let ext_dir = gem_path.join(ext_path.parent().expect("extconf has no parent"));
@@ -1076,7 +1082,7 @@ fn build_extconf(
     // 1. Run the extconf.rb file with the current ruby
     output = crate::commands::ruby::run::run_no_install(
         config,
-        &config.ruby_request()?,
+        &args.ruby_request,
         &[ext_file],
         CaptureOutput::Both,
         Some(&ext_dir),
@@ -1261,6 +1267,7 @@ where
     })
 }
 
+// TODO: Remove this. We should not need to shell out to Ruby to convert a YAML file to Ruby.
 fn convert_gemspec_yaml_to_ruby(contents: String) -> String {
     let mut child = std::process::Command::new("ruby")
         .args([

@@ -3,6 +3,10 @@ use crate::common::RvTest;
 #[test]
 fn test_clean_install_download_test_gem() {
     let mut test = RvTest::new();
+    // Install some Ruby first.
+    // test.rv(&["ruby", "install", "4.0.0"]).assert_success();
+
+    // Now we can use rv.
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testsource");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testsource.lock");
     test.replace_source("http://gems.example.com", &test.server_url());
