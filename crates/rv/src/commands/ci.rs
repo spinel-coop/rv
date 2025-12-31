@@ -178,19 +178,19 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     debug!("Downloading git deps");
     let repos = download_git_repos(lockfile.clone(), &config.cache, args)?;
     debug!("Installing git deps");
-    install_git_repos(config, repos, args).await?;
+    install_git_repos(config, repos, args)?;
 
     debug!("Downloading gems");
     let gems = download_gems(lockfile.clone(), &config.cache, args).await?;
     debug!("Installing gems");
-    let specs = install_gems(config, gems, args).await?;
+    let specs = install_gems(config, gems, args)?;
     debug!("Compiling gems");
-    compile_gems(config, specs, args).await?;
+    compile_gems(config, specs, args)?;
 
     Ok(())
 }
 
-async fn install_git_repos<'i>(
+fn install_git_repos<'i>(
     config: &Config,
     repos: Vec<DownloadedGitRepo<'i>>,
     args: &CiInnerArgs,
@@ -512,7 +512,7 @@ pub fn create_rayon_pool(
         .build()
 }
 
-async fn install_gems<'i>(
+fn install_gems<'i>(
     _config: &Config,
     downloaded: Vec<DownloadedRubygems<'i>>,
     args: &CiInnerArgs,
@@ -547,11 +547,7 @@ async fn install_gems<'i>(
     Ok(specs)
 }
 
-async fn compile_gems(
-    config: &Config,
-    specs: Vec<GemSpecification>,
-    args: &CiInnerArgs,
-) -> Result<()> {
+fn compile_gems(config: &Config, specs: Vec<GemSpecification>, args: &CiInnerArgs) -> Result<()> {
     if args.skip_compile_extensions {
         return Ok(());
     }
