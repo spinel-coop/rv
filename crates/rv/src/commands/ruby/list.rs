@@ -404,6 +404,11 @@ fn latest_patch_version(rubies_for_this_platform: Vec<Ruby>) -> Vec<Ruby> {
     }
     let mut available_rubies: BTreeMap<NonPatchRelease, Ruby> = BTreeMap::new();
     for ruby in rubies_for_this_platform {
+        // Skip 3.5 series since they only include pre-releases
+        if ruby.version.major == Some(3) && ruby.version.minor == Some(5) {
+            continue;
+        }
+
         let key = NonPatchRelease::from(ruby.version.clone());
         let skip = available_rubies
             .get(&key)
@@ -561,8 +566,8 @@ mod tests {
                             browser_download_url: u("3.3.0"),
                         },
                         Asset {
-                            name: "ruby-3.5.0-preview1.arm64_sonoma.tar.gz".to_owned(),
-                            browser_download_url: u("3.5.0-preview1"),
+                            name: "ruby-4.0.0.arm64_sonoma.tar.gz".to_owned(),
+                            browser_download_url: u("4.0.0"),
                         },
                     ],
                 },
@@ -576,11 +581,36 @@ mod tests {
                         active: false,
                     },
                     JsonRubyEntry {
-                        details: ruby("ruby-3.5.0-preview1"),
+                        details: ruby("ruby-4.0.0"),
                         installed: false,
                         active: false,
                     },
                 ],
+            },
+            // Ruby 3.5 is skipped
+            Test {
+                test_name: "Ruby 3.5 is skipped",
+                release: Release {
+                    name: "latest".to_owned(),
+                    assets: vec![
+                        Asset {
+                            name: "ruby-3.5.0-preview1.arm64_sonoma.tar.gz".to_owned(),
+                            browser_download_url: u("3.5.0-preview1"),
+                        },
+                        Asset {
+                            name: "ruby-4.0.0.arm64_sonoma.tar.gz".to_owned(),
+                            browser_download_url: u("4.0.0"),
+                        },
+                    ],
+                },
+                installed_rubies: Vec::new(),
+                active_ruby: None,
+                current_platform_arch: "arm64_sonoma",
+                expected: vec![JsonRubyEntry {
+                    details: ruby("ruby-4.0.0"),
+                    installed: false,
+                    active: false,
+                }],
             },
             // Nothing weird should happen if there's no remotely-available versions.
             Test {
