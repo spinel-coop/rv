@@ -77,7 +77,6 @@ struct CiInnerArgs {
     pub validate_checksums: bool,
     pub lockfile_path: Utf8PathBuf,
     pub install_path: Utf8PathBuf,
-    pub exts_dir: Utf8PathBuf,
 }
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -145,7 +144,6 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         .parent()
         .ok_or(Error::InvalidLockfilePath(lockfile_path.to_string()))?
         .to_path_buf();
-    let exts_dir = exts_dir(config)?;
     let install_path = find_install_path(config, &lockfile_dir).await?;
     let inner_args = CiInnerArgs {
         skip_compile_extensions: args.skip_compile_extensions,
@@ -154,7 +152,6 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         validate_checksums: args.validate_checksums,
         lockfile_path,
         install_path,
-        exts_dir,
     };
     ci_inner(config, &inner_args).await
 }
@@ -503,13 +500,17 @@ async fn compile_gems(
     specs: Vec<GemSpecification>,
     args: &CiInnerArgs,
 ) -> Result<()> {
+    if args.skip_compile_extensions {
+        return Ok(());
+    }
+
+    let exts_dir = exts_dir(config)?;
     use rayon::prelude::*;
     let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
     pool.install(|| {
         specs.into_iter().par_bridge().map(|spec| {
-            // 4. Handle compiling native extensions for gems with native extensions
-            if !args.skip_compile_extensions && !spec.extensions.is_empty() {
-                let compiled_ok = compile_gem(config, args, spec)?;
+            if !spec.extensions.is_empty() {
+                let compiled_ok = compile_gem(config, args, spec, &exts_dir)?;
                 if !compiled_ok {
                     return Err(Error::CompileFailures);
                 }
@@ -902,7 +903,12 @@ fn exts_dir(config: &Config) -> Result<Utf8PathBuf> {
 static EXTCONF_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)extconf").unwrap());
 static RAKE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)rakefile|mkrf_conf").unwrap());
 
-fn compile_gem(config: &Config, args: &CiInnerArgs, spec: GemSpecification) -> Result<bool> {
+fn compile_gem(
+    config: &Config,
+    args: &CiInnerArgs,
+    spec: GemSpecification,
+    exts_dir: &Utf8PathBuf,
+) -> Result<bool> {
     let mut compile_results = Vec::with_capacity(spec.extensions.len());
 
     let gem_home = &args.install_path;
@@ -911,7 +917,7 @@ fn compile_gem(config: &Config, args: &CiInnerArgs, spec: GemSpecification) -> R
     let ext_dest = args
         .install_path
         .join("extensions")
-        .join(&args.exts_dir)
+        .join(exts_dir)
         .join(spec.full_name());
     let mut ran_rake = false;
 
@@ -1519,6 +1525,7 @@ async fn download_gem<'i>(
         }
     }
     debug!("Validated {}", spec.gem_version);
+
     if !cache_path.exists() {
         if let Some(parent) = cache_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
@@ -1526,6 +1533,7 @@ async fn download_gem<'i>(
         tokio::fs::write(&cache_path, &contents).await?;
         debug!("Cached {}", spec.gem_version);
     }
+
     Ok(DownloadedRubygems { contents, spec })
 }
 
