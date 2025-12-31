@@ -724,8 +724,8 @@ impl<'i> DownloadedRubygems<'i> {
         // It should contain a metadata zip, and a data zip
         // (and optionally, a checksum zip).
         let GemVersion { name, version } = self.spec.gem_version;
-        let nameversion = format!("{name}-{version}");
-        debug!("Unpacking {nameversion}");
+        let full_name = format!("{name}-{version}");
+        debug!("Unpacking {full_name}");
 
         // Then unpack the tarball into it.
         let contents = Cursor::new(self.contents);
@@ -784,12 +784,12 @@ impl<'i> DownloadedRubygems<'i> {
                         return Err(Error::InvalidGemArchive("two metadata.gz found".to_owned()));
                     }
                     let UnpackedMetdata { hashed, gemspec } =
-                        unpack_metadata(&bundle_path, &nameversion, HashReader::new(entry))?;
+                        unpack_metadata(&bundle_path, &full_name, HashReader::new(entry))?;
                     found_gemspec = Some(gemspec);
                     if args.validate_checksums
                         && let Some(ref checksums) = checksums
                     {
-                        checksums.validate_metadata(nameversion.clone(), hashed)?
+                        checksums.validate_metadata(full_name.clone(), hashed)?
                     }
                 }
                 "data.tar.gz" => {
@@ -798,11 +798,11 @@ impl<'i> DownloadedRubygems<'i> {
                         return Err(Error::InvalidGemArchive("two data.tar.gz found".to_owned()));
                     }
                     let unpacked =
-                        unpack_data_tar(&bundle_path, &nameversion, HashReader::new(entry))?;
+                        unpack_data_tar(&bundle_path, &full_name, HashReader::new(entry))?;
                     if args.validate_checksums
                         && let Some(ref checksums) = checksums
                     {
-                        checksums.validate_data_tar(nameversion.clone(), &unpacked.hashed)?
+                        checksums.validate_data_tar(full_name.clone(), &unpacked.hashed)?
                     }
                     found_data_tar = true;
                 }
@@ -825,7 +825,7 @@ impl<'i> DownloadedRubygems<'i> {
         }
         let Some(found_gemspec) = found_gemspec else {
             return Err(Error::NoMetadata {
-                gem_name: nameversion,
+                gem_name: full_name,
             });
         };
 
