@@ -174,16 +174,11 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
         tracing::warn!("rv ci does not support path deps yet");
     }
 
-    // Download from Git and from RubyGems in parallel
-    let (repos, gems) = tokio::join!(
-        download_git_repos(lockfile.clone(), &config.cache, args),
-        download_gems(lockfile.clone(), &config.cache, args)
-    );
-    let repos = repos?;
-    let gems = gems?;
-
-    debug!("Installing git dependencies");
+    let repos = download_git_repos(lockfile.clone(), &config.cache, args).await?;
     install_git_repos(config, repos, args).await?;
+
+    debug!("Downloading gems");
+    let gems = download_gems(lockfile.clone(), &config.cache, args).await?;
     debug!("Installing gems");
     let specs = install_gems(config, gems, args).await?;
     debug!("Compiling gems");
