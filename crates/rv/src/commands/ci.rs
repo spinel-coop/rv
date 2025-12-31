@@ -692,12 +692,71 @@ fn hex_key(yaml: &saphyr::Yaml<'_>) -> Option<Vec<u8>> {
     hex::decode(yaml.as_str()?).ok()
 }
 
+fn b64_then_hex(s: &str) -> Option<Vec<u8>> {
+    use base64::prelude::*;
+    // YAML literal blocks may include newlines, which shouldn't
+    // be considered part of the b64.
+    let without_newlines: String = s.chars().filter(|c| !c.is_whitespace()).collect();
+    base64::engine::general_purpose::STANDARD
+        .decode(without_newlines)
+        .ok()
+        .and_then(|x| String::from_utf8(x).ok())
+        .and_then(|x| hex::decode(x).ok())
+}
+
 impl ArchiveChecksums {
     fn new(file: &str) -> Option<Self> {
         use saphyr::{LoadableYamlNode, Yaml};
         let contents_yaml = Yaml::load_from_str(file).ok()?;
         let root = contents_yaml.first()?;
         let mut out = ArchiveChecksums::default();
+
+        let b64_sha512_tag = "U0hBNTEy";
+        let b64_sha256_tag = "U0hBMjU2";
+        let _b64_sha1_tag = "U0hBMQ=="; // ignored, sha1 is not secure anymore.
+        for (k, v) in root.as_mapping().unwrap() {
+            if let Some(tagged_node) = k.get_tagged_node()
+                && let Some(tag) = k.get_tag()
+                && tag.handle == "!"
+                && tag.suffix == "binary"
+            {
+                if tagged_node.as_str() == Some(b64_sha256_tag) {
+                    let metadata = v
+                        .as_mapping_get("metadata.gz")
+                        .and_then(|yaml| yaml.get_tagged_node())
+                        .and_then(|yaml| yaml.as_str())
+                        .and_then(b64_then_hex);
+                    let data_tar = v
+                        .as_mapping_get("data.tar.gz")
+                        .and_then(|yaml| yaml.get_tagged_node())
+                        .and_then(|yaml| yaml.as_str())
+                        .and_then(b64_then_hex);
+                    if let (Some(m), Some(d)) = (metadata, data_tar) {
+                        out.sha256 = Some(ChecksumFiles {
+                            metadata_gz: m,
+                            data_tar_gz: d,
+                        });
+                    }
+                } else if tagged_node.as_str() == Some(b64_sha512_tag) {
+                    let metadata = v
+                        .as_mapping_get("metadata.gz")
+                        .and_then(|yaml| yaml.get_tagged_node())
+                        .and_then(|yaml| yaml.as_str())
+                        .and_then(b64_then_hex);
+                    let data_tar = v
+                        .as_mapping_get("data.tar.gz")
+                        .and_then(|yaml| yaml.get_tagged_node())
+                        .and_then(|yaml| yaml.as_str())
+                        .and_then(b64_then_hex);
+                    if let (Some(m), Some(d)) = (metadata, data_tar) {
+                        out.sha512 = Some(ChecksumFiles {
+                            metadata_gz: m,
+                            data_tar_gz: d,
+                        });
+                    }
+                }
+            }
+        }
 
         if let Some(checksums) = root.as_mapping_get("SHA256") {
             out.sha256 = Some(ChecksumFiles {
@@ -716,7 +775,7 @@ impl ArchiveChecksums {
 
     fn validate_data_tar(&self, gem_name: String, hashed: &Hashed) -> Result<()> {
         if self.sha256.is_none() && self.sha512.is_none() {
-            eprintln!("Checksum file was empty");
+            eprintln!("Checksum file for {gem_name} was empty");
         }
         if let Some(sha256) = &self.sha256
             && hashed.digest_256 != sha256.data_tar_gz
@@ -741,7 +800,7 @@ impl ArchiveChecksums {
 
     fn validate_metadata(&self, gem_name: String, hashed: Hashed) -> Result<()> {
         if self.sha256.is_none() && self.sha512.is_none() {
-            eprintln!("Checksum file was empty");
+            eprintln!("Checksum file for {gem_name} was empty");
         }
         if let Some(sha256) = &self.sha256 {
             let expected = &sha256.metadata_gz;
@@ -1729,5 +1788,40 @@ end"#;
         };
         let actual = Platform::current();
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn binary_checksums() {
+        // Taken from https://rubygems.org/gems/options/versions/2.3.2
+        // Apparently this is an old checksum format?
+        let test_file = r#"---
+!binary "U0hBMQ==":
+  metadata.gz: !binary |-
+    Y2IyYTYzNDkyOGEwM2E1ODQyNzY2MTFjNGIzYmYzNTU3MDc2NDRkNw==
+  data.tar.gz: !binary |-
+    NzkxMmRmMmViNjRiMWIyZmU1MWJhOWYyNjExZjIxMTk4OTc0YTY0YQ==
+!binary "U0hBNTEy":
+  metadata.gz: !binary |-
+    ZGNlNjllYmRmYjZlNGI1ZjVmYjU4YWExNDhkOGRkMzA3YWU0MmE5YWI3MmJj
+    NTE3MTJmZTIzNDMzNjUzNDRhODEyMmU0ODRlM2NkNmY3MTQyZWEzMDBjZmUw
+    N2Y3ODAzNmQ0MzY0NWFkNzc1ZGViODhmMmI3ZmU4Y2M3ZmEwMDg=
+  data.tar.gz: !binary |-
+    MTk4ZGE5YjhlYTkwMTdmZmJjMDI0ZDA0NWIzODhlNDc0NWQzMzQ4NTNkYTI0
+    ZjNkNjZmZTc5MWE3NjI2YmVlMDlhYjE4OTE0YTRhYmQxMTM0MWUyMjcyYTgx
+    ZTU0N2NmMDRlYzNkY2NjOTBkYmI0MmFjM2RiMzgzM2FjM2U2N2Q=
+"#;
+
+        let checksums = ArchiveChecksums::new(test_file).unwrap();
+        let sha512 = checksums
+            .sha512
+            .expect("this file does have a sha512 checksum");
+        assert_eq!(
+            "dce69ebdfb6e4b5f5fb58aa148d8dd307ae42a9ab72bc51712fe2343365344a8122e484e3cd6f7142ea300cfe07f78036d43645ad775deb88f2b7fe8cc7fa008",
+            &hex::encode(sha512.metadata_gz)
+        );
+        assert_eq!(
+            "198da9b8ea9017ffbc024d045b388e4745d334853da24f3d66fe791a7626bee09ab18914a4abd11341e2272a81e547cf04ec3dccc90dbb42ac3db3833ac3e67d",
+            &hex::encode(sha512.data_tar_gz)
+        );
     }
 }
