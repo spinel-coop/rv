@@ -1,6 +1,5 @@
 use anstream::println;
 use camino::{Utf8Path, Utf8PathBuf};
-use core::panic;
 use current_platform::CURRENT_PLATFORM;
 use futures_util::StreamExt;
 use owo_colors::OwoColorize;
@@ -33,6 +32,8 @@ pub enum Error {
     InvalidTarballPath(PathBuf),
     #[error("rv does not (yet) support your platform ({0}). Sorry :(")]
     UnsupportedPlatform(&'static str),
+    #[error("could not find matching ruby for version {0}")]
+    UnsupportedRubyRequest(RubyRequest),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -77,7 +78,7 @@ async fn download_and_extract_remote_tarball(
         Err(Error::IncompleteVersion(requested.clone()))?;
     }
 
-    let url = ruby_url(&requested.to_string())?;
+    let url = ruby_url(&requested)?;
     let tarball_path = tarball_path(config, &url);
 
     let new_dir = tarball_path.parent().unwrap();
@@ -115,8 +116,11 @@ fn valid_tarball_exists(path: &Utf8Path) -> bool {
     fs_err::metadata(path).is_ok_and(|m| m.is_file() && m.len() > 0)
 }
 
-fn ruby_url(version: &str) -> Result<String> {
-    let version = version.strip_prefix("ruby-").unwrap();
+fn ruby_url(requested: &RubyRequest) -> Result<String> {
+    let requested_str = requested.to_string();
+    let version = requested_str
+        .strip_prefix("ruby-")
+        .ok_or(Error::UnsupportedRubyRequest(requested.to_owned()))?;
     let arch = match CURRENT_PLATFORM {
         "aarch64-apple-darwin" => "arm64_sonoma",
         "x86_64-apple-darwin" => "ventura",
@@ -226,4 +230,21 @@ fn extract_ruby_tarball(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_download_url() {
+        for version in [RubyRequest::default()] {
+            match ruby_url(&version) {
+                Ok(_) => {}
+                Err(e) => {
+                    panic!("Ruby version {version} did not have a valid URL: {}", e);
+                }
+            }
+        }
+    }
 }
