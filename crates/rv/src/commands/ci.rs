@@ -41,6 +41,7 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::process::Stdio;
 use std::str::FromStr;
+use std::thread;
 use std::vec;
 
 const ARM_STRINGS: [&str; 3] = ["arm64", "arm", "aarch64"];
@@ -175,17 +176,33 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
         tracing::warn!("rv ci does not support path deps yet");
     }
 
-    debug!("Downloading git deps");
-    let repos = download_git_repos(lockfile.clone(), &config.cache, args)?;
-    debug!("Installing git deps");
-    install_git_repos(config, repos, args)?;
-
     debug!("Downloading gems");
     let gems = download_gems(lockfile.clone(), &config.cache, args).await?;
-    debug!("Installing gems");
-    let specs = install_gems(config, gems, args)?;
-    debug!("Compiling gems");
-    compile_gems(config, specs, args)?;
+
+    thread::scope(|s| {
+        // Handle git deps on their own thread.
+        let git_thread = s.spawn(|| {
+            debug!("Downloading git deps");
+            let repos = download_git_repos(lockfile.clone(), &config.cache, args)?;
+            debug!("Installing git deps");
+            install_git_repos(config, repos, args)?;
+            Ok::<_, Error>(())
+        });
+
+        // Handle RubyGems deps on their own thread.
+        let gem_thread = s.spawn(|| {
+            debug!("Installing gems");
+            let specs = install_gems(config, gems, args)?;
+            debug!("Compiling gems");
+            compile_gems(config, specs, args)?;
+            Ok::<_, Error>(())
+        });
+        // You must join inside the scope
+        let e0 = git_thread.join().unwrap();
+        let e1 = gem_thread.join().unwrap();
+
+        e0.or(e1)
+    })?;
 
     Ok(())
 }
