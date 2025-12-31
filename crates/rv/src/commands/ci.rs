@@ -275,10 +275,10 @@ fn install_git_repo(
             .cache
             .shard(rv_cache::CacheBucket::Gemspec, "gemspecs")
             .into_path_buf();
-        let dep = repo
-            .specs
-            .iter()
-            .find(|s| path.to_string_lossy().contains(s.gem_version.name));
+        let dep = repo.specs.iter().find(|s| {
+            path.to_string_lossy()
+                .contains(&format!("{}.gemspec", s.gem_version.name))
+        });
         if let Some(dep) = dep {
             // check the cache for "gitsha-gemname.gemspec", if not:
             let gemname = dep.gem_version;
@@ -824,7 +824,9 @@ impl<'i> DownloadedRubygems<'i> {
             return Err(Error::NoDataTar);
         }
         let Some(found_gemspec) = found_gemspec else {
-            return Err(Error::NoMetadata);
+            return Err(Error::NoMetadata {
+                gem_name: nameversion,
+            });
         };
 
         Ok(found_gemspec)
