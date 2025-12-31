@@ -28,12 +28,12 @@ rv combines several functions that have previously been separate tools:
 - running packages (like `gemx` or `npx`)
 - installing tools (like `uv tool`, ruby and node lack this today)
 
-## commands
+## command table of contents
 
-### Ruby versions
+### [Ruby version management](#ruby)
 
 - [x] `rv ruby list`
-- [x] `rv ruby pin`
+- [x] [`rv ruby pin`](#pin)
 - [x] `rv ruby dir`
 - [x] `rv ruby run`
 - [x] `rv ruby install`
@@ -48,15 +48,18 @@ rv combines several functions that have previously been separate tools:
 ### Projects
 
 - [ ] `rv clean-install` / `rv ci`
+- [ ] [`rv init`](#init)
 - [ ] `rv install`
 - [ ] `rv run`
 - [ ] `rv list`
-- [ ] `rv init`
 - [ ] `rv upgrade`
 - [ ] `rv add`
 - [ ] `rv remove`
 - [ ] `rv tree`
 - [ ] `rv eol`
+- [ ] `rv info`
+- [ ] `rv search`
+- [ ] `rv new`
 
   #### Single-file projects (scripts)
 
@@ -97,11 +100,12 @@ rv combines several functions that have previously been separate tools:
 
 ### EOL interpreters (maybe)
 
-- [ ] MRI 2.x
-- [ ] MRI 1.8
-- [ ] MRI 1.6
-- [ ] MRI 1.4
-- [ ] MRI 1.2
+- [ ] MRI 2.7.8
+- [ ] MRI 2.5.9
+- [ ] MRI 2.3.8
+- [ ] MRI 1.9.3
+- [ ] MRI 1.8.7
+- [ ] MRI 1.2.6
 - [ ] MRI 1.0
 - [x] MRI 0.49
 
@@ -121,6 +125,12 @@ settings we know we want to support include:
 - ruby location(s)
 - ruby installation location
 - default ruby version
+
+Ruby version can be set by `.ruby-version` (shared with `rvm`, `rbenv`, `chruby`) or `.tool-versions` (shared with `asdf`, and `mise`).
+
+User-wide settings are located in `~/.config/rv/config.kdl` or `~/.rv.kdl`.
+
+Project settings are located in `gem.kdl` at the root of the project directory.
 
 ## projects
 
@@ -176,7 +186,7 @@ Tools are executables provided by a package, installed in a fully isolated envir
 
 This is roughly the equivalent of `cargo install` or `go install`, but taking care of the additional concerns raised by needing an interpreter. `uv tool install` handles all of this extremely well for Python, but Ruby has never had a tool that does this.
 
-## subcommands
+## commands
 
 Notes about the functionality and implementation of each command.
 
@@ -197,6 +207,10 @@ Pin with a version argument tries to set that version for the current project, v
 #### find
 
 The `ruby find` subcommand returns the full path to the currently chosen Ruby interpreter. If passed an argument, it interprets that argument as a version request and prints the full path to a Ruby interpreter that satisfies the version request.
+
+### init
+
+Set up an existing Ruby project to work with `rv`. Create a `gem.kdl` file, import supported settings from `.bundle/config`, import dependencies from `Gemfile`, import package configuration from `*.gemspec`, and print some instructions for anything else that needs to be done manually. After running `rv init`, all the other commands (like `ci`, `run`, `add`, etc) are functional.
 
 ### clean-install
 
@@ -224,22 +238,22 @@ Similar to npm and uv, `rv exec rails@latest new .` will check for the newest ve
 
 The `shell` subcommand handles integration with the user's shell, including automatic ruby version switching and completions for rv commands.
 
-#### init
+#### bash / zsh / fish / nushell / powershell
+
+Passing the name of a shell, as in `rv shell zsh`, prints out instructions for configuring that shell with rv's ruby version management and CLI completions.
+
+#### init (hidden)
 
 The `init` command prints out shellscript that sets up automatic version switching, and is intended to be used like `eval "$(rv shell init zsh)"` to set up zsh to then automatically run `eval "$(rv shell env)"` every time the user changes directories, which provides automatic version switching.
 
-#### env
+#### env (hidden)
 
 The `env` command prints out the env vars that need to be set for the currently-desired ruby version, like `RUBY_VERSION` and `PATH`. The output is expected to be `eval`ed by the shell to change the installation that will run as `ruby`.
 
-#### completions
+#### completions (hidden)
 
 The `completions` command prints out shell-specific output that can be `eval`ed to set up tab-completion for subcommands and arguments to commands.
 
 ### tool
 
 The tool subcommand manages binaries available on the PATH, ensuring that a usable Ruby is installed, the gem and all of its dependencies are installed, and a binary is created and put somewhere in the PATH. The binary needs to ignore the currently chosen ruby version, the current bundle environment, and anything else necessary to ensure that when it is invoked it will run completely independently.
-
-## open questions
-
-1. Should we build support for an `rbproject.kdl` or similar file to configure projects? It could potentially replace `Gemfile`, `.gemspec`, `.ruby-versions`, `.bundle/config`, `Rakefile`, `.rubocop.yaml`, and any other dependency, package, linter, or script configurations. It would be nice to end the reign of the Filefile, and it would provide a place for arbitrary machine-formatted data that tooling could use. It would also provide a location to configure future multi-project workspaces.

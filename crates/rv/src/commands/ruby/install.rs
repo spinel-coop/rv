@@ -77,7 +77,7 @@ async fn download_and_extract_remote_tarball(
         Err(Error::IncompleteVersion(requested.clone()))?;
     }
 
-    let url = ruby_url(&requested.to_string())?;
+    let url = ruby_url(requested)?;
     let tarball_path = tarball_path(config, &url);
 
     let new_dir = tarball_path.parent().unwrap();
@@ -115,8 +115,11 @@ fn valid_tarball_exists(path: &Utf8Path) -> bool {
     fs_err::metadata(path).is_ok_and(|m| m.is_file() && m.len() > 0)
 }
 
-fn ruby_url(version: &str) -> Result<String> {
-    let version = version.strip_prefix("ruby-").unwrap();
+fn ruby_url(ruby_request: &RubyRequest) -> Result<String> {
+    let version_str = ruby_request.to_string();
+    let version = version_str
+        .strip_prefix("ruby-")
+        .ok_or(Error::IncompleteVersion(ruby_request.to_owned()))?;
     let arch = match CURRENT_PLATFORM {
         "aarch64-apple-darwin" => "arm64_sonoma",
         "x86_64-apple-darwin" => "ventura",
@@ -128,7 +131,7 @@ fn ruby_url(version: &str) -> Result<String> {
     let download_base = std::env::var("RV_INSTALL_URL")
         .unwrap_or("https://github.com/spinel-coop/rv-ruby/releases/latest/download".to_owned());
 
-    Ok(format!("{}/ruby-{version}.{arch}.tar.gz", download_base))
+    Ok(format!("{download_base}/ruby-{version}.{arch}.tar.gz"))
 }
 
 fn tarball_path(config: &Config, url: impl AsRef<str>) -> Utf8PathBuf {

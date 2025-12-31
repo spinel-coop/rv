@@ -1,0 +1,2 @@
+source "https://gem.coop"
+gem "indirect", github: "indirect/indirect"
