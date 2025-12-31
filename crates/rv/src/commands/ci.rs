@@ -375,7 +375,7 @@ fn download_git_repos<'i>(
         lockfile
             .git
             .par_iter()
-            .map(|git_source| download_git_repo(&git_clone_dir, &git_source))
+            .map(|git_source| download_git_repo(&git_clone_dir, git_source))
             .collect::<Result<Vec<_>>>()
     })?;
     Ok(downloads)
@@ -427,7 +427,7 @@ fn download_git_repo<'i>(
         // It wasn't cached, so clone it.
         tracing::event!(tracing::Level::DEBUG, %git_clone_dir, %git_source.remote, %git_source.revision, "Cloning repo");
         let git_cloned = std::process::Command::new("git")
-            .current_dir(&git_clone_dir)
+            .current_dir(git_clone_dir)
             .args([
                 "clone",
                 "--quiet",
@@ -450,7 +450,7 @@ fn download_git_repo<'i>(
         remote: git_source.remote.to_string(),
         specs: git_source.specs.clone(),
         sha: git_source.revision.to_string(),
-        path: git_repo_dir.clone(),
+        path: git_repo_dir,
         submodules: git_source.submodules,
     })
 }
