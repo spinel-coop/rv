@@ -160,6 +160,9 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     let lockfile_contents = tokio::fs::read_to_string(&args.lockfile_path).await?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
 
+    let binstub_dir = args.install_path.join("bin");
+    tokio::fs::create_dir_all(&binstub_dir).await?;
+
     if lockfile.path.is_empty().not() {
         tracing::warn!("rv ci does not support path deps yet");
     }
@@ -469,11 +472,9 @@ async fn install_gems<'i>(
     downloaded: Vec<DownloadedRubygems<'i>>,
     args: &CiInnerArgs,
 ) -> Result<Vec<GemSpecification>> {
-    let binstub_dir = args.install_path.join("bin");
-    debug!("about to create {}", binstub_dir);
-    tokio::fs::create_dir_all(&binstub_dir).await?;
-    debug!("finished creating {}", binstub_dir);
     use rayon::prelude::*;
+
+    let binstub_dir = args.install_path.join("bin");
     let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
     let specs = pool.install(|| {
         downloaded
