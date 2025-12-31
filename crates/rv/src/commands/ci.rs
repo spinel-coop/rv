@@ -110,8 +110,8 @@ pub enum Error {
     InvalidPath(PathBuf),
     #[error("Checksum file was not valid YAML")]
     InvalidChecksum,
-    #[error("Gem archive did not include metadata.gz")]
-    NoMetadata,
+    #[error("Gem {gem_name} archive did not include metadata.gz")]
+    NoMetadata { gem_name: String },
     #[error("Gem archive did not include data.tar.gz")]
     NoDataTar,
     #[error("File {filename} did not match {algo} checksum in gem {gem_name}")]
