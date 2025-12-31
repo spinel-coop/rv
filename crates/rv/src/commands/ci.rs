@@ -432,7 +432,7 @@ async fn find_install_path(config: &Config, lockfile_dir: &Utf8Path) -> Result<U
         return Ok(Utf8PathBuf::from(&bundle_path));
     }
     let args = ["-rbundler", "-e", "puts Bundler.bundle_path"];
-    let bundle_path = crate::commands::ruby::run::run(
+    let bundle_path = match crate::commands::ruby::run::run(
         config,
         None,
         Default::default(),
@@ -440,8 +440,11 @@ async fn find_install_path(config: &Config, lockfile_dir: &Utf8Path) -> Result<U
         CaptureOutput::Both,
         Some(lockfile_dir),
     )
-    .await?
-    .stdout;
+    .await
+    {
+        Ok(output) => output.stdout,
+        Err(_) => Vec::from(".rv"),
+    };
 
     if bundle_path.is_empty() {
         return Err(Error::BadBundlePath);
