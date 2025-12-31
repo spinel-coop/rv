@@ -17,6 +17,7 @@ use rv_lockfile::datatypes::ChecksumAlgorithm;
 use rv_lockfile::datatypes::GemSection;
 use rv_lockfile::datatypes::GemVersion;
 use rv_lockfile::datatypes::GemfileDotLock;
+use rv_lockfile::datatypes::GitSection;
 use rv_lockfile::datatypes::Spec;
 use rv_ruby::request::RubyRequest;
 use sha2::Digest;
@@ -174,7 +175,7 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
         tracing::warn!("rv ci does not support path deps yet");
     }
 
-    let repos = download_git_repos(lockfile.clone(), &config.cache, args).await?;
+    let repos = download_git_repos(lockfile.clone(), &config.cache, args)?;
     install_git_repos(config, repos, args).await?;
 
     debug!("Downloading gems");
@@ -356,7 +357,7 @@ fn install_git_repo(
     Ok(())
 }
 
-async fn download_git_repos<'i>(
+fn download_git_repos<'i>(
     lockfile: GemfileDotLock<'i>,
     cache: &rv_cache::Cache,
     _args: &CiInnerArgs,
@@ -371,73 +372,82 @@ async fn download_git_repos<'i>(
     fs_err::create_dir_all(&git_clone_dir)?;
 
     for git_source in lockfile.git {
-        // This will be the subdir within `git_clone_dir` that the git cloned repos are written to.
-        let cache_key = rv_cache::cache_digest((git_source.remote, git_source.revision));
-        let git_repo_dir = git_clone_dir.clone().join(&cache_key);
+        downloads.push(download_git_repo(&git_clone_dir, &git_source)?);
+    }
+    Ok(downloads)
+}
 
-        if std::fs::exists(&git_repo_dir)? {
-            tracing::event!(tracing::Level::DEBUG, %git_repo_dir, %git_source.remote, %git_source.revision, "checking for revision");
-            let sha_check = std::process::Command::new("git")
+fn download_git_repo<'i>(
+    git_clone_dir: &Utf8Path,
+    git_source: &GitSection<'i>,
+) -> Result<DownloadedGitRepo<'i>> {
+    // This will be the subdir within `git_clone_dir` that the git cloned repos are written to.
+    let cache_key = rv_cache::cache_digest((git_source.remote, git_source.revision));
+    let git_repo_dir = git_clone_dir.join(&cache_key);
+
+    // Check if it's already in the cache.
+    if std::fs::exists(&git_repo_dir)? {
+        tracing::event!(tracing::Level::DEBUG, %git_repo_dir, %git_source.remote, %git_source.revision, "checking for revision");
+        let sha_check = std::process::Command::new("git")
+            .current_dir(&git_repo_dir)
+            .args([
+                "--no-lazy-fetch",
+                "cat-file",
+                "-e",
+                &format!("{}^{{commit}}", git_source.revision),
+            ])
+            .spawn()?
+            .wait()?;
+        if !sha_check.success() {
+            tracing::event!(tracing::Level::DEBUG, %git_repo_dir, %git_source.remote, %git_source.revision, "updating repo");
+            let git_fetch = std::process::Command::new("git")
                 .current_dir(&git_repo_dir)
                 .args([
-                    "--no-lazy-fetch",
-                    "cat-file",
-                    "-e",
-                    &format!("{}^{{commit}}", git_source.revision),
-                ])
-                .spawn()?
-                .wait()?;
-            if !sha_check.success() {
-                tracing::event!(tracing::Level::DEBUG, %git_repo_dir, %git_source.remote, %git_source.revision, "updating repo");
-                let git_fetch = std::process::Command::new("git")
-                    .current_dir(&git_repo_dir)
-                    .args([
-                        "fetch",
-                        "--quiet",
-                        "--force",
-                        "--tags",
-                        git_source.remote,
-                        "refs/heads/*:refs/heads/*",
-                    ])
-                    .spawn()?
-                    .wait()?;
-                if !git_fetch.success() {
-                    return Err(Error::Git {
-                        error: format!("git fetch had exit code {}", git_fetch),
-                    });
-                }
-            }
-        } else {
-            tracing::event!(tracing::Level::DEBUG, %git_clone_dir, %git_source.remote, %git_source.revision, "Cloning repo");
-            let git_cloned = std::process::Command::new("git")
-                .current_dir(&git_clone_dir)
-                .args([
-                    "clone",
+                    "fetch",
                     "--quiet",
-                    "--bare",
-                    "--no-hardlinks",
+                    "--force",
+                    "--tags",
                     git_source.remote,
-                    cache_key.as_ref(),
+                    "refs/heads/*:refs/heads/*",
                 ])
                 .spawn()?
                 .wait()?;
-            if !git_cloned.success() {
+            if !git_fetch.success() {
                 return Err(Error::Git {
-                    error: format!("git clone had exit code {}", git_cloned),
+                    error: format!("git fetch had exit code {}", git_fetch),
                 });
             }
         }
-
-        // Success! Save the paths of all the repos we just cloned.
-        downloads.push(DownloadedGitRepo {
-            remote: git_source.remote.to_string(),
-            specs: git_source.specs.clone(),
-            sha: git_source.revision.to_string(),
-            path: git_repo_dir.clone(),
-            submodules: git_source.submodules,
-        });
+    } else {
+        // It wasn't cached, so clone it.
+        tracing::event!(tracing::Level::DEBUG, %git_clone_dir, %git_source.remote, %git_source.revision, "Cloning repo");
+        let git_cloned = std::process::Command::new("git")
+            .current_dir(&git_clone_dir)
+            .args([
+                "clone",
+                "--quiet",
+                "--bare",
+                "--no-hardlinks",
+                git_source.remote,
+                cache_key.as_ref(),
+            ])
+            .spawn()?
+            .wait()?;
+        if !git_cloned.success() {
+            return Err(Error::Git {
+                error: format!("git clone had exit code {}", git_cloned),
+            });
+        }
     }
-    Ok(downloads)
+
+    // Success! Save the paths of all the repos we just cloned.
+    Ok(DownloadedGitRepo {
+        remote: git_source.remote.to_string(),
+        specs: git_source.specs.clone(),
+        sha: git_source.revision.to_string(),
+        path: git_repo_dir.clone(),
+        submodules: git_source.submodules,
+    })
 }
 
 fn find_lockfile_path(gemfile: Option<Utf8PathBuf>) -> Result<Utf8PathBuf> {
