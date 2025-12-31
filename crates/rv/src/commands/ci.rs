@@ -202,6 +202,7 @@ fn install_git_repo(
     config: &Config,
     args: &CiInnerArgs,
 ) -> Result<()> {
+    debug!("Installing git repo {:?}", repo);
     let repo_path = Utf8PathBuf::from(&repo.remote);
     let repo_name = repo_path.file_name().expect("repo has no filename?");
     let repo_name = repo_name.strip_suffix(".git").unwrap_or(repo_name);
@@ -487,7 +488,6 @@ async fn install_gems<'i>(
                     );
                 };
                 install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir)?;
-                debug!("Unpacked {gv}");
                 Ok(dep_gemspec)
             })
             .collect::<Result<Vec<GemSpecification>>>()
@@ -507,7 +507,6 @@ async fn compile_gems(
         specs.into_iter().par_bridge().map(|spec| {
             // 4. Handle compiling native extensions for gems with native extensions
             if !args.skip_compile_extensions && !spec.extensions.is_empty() {
-                debug!("compiling native extensions for {}", spec.full_name());
                 let compiled_ok = compile_gem(config, args, spec)?;
                 if !compiled_ok {
                     return Err(Error::CompileFailures);
@@ -914,8 +913,10 @@ fn compile_gem(config: &Config, args: &CiInnerArgs, spec: GemSpecification) -> R
     let mut ran_rake = false;
 
     if std::fs::exists(ext_dest.join("gem.build_complete"))? {
+        debug!("native extensions for {} already built", spec.full_name());
         return Ok(true);
     }
+    debug!("compiling native extensions for {}", spec.full_name());
 
     for extstr in spec.extensions.clone() {
         let extension = extstr.as_ref();
