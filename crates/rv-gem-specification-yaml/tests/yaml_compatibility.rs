@@ -487,3 +487,25 @@ fn test_yaml_with_aliased_dependencies() {
         }
     }
 }
+
+#[test]
+fn test_version_requirement_class() {
+    let yaml_content = load_fixture("version_requirement_class");
+    let result = parse(&yaml_content);
+    assert!(result.is_ok());
+    if let Ok(spec) = result {
+        assert_eq!(spec.name, "rubypants");
+    }
+}
+
+#[test]
+fn test_terminal_table_1_4_5_version_requirement_class() {
+    // terminal-table-1.4.5.gem uses Gem::Version::Requirement instead of Gem::Requirement
+    let yaml_content = std::fs::read_to_string("tests/fixtures/terminal-table-1.4.5.gemspec.yaml")
+        .expect("terminal-table-1.4.5 fixture should exist");
+    let result = parse(&yaml_content);
+    assert!(result.is_ok());
+    if let Ok(spec) = result {
+        assert_eq!(spec.name, "terminal-table");
+    }
+}
