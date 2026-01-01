@@ -94,8 +94,8 @@ pub enum Error {
     UnknownExtension { filename: String, gemname: String },
     #[error("No gemspec found for downloaded gem {0}")]
     MissingGemspec(String),
-    #[error("Some gems did not compile their extensions")]
-    CompileFailures,
+    #[error("Gem {gem} could not compile extensions")]
+    CompileFailures { gem: String },
     #[error(transparent)]
     Config(#[from] crate::config::Error),
     #[error(transparent)]
@@ -117,8 +117,8 @@ pub enum Error {
     BadBundlePath,
     #[error("Failed to unpack tarball path {0}")]
     InvalidPath(PathBuf),
-    #[error("Checksum file was not valid YAML")]
-    InvalidChecksum,
+    #[error("Checksum for {0} was not valid YAML")]
+    InvalidChecksum(String),
     #[error("Gem {gem_name} archive did not include metadata.gz")]
     NoMetadata { gem_name: String },
     #[error("Gem archive did not include data.tar.gz")]
@@ -176,13 +176,12 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     let binstub_dir = args.install_path.join("bin");
     tokio::fs::create_dir_all(&binstub_dir).await?;
 
-    if lockfile.path.is_empty().not() {
-        tracing::warn!("rv ci does not support path deps yet");
-    }
+    debug!("Installing path gems");
+    install_paths(config, &lockfile.path, args)?;
 
-    debug!("Downloading git deps");
+    debug!("Downloading git gems");
     let repos = download_git_repos(lockfile.clone(), &config.cache, args)?;
-    debug!("Installing git deps");
+    debug!("Installing git gems");
     install_git_repos(config, repos, args)?;
 
     debug!("Downloading gems");
@@ -191,6 +190,103 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     let specs = install_gems(config, gems, args)?;
     debug!("Compiling gems");
     compile_gems(config, specs, args)?;
+
+    Ok(())
+}
+
+fn install_paths<'i>(
+    config: &Config,
+    paths: &Vec<rv_lockfile::datatypes::PathSection<'i>>,
+    args: &CiInnerArgs,
+) -> Result<()> {
+    use rayon::prelude::*;
+    let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
+    pool.install(|| {
+        paths
+            .iter()
+            .par_bridge()
+            .map(|path| install_path(path, config, args))
+            .collect::<Result<Vec<_>>>()?;
+        Ok::<_, Error>(())
+    })?;
+    Ok(())
+}
+
+fn install_path(
+    path_section: &rv_lockfile::datatypes::PathSection,
+    config: &Config,
+    args: &CiInnerArgs,
+) -> Result<()> {
+    let cached_gemspecs_dir = config
+        .cache
+        .shard(rv_cache::CacheBucket::Gemspec, "gemspecs")
+        .into_path_buf();
+    fs_err::create_dir_all(&cached_gemspecs_dir)?;
+
+    let path_key = rv_cache::cache_digest(path_section.remote);
+    let path_dir = Utf8PathBuf::from(path_section.remote);
+
+    let pattern = path_dir.join("**/*.gemspec").to_string();
+    for path in glob(&pattern).expect("invalid glob pattern").flatten() {
+        debug!("found gemspec at {:?}", path);
+        // find the .gemspec file(s)
+        let cached_gemspecs_dir = config
+            .cache
+            .shard(rv_cache::CacheBucket::Gemspec, "gemspecs")
+            .into_path_buf();
+        let dep = path_section.specs.iter().find(|s| {
+            path.to_string_lossy()
+                .contains(&format!("{}.gemspec", s.gem_version.name))
+        });
+
+        if let Some(dep) = dep {
+            // check the cache for "gitsha-gemname.gemspec", if not:
+            let gemname = dep.gem_version;
+            let cache_key = format!("{path_key}-{gemname}.gemspec");
+            let cached_gemspec_path = cached_gemspecs_dir.join(&cache_key);
+            let cached = std::fs::exists(&cached_gemspec_path).is_ok_and(|exists| exists) && {
+                let gemspec_modified = std::fs::metadata(&path)?.modified()?;
+                let cache_modified = std::fs::metadata(&cached_gemspec_path)?.modified()?;
+                gemspec_modified < cache_modified
+            };
+            let yaml_contents = if cached {
+                std::fs::read_to_string(cached_gemspec_path)?
+            } else {
+                // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
+                let yaml_gemspec_vec = crate::commands::ruby::run::run_no_install(
+                    config,
+                    &args.ruby_request,
+                    &[
+                        "-e",
+                        &format!(
+                            "puts Gem::Specification.load(\"{}\").to_yaml",
+                            path.to_string_lossy() // TODO: how do I interpolate an os_str into a shell arg :(
+                        ),
+                    ],
+                    CaptureOutput::Both,
+                    Some(&path_dir),
+                    Vec::new(),
+                )?
+                .stdout;
+                let yaml_gemspec = String::from_utf8(yaml_gemspec_vec).unwrap(); // arghhhhhhh
+                // cache the YAML gemspec as "gitsha-gemname.gemspec"
+                debug!("writing YAML gemspec to {}", &cached_gemspec_path);
+                fs_err::write(&cached_gemspec_path, &yaml_gemspec)?;
+                yaml_gemspec
+            };
+            // parse the YAML gemspec to get the executable names
+            let dep_gemspec = match rv_gem_specification_yaml::parse(&yaml_contents) {
+                Ok(parsed) => parsed,
+                Err(e) => {
+                    eprintln!("Warning: specification of {gemname} was invalid: {e}");
+                    return Ok(());
+                }
+            };
+            // pass the executable names to generate binstubs
+            let binstub_dir = args.install_path.join("bin");
+            install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir)?;
+        }
+    }
 
     Ok(())
 }
@@ -564,9 +660,11 @@ fn compile_gems(config: &Config, specs: Vec<GemSpecification>, args: &CiInnerArg
         specs.into_iter().par_bridge().map(|spec| {
             debug!("Compiling gem extension {}-{}", spec.name, spec.version);
             if !spec.extensions.is_empty() {
-                let compiled_ok = compile_gem(config, args, spec, &args.extensions_dir)?;
+                let compiled_ok = compile_gem(config, args, &spec, &args.extensions_dir)?;
                 if !compiled_ok {
-                    return Err(Error::CompileFailures);
+                    return Err(Error::CompileFailures {
+                        gem: spec.full_name(),
+                    });
                 }
             }
             Ok(())
@@ -708,7 +806,8 @@ impl<'i> DownloadedRubygems<'i> {
                     let mut contents = GzDecoder::new(entry);
                     let mut str_contents = String::new();
                     let _ = contents.read_to_string(&mut str_contents)?;
-                    let cs = ArchiveChecksums::new(&str_contents).ok_or(Error::InvalidChecksum)?;
+                    let cs = ArchiveChecksums::new(&str_contents)
+                        .ok_or(Error::InvalidChecksum(self.spec.gem_version.to_string()))?;
 
                     // Should not happen in practice, because we break after finding the checksums.
                     // But may as well be defensive here.
@@ -877,7 +976,7 @@ static RAKE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)rakefile|mkrf_con
 fn compile_gem(
     config: &Config,
     args: &CiInnerArgs,
-    spec: GemSpecification,
+    spec: &GemSpecification,
     exts_dir: &Utf8PathBuf,
 ) -> Result<bool> {
     let mut compile_results = Vec::with_capacity(spec.extensions.len());

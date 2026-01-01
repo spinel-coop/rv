@@ -308,7 +308,11 @@ fn parse_requirement<'a>(
     anchors: &mut AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Requirement, ContextError> {
-    tagged_mapping_start("ruby/object:Gem::Requirement").parse_next(input)?;
+    alt([
+        tagged_mapping_start("ruby/object:Gem::Requirement"),
+        tagged_mapping_start("ruby/object:Gem::Version::Requirement"),
+    ])
+    .parse_next(input)?;
     let fields = parse_requirement_fields(anchors, input)?;
     mapping_end.parse_next(input)?;
     Ok(fields)
