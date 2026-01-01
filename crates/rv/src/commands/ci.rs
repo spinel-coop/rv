@@ -244,10 +244,12 @@ fn install_path(
             let gemname = dep.gem_version;
             let cache_key = format!("{path_key}-{gemname}.gemspec");
             let cached_gemspec_path = cached_gemspecs_dir.join(&cache_key);
-            let cached = std::fs::exists(&cached_gemspec_path).is_ok_and(|exists| exists);
-            let gemspec_modified = std::fs::metadata(&path)?.modified()?;
-            let cache_modified = std::fs::metadata(&cached_gemspec_path)?.modified()?;
-            let yaml_contents = if cached && gemspec_modified < cache_modified {
+            let cached = std::fs::exists(&cached_gemspec_path).is_ok_and(|exists| exists) && {
+                let gemspec_modified = std::fs::metadata(&path)?.modified()?;
+                let cache_modified = std::fs::metadata(&cached_gemspec_path)?.modified()?;
+                gemspec_modified < cache_modified
+            };
+            let yaml_contents = if cached {
                 std::fs::read_to_string(cached_gemspec_path)?
             } else {
                 // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
