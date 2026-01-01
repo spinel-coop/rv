@@ -223,7 +223,7 @@ fn install_path(
         .into_path_buf();
     fs_err::create_dir_all(&cached_gemspecs_dir)?;
 
-    let path_key = rv_cache::cache_digest(&path_section.remote);
+    let path_key = rv_cache::cache_digest(path_section.remote);
     let path_dir = Utf8PathBuf::from(path_section.remote);
 
     let pattern = path_dir.join("**/*.gemspec").to_string();
