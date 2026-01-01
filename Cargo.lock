@@ -2039,6 +2039,7 @@ version = "0.3.1"
 dependencies = [
  "anstream",
  "assert_fs",
+ "base64",
  "bytes",
  "bytesize",
  "camino",
