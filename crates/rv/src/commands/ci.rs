@@ -94,8 +94,8 @@ pub enum Error {
     UnknownExtension { filename: String, gemname: String },
     #[error("No gemspec found for downloaded gem {0}")]
     MissingGemspec(String),
-    #[error("Some gems did not compile their extensions")]
-    CompileFailures,
+    #[error("Gem {gem} could not compile extensions")]
+    CompileFailures { gem: String },
     #[error(transparent)]
     Config(#[from] crate::config::Error),
     #[error(transparent)]
@@ -660,9 +660,11 @@ fn compile_gems(config: &Config, specs: Vec<GemSpecification>, args: &CiInnerArg
         specs.into_iter().par_bridge().map(|spec| {
             debug!("Compiling gem extension {}-{}", spec.name, spec.version);
             if !spec.extensions.is_empty() {
-                let compiled_ok = compile_gem(config, args, spec, &args.extensions_dir)?;
+                let compiled_ok = compile_gem(config, args, &spec, &args.extensions_dir)?;
                 if !compiled_ok {
-                    return Err(Error::CompileFailures);
+                    return Err(Error::CompileFailures {
+                        gem: spec.full_name(),
+                    });
                 }
             }
             Ok(())
@@ -973,7 +975,7 @@ static RAKE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)rakefile|mkrf_con
 fn compile_gem(
     config: &Config,
     args: &CiInnerArgs,
-    spec: GemSpecification,
+    spec: &GemSpecification,
     exts_dir: &Utf8PathBuf,
 ) -> Result<bool> {
     let mut compile_results = Vec::with_capacity(spec.extensions.len());
