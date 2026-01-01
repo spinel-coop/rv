@@ -692,6 +692,14 @@ struct ChecksumFiles {
 }
 
 fn hex_key(yaml: &saphyr::Yaml<'_>) -> Option<Vec<u8>> {
+    if let Some(tag) = yaml.get_tag()
+        && tag.handle == "!"
+        && tag.suffix == "binary"
+        && let Some(tagged) = yaml.get_tagged_node()
+        && let Some(s) = tagged.as_str()
+    {
+        return b64_then_hex(s);
+    }
     hex::decode(yaml.as_str()?).ok()
 }
 
@@ -1824,6 +1832,38 @@ end"#;
         );
         assert_eq!(
             "198da9b8ea9017ffbc024d045b388e4745d334853da24f3d66fe791a7626bee09ab18914a4abd11341e2272a81e547cf04ec3dccc90dbb42ac3db3833ac3e67d",
+            &hex::encode(sha512.data_tar_gz)
+        );
+    }
+
+    #[test]
+    fn binary_checksums_formatador() {
+        // Taken from formatador 0.2.5
+        let test_file = r#"---
+!binary "U0hBMQ==":
+  metadata.gz: !binary |-
+    ZmFhYzcyNjZlYTkzM2RmZTBhYmY1OWJmN2ViOWUyMzYyNmIyYzdiMw==
+  data.tar.gz: !binary |-
+    MGRkYmM5ZGM0OTliYjI4NjEwY2M3NDZmYWI2NWYwOTZjM2ZkOWExMw==
+SHA512:
+  metadata.gz: !binary |-
+    Y2VhYjM0NzZkYmExYmQ5OTMwZjI5ZmZhYTllNTBmNzdlMDEzNDk4NWVmZTVj
+    MmU0ZjEwZTVhOTdlZWU3ZGYyOTE5YTc3YTA4Y2MxNDM3MDQyYmY0ZjMzNmY3
+    YTIxNDY1MDMwM2ZiOGI1MzQ3ODJiYWRlZmNiMzIyOWFmNzBiZDY=
+  data.tar.gz: !binary |-
+    YzcyNzFhYTk2ODI2YjUzZTlhZTAxNWI0MTYzZmJlNGY2MjU2Y2M5MTAxY2Fl
+    OTViZGRlMWVlODgwMWNmOWExNTZlYWY5YzFhNjc4Yzg3Y2IxZDQ5YjJjN2Iw
+    OWUyYjI5ZjAyNDg3Mzk0YmVlMDA5MmU0ZDU3ZmMxOTUyYzRjNjI="#;
+        let checksums = ArchiveChecksums::new(test_file).expect("should have found checksums");
+        let sha512 = checksums
+            .sha512
+            .expect("this file does have a sha512 checksum");
+        assert_eq!(
+            "ceab3476dba1bd9930f29ffaa9e50f77e0134985efe5c2e4f10e5a97eee7df2919a77a08cc1437042bf4f336f7a214650303fb8b534782badefcb3229af70bd6",
+            &hex::encode(sha512.metadata_gz)
+        );
+        assert_eq!(
+            "c7271aa96826b53e9ae015b4163fbe4f6256cc9101cae95bdde1ee8801cf9a156eaf9c1a678c87cb1d49b2c7b09e2b29f02487394bee0092e4d57fc1952c4c62",
             &hex::encode(sha512.data_tar_gz)
         );
     }
