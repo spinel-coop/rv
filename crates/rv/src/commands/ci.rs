@@ -117,8 +117,8 @@ pub enum Error {
     BadBundlePath,
     #[error("Failed to unpack tarball path {0}")]
     InvalidPath(PathBuf),
-    #[error("Checksum file was not valid YAML")]
-    InvalidChecksum,
+    #[error("Checksum for {0} was not valid YAML")]
+    InvalidChecksum(String),
     #[error("Gem {gem_name} archive did not include metadata.gz")]
     NoMetadata { gem_name: String },
     #[error("Gem archive did not include data.tar.gz")]
@@ -806,7 +806,8 @@ impl<'i> DownloadedRubygems<'i> {
                     let mut contents = GzDecoder::new(entry);
                     let mut str_contents = String::new();
                     let _ = contents.read_to_string(&mut str_contents)?;
-                    let cs = ArchiveChecksums::new(&str_contents).ok_or(Error::InvalidChecksum)?;
+                    let cs = ArchiveChecksums::new(&str_contents)
+                        .ok_or(Error::InvalidChecksum(self.spec.gem_version.to_string()))?;
 
                     // Should not happen in practice, because we break after finding the checksums.
                     // But may as well be defensive here.
