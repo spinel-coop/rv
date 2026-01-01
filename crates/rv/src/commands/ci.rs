@@ -89,6 +89,8 @@ pub enum Error {
     Infallible(#[from] std::convert::Infallible),
     #[error("Cannot build unknown native extension {filename} from gem {gemname}")]
     UnknownExtension { filename: String, gemname: String },
+    #[error("No gemspec found for downloaded gem {0}")]
+    MissingGemspec(String),
     #[error("Some gems did not compile their extensions")]
     CompileFailures,
     #[error(transparent)]
@@ -525,26 +527,27 @@ fn install_gems<'i>(
         downloaded
             .into_iter()
             .par_bridge()
-            .map(|download| {
-                let gv = download.spec.gem_version;
-                // Actually unpack the tarball here.
-                let dep_gemspec_res = download.unpack_tarball(args.install_path.clone(), args)?;
-                debug!("Unpacked tarball {gv}");
-                let Some(dep_gemspec) = dep_gemspec_res else {
-                    panic!(
-                        "Warning: No gemspec found for downloaded gem {}",
-                        gv.yellow()
-                    );
-                };
-                debug!("Installing binstubs for {gv}");
-                install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir)?;
-                debug!("Installed {gv}");
-                Ok(dep_gemspec)
-            })
+            .map(|download| install_single_gem(download, args, &binstub_dir))
             .collect::<Result<Vec<GemSpecification>>>()
     })?;
 
     Ok(specs)
+}
+
+fn install_single_gem<'i>(
+    download: DownloadedRubygems<'i>,
+    args: &CiInnerArgs,
+    binstub_dir: &Utf8Path,
+) -> Result<GemSpecification> {
+    let gv = download.spec.gem_version;
+    // Actually unpack the tarball here.
+    let dep_gemspec_res = download.unpack_tarball(args.install_path.clone(), args)?;
+    debug!("Unpacked tarball {gv}");
+    let dep_gemspec = dep_gemspec_res.ok_or(Error::MissingGemspec(gv.to_string()))?;
+    debug!("Installing binstubs for {gv}");
+    install_binstub(&dep_gemspec.name, &dep_gemspec.executables, binstub_dir)?;
+    debug!("Installed {gv}");
+    Ok(dep_gemspec)
 }
 
 fn compile_gems(config: &Config, specs: Vec<GemSpecification>, args: &CiInnerArgs) -> Result<()> {
