@@ -33,7 +33,6 @@ use crate::config::Config;
 use std::collections::HashMap;
 use std::env::current_dir;
 use std::io;
-use std::io::Cursor;
 use std::io::Read;
 use std::io::Write;
 use std::ops::Not;
@@ -789,7 +788,7 @@ impl<'i> DownloadedRubygems<'i> {
         debug!("Unpacking {full_name}");
 
         // Then unpack the tarball into it.
-        let contents = Cursor::new(self.contents);
+        let contents = &self.contents[..];
 
         // Now that we've handled checksums (perhaps), we can iterate through the archive
         // and unpack the entries we care about. Specifically the metadata and the data itself.
@@ -1236,7 +1235,7 @@ where
         }
     };
     let ruby_contents = convert_gemspec_yaml_to_ruby(yaml_contents);
-    std::io::copy(&mut Cursor::new(ruby_contents), &mut dst)?;
+    std::io::copy(&mut ruby_contents.as_bytes(), &mut dst)?;
 
     let h = unzipper.into_inner();
     Ok(UnpackedMetdata {
