@@ -46,21 +46,21 @@ impl TryFrom<&str> for ComparisonOperator {
 
     fn try_from(str: &str) -> Result<Self, Self::Error> {
         match &str[0..2] {
-            ">=" => Ok(ComparisonOperator::GreaterEqual),
-            "<=" => Ok(ComparisonOperator::LessEqual),
-            "!=" => Ok(ComparisonOperator::NotEqual),
-            "~>" => Ok(ComparisonOperator::Pessimistic),
+            ">=" => Ok(Self::GreaterEqual),
+            "<=" => Ok(Self::LessEqual),
+            "!=" => Ok(Self::NotEqual),
+            "~>" => Ok(Self::Pessimistic),
             _ => match &str[0..1] {
-                ">" => Ok(ComparisonOperator::Greater),
-                "<" => Ok(ComparisonOperator::Less),
-                "=" => Ok(ComparisonOperator::Equal),
+                ">" => Ok(Self::Greater),
+                "<" => Ok(Self::Less),
+                "=" => Ok(Self::Equal),
                 "!" => {
-                    // Handle invalid operators like "! 1"
-                    Err(RequirementError::InvalidOperator {
-                        operator: str.chars().take(2).collect(),
+                  // Handle invalid operators like "! 1"
+                    Err(Self::Error::InvalidOperator {
+                        operator: str[0..1].to_string(),
                     })
-                }
-                _ => Ok(ComparisonOperator::Equal),
+                },
+                _ => Ok(Self::Equal)
             },
         }
     }
@@ -131,7 +131,8 @@ impl Requirement {
 
         requirement
             .strip_prefix(&operator.to_string())
-            .map_or_else(|| Ok(None), |s| Ok(Some((operator, s.trim()))))
+            .map(|s| Ok((operator, s.trim())))
+            .transpose()
     }
 
     pub fn satisfied_by(&self, version: &Version) -> bool {
@@ -432,6 +433,7 @@ mod tests {
     fn test_invalid_requirements() {
         assert!(Requirement::parse("").is_err());
         assert!(Requirement::parse("! 1").is_err());
+        assert!(Requirement::parse("& 1").is_err());
         assert!(Requirement::parse("= junk").is_err());
         assert!(Requirement::parse("1..2").is_err());
     }
