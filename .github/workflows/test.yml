@@ -8,7 +8,10 @@ on:
   merge_group:
     types: [checks_requested]
 permissions: read-all
-name: Test
+
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   run-tests:
     name: Run tests

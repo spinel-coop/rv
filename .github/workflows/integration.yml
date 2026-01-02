@@ -8,7 +8,10 @@ on:
   merge_group:
     types: [checks_requested]
 permissions: read-all
-name: Integration
+
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   alpine-linux:
     name: Run on Alpine Linux
