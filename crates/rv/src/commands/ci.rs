@@ -80,6 +80,7 @@ struct CiInnerArgs {
     pub max_concurrent_installs: usize,
     pub validate_checksums: bool,
     pub lockfile_path: Utf8PathBuf,
+    pub lockfile_dir: Utf8PathBuf,
     pub install_path: Utf8PathBuf,
     pub extensions_dir: Utf8PathBuf,
     pub ruby_request: RubyRequest,
@@ -161,6 +162,7 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         max_concurrent_installs: args.max_concurrent_installs,
         validate_checksums: args.validate_checksums,
         lockfile_path,
+        lockfile_dir,
         install_path,
         extensions_dir,
         ruby_request,
@@ -169,10 +171,6 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
 }
 
 async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
-    let lockfile_dir = args
-        .lockfile_path
-        .parent()
-        .expect("lockfile is not in directory???");
     let lockfile_contents = tokio::fs::read_to_string(&args.lockfile_path).await?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
 
@@ -180,7 +178,7 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     tokio::fs::create_dir_all(&binstub_dir).await?;
 
     debug!("Installing path gems");
-    install_paths(config, lockfile_dir, &lockfile.path, args)?;
+    install_paths(config, &lockfile.path, args)?;
 
     debug!("Downloading git gems");
     let repos = download_git_repos(lockfile.clone(), &config.cache, args)?;
@@ -199,7 +197,6 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
 
 fn install_paths<'i>(
     config: &Config,
-    lockfile_dir: &Utf8Path,
     paths: &Vec<rv_lockfile::datatypes::PathSection<'i>>,
     args: &CiInnerArgs,
 ) -> Result<()> {
@@ -209,7 +206,7 @@ fn install_paths<'i>(
         paths
             .iter()
             .par_bridge()
-            .map(|path| install_path(path, lockfile_dir, config, args))
+            .map(|path| install_path(path, &args.lockfile_dir, config, args))
             .collect::<Result<Vec<_>>>()?;
         Ok::<_, Error>(())
     })?;
