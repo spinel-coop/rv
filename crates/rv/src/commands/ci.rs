@@ -184,9 +184,9 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     install_git_repos(config, repos, args)?;
 
     debug!("Downloading gems");
-    let gems = download_gems(lockfile.clone(), &config.cache, args).await?;
+    let downloaded = download_gems(lockfile.clone(), &config.cache, args).await?;
     debug!("Installing gems");
-    let specs = install_gems(config, gems, args)?;
+    let specs = install_gems(downloaded, args)?;
     debug!("Compiling gems");
     compile_gems(config, specs, args)?;
 
@@ -627,7 +627,6 @@ pub fn create_rayon_pool(
 }
 
 fn install_gems<'i>(
-    _config: &Config,
     downloaded: Vec<DownloadedRubygems<'i>>,
     args: &CiInnerArgs,
 ) -> Result<Vec<GemSpecification>> {
