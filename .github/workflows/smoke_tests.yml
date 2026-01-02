@@ -1,0 +1,40 @@
+name: Smoke Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  merge_group:
+    types: [checks_requested]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  gitlab:
+    name: Confirm GitLab clean-install
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build rv
+        run: cargo build --release --locked --bin rv
+
+      - name: Clone GitLab
+        run: git clone --depth 1 https://gitlab.com/gitlab-org/gitlab.git gitlab
+
+      - name: Install GitLab's .ruby-version
+        run: ./target/release/rv ruby install
+        working-directory: gitlab
+
+      - name: Run rv ci
+        run: ../target/release/rv ci
+        working-directory: gitlab
