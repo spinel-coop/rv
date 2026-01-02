@@ -142,7 +142,7 @@ fn ruby_from_asset(asset: &Asset) -> Result<Ruby> {
 }
 
 /// Fetches available rubies
-pub(crate) async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Release> {
+async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Release> {
     let cache_entry = cache.entry(
         rv_cache::CacheBucket::Ruby,
         "releases",
