@@ -1207,10 +1207,10 @@ where
 
         // Not sure if this is strictly necessary, or if we can know the
         // intermediate directories ahead of time.
-        if let Some(dst_parent) = dst.parent() {
-            if created_dirs.insert(dst_parent.to_path_buf()) {
-                fs_err::create_dir_all(dst_parent)?;
-            }
+        if let Some(dst_parent) = dst.parent()
+            && created_dirs.insert(dst_parent.to_path_buf())
+        {
+            fs_err::create_dir_all(dst_parent)?;
         }
         entry.unpack(&dst)?;
     }
