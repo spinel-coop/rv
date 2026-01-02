@@ -290,7 +290,10 @@ fn install_path(
                     parsed
                 }
                 Err(e) => {
-                    eprintln!("Warning: specification of {gemname} was invalid: {e}");
+                    eprintln!(
+                        "Warning: path gem specification at {} was invalid: {e}",
+                        path.to_string_lossy()
+                    );
                     return Ok(());
                 }
             };
@@ -459,7 +462,10 @@ fn install_git_repo(
             let dep_gemspec = match rv_gem_specification_yaml::parse(&yaml_contents) {
                 Ok(parsed) => parsed,
                 Err(e) => {
-                    eprintln!("Warning: specification of {gemname} was invalid: {e}");
+                    eprintln!(
+                        "Warning: git gem specification at {} was invalid: {e}",
+                        path.to_string_lossy()
+                    );
                     return Ok(());
                 }
             };
@@ -1243,7 +1249,7 @@ where
     let parsed = match rv_gem_specification_yaml::parse(&yaml_contents) {
         Ok(parsed) => Some(parsed),
         Err(e) => {
-            eprintln!("Warning: specification of {nameversion} was invalid: {e}");
+            eprintln!("Warning: gem specification at {dst_path} was invalid: {e}");
             None
         }
     };
