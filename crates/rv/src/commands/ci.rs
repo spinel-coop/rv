@@ -667,24 +667,38 @@ fn compile_gems(config: &Config, specs: Vec<GemSpecification>, args: &CiInnerArg
         return Ok(());
     }
 
+    use dep_graph::{DepGraph, Node};
     use rayon::prelude::*;
-    let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
-    pool.install(|| {
-        specs.into_iter().par_bridge().map(|spec| {
-            debug!("Compiling gem extension {}-{}", spec.name, spec.version);
-            if !spec.extensions.is_empty() {
-                let compiled_ok = compile_gem(config, args, &spec, &args.extensions_dir)?;
-                if !compiled_ok {
-                    return Err(Error::CompileFailures {
-                        gem: spec.full_name(),
-                    });
+
+    let mut nodes = HashMap::new();
+    for spec in &specs {
+        if !spec.extensions.is_empty() {
+            nodes.insert(spec.name.clone(), Node::new(spec.name.clone()));
+        }
+    }
+
+    for spec in &specs {
+        if let Some(gem) = nodes.get_mut(&spec.name) {
+            for dep in &spec.dependencies {
+                if dep.is_runtime() {
+                    gem.add_dep(dep.name.clone());
                 }
             }
-            Ok(())
-        })
+        }
+    }
+
+    let deps: Vec<Node<String>> = nodes.values().cloned().collect();
+    let graph = DepGraph::new(deps.as_slice());
+    graph.into_par_iter().try_for_each(|node| {
+        let spec = specs.iter().find(|s| s.name == *node).unwrap();
+        let compiled_ok = compile_gem(config, args, spec, &args.extensions_dir)?;
+        if !compiled_ok {
+            return Err(Error::CompileFailures {
+                gem: spec.full_name(),
+            });
+        }
+        Ok(())
     })
-    .collect::<Result<()>>()?;
-    Ok(())
 }
 
 fn install_binstub(dep_name: &str, executables: &[String], binstub_dir: &Utf8Path) -> Result<()> {
