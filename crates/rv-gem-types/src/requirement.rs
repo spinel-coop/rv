@@ -1,5 +1,5 @@
 use crate::Version;
-use std::str::FromStr;
+use std::str::{FromStr, pattern::Pattern};
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum RequirementError {
@@ -45,22 +45,28 @@ impl TryFrom<&str> for ComparisonOperator {
     type Error = RequirementError;
 
     fn try_from(str: &str) -> Result<Self, Self::Error> {
+        let first = &str[0..1];
+
         match &str[0..2] {
             ">=" => Ok(Self::GreaterEqual),
             "<=" => Ok(Self::LessEqual),
             "!=" => Ok(Self::NotEqual),
             "~>" => Ok(Self::Pessimistic),
-            _ => match &str[0..1] {
+            _ => match first {
                 ">" => Ok(Self::Greater),
                 "<" => Ok(Self::Less),
                 "=" => Ok(Self::Equal),
-                "!" => {
-                  // Handle invalid operators like "! 1"
-                    Err(Self::Error::InvalidOperator {
-                        operator: str[0..1].to_string(),
-                    })
-                },
-                _ => Ok(Self::Equal)
+                _ => {
+                    if first.starts_with(&("1".."9")) {
+                        // Default to "=" if no operator specified
+                        Ok(Self::Equal)
+                    } else {
+                        // Handle invalid operators like "! 1"
+                        Err(Self::Error::InvalidOperator {
+                            operator: first.to_string(),
+                        })
+                    }
+                }
             },
         }
     }
@@ -71,11 +77,7 @@ impl Requirement {
         let mut constraints = Vec::new();
 
         for req in requirements {
-            let req_str = req.as_ref().trim();
-            if req_str.is_empty() {
-                continue;
-            }
-            constraints.push(Self::parse_requirement(req_str)?);
+            constraints.push(Self::parse_requirement(req.as_ref())?);
         }
 
         // Default to ">= 0" if no constraints
@@ -93,46 +95,27 @@ impl Requirement {
     }
 
     pub fn parse(requirement: &str) -> Result<Self, RequirementError> {
-        let requirement = requirement.trim();
-        if requirement.is_empty() {
-            return Err(RequirementError::Empty);
-        }
         Self::new(vec![requirement])
     }
 
     fn parse_requirement(requirement: &str) -> Result<VersionConstraint, RequirementError> {
         let requirement = requirement.trim();
-
         if requirement.is_empty() {
             return Err(RequirementError::Empty);
         }
 
-        // Try to match operator and version
-        let (operator, version_str) =
-            if let Some(captures) = Self::extract_operator_and_version(requirement)? {
-                captures
-            } else {
-                // Default to "=" if no operator specified
-                (ComparisonOperator::Equal, requirement)
-            };
+        let operator = ComparisonOperator::try_from(requirement)?;
+
+        let version_str = requirement
+            .strip_prefix(&operator.to_string())
+            .map(|s| s.trim())
+            .unwrap_or(requirement);
 
         let version = Version::new(version_str).map_err(|_| RequirementError::InvalidVersion {
             version: version_str.to_string(),
         })?;
 
         Ok(VersionConstraint { operator, version })
-    }
-
-    fn extract_operator_and_version(
-        requirement: &str,
-    ) -> Result<Option<(ComparisonOperator, &str)>, RequirementError> {
-        let requirement = requirement.trim();
-        let operator = ComparisonOperator::try_from(requirement)?;
-
-        requirement
-            .strip_prefix(&operator.to_string())
-            .map(|s| Ok((operator, s.trim())))
-            .transpose()
     }
 
     pub fn satisfied_by(&self, version: &Version) -> bool {
