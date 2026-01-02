@@ -1199,6 +1199,7 @@ where
     let data_dir: PathBuf = bundle_path.join("gems").join(nameversion).into();
     fs_err::create_dir_all(&data_dir)?;
     let mut gem_data_archive = tar::Archive::new(GzDecoder::new(data_tar_gz));
+    let mut created_dirs = std::collections::HashSet::new();
     for e in gem_data_archive.entries()? {
         let mut entry = e?;
         let entry_path = entry.path()?;
@@ -1207,7 +1208,9 @@ where
         // Not sure if this is strictly necessary, or if we can know the
         // intermediate directories ahead of time.
         if let Some(dst_parent) = dst.parent() {
-            fs_err::create_dir_all(dst_parent)?;
+            if created_dirs.insert(dst_parent.to_path_buf()) {
+                fs_err::create_dir_all(dst_parent)?;
+            }
         }
         entry.unpack(&dst)?;
     }
