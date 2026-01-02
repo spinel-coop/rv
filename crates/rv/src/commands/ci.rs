@@ -80,6 +80,7 @@ struct CiInnerArgs {
     pub max_concurrent_installs: usize,
     pub validate_checksums: bool,
     pub lockfile_path: Utf8PathBuf,
+    pub lockfile_dir: Utf8PathBuf,
     pub install_path: Utf8PathBuf,
     pub extensions_dir: Utf8PathBuf,
     pub ruby_request: RubyRequest,
@@ -161,6 +162,7 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         max_concurrent_installs: args.max_concurrent_installs,
         validate_checksums: args.validate_checksums,
         lockfile_path,
+        lockfile_dir,
         install_path,
         extensions_dir,
         ruby_request,
@@ -204,7 +206,7 @@ fn install_paths<'i>(
         paths
             .iter()
             .par_bridge()
-            .map(|path| install_path(path, config, args))
+            .map(|path| install_path(path, &args.lockfile_dir, config, args))
             .collect::<Result<Vec<_>>>()?;
         Ok::<_, Error>(())
     })?;
@@ -213,6 +215,7 @@ fn install_paths<'i>(
 
 fn install_path(
     path_section: &rv_lockfile::datatypes::PathSection,
+    lockfile_dir: &Utf8Path,
     config: &Config,
     args: &CiInnerArgs,
 ) -> Result<()> {
@@ -239,18 +242,24 @@ fn install_path(
         });
 
         if let Some(dep) = dep {
-            // check the cache for "gitsha-gemname.gemspec", if not:
             let gemname = dep.gem_version;
             let cache_key = format!("{path_key}-{gemname}.gemspec");
             let cached_gemspec_path = cached_gemspecs_dir.join(&cache_key);
+
+            // check the cache for "gitsha-gemname.gemspec", if not:
             let cached = std::fs::exists(&cached_gemspec_path).is_ok_and(|exists| exists) && {
                 let gemspec_modified = std::fs::metadata(&path)?.modified()?;
                 let cache_modified = std::fs::metadata(&cached_gemspec_path)?.modified()?;
                 gemspec_modified < cache_modified
             };
             let yaml_contents = if cached {
-                std::fs::read_to_string(cached_gemspec_path)?
+                std::fs::read_to_string(&cached_gemspec_path)?
             } else {
+                let gemspec_path =
+                    Utf8PathBuf::try_from(path.clone()).expect("gemspec path not valid UTF-8");
+                if !std::fs::exists(&gemspec_path)? {
+                    return Err(Error::InvalidPath(gemspec_path.into()));
+                }
                 // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
                 let yaml_gemspec_vec = crate::commands::ruby::run::run_no_install(
                     config,
@@ -259,25 +268,29 @@ fn install_path(
                         "-e",
                         &format!(
                             "puts Gem::Specification.load(\"{}\").to_yaml",
-                            path.to_string_lossy() // TODO: how do I interpolate an os_str into a shell arg :(
+                            lockfile_dir.join(gemspec_path),
                         ),
                     ],
                     CaptureOutput::Both,
-                    Some(&path_dir),
+                    Some(lockfile_dir),
                     Vec::new(),
                 )?
                 .stdout;
-                let yaml_gemspec = String::from_utf8(yaml_gemspec_vec).unwrap(); // arghhhhhhh
-                // cache the YAML gemspec as "gitsha-gemname.gemspec"
-                debug!("writing YAML gemspec to {}", &cached_gemspec_path);
-                fs_err::write(&cached_gemspec_path, &yaml_gemspec)?;
-                yaml_gemspec
+                String::from_utf8(yaml_gemspec_vec).unwrap() // arghhhhhhhhhh
             };
             // parse the YAML gemspec to get the executable names
             let dep_gemspec = match rv_gem_specification_yaml::parse(&yaml_contents) {
-                Ok(parsed) => parsed,
+                Ok(parsed) => {
+                    // cache the YAML gemspec as "gitsha-gemname.gemspec"
+                    debug!("writing YAML gemspec to {}", &cached_gemspec_path);
+                    fs_err::write(&cached_gemspec_path, &yaml_contents)?;
+                    parsed
+                }
                 Err(e) => {
-                    eprintln!("Warning: specification of {gemname} was invalid: {e}");
+                    eprintln!(
+                        "Warning: path gem specification at {} was invalid: {e}",
+                        path.to_string_lossy()
+                    );
                     return Ok(());
                 }
             };
@@ -446,7 +459,10 @@ fn install_git_repo(
             let dep_gemspec = match rv_gem_specification_yaml::parse(&yaml_contents) {
                 Ok(parsed) => parsed,
                 Err(e) => {
-                    eprintln!("Warning: specification of {gemname} was invalid: {e}");
+                    eprintln!(
+                        "Warning: git gem specification at {} was invalid: {e}",
+                        path.to_string_lossy()
+                    );
                     return Ok(());
                 }
             };
@@ -1230,7 +1246,7 @@ where
     let parsed = match rv_gem_specification_yaml::parse(&yaml_contents) {
         Ok(parsed) => Some(parsed),
         Err(e) => {
-            eprintln!("Warning: specification of {nameversion} was invalid: {e}");
+            eprintln!("Warning: gem specification at {dst_path} was invalid: {e}");
             None
         }
     };
