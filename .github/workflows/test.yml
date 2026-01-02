@@ -2,13 +2,13 @@ name: Test
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    branches: [main]
   pull_request:
     branches: [main]
   merge_group:
     types: [checks_requested]
+  workflow_dispatch:
+
 permissions: read-all
 
 env:
@@ -28,7 +28,9 @@ jobs:
           - macos-15-intel # x86
 
     steps:
-      - uses: actions/checkout@v6
+      - name: Check out repo
+        uses: actions/checkout@v6
+
       - name: Install additional shells
         if: startsWith(matrix.runs-on, 'ubuntu')
         run: sudo apt-get update && sudo apt-get install -y zsh fish
@@ -45,7 +47,9 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository == 'spinel-coop/rv' }}
     steps:
-      - uses: actions/checkout@v6
+      - name: Check out repo
+        uses: actions/checkout@v6
+
       - name: Install additional shells
         run: sudo apt-get update && sudo apt-get install -y zsh fish
       - name: Install Rust

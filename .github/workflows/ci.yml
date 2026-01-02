@@ -1,12 +1,14 @@
+# CI = Continuous Integration, not to be confused with "rv ci" (clean-install)
 name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   merge_group:
     types: [checks_requested]
+  workflow_dispatch:
 
 permissions: read-all
 
@@ -24,35 +26,38 @@ jobs:
 
     # Prevent sudden announcement of a new advisory from failing ci:
     continue-on-error: ${{ matrix.checks == 'advisories' }}
-
     steps:
-    - uses: actions/checkout@v6
-    - uses: EmbarkStudios/cargo-deny-action@v2
-      with:
-        command: check ${{ matrix.checks }}
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Install cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check ${{ matrix.checks }}
 
   lint-and-fmt:
     name: Lint and format
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+      - name: Check out repo
+        uses: actions/checkout@v6
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        components: rustfmt, clippy
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
-    - name: Cache dependencies
-      uses: Swatinem/rust-cache@v2
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
 
-    - name: Check formatting
-      run: cargo fmt --all -- --check
+      - name: Check formatting
+        run: cargo fmt --all -- --check
 
-    - name: Run clippy
-      run: ./bin/lint
+      - name: Run clippy
+        run: ./bin/lint
 
-    - name: Run rv
-      run: ./bin/rv --version
+      - name: Run rv
+        run: ./bin/rv --version
 
   build:
     name: Build
@@ -61,13 +66,14 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest, macos-15-intel]
     steps:
-    - uses: actions/checkout@v6
+      - name: Check out repo
+        uses: actions/checkout@v6
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
 
-    - name: Cache dependencies
-      uses: Swatinem/rust-cache@v2
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
 
-    - name: Build
-      run: cargo build --release --locked --all-features --bin rv
+      - name: Build
+        run: cargo build --release --locked --all-features --bin rv

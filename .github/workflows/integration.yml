@@ -2,13 +2,13 @@ name: Integration
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    branches: [main]
   pull_request:
     branches: [main]
   merge_group:
     types: [checks_requested]
+  workflow_dispatch:
+
 permissions: read-all
 
 env:
@@ -21,12 +21,16 @@ jobs:
     container:
       image: rust:alpine
     steps:
-      - uses: actions/checkout@v6
+      - name: Check out repo
+        uses: actions/checkout@v6
+
       - name: Install dependencies
         run: |
           apk add --no-cache build-base
+
       - name: Build rv
         run: cargo build --release --locked --all-features --bin rv
+
       - name: Test rv runs
         run: |
           ./target/release/rv --version
@@ -38,11 +42,15 @@ jobs:
     container:
       image: archlinux:base-devel
     steps:
-      - uses: actions/checkout@v6
+      - name: Check out repo
+        uses: actions/checkout@v6
+
       - name: Install dependencies
         run: pacman -Syu --noconfirm rust
+
       - name: Build rv
         run: cargo build --release --locked --all-features --bin rv
+
       - name: Test rv installs and runs ruby
         run: |
           ./target/release/rv --version
