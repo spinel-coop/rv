@@ -245,18 +245,24 @@ fn install_path(
         });
 
         if let Some(dep) = dep {
-            // check the cache for "gitsha-gemname.gemspec", if not:
             let gemname = dep.gem_version;
             let cache_key = format!("{path_key}-{gemname}.gemspec");
             let cached_gemspec_path = cached_gemspecs_dir.join(&cache_key);
+
+            // check the cache for "gitsha-gemname.gemspec", if not:
             let cached = std::fs::exists(&cached_gemspec_path).is_ok_and(|exists| exists) && {
                 let gemspec_modified = std::fs::metadata(&path)?.modified()?;
                 let cache_modified = std::fs::metadata(&cached_gemspec_path)?.modified()?;
                 gemspec_modified < cache_modified
             };
             let yaml_contents = if cached {
-                std::fs::read_to_string(cached_gemspec_path)?
+                std::fs::read_to_string(&cached_gemspec_path)?
             } else {
+                let gemspec_path =
+                    Utf8PathBuf::try_from(path.clone()).expect("gemspec path not valid UTF-8");
+                if !std::fs::exists(&gemspec_path)? {
+                    return Err(Error::InvalidPath(gemspec_path.into()));
+                }
                 // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
                 let yaml_gemspec_vec = crate::commands::ruby::run::run_no_install(
                     config,
@@ -273,15 +279,16 @@ fn install_path(
                     Vec::new(),
                 )?
                 .stdout;
-                let yaml_gemspec = String::from_utf8(yaml_gemspec_vec).unwrap(); // arghhhhhhh
-                // cache the YAML gemspec as "gitsha-gemname.gemspec"
-                debug!("writing YAML gemspec to {}", &cached_gemspec_path);
-                fs_err::write(&cached_gemspec_path, &yaml_gemspec)?;
-                yaml_gemspec
+                String::from_utf8(yaml_gemspec_vec).unwrap() // arghhhhhhhhhh
             };
             // parse the YAML gemspec to get the executable names
             let dep_gemspec = match rv_gem_specification_yaml::parse(&yaml_contents) {
-                Ok(parsed) => parsed,
+                Ok(parsed) => {
+                    // cache the YAML gemspec as "gitsha-gemname.gemspec"
+                    debug!("writing YAML gemspec to {}", &cached_gemspec_path);
+                    fs_err::write(&cached_gemspec_path, &yaml_contents)?;
+                    parsed
+                }
                 Err(e) => {
                     eprintln!("Warning: specification of {gemname} was invalid: {e}");
                     return Ok(());
