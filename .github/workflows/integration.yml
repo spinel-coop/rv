@@ -4,6 +4,7 @@ on:
       - main
   workflow_dispatch:
   pull_request:
+    branches: [main]
   merge_group:
     types: [checks_requested]
 permissions: read-all
