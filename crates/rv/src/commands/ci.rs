@@ -169,6 +169,10 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
 }
 
 async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
+    let lockfile_dir = args
+        .lockfile_path
+        .parent()
+        .expect("lockfile is not in directory???");
     let lockfile_contents = tokio::fs::read_to_string(&args.lockfile_path).await?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
 
@@ -176,7 +180,7 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     tokio::fs::create_dir_all(&binstub_dir).await?;
 
     debug!("Installing path gems");
-    install_paths(config, &lockfile.path, args)?;
+    install_paths(config, lockfile_dir, &lockfile.path, args)?;
 
     debug!("Downloading git gems");
     let repos = download_git_repos(lockfile.clone(), &config.cache, args)?;
@@ -195,6 +199,7 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
 
 fn install_paths<'i>(
     config: &Config,
+    lockfile_dir: &Utf8Path,
     paths: &Vec<rv_lockfile::datatypes::PathSection<'i>>,
     args: &CiInnerArgs,
 ) -> Result<()> {
@@ -204,7 +209,7 @@ fn install_paths<'i>(
         paths
             .iter()
             .par_bridge()
-            .map(|path| install_path(path, config, args))
+            .map(|path| install_path(path, lockfile_dir, config, args))
             .collect::<Result<Vec<_>>>()?;
         Ok::<_, Error>(())
     })?;
@@ -213,6 +218,7 @@ fn install_paths<'i>(
 
 fn install_path(
     path_section: &rv_lockfile::datatypes::PathSection,
+    lockfile_dir: &Utf8Path,
     config: &Config,
     args: &CiInnerArgs,
 ) -> Result<()> {
@@ -259,11 +265,11 @@ fn install_path(
                         "-e",
                         &format!(
                             "puts Gem::Specification.load(\"{}\").to_yaml",
-                            path.to_string_lossy() // TODO: how do I interpolate an os_str into a shell arg :(
+                            lockfile_dir.join(gemspec_path),
                         ),
                     ],
                     CaptureOutput::Both,
-                    Some(&path_dir),
+                    Some(lockfile_dir),
                     Vec::new(),
                 )?
                 .stdout;
