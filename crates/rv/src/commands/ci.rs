@@ -148,7 +148,7 @@ type Result<T> = std::result::Result<T, Error>;
 
 pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     let ruby_request = config.ruby_request();
-    let extensions_dir = find_exts_dir(config).await?;
+    let extensions_dir = find_exts_dir(config)?;
     let lockfile_path = find_lockfile_path(args.gemfile)?;
     let lockfile_dir = lockfile_path
         .parent()
@@ -944,26 +944,18 @@ impl CompileNativeExtResult {
     }
 }
 
-async fn find_exts_dir(config: &Config) -> Result<Utf8PathBuf> {
-    debug!("Finding extensions dir");
-    let version = Some(RubyRequest {
-        major: Some(4),
-        minor: Some(0),
-        patch: Some(0),
-        ..Default::default()
-    });
-    let exts_dir = crate::commands::ruby::run::run(
+fn find_exts_dir(config: &Config) -> Result<Utf8PathBuf> {
+    let exts_dir = crate::commands::ruby::run::run_no_install(
         config,
-        version,
-        false,
+        &config.ruby_request()?,
         &[
             "-e",
             "puts File.join(Gem::Platform.local.to_s, Gem.extension_api_version)",
         ],
         CaptureOutput::Both,
         None,
-    )
-    .await?
+        vec![],
+    )?
     .stdout;
 
     let extensions_dir = String::from_utf8(exts_dir)
