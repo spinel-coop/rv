@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8PathBuf;
 use indexmap::IndexSet;
 use tracing::{debug, instrument};
 
@@ -13,6 +13,7 @@ use rv_ruby::{
 };
 
 mod ruby_cache;
+mod ruby_fetcher;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -46,24 +47,24 @@ impl Config {
         self.discover_rubies()
     }
 
+    pub async fn remote_rubies(&self) -> Vec<Ruby> {
+        self.discover_remote_rubies().await
+    }
+
     pub fn matching_ruby(&self, request: &RubyRequest) -> Option<Ruby> {
         let rubies = self.rubies();
         request.find_match_in(rubies)
     }
 
     pub fn current_ruby(&self) -> Option<Ruby> {
-        if let Ok(request) = self.ruby_request() {
-            self.matching_ruby(&request)
-        } else {
-            None
-        }
+        self.matching_ruby(&self.ruby_request())
     }
 
-    pub fn ruby_request(&self) -> Result<RubyRequest> {
+    pub fn ruby_request(&self) -> RubyRequest {
         if let Some(request) = &self.requested_ruby {
-            Ok(request.0.clone())
+            request.0.clone()
         } else {
-            Ok(RubyRequest::default())
+            RubyRequest::default()
         }
     }
 }
@@ -91,7 +92,7 @@ impl<'a> PathInfo<'a> {
 }
 
 /// Default Ruby installation directories
-pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
+pub fn default_ruby_dirs() -> Vec<Utf8PathBuf> {
     let mut paths: Vec<PathInfo> = vec![];
     let xdg_path = xdg_data_path();
     paths.push(PathInfo::new(&xdg_path, true));
@@ -108,12 +109,12 @@ pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
     paths
         .into_iter()
         .filter_map(|path_info| {
-            let joinable_path = path_info.path.strip_prefix("/").unwrap();
-            let joined_path = root.join(joinable_path);
+            let path = Utf8PathBuf::from(path_info.path);
+            let canonical_path = path.canonicalize_utf8();
             if path_info.always_include {
-                Some(joined_path)
+                Some(canonical_path.unwrap_or(path))
             } else {
-                joined_path.canonicalize_utf8().ok()
+                canonical_path.ok()
             }
         })
         .collect()
@@ -277,8 +278,7 @@ mod tests {
 
     #[test]
     fn test_default_ruby_dirs() {
-        let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
-        default_ruby_dirs(&root);
+        default_ruby_dirs();
     }
 
     #[test]

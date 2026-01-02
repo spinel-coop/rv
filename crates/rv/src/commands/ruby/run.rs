@@ -46,7 +46,7 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
     cwd: Option<&Utf8Path>,
 ) -> Result<Output> {
     let request = match version {
-        None => config.ruby_request()?,
+        None => config.ruby_request(),
         Some(version) => version,
     };
     let install = !no_install;
@@ -56,7 +56,13 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
         debug!("Ruby not found, so installing {request}");
         let install_dir = None;
         let tarball_path = None;
-        crate::commands::ruby::install::install(config, install_dir, &request, tarball_path).await?
+        crate::commands::ruby::install::install(
+            config,
+            install_dir,
+            Some(request.clone()),
+            tarball_path,
+        )
+        .await?
     };
     run_no_install(config, &request, args, capture_output, cwd, vec![])
 }

@@ -88,6 +88,10 @@ impl Ord for RubyRequest {
 }
 
 impl RubyRequest {
+    pub fn is_specific(&self) -> bool {
+        self.major.is_some() && self.minor.is_some() && self.patch.is_some()
+    }
+
     pub fn find_match_in(&self, rubies: Vec<Ruby>) -> Option<Ruby> {
         rubies
             .into_iter()

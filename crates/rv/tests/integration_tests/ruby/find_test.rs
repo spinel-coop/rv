@@ -2,12 +2,7 @@ use crate::common::{RvOutput, RvTest};
 
 impl RvTest {
     pub fn ruby_find(&self, args: &[&str]) -> RvOutput {
-        let mut cmd = self.rv_command();
-        cmd.args(["ruby", "find"]);
-        cmd.args(args);
-
-        let output = cmd.output().expect("Failed to execute rv command");
-        RvOutput::new(self.temp_dir.path().as_str(), output)
+        self.rv(&[&["ruby", "find"], args].concat())
     }
 }
 
@@ -53,7 +48,7 @@ fn test_ruby_find_matching_request() {
     find.assert_success();
     assert_eq!(
         find.normalized_stdout(),
-        "/opt/rubies/ruby-3.3.5/bin/ruby\n"
+        "/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin/ruby\n"
     );
 }
 
@@ -65,14 +60,14 @@ fn test_ruby_find_default() {
     find.assert_success();
     assert_eq!(
         find.normalized_stdout(),
-        "/opt/rubies/ruby-3.3.5/bin/ruby\n"
+        "/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin/ruby\n"
     );
 }
 
 #[test]
 fn test_ruby_find_dot_ruby_version_empty() {
     let test = RvTest::new();
-    std::fs::write(test.temp_dir.path().join(".ruby-version"), "").unwrap();
+    std::fs::write(test.temp_root().join(".ruby-version"), "").unwrap();
     test.create_ruby_dir("ruby-3.3.5");
     test.create_ruby_dir("ruby-3.4.5");
     let find = test.ruby_find(&[]);
@@ -86,14 +81,14 @@ fn test_ruby_find_dot_ruby_version_empty() {
 #[test]
 fn test_ruby_find_dot_ruby_version_matching() {
     let test = RvTest::new();
-    std::fs::write(test.temp_dir.path().join(".ruby-version"), "3.3.5\n").unwrap();
+    std::fs::write(test.temp_root().join(".ruby-version"), "3.3.5\n").unwrap();
     test.create_ruby_dir("ruby-3.3.5");
     test.create_ruby_dir("ruby-3.4.5");
     let find = test.ruby_find(&[]);
     find.assert_success();
     assert_eq!(
         find.normalized_stdout(),
-        "/opt/rubies/ruby-3.3.5/bin/ruby\n"
+        "/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin/ruby\n"
     );
 }
 
@@ -106,13 +101,13 @@ fn test_ruby_find_multiple_matching() {
     find.assert_success();
     assert_eq!(
         find.normalized_stdout(),
-        "/opt/rubies/ruby-3.3.5/bin/ruby\n"
+        "/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin/ruby\n"
     );
     let find = test.ruby_find(&["ruby-3.3.5"]);
     find.assert_success();
     assert_eq!(
         find.normalized_stdout(),
-        "/opt/rubies/ruby-3.3.5/bin/ruby\n"
+        "/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin/ruby\n"
     );
 }
 
@@ -126,12 +121,12 @@ fn test_ruby_find_matching_jruby() {
     find.assert_success();
     assert_eq!(
         find.normalized_stdout(),
-        "/opt/rubies/jruby-10.0.1.0/bin/ruby\n"
+        "/tmp/home/.local/share/rv/rubies/jruby-10.0.1.0/bin/ruby\n"
     );
     let find = test.ruby_find(&["jruby-9"]);
     find.assert_success();
     assert_eq!(
         find.normalized_stdout(),
-        "/opt/rubies/jruby-9.4.8.0/bin/ruby\n"
+        "/tmp/home/.local/share/rv/rubies/jruby-9.4.8.0/bin/ruby\n"
     );
 }

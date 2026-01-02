@@ -15,6 +15,90 @@ fn arch() -> &'static str {
 }
 
 #[test]
+fn test_ruby_install_no_specific_version() {
+    let mut test = RvTest::new();
+
+    let tarball_content = create_mock_tarball();
+    let download_suffix = make_dl_suffix("3.4.5");
+    let _mock = test
+        .mock_tarball_download(&download_suffix, &tarball_content)
+        .create();
+
+    test.env.remove("RV_NO_CACHE");
+    let cache_dir = test.temp_root().join("cache");
+    test.env
+        .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
+
+    let releases_body = r#"{
+    "name": "3.4.5",
+    "assets": [{
+        "name": "ruby-3.4.5.arm64_sonoma.tar.gz",
+        "browser_download_url": "http://..."}
+    ]}"#;
+    let mock = test.mock_releases(releases_body);
+
+    let output = test.rv(&["ruby", "install"]);
+
+    mock.assert();
+    output.assert_success();
+
+    assert!(
+        output
+            .normalized_stdout()
+            .contains("Installed Ruby version ruby-3.4.5 to /tmp/home/.local/share/rv/rubies")
+    );
+
+    let cache_key = rv_cache::cache_digest(format!("{}/{}", test.server_url(), download_suffix));
+    let tarball_path = cache_dir
+        .join("ruby-v0")
+        .join("tarballs")
+        .join(format!("{}.tar.gz", cache_key));
+    assert!(tarball_path.exists(), "Tarball should be cached");
+}
+
+#[test]
+fn test_ruby_install_incomplete_request() {
+    let mut test = RvTest::new();
+
+    let tarball_content = create_mock_tarball();
+    let download_suffix = make_dl_suffix("4.0.0");
+    let _mock = test
+        .mock_tarball_download(&download_suffix, &tarball_content)
+        .create();
+
+    test.env.remove("RV_NO_CACHE");
+    let cache_dir = test.temp_root().join("cache");
+    test.env
+        .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
+
+    let releases_body = r#"{
+    "name": "4.0.0",
+    "assets": [{
+        "name": "ruby-4.0.0.arm64_sonoma.tar.gz",
+        "browser_download_url": "http://..."}
+    ]}"#;
+    let mock = test.mock_releases(releases_body);
+
+    let output = test.rv(&["ruby", "install", "4"]);
+
+    mock.assert();
+    output.assert_success();
+
+    assert!(
+        output
+            .normalized_stdout()
+            .contains("Installed Ruby version ruby-4.0.0 to /tmp/home/.local/share/rv/rubies")
+    );
+
+    let cache_key = rv_cache::cache_digest(format!("{}/{}", test.server_url(), download_suffix));
+    let tarball_path = cache_dir
+        .join("ruby-v0")
+        .join("tarballs")
+        .join(format!("{}.tar.gz", cache_key));
+    assert!(tarball_path.exists(), "Tarball should be cached");
+}
+
+#[test]
 fn test_ruby_install_successful_download() {
     let mut test = RvTest::new();
 
@@ -25,7 +109,7 @@ fn test_ruby_install_successful_download() {
         .create();
 
     test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_dir.path().join("cache");
+    let cache_dir = test.temp_root().join("cache");
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
@@ -71,9 +155,8 @@ fn test_ruby_install_from_tarball() {
 
     // is the mocked ruby from the tarball actually installed
     let mocked_ruby_path = test
-        .temp_dir
-        .path()
-        .join("tmp/home/.local/share/rv/rubies/portable-ruby/bin/ruby");
+        .temp_home()
+        .join(".local/share/rv/rubies/portable-ruby/bin/ruby");
     let mut command = Command::new(mocked_ruby_path);
     command.output().expect("mock ruby");
 }
@@ -104,7 +187,7 @@ fn test_ruby_install_http_failure_no_empty_file() {
         .create();
 
     test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_dir.path().join("cache");
+    let cache_dir = test.temp_root().join("cache");
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
@@ -175,7 +258,7 @@ fn test_ruby_install_interrupted_download_cleanup() {
         .create();
 
     test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_dir.path().join("cache");
+    let cache_dir = test.temp_root().join("cache");
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
@@ -218,7 +301,7 @@ fn test_ruby_install_cached_file_reused() {
         .create();
 
     test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_dir.path().join("cache");
+    let cache_dir = test.temp_root().join("cache");
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
@@ -247,7 +330,7 @@ fn test_ruby_install_invalid_url() {
     );
 
     test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_dir.path().join("cache");
+    let cache_dir = test.temp_root().join("cache");
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
@@ -299,7 +382,7 @@ fn test_ruby_install_atomic_rename_behavior() {
         .create();
 
     test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_dir.path().join("cache");
+    let cache_dir = test.temp_root().join("cache");
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
@@ -374,7 +457,7 @@ fn test_ruby_install_temp_file_cleanup_on_extraction_failure() {
         .create();
 
     test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_dir.path().join("cache");
+    let cache_dir = test.temp_root().join("cache");
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 

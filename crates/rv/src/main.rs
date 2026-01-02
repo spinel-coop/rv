@@ -88,7 +88,7 @@ impl Cli {
 
         let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
         let ruby_dirs = if self.ruby_dir.is_empty() {
-            config::default_ruby_dirs(&root)
+            config::default_ruby_dirs()
         } else {
             self.ruby_dir
                 .iter()
@@ -297,7 +297,7 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
                 version,
                 install_dir,
                 tarball_path,
-            } => ruby_install(config, install_dir, &version, tarball_path).await?,
+            } => ruby_install(config, install_dir, version, tarball_path).await?,
             RubyCommand::Uninstall { version } => ruby_uninstall(config, version).await?,
             #[cfg(unix)]
             RubyCommand::Run {

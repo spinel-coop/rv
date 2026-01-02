@@ -31,7 +31,7 @@ impl RvTest {
         };
 
         test.env
-            .insert("RV_ROOT_DIR".into(), test.temp_dir.path().as_str().into());
+            .insert("RV_ROOT_DIR".into(), test.temp_root().as_str().into());
         // Set consistent arch/os for cross-platform testing
         test.env
             .insert("RV_TEST_PLATFORM".into(), "aarch64-apple-darwin".into()); // For mocking current_platform::CURRENT_PLATFORM
@@ -39,7 +39,7 @@ impl RvTest {
         test.env.insert("RV_TEST_OS".into(), "macos".into());
 
         test.env.insert("RV_TEST_EXE".into(), "/tmp/bin/rv".into());
-        test.env.insert("HOME".into(), "/tmp/home".into());
+        test.env.insert("HOME".into(), test.temp_home().into());
         test.env
             .insert("BUNDLE_PATH".into(), test.cwd.join("app").into());
         test.env.insert("RV_DISABLE_INDICATIF".into(), "1".into()); // Disable indicatif progress bars in tests due to a bug in tracing-indicatif
@@ -64,12 +64,20 @@ impl RvTest {
         test
     }
 
+    pub fn temp_root(&self) -> Utf8PathBuf {
+        self.temp_dir.path().canonicalize_utf8().unwrap()
+    }
+
+    pub fn temp_home(&self) -> Utf8PathBuf {
+        self.temp_root().join("home")
+    }
+
     pub fn rv(&self, args: &[&str]) -> RvOutput {
         let mut cmd = self.rv_command();
         cmd.args(args);
 
         let output = cmd.output().expect("Failed to execute rv command");
-        RvOutput::new(self.temp_dir.path().as_str(), output)
+        RvOutput::new(self.temp_root().as_str(), output)
     }
 
     pub fn rv_command(&self) -> Command {
@@ -143,7 +151,7 @@ impl RvTest {
 
     /// Mock a tarball on disk for testing
     pub fn mock_tarball_on_disk(&mut self, filename: &str, content: &[u8]) -> Utf8PathBuf {
-        let temp_dir = self.temp_dir.path().join("tmp");
+        let temp_dir = self.temp_root().join("tmp");
         std::fs::create_dir_all(&temp_dir).expect("Failed to create TMP directory");
         let full_path = temp_dir.join(filename);
         std::fs::write(&full_path, content).expect("Failed to write path");
@@ -157,7 +165,7 @@ impl RvTest {
     }
 
     pub fn create_ruby_dir(&self, name: &str) -> Utf8PathBuf {
-        let ruby_dir = self.temp_dir.path().join("opt").join("rubies").join(name);
+        let ruby_dir = self.temp_home().join(".local/share/rv/rubies").join(name);
         std::fs::create_dir_all(&ruby_dir).expect("Failed to create ruby directory");
 
         let bin_dir = ruby_dir.join("bin");
@@ -289,20 +297,7 @@ impl RvOutput {
         }
 
         // Remove test root from paths
-        let mut full_test_root = self.test_root.clone();
-        // On macOS, the test root might be prefixed with "/private"
-        if cfg!(target_os = "macos") {
-            full_test_root.insert_str(0, "/private");
-        }
-        output.replace(&full_test_root, "")
-    }
-
-    /// Perform the normalization of `.normalized_stdout()` and also replace
-    /// instances of the given temp dir with `/tmp`
-    pub fn normalized_stdout_with_temp_dir(&self, temp_dir_path: String) -> String {
-        assert!(!temp_dir_path.ends_with("/"));
-        let output = self.normalized_stdout();
-        output.replace(&temp_dir_path, "/tmp")
+        output.replace(&self.test_root, "/tmp")
     }
 
     /// Normalize stderr for cross-platform snapshot testing
