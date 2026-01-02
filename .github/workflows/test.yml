@@ -34,13 +34,18 @@ jobs:
       - name: Install additional shells
         if: startsWith(matrix.runs-on, 'ubuntu')
         run: sudo apt-get update && sudo apt-get install -y zsh fish
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+
       - name: Install nextest
         uses: taiki-e/install-action@nextest
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
-      - run: ./bin/test
+
+      - name: Run tests
+        run: ./bin/test
 
   run-tests-coverage:
     name: Run tests with coverage
@@ -52,12 +57,16 @@ jobs:
 
       - name: Install additional shells
         run: sudo apt-get update && sudo apt-get install -y zsh fish
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+
       - name: Install cargo llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
+
       - name: Install nextest
         uses: taiki-e/install-action@nextest
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
