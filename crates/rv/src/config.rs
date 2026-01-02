@@ -13,6 +13,7 @@ use rv_ruby::{
 };
 
 mod ruby_cache;
+mod ruby_fetcher;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -44,6 +45,10 @@ impl Config {
     #[instrument(skip_all)]
     pub fn rubies(&self) -> Vec<Ruby> {
         self.discover_rubies()
+    }
+
+    pub async fn remote_rubies(&self) -> Vec<Ruby> {
+        self.discover_remote_rubies().await
     }
 
     pub fn matching_ruby(&self, request: &RubyRequest) -> Option<Ruby> {
