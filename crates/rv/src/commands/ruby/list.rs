@@ -155,7 +155,7 @@ pub(crate) async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Re
     });
     if url == "-" {
         // Special case to return empty list
-        tracing::debug!("RV_LIST_URL is '-', returning empty list without network request.");
+        debug!("RV_LIST_URL is '-', returning empty list without network request.");
         return Ok(Release {
             name: "Empty release".to_owned(),
             assets: Vec::new(),
