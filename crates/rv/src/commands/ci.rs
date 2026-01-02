@@ -691,7 +691,7 @@ fn compile_gems(config: &Config, specs: Vec<GemSpecification>, args: &CiInnerArg
     let graph = DepGraph::new(deps.as_slice());
     graph.into_par_iter().try_for_each(|node| {
         let spec = specs.iter().find(|s| s.name == *node).unwrap();
-        let compiled_ok = compile_gem(config, args, spec, &args.extensions_dir)?;
+        let compiled_ok = compile_gem(config, args, spec)?;
         if !compiled_ok {
             return Err(Error::CompileFailures {
                 gem: spec.full_name(),
@@ -977,12 +977,7 @@ async fn find_exts_dir(config: &Config) -> Result<Utf8PathBuf> {
 static EXTCONF_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)extconf").unwrap());
 static RAKE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)rakefile|mkrf_conf").unwrap());
 
-fn compile_gem(
-    config: &Config,
-    args: &CiInnerArgs,
-    spec: &GemSpecification,
-    exts_dir: &Utf8PathBuf,
-) -> Result<bool> {
+fn compile_gem(config: &Config, args: &CiInnerArgs, spec: &GemSpecification) -> Result<bool> {
     let mut compile_results = Vec::with_capacity(spec.extensions.len());
 
     let gem_home = &args.install_path;
@@ -991,7 +986,7 @@ fn compile_gem(
     let ext_dest = args
         .install_path
         .join("extensions")
-        .join(exts_dir)
+        .join(&args.extensions_dir)
         .join(spec.full_name());
     let mut ran_rake = false;
 
