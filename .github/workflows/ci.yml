@@ -68,4 +68,4 @@ jobs:
       uses: Swatinem/rust-cache@v2
 
     - name: Build
-      run: cargo build --release --all-features --bin rv
+      run: cargo build --release --locked --all-features --bin rv
