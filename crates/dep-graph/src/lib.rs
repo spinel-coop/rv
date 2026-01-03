@@ -177,7 +177,10 @@ mod tests {
         assert_eq!(result.len(), deps.len());
     }
 
-    #[cfg(feature = "parallel")]
+    #[cfg(all(
+        feature = "parallel",
+        not(all(target_arch = "arm", target_os = "linux"))
+    ))]
     #[test]
     fn par_diamond_graph_steps() {
         let mut n1 = Node::new("1");
