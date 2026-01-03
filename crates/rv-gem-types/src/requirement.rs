@@ -46,11 +46,7 @@ impl Requirement {
         let mut constraints = Vec::new();
 
         for req in requirements {
-            let req_str = req.as_ref().trim();
-            if req_str.is_empty() {
-                continue;
-            }
-            constraints.push(Self::parse_requirement(req_str)?);
+            constraints.push(Self::parse_requirement(req.as_ref())?);
         }
 
         // Default to ">= 0" if no constraints
