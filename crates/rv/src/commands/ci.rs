@@ -19,7 +19,6 @@ use rv_lockfile::datatypes::GemVersion;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_lockfile::datatypes::GitSection;
 use rv_lockfile::datatypes::Spec;
-use rv_ruby::request::RubyRequest;
 use sha2::Digest;
 use tracing::debug;
 use tracing::info;
@@ -83,7 +82,6 @@ struct CiInnerArgs {
     pub lockfile_dir: Utf8PathBuf,
     pub install_path: Utf8PathBuf,
     pub extensions_dir: Utf8PathBuf,
-    pub ruby_request: RubyRequest,
 }
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -148,8 +146,7 @@ pub enum Error {
 type Result<T> = std::result::Result<T, Error>;
 
 pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
-    let ruby_request = config.ruby_request();
-    let extensions_dir = find_exts_dir(config).await?;
+    let extensions_dir = find_exts_dir(config)?;
     let lockfile_path = find_lockfile_path(args.gemfile)?;
     let lockfile_dir = lockfile_path
         .parent()
@@ -165,7 +162,6 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         lockfile_dir,
         install_path,
         extensions_dir,
-        ruby_request,
     };
     ci_inner(config, &inner_args).await
 }
@@ -186,9 +182,9 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     install_git_repos(config, repos, args)?;
 
     debug!("Downloading gems");
-    let gems = download_gems(lockfile.clone(), &config.cache, args).await?;
+    let downloaded = download_gems(lockfile.clone(), &config.cache, args).await?;
     debug!("Installing gems");
-    let specs = install_gems(config, gems, args)?;
+    let specs = install_gems(downloaded, args)?;
     debug!("Compiling gems");
     compile_gems(config, specs, args)?;
 
@@ -263,7 +259,7 @@ fn install_path(
                 // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
                 let yaml_gemspec_vec = crate::commands::ruby::run::run_no_install(
                     config,
-                    &args.ruby_request,
+                    &config.ruby_request(),
                     &[
                         "-e",
                         &format!(
@@ -436,7 +432,7 @@ fn install_git_repo(
                 // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
                 let yaml_gemspec_vec = crate::commands::ruby::run::run_no_install(
                     config,
-                    &args.ruby_request,
+                    &config.ruby_request(),
                     &[
                         "-e",
                         &format!(
@@ -629,7 +625,6 @@ pub fn create_rayon_pool(
 }
 
 fn install_gems<'i>(
-    _config: &Config,
     downloaded: Vec<DownloadedRubygems<'i>>,
     args: &CiInnerArgs,
 ) -> Result<Vec<GemSpecification>> {
@@ -669,24 +664,38 @@ fn compile_gems(config: &Config, specs: Vec<GemSpecification>, args: &CiInnerArg
         return Ok(());
     }
 
+    use dep_graph::{DepGraph, Node};
     use rayon::prelude::*;
-    let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
-    pool.install(|| {
-        specs.into_iter().par_bridge().map(|spec| {
-            debug!("Compiling gem extension {}-{}", spec.name, spec.version);
-            if !spec.extensions.is_empty() {
-                let compiled_ok = compile_gem(config, args, &spec, &args.extensions_dir)?;
-                if !compiled_ok {
-                    return Err(Error::CompileFailures {
-                        gem: spec.full_name(),
-                    });
+
+    let mut nodes = HashMap::new();
+    for spec in &specs {
+        if !spec.extensions.is_empty() {
+            nodes.insert(spec.name.clone(), Node::new(spec.name.clone()));
+        }
+    }
+
+    for spec in &specs {
+        if let Some(gem) = nodes.get_mut(&spec.name) {
+            for dep in &spec.dependencies {
+                if dep.is_runtime() {
+                    gem.add_dep(dep.name.clone());
                 }
             }
-            Ok(())
-        })
+        }
+    }
+
+    let deps: Vec<Node<String>> = nodes.values().cloned().collect();
+    let graph = DepGraph::new(deps.as_slice());
+    graph.into_par_iter().try_for_each(|node| {
+        let spec = specs.iter().find(|s| s.name == *node).unwrap();
+        let compiled_ok = compile_gem(config, args, spec)?;
+        if !compiled_ok {
+            return Err(Error::CompileFailures {
+                gem: spec.full_name(),
+            });
+        }
+        Ok(())
     })
-    .collect::<Result<()>>()?;
-    Ok(())
 }
 
 fn install_binstub(dep_name: &str, executables: &[String], binstub_dir: &Utf8Path) -> Result<()> {
@@ -933,26 +942,18 @@ impl CompileNativeExtResult {
     }
 }
 
-async fn find_exts_dir(config: &Config) -> Result<Utf8PathBuf> {
-    debug!("Finding extensions dir");
-    let version = Some(RubyRequest {
-        major: Some(4),
-        minor: Some(0),
-        patch: Some(0),
-        ..Default::default()
-    });
-    let exts_dir = crate::commands::ruby::run::run(
+fn find_exts_dir(config: &Config) -> Result<Utf8PathBuf> {
+    let exts_dir = crate::commands::ruby::run::run_no_install(
         config,
-        version,
-        false,
+        &config.ruby_request(),
         &[
             "-e",
             "puts File.join(Gem::Platform.local.to_s, Gem.extension_api_version)",
         ],
         CaptureOutput::Both,
         None,
-    )
-    .await?
+        vec![],
+    )?
     .stdout;
 
     let extensions_dir = String::from_utf8(exts_dir)
@@ -965,12 +966,7 @@ async fn find_exts_dir(config: &Config) -> Result<Utf8PathBuf> {
 static EXTCONF_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)extconf").unwrap());
 static RAKE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)rakefile|mkrf_conf").unwrap());
 
-fn compile_gem(
-    config: &Config,
-    args: &CiInnerArgs,
-    spec: &GemSpecification,
-    exts_dir: &Utf8PathBuf,
-) -> Result<bool> {
+fn compile_gem(config: &Config, args: &CiInnerArgs, spec: &GemSpecification) -> Result<bool> {
     let mut compile_results = Vec::with_capacity(spec.extensions.len());
 
     let gem_home = &args.install_path;
@@ -979,7 +975,7 @@ fn compile_gem(
     let ext_dest = args
         .install_path
         .join("extensions")
-        .join(exts_dir)
+        .join(&args.extensions_dir)
         .join(spec.full_name());
     let mut ran_rake = false;
 
@@ -992,9 +988,9 @@ fn compile_gem(
     for extstr in spec.extensions.clone() {
         let extension = extstr.as_ref();
         if EXTCONF_REGEX.is_match(extension) {
-            if let Ok(outputs) = build_extconf(
-                config, extension, gem_home, &gem_path, &ext_dest, &lib_dest, args,
-            ) {
+            if let Ok(outputs) =
+                build_extconf(config, extension, gem_home, &gem_path, &ext_dest, &lib_dest)
+            {
                 compile_results.push(CompileNativeExtResult {
                     extension: extension.to_string(),
                     outputs,
@@ -1003,7 +999,7 @@ fn compile_gem(
         } else if RAKE_REGEX.is_match(extension) {
             if !ran_rake
                 && let Ok(outputs) =
-                    build_rakefile(config, extension, &gem_path, &ext_dest, &lib_dest, args)
+                    build_rakefile(config, extension, &gem_path, &ext_dest, &lib_dest)
             {
                 compile_results.push(CompileNativeExtResult {
                     extension: extension.to_string(),
@@ -1062,7 +1058,6 @@ fn build_rakefile(
     gem_path: &Utf8PathBuf,
     ext_dest: &Utf8PathBuf,
     lib_dest: &Utf8PathBuf,
-    args: &CiInnerArgs,
 ) -> Result<Vec<std::process::Output>> {
     let ext_path = Utf8PathBuf::from_str(extension)?;
     let ext_dir = gem_path.join(ext_path.parent().expect("extconf has no parent"));
@@ -1074,7 +1069,7 @@ fn build_rakefile(
     if ext_file.to_lowercase().contains("mkrf_conf") {
         output = crate::commands::ruby::run::run_no_install(
             config,
-            &args.ruby_request,
+            &config.ruby_request(),
             &[ext_file],
             CaptureOutput::Both,
             Some(&ext_dir),
@@ -1111,7 +1106,6 @@ fn build_extconf(
     gem_path: &Utf8PathBuf,
     ext_dest: &Utf8PathBuf,
     lib_dest: &Utf8PathBuf,
-    args: &CiInnerArgs,
 ) -> Result<Vec<std::process::Output>> {
     let ext_path = Utf8PathBuf::from_str(extension)?;
     let ext_dir = gem_path.join(ext_path.parent().expect("extconf has no parent"));
@@ -1122,7 +1116,7 @@ fn build_extconf(
     // 1. Run the extconf.rb file with the current ruby
     output = crate::commands::ruby::run::run_no_install(
         config,
-        &args.ruby_request,
+        &config.ruby_request(),
         &[ext_file],
         CaptureOutput::Both,
         Some(&ext_dir),
