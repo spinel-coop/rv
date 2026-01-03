@@ -19,6 +19,7 @@ use rv_lockfile::datatypes::GemVersion;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_lockfile::datatypes::GitSection;
 use rv_lockfile::datatypes::Spec;
+use rv_ruby::request::RubyRequest;
 use sha2::Digest;
 use tracing::debug;
 use tracing::info;
@@ -151,20 +152,21 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     // We need some Ruby installed, because we might need to run Ruby code when installing
     // various gems. So, pick a stable version of Ruby, ensure it's installed,
     // so we can use it later.
-    let ruby_request = config.ruby_request()?;
+    let ruby_request = config.ruby_request();
     let ruby_request = if ruby_request == RubyRequest::default() {
-        RubyRequest {
-            major: Some(4),
-            minor: Some(0),
-            patch: Some(0),
-            ..Default::default()
-        }
+        RubyRequest::latest()
     } else {
         ruby_request
     };
     let tarball_path = None;
     let install_dir = None;
-    crate::ruby_install(config, install_dir, &ruby_request, tarball_path).await?;
+    crate::ruby_install(
+        config,
+        install_dir,
+        Some(ruby_request.clone()),
+        tarball_path,
+    )
+    .await?;
 
     // Now that it's installed, we can use Ruby to query various directories
     // we'll need to know later.
