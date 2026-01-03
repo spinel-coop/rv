@@ -1,7 +1,8 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 use dep_graph::{DepGraph, Node};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
+use std::hint::black_box;
 use std::thread;
 use std::time::Duration;
 
