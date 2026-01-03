@@ -19,7 +19,6 @@ use rv_lockfile::datatypes::GemVersion;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_lockfile::datatypes::GitSection;
 use rv_lockfile::datatypes::Spec;
-use rv_ruby::request::RubyRequest;
 use sha2::Digest;
 use tracing::debug;
 use tracing::info;
@@ -147,7 +146,6 @@ pub enum Error {
 type Result<T> = std::result::Result<T, Error>;
 
 pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
-    let ruby_request = config.ruby_request();
     let extensions_dir = find_exts_dir(config)?;
     let lockfile_path = find_lockfile_path(args.gemfile)?;
     let lockfile_dir = lockfile_path
@@ -261,7 +259,7 @@ fn install_path(
                 // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
                 let yaml_gemspec_vec = crate::commands::ruby::run::run_no_install(
                     config,
-                    &config.ruby_request()?,
+                    &config.ruby_request(),
                     &[
                         "-e",
                         &format!(
@@ -434,7 +432,7 @@ fn install_git_repo(
                 // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
                 let yaml_gemspec_vec = crate::commands::ruby::run::run_no_install(
                     config,
-                    &config.ruby_request()?,
+                    &config.ruby_request(),
                     &[
                         "-e",
                         &format!(
@@ -947,7 +945,7 @@ impl CompileNativeExtResult {
 fn find_exts_dir(config: &Config) -> Result<Utf8PathBuf> {
     let exts_dir = crate::commands::ruby::run::run_no_install(
         config,
-        &config.ruby_request()?,
+        &config.ruby_request(),
         &[
             "-e",
             "puts File.join(Gem::Platform.local.to_s, Gem.extension_api_version)",
@@ -1071,7 +1069,7 @@ fn build_rakefile(
     if ext_file.to_lowercase().contains("mkrf_conf") {
         output = crate::commands::ruby::run::run_no_install(
             config,
-            &config.ruby_request()?,
+            &config.ruby_request(),
             &[ext_file],
             CaptureOutput::Both,
             Some(&ext_dir),
@@ -1118,7 +1116,7 @@ fn build_extconf(
     // 1. Run the extconf.rb file with the current ruby
     output = crate::commands::ruby::run::run_no_install(
         config,
-        &config.ruby_request()?,
+        &config.ruby_request(),
         &[ext_file],
         CaptureOutput::Both,
         Some(&ext_dir),
