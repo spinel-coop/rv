@@ -46,7 +46,7 @@ impl Requirement {
         let mut constraints = Vec::new();
 
         for req in requirements {
-            constraints.push(Self::parse_requirement(req.as_ref())?);
+            constraints.push(Self::parse_constraint(req.as_ref())?);
         }
 
         // Default to ">= 0" if no constraints
@@ -67,20 +67,20 @@ impl Requirement {
         Self::new(vec![requirement])
     }
 
-    fn parse_requirement(requirement: &str) -> Result<VersionConstraint, RequirementError> {
-        let requirement = requirement.trim();
+    fn parse_constraint(constraint: &str) -> Result<VersionConstraint, RequirementError> {
+        let constraint = constraint.trim();
 
-        if requirement.is_empty() {
+        if constraint.is_empty() {
             return Err(RequirementError::Empty);
         }
 
         // Try to match operator and version
         let (operator, version_str) =
-            if let Some(captures) = Self::extract_operator_and_version(requirement)? {
+            if let Some(captures) = Self::extract_operator_and_version(constraint)? {
                 captures
             } else {
                 // Default to "=" if no operator specified
-                (ComparisonOperator::Equal, requirement)
+                (ComparisonOperator::Equal, constraint)
             };
 
         let version = Version::new(version_str).map_err(|_| RequirementError::InvalidVersion {
@@ -91,26 +91,26 @@ impl Requirement {
     }
 
     fn extract_operator_and_version(
-        requirement: &str,
+        constraint: &str,
     ) -> Result<Option<(ComparisonOperator, &str)>, RequirementError> {
-        if let Some(stripped) = requirement.strip_prefix(">=") {
+        if let Some(stripped) = constraint.strip_prefix(">=") {
             Ok(Some((ComparisonOperator::GreaterEqual, stripped.trim())))
-        } else if let Some(stripped) = requirement.strip_prefix("<=") {
+        } else if let Some(stripped) = constraint.strip_prefix("<=") {
             Ok(Some((ComparisonOperator::LessEqual, stripped.trim())))
-        } else if let Some(stripped) = requirement.strip_prefix("!=") {
+        } else if let Some(stripped) = constraint.strip_prefix("!=") {
             Ok(Some((ComparisonOperator::NotEqual, stripped.trim())))
-        } else if let Some(stripped) = requirement.strip_prefix("~>") {
+        } else if let Some(stripped) = constraint.strip_prefix("~>") {
             Ok(Some((ComparisonOperator::Pessimistic, stripped.trim())))
-        } else if let Some(stripped) = requirement.strip_prefix('>') {
+        } else if let Some(stripped) = constraint.strip_prefix('>') {
             Ok(Some((ComparisonOperator::Greater, stripped.trim())))
-        } else if let Some(stripped) = requirement.strip_prefix('<') {
+        } else if let Some(stripped) = constraint.strip_prefix('<') {
             Ok(Some((ComparisonOperator::Less, stripped.trim())))
-        } else if let Some(stripped) = requirement.strip_prefix('=') {
+        } else if let Some(stripped) = constraint.strip_prefix('=') {
             Ok(Some((ComparisonOperator::Equal, stripped.trim())))
-        } else if requirement.starts_with('!') {
+        } else if constraint.starts_with('!') {
             // Handle invalid operators like "! 1"
             Err(RequirementError::InvalidOperator {
-                operator: requirement.chars().take(2).collect(),
+                operator: constraint.chars().take(2).collect(),
             })
         } else {
             Ok(None)
