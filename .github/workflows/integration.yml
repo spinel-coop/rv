@@ -29,7 +29,7 @@ jobs:
           apk add --no-cache build-base
 
       - name: Build rv
-        run: cargo build --release --locked --all-features --bin rv
+        run: ./bin/rv
 
       - name: Test rv runs
         run: |
@@ -49,7 +49,7 @@ jobs:
         run: pacman -Syu --noconfirm rust
 
       - name: Build rv
-        run: cargo build --release --locked --all-features --bin rv
+        run: ./bin/rv
 
       - name: Test rv installs and runs ruby
         run: |
