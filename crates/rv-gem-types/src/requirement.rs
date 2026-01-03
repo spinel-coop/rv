@@ -25,6 +25,17 @@ pub struct VersionConstraint {
 }
 
 impl VersionConstraint {
+    pub fn version_from(str: &str, prefix: &str) -> Result<Version, RequirementError> {
+        let str = str.strip_prefix(prefix).unwrap_or(str).trim();
+        Self::new_version(str)
+    }
+
+    pub fn new_version(version: &str) -> Result<Version, RequirementError> {
+        Version::new(version).map_err(|_| RequirementError::InvalidVersion {
+            version: version.to_string(),
+        })
+    }
+
     pub fn is_latest(&self) -> bool {
         matches!(self.operator, ComparisonOperator::GreaterEqual) && self.version.version == "0"
     }
@@ -42,11 +53,7 @@ impl TryFrom<&str> for VersionConstraint {
 
         // Try to match operator and version
         let operator = ComparisonOperator::try_from(str)?;
-        let version_str = str.strip_prefix(operator.as_ref()).unwrap_or(str).trim();
-
-        let version = Version::new(version_str).map_err(|_| RequirementError::InvalidVersion {
-            version: version_str.to_string(),
-        })?;
+        let version = VersionConstraint::version_from(str, operator.as_ref())?;
 
         Ok(Self { operator, version })
     }
