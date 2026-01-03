@@ -51,7 +51,9 @@ saphyr-parser = "0.0.6"
 seahash = "4.1.0"
 serde = "1.0.219"
 serde_json = "1.0"
-serde_with = { version = "3.16.0", default-features = false, features = ["macros"] }
+serde_with = { version = "3.16.0", default-features = false, features = [
+  "macros",
+] }
 sha1 = "0.10"
 sha2 = "0.10"
 shell-escape = "0.1.5"
@@ -72,6 +74,7 @@ rv-gem-specification-yaml = { version = "0.1.0", path = "crates/rv-gem-specifica
 rv-gem-types = { version = "0.1.0", path = "crates/rv-gem-types" }
 rv-ruby = { version = "0.1.0", path = "crates/rv-ruby" }
 rv-version = { version = "0.1.0", path = "crates/rv-version" }
+dep-graph = { version = "0.2.0-rv", path = "crates/dep-graph" }
 
 # The profile that 'dist' will build with
 [profile.dist]
@@ -87,4 +90,3 @@ debug = true
 dbg_macro = "warn"
 redundant_clone = "warn"
 result_large_err = "allow"
-
