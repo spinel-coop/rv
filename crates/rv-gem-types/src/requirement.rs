@@ -41,7 +41,8 @@ impl TryFrom<&str> for VersionConstraint {
         }
 
         // Try to match operator and version
-        let (operator, version_str) = ComparisonOperator::split(str)?;
+        let operator = ComparisonOperator::try_from(str)?;
+        let version_str = str.strip_prefix(operator.as_ref()).unwrap_or(str).trim();
 
         let version = Version::new(version_str).map_err(|_| RequirementError::InvalidVersion {
             version: version_str.to_string(),
@@ -60,14 +61,6 @@ pub enum ComparisonOperator {
     Less,
     LessEqual,
     Pessimistic,
-}
-
-impl ComparisonOperator {
-    fn split(constraint: &str) -> Result<(Self, &str), RequirementError> {
-        let operator = Self::try_from(constraint)?;
-        let version = constraint.strip_prefix(operator.as_ref()).unwrap_or(constraint);
-        Ok((operator, version.trim()))
-    }
 }
 
 impl TryFrom<&str> for ComparisonOperator {
