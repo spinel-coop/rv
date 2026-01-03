@@ -80,12 +80,10 @@ impl TryFrom<&str> for ComparisonOperator {
             s if s.starts_with("~>") => Ok(Self::Pessimistic),
             s if s.starts_with(">") => Ok(Self::Greater),
             s if s.starts_with("<") => Ok(Self::Less),
-            s if s.starts_with("!") => {
-                Err(RequirementError::InvalidOperator {
-                    operator: str.chars().take(2).collect()
-                })
-            },
-            _ => Ok(Self::Equal) // Default to "=" if no operator specified
+            s if s.starts_with("!") => Err(RequirementError::InvalidOperator {
+                operator: str.chars().take(2).collect(),
+            }),
+            _ => Ok(Self::Equal), // Default to "=" if no operator specified
         }
     }
 }
