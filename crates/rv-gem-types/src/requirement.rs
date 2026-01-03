@@ -115,9 +115,7 @@ impl Requirement {
 
         // Default to ">= 0" if no constraints
         if constraints.is_empty() {
-            let version = Version::new("0").map_err(|_| RequirementError::InvalidVersion {
-                version: "0".to_string(),
-            })?;
+            let version = VersionConstraint::new_version("0")?;
             constraints.push(VersionConstraint {
                 operator: ComparisonOperator::GreaterEqual,
                 version,
