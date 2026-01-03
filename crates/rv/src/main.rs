@@ -268,7 +268,11 @@ async fn run() -> Result<()> {
                 // an `anstream::AutoStream` that handles color output for us.
                 .with_writer(writer),
         )
-        .with(tracing_oslog::OsLogger::new("dev.rv.tracing", "default"))
+        .with(if cfg!(target_os = "macos") {
+            Some(tracing_oslog::OsLogger::new("dev.rv.tracing", "default"))
+        } else {
+            None
+        })
         .with(filter);
 
     if std::env::var("RV_DISABLE_INDICATIF").is_err() {
