@@ -104,17 +104,17 @@ impl AsRef<str> for ComparisonOperator {
 
 impl Requirement {
     pub fn new(requirements: Vec<impl AsRef<str>>) -> Result<Self, RequirementError> {
-        let mut constraints = Vec::new();
+        if requirements.is_empty() {
+            Ok(Self::default())
+        } else {
+            let mut constraints = Vec::new();
 
-        for req in requirements {
-            constraints.push(VersionConstraint::try_from(req.as_ref())?);
+            for req in requirements {
+                constraints.push(VersionConstraint::try_from(req.as_ref())?);
+            }
+
+            Ok(Self { constraints })
         }
-
-        if constraints.is_empty() {
-            constraints.push(VersionConstraint::default())
-        }
-
-        Ok(Self { constraints })
     }
 
     pub fn parse(requirement: &str) -> Result<Self, RequirementError> {
@@ -160,10 +160,7 @@ impl Eq for Requirement {}
 impl Default for Requirement {
     fn default() -> Self {
         Self {
-            constraints: vec![VersionConstraint {
-                operator: ComparisonOperator::GreaterEqual,
-                version: Version::default(),
-            }],
+            constraints: vec![VersionConstraint::default()],
         }
     }
 }
