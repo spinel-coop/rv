@@ -146,7 +146,7 @@ where
     let next_nodes = rdep_ids
         .iter()
         .filter_map(|rdep_id| {
-            let rdep = match deps.get_mut(&rdep_id) {
+            let rdep = match deps.get_mut(rdep_id) {
                 Some(rdep) => rdep,
                 None => return None,
             };

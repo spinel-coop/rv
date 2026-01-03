@@ -250,10 +250,14 @@ mod tests {
     #[cfg(feature = "parallel")]
     #[test]
     fn par_thousand_graph() {
-        let mut nodes: Vec<Node<_>> = (0..1000).map(|i| Node::new(format!("{}", i))).collect();
-        for i in 1..1000 {
-            nodes[i].add_dep("0".to_string());
-        }
+        let nodes: Vec<Node<_>> = (0..1000)
+            .map(|i| {
+                let mut node = Node::new(format!("{}", i));
+                node.add_dep("0".to_string());
+
+                node
+            })
+            .collect();
 
         let r = DepGraph::new(&nodes);
         let result = r.into_par_iter().map(|_| true).collect::<Vec<bool>>();
@@ -263,10 +267,13 @@ mod tests {
 
     #[test]
     fn iter_thousand_graph() {
-        let mut nodes: Vec<Node<_>> = (0..1000).map(|i| Node::new(format!("{}", i))).collect();
-        for i in 1..1000 {
-            nodes[i].add_dep("0".to_string());
-        }
+        let nodes: Vec<Node<_>> = (0..1000)
+            .map(|i| {
+                let mut node = Node::new(format!("{}", i));
+                node.add_dep("0".to_string());
+                node
+            })
+            .collect();
 
         let r = DepGraph::new(&nodes);
         let result = r.into_iter().map(|_| true).collect::<Vec<bool>>();
