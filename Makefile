@@ -6,8 +6,11 @@ SMOKE_TEST_DIR := temp/smoke-tests
 RV := ./target/release/rv
 
 # Build rv in release mode
-$(RV):
+.PHONY: build
+build:
 	cargo build --release --locked --all-features --bin rv
+
+$(RV): build
 
 # Generic smoke test function
 # Args: (1) project name, (2) git repo URL
