@@ -93,8 +93,6 @@ impl Requirement {
     fn extract_operator_and_version(
         requirement: &str,
     ) -> Result<Option<(ComparisonOperator, &str)>, RequirementError> {
-        let requirement = requirement.trim();
-
         if let Some(stripped) = requirement.strip_prefix(">=") {
             Ok(Some((ComparisonOperator::GreaterEqual, stripped.trim())))
         } else if let Some(stripped) = requirement.strip_prefix("<=") {
