@@ -68,10 +68,6 @@ impl Requirement {
     }
 
     pub fn parse(requirement: &str) -> Result<Self, RequirementError> {
-        let requirement = requirement.trim();
-        if requirement.is_empty() {
-            return Err(RequirementError::Empty);
-        }
         Self::new(vec![requirement])
     }
 
