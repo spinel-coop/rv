@@ -15,7 +15,7 @@ default = ["parallel"]
 parallel = ["rayon", "crossbeam-channel"]
 
 [dev-dependencies]
-criterion = "0.3"
+criterion = { workspace = true }
 
 [[bench]]
 name = "dep_graph"
