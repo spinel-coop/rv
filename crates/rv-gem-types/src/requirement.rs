@@ -27,11 +27,8 @@ pub struct VersionConstraint {
 
 impl VersionConstraint {
     pub fn version_from(str: &str, prefix: &str) -> Result<Version, RequirementError> {
-        let str = str.strip_prefix(prefix).unwrap_or(str).trim();
-        Self::new_version(str)
-    }
+        let version = str.strip_prefix(prefix).unwrap_or(str).trim();
 
-    pub fn new_version(version: &str) -> Result<Version, RequirementError> {
         Version::new(version).map_err(|_| RequirementError::InvalidVersion {
             version: version.to_string(),
         })
