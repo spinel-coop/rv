@@ -63,6 +63,18 @@ pub enum ComparisonOperator {
 }
 
 impl ComparisonOperator {
+    fn as_str(&self) -> &str {
+        match self {
+            Self::GreaterEqual => ">=",
+            Self::LessEqual => "<=",
+            Self::NotEqual => "!=",
+            Self::Pessimistic => "~>",
+            Self::Greater => ">",
+            Self::Less => "<",
+            Self::Equal => "=",
+        }
+    }
+
     fn split(constraint: &str) -> Result<(Self, &str), RequirementError> {
         if let Some(stripped) = constraint.strip_prefix(">=") {
             Ok((Self::GreaterEqual, stripped.trim()))
