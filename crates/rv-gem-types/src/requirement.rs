@@ -18,7 +18,8 @@ pub struct Requirement {
     pub constraints: Vec<VersionConstraint>,
 }
 
-#[derive(Debug, Clone)]
+// Defaults to ">= 0"
+#[derive(Default, Debug, Clone)]
 pub struct VersionConstraint {
     pub operator: ComparisonOperator,
     pub version: Version,
@@ -59,11 +60,12 @@ impl TryFrom<&str> for VersionConstraint {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub enum ComparisonOperator {
     Equal,
     NotEqual,
     Greater,
+    #[default]
     GreaterEqual,
     Less,
     LessEqual,
@@ -113,13 +115,8 @@ impl Requirement {
             constraints.push(VersionConstraint::try_from(req.as_ref())?);
         }
 
-        // Default to ">= 0" if no constraints
         if constraints.is_empty() {
-            let version = VersionConstraint::new_version("0")?;
-            constraints.push(VersionConstraint {
-                operator: ComparisonOperator::GreaterEqual,
-                version,
-            });
+            constraints.push(VersionConstraint::default())
         }
 
         Ok(Self { constraints })
