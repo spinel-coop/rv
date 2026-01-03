@@ -63,7 +63,36 @@ pub enum ComparisonOperator {
 }
 
 impl ComparisonOperator {
-    fn as_str(&self) -> &str {
+    fn split(constraint: &str) -> Result<(Self, &str), RequirementError> {
+        let operator = Self::try_from(constraint)?;
+        let version = constraint.strip_prefix(operator.as_ref()).unwrap_or(constraint);
+        Ok((operator, version.trim()))
+    }
+}
+
+impl TryFrom<&str> for ComparisonOperator {
+    type Error = RequirementError;
+
+    fn try_from(str: &str) -> Result<Self, RequirementError> {
+        match str {
+            s if s.starts_with(">=") => Ok(Self::GreaterEqual),
+            s if s.starts_with("<=") => Ok(Self::LessEqual),
+            s if s.starts_with("!=") => Ok(Self::NotEqual),
+            s if s.starts_with("~>") => Ok(Self::Pessimistic),
+            s if s.starts_with(">") => Ok(Self::Greater),
+            s if s.starts_with("<") => Ok(Self::Less),
+            s if s.starts_with("!") => {
+                Err(RequirementError::InvalidOperator {
+                    operator: str.chars().take(2).collect()
+                })
+            },
+            _ => Ok(Self::Equal) // Default to "=" if no operator specified
+        }
+    }
+}
+
+impl AsRef<str> for ComparisonOperator {
+    fn as_ref(&self) -> &str {
         match self {
             Self::GreaterEqual => ">=",
             Self::LessEqual => "<=",
@@ -72,32 +101,6 @@ impl ComparisonOperator {
             Self::Greater => ">",
             Self::Less => "<",
             Self::Equal => "=",
-        }
-    }
-
-    fn split(constraint: &str) -> Result<(Self, &str), RequirementError> {
-        if let Some(stripped) = constraint.strip_prefix(">=") {
-            Ok((Self::GreaterEqual, stripped.trim()))
-        } else if let Some(stripped) = constraint.strip_prefix("<=") {
-            Ok((Self::LessEqual, stripped.trim()))
-        } else if let Some(stripped) = constraint.strip_prefix("!=") {
-            Ok((Self::NotEqual, stripped.trim()))
-        } else if let Some(stripped) = constraint.strip_prefix("~>") {
-            Ok((Self::Pessimistic, stripped.trim()))
-        } else if let Some(stripped) = constraint.strip_prefix('>') {
-            Ok((Self::Greater, stripped.trim()))
-        } else if let Some(stripped) = constraint.strip_prefix('<') {
-            Ok((Self::Less, stripped.trim()))
-        } else if let Some(stripped) = constraint.strip_prefix('=') {
-            Ok((Self::Equal, stripped.trim()))
-        } else if constraint.starts_with('!') {
-            // Handle invalid operators like "! 1"
-            Err(RequirementError::InvalidOperator {
-                operator: constraint.chars().take(2).collect(),
-            })
-        } else {
-            // Default to "=" if no operator specified
-            Ok((Self::Equal, constraint))
         }
     }
 }
