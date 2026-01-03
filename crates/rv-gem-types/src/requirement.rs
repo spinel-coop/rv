@@ -198,15 +198,7 @@ impl VersionConstraint {
 
 impl std::fmt::Display for ComparisonOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ComparisonOperator::Equal => write!(f, "="),
-            ComparisonOperator::NotEqual => write!(f, "!="),
-            ComparisonOperator::Greater => write!(f, ">"),
-            ComparisonOperator::GreaterEqual => write!(f, ">="),
-            ComparisonOperator::Less => write!(f, "<"),
-            ComparisonOperator::LessEqual => write!(f, "<="),
-            ComparisonOperator::Pessimistic => write!(f, "~>"),
-        }
+        write!(f, "{}", self.as_ref())
     }
 }
 
