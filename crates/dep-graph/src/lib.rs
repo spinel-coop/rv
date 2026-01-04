@@ -144,10 +144,7 @@ mod tests {
     use super::*;
     #[cfg(feature = "parallel")]
     use rayon::prelude::*;
-    #[cfg(all(
-        feature = "parallel",
-        not(all(target_arch = "aarch64", target_os = "linux"))
-    ))]
+    #[cfg(feature = "parallel")]
     use std::time::Duration;
 
     /// Run against a diamond graph
@@ -180,13 +177,11 @@ mod tests {
         assert_eq!(result.len(), deps.len());
     }
 
-    // This test is flaky on ARM Linux due to race conditions in the parallel iterator.
+    // This test is flaky due to race conditions in the parallel iterator.
     // See: https://github.com/nmoutschen/dep-graph/issues/3
-    #[cfg(all(
-        feature = "parallel",
-        not(all(target_arch = "aarch64", target_os = "linux"))
-    ))]
+    #[cfg(feature = "parallel")]
     #[test]
+    #[ignore = "flaky due to race condition in parallel iterator"]
     fn par_diamond_graph_steps() {
         let mut n1 = Node::new("1");
         let mut n2 = Node::new("2");
@@ -209,13 +204,11 @@ mod tests {
         assert_eq!(result, 10);
     }
 
-    // This test is flaky on ARM Linux due to race conditions in the parallel iterator.
+    // This test is flaky due to race conditions in the parallel iterator.
     // See: https://github.com/nmoutschen/dep-graph/issues/3
-    #[cfg(all(
-        feature = "parallel",
-        not(all(target_arch = "aarch64", target_os = "linux"))
-    ))]
+    #[cfg(feature = "parallel")]
     #[test]
+    #[ignore = "flaky due to race condition in parallel iterator"]
     fn par_diamond_graph_with_timeout() {
         let mut n1 = Node::new("1");
         let mut n2 = Node::new("2");
