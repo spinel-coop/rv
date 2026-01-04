@@ -1,7 +1,4 @@
-use crate::{
-    error::Error,
-    graph::{remove_node_id, DepGraph, DependencyMap},
-};
+use crate::graph::{remove_node_id, DepGraph, DependencyMap};
 use crossbeam_channel::{Receiver, Sender};
 
 use rayon::iter::{
@@ -15,15 +12,11 @@ use std::hash::{Hash, Hasher};
 use std::iter::{DoubleEndedIterator, ExactSizeIterator};
 
 use std::ops;
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-    Arc, RwLock,
-};
 use std::thread;
 use std::time::Duration;
 
 /// Default timeout in milliseconds
-const DEFAULT_TIMEOUT: Duration = Duration::from_millis(1000);
+const DEFAULT_TIMEOUT: Duration = Duration::from_millis(100);
 
 /// Add into_par_iter() to DepGraph
 impl<I> IntoParallelIterator for DepGraph<I>
@@ -50,8 +43,6 @@ where
 {
     // Wrapped item
     inner: I,
-    // Reference to the number of items being currently processed
-    counter: Arc<AtomicUsize>,
     // Channel to notify that the item is done processing (upon drop)
     item_done_tx: Sender<I>,
 }
@@ -68,11 +59,9 @@ where
     /// thread.
     ///
     /// Upon creating of a `Wrapper`, we also increment the processing counter.
-    pub fn new(inner: I, counter: Arc<AtomicUsize>, item_done_tx: Sender<I>) -> Self {
-        (*counter).fetch_add(1, Ordering::SeqCst);
+    pub fn new(inner: I, item_done_tx: Sender<I>) -> Self {
         Self {
             inner,
-            counter,
             item_done_tx,
         }
     }
@@ -88,12 +77,6 @@ where
     ///
     /// This will decrement the processing counter and notify the dispatcher thread.
     fn drop(&mut self) {
-        (*self.counter).fetch_sub(1, Ordering::SeqCst);
-        // Ignore send errors - the receiver may have been dropped.
-        // Drop implementations should not panic per Rust best practices,
-        // as panicking during unwinding from another panic will abort the program.
-        // See: https://doc.rust-lang.org/std/ops/trait.Drop.html
-        // See: https://github.com/nmoutschen/dep-graph/issues/3
         let _ = self.item_done_tx.send(self.inner.clone());
     }
 }
@@ -150,8 +133,6 @@ pub struct DepGraphParIter<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
 {
-    timeout: Arc<RwLock<Duration>>,
-    counter: Arc<AtomicUsize>,
     item_ready_rx: Receiver<I>,
     item_done_tx: Sender<I>,
 }
@@ -165,9 +146,6 @@ where
     /// This will create a thread and crossbeam channels to listen/send
     /// available and processed nodes.
     pub fn new(ready_nodes: Vec<I>, deps: DependencyMap<I>, rdeps: DependencyMap<I>) -> Self {
-        let timeout = Arc::new(RwLock::new(DEFAULT_TIMEOUT));
-        let counter = Arc::new(AtomicUsize::new(0));
-
         // Create communication channel for processed nodes
         let (item_ready_tx, item_ready_rx) = crossbeam_channel::unbounded::<I>();
         let (item_done_tx, item_done_rx) = crossbeam_channel::unbounded::<I>();
@@ -184,9 +162,6 @@ where
             in_flight += 1;
         }
 
-        // Clone Arcs for dispatcher thread
-        let loop_timeout = timeout.clone();
-
         // Start dispatcher thread
         thread::spawn(move || {
             loop {
@@ -197,7 +172,7 @@ where
                         in_flight -= 1;
 
                         // Remove the node from all reverse dependencies
-                        let next_nodes = remove_node_id::<I>(id, &deps, &rdeps)?;
+                        let next_nodes = remove_node_id::<I>(id, &deps, &rdeps).unwrap();
 
                         // Send the next available nodes to the channel.
                         for node_id in &next_nodes {
@@ -211,7 +186,7 @@ where
                         }
                     },
                     // Timeout
-                    default(*loop_timeout.read().unwrap()) => {
+                    default(DEFAULT_TIMEOUT) => {
                         let deps = deps.read().unwrap();
                         if deps.is_empty() {
                             break;
@@ -221,7 +196,7 @@ where
                         } else if in_flight > 0 {
                             continue;
                         } else {
-                            return Err(Error::ResolveGraphError("circular dependency detected"));
+                            return Err(crate::error::Error::ResolveGraphError("circular dependency detected"));
                         }
                     },
                 };
@@ -234,17 +209,9 @@ where
         });
 
         DepGraphParIter {
-            timeout,
-            counter,
-
             item_ready_rx,
             item_done_tx,
         }
-    }
-
-    pub fn with_timeout(self, timeout: Duration) -> Self {
-        *self.timeout.write().unwrap() = timeout;
-        self
     }
 }
 
@@ -282,7 +249,6 @@ where
         CB: ProducerCallback<Self::Item>,
     {
         callback.callback(DepGraphProducer {
-            counter: self.counter,
             item_ready_rx: self.item_ready_rx,
             item_done_tx: self.item_done_tx,
         })
@@ -293,7 +259,6 @@ struct DepGraphProducer<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
 {
-    counter: Arc<AtomicUsize>,
     item_ready_rx: Receiver<I>,
     item_done_tx: Sender<I>,
 }
@@ -307,11 +272,7 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         // TODO: Check until there is an item available
         match self.item_ready_rx.recv() {
-            Ok(item) => Some(Wrapper::new(
-                item,
-                self.counter.clone(),
-                self.item_done_tx.clone(),
-            )),
+            Ok(item) => Some(Wrapper::new(item, self.item_done_tx.clone())),
             Err(_) => None,
         }
     }
@@ -340,7 +301,6 @@ where
 
     fn into_iter(self) -> Self::IntoIter {
         Self {
-            counter: self.counter,
             item_ready_rx: self.item_ready_rx,
             item_done_tx: self.item_done_tx,
         }
@@ -349,12 +309,10 @@ where
     fn split_at(self, _: usize) -> (Self, Self) {
         (
             Self {
-                counter: self.counter.clone(),
                 item_ready_rx: self.item_ready_rx.clone(),
                 item_done_tx: self.item_done_tx.clone(),
             },
             Self {
-                counter: self.counter.clone(),
                 item_ready_rx: self.item_ready_rx.clone(),
                 item_done_tx: self.item_done_tx,
             },
