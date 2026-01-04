@@ -144,7 +144,10 @@ mod tests {
     use super::*;
     #[cfg(feature = "parallel")]
     use rayon::prelude::*;
-    #[cfg(feature = "parallel")]
+    #[cfg(all(
+        feature = "parallel",
+        not(all(target_arch = "aarch64", target_os = "linux"))
+    ))]
     use std::time::Duration;
 
     /// Run against a diamond graph
