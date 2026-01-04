@@ -177,10 +177,7 @@ mod tests {
         assert_eq!(result.len(), deps.len());
     }
 
-    #[cfg(all(
-        feature = "parallel",
-        not(all(target_arch = "arm", target_os = "linux"))
-    ))]
+    #[cfg(feature = "parallel")]
     #[test]
     fn par_diamond_graph_steps() {
         let mut n1 = Node::new("1");
@@ -275,6 +272,42 @@ mod tests {
         let result = r.into_iter().map(|_| true).collect::<Vec<bool>>();
 
         assert_eq!(result.len(), nodes.len());
+    }
+
+    /// Stress test for the parallel iterator to catch race conditions.
+    /// This test runs the diamond graph iteration many times with a short
+    /// timeout to expose timing-dependent bugs where the dispatcher
+    /// could incorrectly detect a circular dependency when items were
+    /// pending in the channel but not yet picked up by workers.
+    /// See: https://github.com/nmoutschen/dep-graph/issues/3
+    #[cfg(feature = "parallel")]
+    #[test]
+    fn par_diamond_graph_stress() {
+        for i in 0..20 {
+            let mut n1 = Node::new("1");
+            let mut n2 = Node::new("2");
+            let mut n3 = Node::new("3");
+            let n4 = Node::new("4");
+
+            n1.add_dep(n2.id());
+            n1.add_dep(n3.id());
+            n2.add_dep(n4.id());
+            n3.add_dep(n4.id());
+
+            let deps = vec![n1, n2, n3, n4];
+
+            let r = DepGraph::new(&deps);
+            // Use a 1ms timeout - short enough to exercise the timeout code path,
+            // long enough to avoid thread starvation issues.
+            // See: https://github.com/nmoutschen/dep-graph/issues/3
+            let result = r
+                .into_par_iter()
+                .with_timeout(Duration::from_millis(1))
+                .map(|_| true)
+                .collect::<Vec<bool>>();
+
+            assert_eq!(result.len(), deps.len(), "iteration {} failed", i);
+        }
     }
 
     // #[test]
