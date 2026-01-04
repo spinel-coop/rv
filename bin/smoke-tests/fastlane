@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Smoke test for fastlane
+# https://github.com/fastlane/fastlane
+#
+# fastlane requires Ruby >= 2.6 but doesn't specify a .ruby-version,
+# so we pin to a stable version for testing.
+
+RUBY_VERSION="3.3"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+SMOKE_TEST_DIR="$ROOT_DIR/temp/smoke-tests"
+PROJECT_DIR="$SMOKE_TEST_DIR/fastlane"
+RV="$ROOT_DIR/target/release/rv"
+
+# Clone if needed
+mkdir -p "$SMOKE_TEST_DIR"
+if [ ! -d "$PROJECT_DIR" ]; then
+    echo "Cloning fastlane..."
+    git clone --depth 1 https://github.com/fastlane/fastlane.git "$PROJECT_DIR"
+else
+    echo "fastlane already cloned, using existing copy"
+fi
+
+cd "$PROJECT_DIR"
+
+# Create .ruby-version since fastlane doesn't have one
+echo "$RUBY_VERSION" > .ruby-version
+
+echo "Installing Ruby $RUBY_VERSION for fastlane..."
+"$RV" ruby install
+
+echo "Running rv ci for fastlane..."
+"$RV" ci
+
+echo "Smoke test for fastlane passed!"
