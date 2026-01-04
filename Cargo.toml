@@ -65,7 +65,7 @@ tokio = "1.46.1"
 tracing = "0.1.44"
 tracing-indicatif = "0.3.11"
 tracing-oslog = "0.3.0"
-tracing-subscriber = "0.3.19"
+tracing-subscriber = "0.3.22"
 tracing-test = "0.2"
 winnow = "0.6"
 rv-cache = { version = "0.1.0", path = "crates/rv-cache" }
