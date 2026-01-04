@@ -282,7 +282,7 @@ where
         CB: ProducerCallback<Self::Item>,
     {
         callback.callback(DepGraphProducer {
-            counter: self.counter.clone(),
+            counter: self.counter,
             item_ready_rx: self.item_ready_rx,
             item_done_tx: self.item_done_tx,
         })
@@ -340,8 +340,8 @@ where
 
     fn into_iter(self) -> Self::IntoIter {
         Self {
-            counter: self.counter.clone(),
-            item_ready_rx: self.item_ready_rx.clone(),
+            counter: self.counter,
+            item_ready_rx: self.item_ready_rx,
             item_done_tx: self.item_done_tx,
         }
     }

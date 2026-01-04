@@ -9,6 +9,7 @@ pub type InnerDependencyMap<I> = HashMap<I, HashSet<I>>;
 pub type DependencyMap<I> = Arc<RwLock<InnerDependencyMap<I>>>;
 
 /// Dependency graph
+#[derive(Debug, Default)]
 pub struct DepGraph<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
@@ -43,16 +44,12 @@ where
 
             if node.deps().is_empty() {
                 ready_nodes.push(node.id().clone());
-            }
-
-            for node_dep in node.deps() {
-                if !rdeps.contains_key(node_dep) {
-                    let mut dep_rdeps = HashSet::new();
-                    dep_rdeps.insert(node.id().clone());
-                    rdeps.insert(node_dep.clone(), dep_rdeps.clone());
-                } else {
-                    let dep_rdeps = rdeps.get_mut(node_dep).unwrap();
-                    dep_rdeps.insert(node.id().clone());
+            } else {
+                for node_dep in node.deps() {
+                    rdeps
+                        .entry(node_dep.clone())
+                        .or_default()
+                        .insert(node.id().clone());
                 }
             }
         }
@@ -65,6 +62,20 @@ where
     }
 }
 
+impl<I: Clone> Clone for DepGraph<I>
+where
+    I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
+{
+    fn clone(&self) -> Self {
+        Self {
+            ready_nodes: self.ready_nodes.clone(),
+            // clone the inner HashMap so that a new iteration can be started
+            deps: Arc::new(RwLock::new(self.deps.read().unwrap().clone())),
+            rdeps: Arc::new(RwLock::new(self.rdeps.read().unwrap().clone())),
+        }
+    }
+}
+
 impl<I> IntoIterator for DepGraph<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
@@ -73,7 +84,7 @@ where
     type IntoIter = DepGraphIter<I>;
 
     fn into_iter(self) -> Self::IntoIter {
-        DepGraphIter::<I>::new(self.ready_nodes.clone(), self.deps.clone(), self.rdeps)
+        DepGraphIter::<I>::new(self.ready_nodes, self.deps, self.rdeps)
     }
 }
 
@@ -133,33 +144,31 @@ pub fn remove_node_id<I>(
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
 {
-    let rdep_ids = {
-        match rdeps.read().unwrap().get(&id) {
-            Some(node) => node.clone(),
-            // If no node depends on a node, it will not appear
-            // in rdeps.
-            None => Default::default(),
-        }
-    };
-
     let mut deps = deps.write().unwrap();
-    let next_nodes = rdep_ids
-        .iter()
-        .filter_map(|rdep_id| {
-            let rdep = match deps.get_mut(rdep_id) {
-                Some(rdep) => rdep,
-                None => return None,
-            };
+    let next_nodes = if let Some(rdep_ids) = rdeps.read().unwrap().get(&id) {
+        let next_nodes = rdep_ids
+            .iter()
+            .filter_map(|rdep_id| {
+                let rdep = match deps.get_mut(rdep_id) {
+                    Some(rdep) => rdep,
+                    None => return None,
+                };
 
-            rdep.remove(&id);
+                rdep.remove(&id);
 
-            if rdep.is_empty() {
-                Some(rdep_id.clone())
-            } else {
-                None
-            }
-        })
-        .collect();
+                if rdep.is_empty() {
+                    Some(rdep_id.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        next_nodes
+    } else {
+        // If no node depends on a node, it will not appear in rdeps.
+        vec![]
+    };
 
     // Remove the current node from the list of dependencies.
     deps.remove(&id);
