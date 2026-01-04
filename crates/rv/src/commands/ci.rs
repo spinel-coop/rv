@@ -19,6 +19,7 @@ use rv_lockfile::datatypes::GemVersion;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_lockfile::datatypes::GitSection;
 use rv_lockfile::datatypes::Spec;
+use rv_ruby::request::RubyRequest;
 use sha2::Digest;
 use tracing::debug;
 use tracing::info;
@@ -88,6 +89,8 @@ struct CiInnerArgs {
 pub enum Error {
     #[error(transparent)]
     Infallible(#[from] std::convert::Infallible),
+    #[error("Needed to install Ruby but couldn't: {0}")]
+    Install(#[from] crate::commands::ruby::install::Error),
     #[error("Cannot build unknown native extension {filename} from gem {gemname}")]
     UnknownExtension { filename: String, gemname: String },
     #[error("No gemspec found for downloaded gem {0}")]
@@ -146,13 +149,29 @@ pub enum Error {
 type Result<T> = std::result::Result<T, Error>;
 
 pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
-    let extensions_dir = find_exts_dir(config)?;
+    // We need some Ruby installed, because we might need to run Ruby code when installing
+    // various gems. So, pick a stable version of Ruby, ensure it's installed,
+    // so we can use it later.
+    let ruby_request = config.ruby_request();
+    let ruby_request = if ruby_request == RubyRequest::default() {
+        RubyRequest::latest()
+    } else {
+        ruby_request
+    };
+
+    if config.matching_ruby(&ruby_request).is_none() {
+        crate::ruby_install(config, None, Some(ruby_request.clone()), None).await?;
+    }
+
+    // Now that it's installed, we can use Ruby to query various directories
+    // we'll need to know later.
+    let extensions_dir = find_exts_dir(config, &ruby_request)?;
     let lockfile_path = find_lockfile_path(args.gemfile)?;
     let lockfile_dir = lockfile_path
         .parent()
         .ok_or(Error::InvalidLockfilePath(lockfile_path.to_string()))?
         .to_path_buf();
-    let install_path = find_install_path(config, &lockfile_dir).await?;
+    let install_path = find_install_path(config, &lockfile_dir, &ruby_request)?;
     let inner_args = CiInnerArgs {
         skip_compile_extensions: args.skip_compile_extensions,
         max_concurrent_requests: args.max_concurrent_requests,
@@ -586,22 +605,24 @@ fn find_lockfile_path(gemfile: Option<Utf8PathBuf>) -> Result<Utf8PathBuf> {
 
 /// Which path should `ci` install gems under?
 /// Uses Bundler's `bundle_path`.
-async fn find_install_path(config: &Config, lockfile_dir: &Utf8Path) -> Result<Utf8PathBuf> {
+fn find_install_path(
+    config: &Config,
+    lockfile_dir: &Utf8Path,
+    version: &RubyRequest,
+) -> Result<Utf8PathBuf> {
     let env_path = std::env::var("BUNDLE_PATH");
     if let Ok(bundle_path) = env_path {
         return Ok(Utf8PathBuf::from(&bundle_path));
     }
     let args = ["-rbundler", "-e", "puts Bundler.bundle_path"];
-    let bundle_path = match crate::commands::ruby::run::run(
+    let bundle_path = match crate::commands::ruby::run::run_no_install(
         config,
-        None,
-        Default::default(),
+        version,
         args.as_slice(),
         CaptureOutput::Both,
         Some(lockfile_dir),
-    )
-    .await
-    {
+        Vec::new(), // env
+    ) {
         Ok(output) => output.stdout,
         Err(_) => Vec::from(".rv"),
     };
@@ -942,17 +963,18 @@ impl CompileNativeExtResult {
     }
 }
 
-fn find_exts_dir(config: &Config) -> Result<Utf8PathBuf> {
+fn find_exts_dir(config: &Config, version: &RubyRequest) -> Result<Utf8PathBuf> {
+    debug!("Finding extensions dir");
     let exts_dir = crate::commands::ruby::run::run_no_install(
         config,
-        &config.ruby_request(),
+        version,
         &[
             "-e",
             "puts File.join(Gem::Platform.local.to_s, Gem.extension_api_version)",
         ],
         CaptureOutput::Both,
         None,
-        vec![],
+        Vec::new(),
     )?
     .stdout;
 
