@@ -55,7 +55,7 @@ shell-escape = { workspace = true }
 once_cell = { workspace = true }
 rayon-tracing = { workspace = true }
 clap_complete = "4.5.61"
-clap_complete_nushell = "4.5.8"
+clap_complete_nushell = "4.5.10"
 url = "2.5.7"
 bytes = "1.11.0"
 saphyr.workspace = true
