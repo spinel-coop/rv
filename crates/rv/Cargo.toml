@@ -34,6 +34,7 @@ tracing = { workspace = true }
 etcetera = { workspace = true }
 tracing-indicatif = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
+tracing-oslog = { workspace = true }
 anstream = { workspace = true }
 clap-verbosity-flag = { workspace = true, features = ["tracing"] }
 reqwest = { workspace = true, features = ["stream", "socks"] }
@@ -66,6 +67,7 @@ camino-tempfile = "1.4.1"
 dircpy = "0.3.19"
 glob = "0.3.3"
 base64 = "0.22.1"
+dep-graph = { workspace = true }
 
 [dev-dependencies]
 insta = { workspace = true }

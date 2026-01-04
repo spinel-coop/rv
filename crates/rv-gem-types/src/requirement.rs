@@ -18,113 +18,107 @@ pub struct Requirement {
     pub constraints: Vec<VersionConstraint>,
 }
 
-#[derive(Debug, Clone)]
+// Defaults to ">= 0"
+#[derive(Default, Debug, Clone)]
 pub struct VersionConstraint {
     pub operator: ComparisonOperator,
     pub version: Version,
 }
 
 impl VersionConstraint {
+    pub fn version_from(str: &str, prefix: &str) -> Result<Version, RequirementError> {
+        let version = str.strip_prefix(prefix).unwrap_or(str).trim();
+
+        Version::new(version).map_err(|_| RequirementError::InvalidVersion {
+            version: version.to_string(),
+        })
+    }
+
     pub fn is_latest(&self) -> bool {
         matches!(self.operator, ComparisonOperator::GreaterEqual) && self.version.version == "0"
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+impl TryFrom<&str> for VersionConstraint {
+    type Error = RequirementError;
+
+    fn try_from(str: &str) -> Result<Self, RequirementError> {
+        let str = str.trim();
+
+        if str.is_empty() {
+            return Err(RequirementError::Empty);
+        }
+
+        // Try to match operator and version
+        let operator = ComparisonOperator::try_from(str)?;
+        let version = VersionConstraint::version_from(str, operator.as_ref())?;
+
+        Ok(Self { operator, version })
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub enum ComparisonOperator {
     Equal,
     NotEqual,
     Greater,
+    #[default]
     GreaterEqual,
     Less,
     LessEqual,
     Pessimistic,
 }
 
+impl TryFrom<&str> for ComparisonOperator {
+    type Error = RequirementError;
+
+    fn try_from(str: &str) -> Result<Self, RequirementError> {
+        match str {
+            s if s.starts_with(">=") => Ok(Self::GreaterEqual),
+            s if s.starts_with("<=") => Ok(Self::LessEqual),
+            s if s.starts_with("!=") => Ok(Self::NotEqual),
+            s if s.starts_with("~>") => Ok(Self::Pessimistic),
+            s if s.starts_with(">") => Ok(Self::Greater),
+            s if s.starts_with("<") => Ok(Self::Less),
+            s if s.starts_with("!") => Err(RequirementError::InvalidOperator {
+                operator: str.chars().take(2).collect(),
+            }),
+            _ => Ok(Self::Equal), // Default to "=" if no operator specified
+        }
+    }
+}
+
+impl AsRef<str> for ComparisonOperator {
+    fn as_ref(&self) -> &str {
+        match self {
+            Self::GreaterEqual => ">=",
+            Self::LessEqual => "<=",
+            Self::NotEqual => "!=",
+            Self::Pessimistic => "~>",
+            Self::Greater => ">",
+            Self::Less => "<",
+            Self::Equal => "=",
+        }
+    }
+}
+
 impl Requirement {
     pub fn new(requirements: Vec<impl AsRef<str>>) -> Result<Self, RequirementError> {
-        let mut constraints = Vec::new();
+        if requirements.is_empty() {
+            Ok(Self::default())
+        } else {
+            let mut constraints = Vec::new();
 
-        for req in requirements {
-            let req_str = req.as_ref().trim();
-            if req_str.is_empty() {
-                continue;
+            for req in requirements {
+                constraints.push(VersionConstraint::try_from(req.as_ref())?);
             }
-            constraints.push(Self::parse_requirement(req_str)?);
-        }
 
-        // Default to ">= 0" if no constraints
-        if constraints.is_empty() {
-            let version = Version::new("0").map_err(|_| RequirementError::InvalidVersion {
-                version: "0".to_string(),
-            })?;
-            constraints.push(VersionConstraint {
-                operator: ComparisonOperator::GreaterEqual,
-                version,
-            });
+            Ok(Self { constraints })
         }
-
-        Ok(Self { constraints })
     }
 
     pub fn parse(requirement: &str) -> Result<Self, RequirementError> {
-        let requirement = requirement.trim();
-        if requirement.is_empty() {
-            return Err(RequirementError::Empty);
-        }
         Self::new(vec![requirement])
-    }
-
-    fn parse_requirement(requirement: &str) -> Result<VersionConstraint, RequirementError> {
-        let requirement = requirement.trim();
-
-        if requirement.is_empty() {
-            return Err(RequirementError::Empty);
-        }
-
-        // Try to match operator and version
-        let (operator, version_str) =
-            if let Some(captures) = Self::extract_operator_and_version(requirement)? {
-                captures
-            } else {
-                // Default to "=" if no operator specified
-                (ComparisonOperator::Equal, requirement)
-            };
-
-        let version = Version::new(version_str).map_err(|_| RequirementError::InvalidVersion {
-            version: version_str.to_string(),
-        })?;
-
-        Ok(VersionConstraint { operator, version })
-    }
-
-    fn extract_operator_and_version(
-        requirement: &str,
-    ) -> Result<Option<(ComparisonOperator, &str)>, RequirementError> {
-        let requirement = requirement.trim();
-
-        if let Some(stripped) = requirement.strip_prefix(">=") {
-            Ok(Some((ComparisonOperator::GreaterEqual, stripped.trim())))
-        } else if let Some(stripped) = requirement.strip_prefix("<=") {
-            Ok(Some((ComparisonOperator::LessEqual, stripped.trim())))
-        } else if let Some(stripped) = requirement.strip_prefix("!=") {
-            Ok(Some((ComparisonOperator::NotEqual, stripped.trim())))
-        } else if let Some(stripped) = requirement.strip_prefix("~>") {
-            Ok(Some((ComparisonOperator::Pessimistic, stripped.trim())))
-        } else if let Some(stripped) = requirement.strip_prefix('>') {
-            Ok(Some((ComparisonOperator::Greater, stripped.trim())))
-        } else if let Some(stripped) = requirement.strip_prefix('<') {
-            Ok(Some((ComparisonOperator::Less, stripped.trim())))
-        } else if let Some(stripped) = requirement.strip_prefix('=') {
-            Ok(Some((ComparisonOperator::Equal, stripped.trim())))
-        } else if requirement.starts_with('!') {
-            // Handle invalid operators like "! 1"
-            Err(RequirementError::InvalidOperator {
-                operator: requirement.chars().take(2).collect(),
-            })
-        } else {
-            Ok(None)
-        }
     }
 
     pub fn satisfied_by(&self, version: &Version) -> bool {
@@ -166,10 +160,7 @@ impl Eq for Requirement {}
 impl Default for Requirement {
     fn default() -> Self {
         Self {
-            constraints: vec![VersionConstraint {
-                operator: ComparisonOperator::GreaterEqual,
-                version: Version::default(),
-            }],
+            constraints: vec![VersionConstraint::default()],
         }
     }
 }
@@ -204,15 +195,7 @@ impl VersionConstraint {
 
 impl std::fmt::Display for ComparisonOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ComparisonOperator::Equal => write!(f, "="),
-            ComparisonOperator::NotEqual => write!(f, "!="),
-            ComparisonOperator::Greater => write!(f, ">"),
-            ComparisonOperator::GreaterEqual => write!(f, ">="),
-            ComparisonOperator::Less => write!(f, "<"),
-            ComparisonOperator::LessEqual => write!(f, "<="),
-            ComparisonOperator::Pessimistic => write!(f, "~>"),
-        }
+        write!(f, "{}", self.as_ref())
     }
 }
 
