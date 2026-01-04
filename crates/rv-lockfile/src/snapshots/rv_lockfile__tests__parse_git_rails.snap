@@ -1,11 +1,14 @@
 ---
 source: crates/rv-lockfile/src/tests.rs
+assertion_line: 69
 expression: output
 ---
 git:
   - remote: "https://github.com/indirect/indirect.git"
     revision: ee7de5322965eb4e756454a66039a2d2a3395509
     branch: ~
+    ref: ~
+    tag: ~
     submodules: false
     specs:
       - gem_version:
@@ -20,6 +23,8 @@ git:
   - remote: "https://github.com/rails/rails.git"
     revision: 80570a6dd73d632738ed86561b10d33217c6fa7e
     branch: ~
+    ref: ~
+    tag: ~
     submodules: false
     specs:
       - gem_version:
