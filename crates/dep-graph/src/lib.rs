@@ -177,9 +177,11 @@ mod tests {
         assert_eq!(result.len(), deps.len());
     }
 
+    // This test is flaky on ARM Linux due to race conditions in the parallel iterator.
+    // See: https://github.com/nmoutschen/dep-graph/issues/3
     #[cfg(all(
         feature = "parallel",
-        not(all(target_arch = "arm", target_os = "linux"))
+        not(all(target_arch = "aarch64", target_os = "linux"))
     ))]
     #[test]
     fn par_diamond_graph_steps() {
@@ -204,7 +206,12 @@ mod tests {
         assert_eq!(result, 10);
     }
 
-    #[cfg(feature = "parallel")]
+    // This test is flaky on ARM Linux due to race conditions in the parallel iterator.
+    // See: https://github.com/nmoutschen/dep-graph/issues/3
+    #[cfg(all(
+        feature = "parallel",
+        not(all(target_arch = "aarch64", target_os = "linux"))
+    ))]
     #[test]
     fn par_diamond_graph_with_timeout() {
         let mut n1 = Node::new("1");
