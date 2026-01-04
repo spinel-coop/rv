@@ -89,9 +89,12 @@ where
     /// This will decrement the processing counter and notify the dispatcher thread.
     fn drop(&mut self) {
         (*self.counter).fetch_sub(1, Ordering::SeqCst);
-        self.item_done_tx
-            .send(self.inner.clone())
-            .expect("could not send message")
+        // Ignore send errors - the receiver may have been dropped.
+        // Drop implementations should not panic per Rust best practices,
+        // as panicking during unwinding from another panic will abort the program.
+        // See: https://doc.rust-lang.org/std/ops/trait.Drop.html
+        // See: https://github.com/nmoutschen/dep-graph/issues/3 - repo is not maintained, unfortunately
+        let _ = self.item_done_tx.send(self.inner.clone());
     }
 }
 
