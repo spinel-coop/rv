@@ -110,6 +110,13 @@ fn test_parse_git_tag() {
     insta::assert_yaml_snapshot!(output);
 }
 
+#[test]
+fn test_parse_mastodon() {
+    let input = include_str!("../tests/inputs/Gemfile.mastodon.lock");
+    let output = must_parse(input);
+    insta::assert_yaml_snapshot!(output);
+}
+
 fn must_parse(input: &str) -> crate::datatypes::GemfileDotLock<'_> {
     match crate::parse(input) {
         Ok(o) => o,
