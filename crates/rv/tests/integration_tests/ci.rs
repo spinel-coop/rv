@@ -1,11 +1,13 @@
 use crate::common::RvTest;
 
-fn install_real_ruby(test: &mut RvTest, ruby_version: &str) {
-    // Install a Ruby version first.
+fn ensure_real_ruby(test: &mut RvTest, ruby_version: &str) {
     // Remove the mock, because we need a real Ruby.
     let env_var_list = test.env.remove("RV_LIST_URL");
     let env_var_install = test.env.remove("RV_INSTALL_URL");
-    test.rv(&["ruby", "install", ruby_version]).assert_success();
+
+    // Make sure we have the version available, auto-installing if needed
+    test.rv(&["ruby", "run", ruby_version, "--", "--version"])
+        .assert_success();
 
     // Put the Ruby install mocks back now.
     if let Some(ev) = env_var_list {
@@ -19,7 +21,7 @@ fn install_real_ruby(test: &mut RvTest, ruby_version: &str) {
 fn test_clean_install_download_test_gem() {
     let mut test = RvTest::new();
 
-    install_real_ruby(&mut test, "4.0.0");
+    ensure_real_ruby(&mut test, "4.0.0");
 
     // Now we can use rv ci.
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testsource");
@@ -44,7 +46,7 @@ fn test_clean_install_download_test_gem() {
 #[test]
 fn test_clean_install_native_macos_aarch64() {
     let mut test = RvTest::new();
-    install_real_ruby(&mut test, "4.0.0");
+    ensure_real_ruby(&mut test, "4.0.0");
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative.lock");
     let output = test.rv(&["ci", "--skip-compile-extensions"]);
@@ -59,7 +61,7 @@ fn test_clean_install_native_macos_aarch64() {
 #[test]
 fn test_clean_install_native_linux_x86_64() {
     let mut test = RvTest::new();
-    install_real_ruby(&mut test, "4.0.0");
+    ensure_real_ruby(&mut test, "4.0.0");
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative.lock");
     let output = test.rv(&["ci", "--skip-compile-extensions"]);
@@ -73,7 +75,7 @@ fn test_clean_install_native_linux_x86_64() {
 #[test]
 fn test_clean_install_download_faker() {
     let mut test = RvTest::new();
-    install_real_ruby(&mut test, "4.0.0");
+    ensure_real_ruby(&mut test, "4.0.0");
     // https://github.com/faker-ruby/faker/blob/2f8b18b112fb3b7d2750321a8e574518cfac0d53/Gemfile
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.faker");
     // https://github.com/faker-ruby/faker/blob/2f8b18b112fb3b7d2750321a8e574518cfac0d53/Gemfile.lock
