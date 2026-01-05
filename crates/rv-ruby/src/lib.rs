@@ -181,6 +181,8 @@ pub enum RubyError {
     InvalidVersion(String),
     #[error(transparent)]
     RequestError(#[from] crate::request::RequestError),
+    #[error(transparent)]
+    ParseVersionError(#[from] crate::version::ParseVersionError),
 }
 
 /// Extract all Ruby information from the executable in a single call

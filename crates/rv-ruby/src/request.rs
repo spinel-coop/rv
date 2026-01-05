@@ -7,6 +7,8 @@ use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 pub type VersionPart = u32;
 
+/// A range of possible Ruby versions. E.g. "3.4" spans the range 3.4.0, 3.4.1, etc.
+/// This is different to a RubyVersion, which is one specific version in this requested range.
 #[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay)]
 pub struct RubyRequest {
     pub engine: RubyEngine,
