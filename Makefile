@@ -29,3 +29,12 @@ smoke-test-huginn:
 .PHONY: smoke-test-clean
 smoke-test-clean:
 	rm -rf temp/smoke-tests/*
+
+# Integration tests (run in Docker containers)
+.PHONY: integration-test-alpine
+integration-test-alpine:
+	docker run --rm -v "$(PWD):/rv" -w /rv rust:alpine sh -c "apk add --no-cache build-base && ./bin/build-rv && ./target/release/rv --version && ./target/release/rv --help"
+
+.PHONY: integration-test-arch
+integration-test-arch:
+	docker run --rm --platform linux/amd64 -v "$(PWD):/rv" -w /rv archlinux:base-devel sh -c "pacman -Syu --noconfirm rust && ./bin/build-rv && ./target/release/rv --version && ./target/release/rv --help"
