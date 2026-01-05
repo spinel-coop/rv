@@ -19,6 +19,9 @@ jobs:
     name: Build rv
     runs-on: ubuntu-latest
     steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
       - uses: ./.github/actions/build-rv
 
       - name: Upload rv binary
