@@ -9,6 +9,11 @@ RV := ./target/release/rv
 build:
 	cargo build --release --locked --all-features --bin rv
 
+# Run all tests
+.PHONY: test
+test:
+	cargo test --locked
+
 $(RV): build
 
 # Project smoke tests (scripts in bin/smoke-tests/)
