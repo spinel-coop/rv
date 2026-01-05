@@ -1,12 +1,9 @@
 name: Build rv
-description: Check out repo, install Rust, cache dependencies, and build rv
+description: Install Rust, cache dependencies, and build rv
 
 runs:
   using: composite
   steps:
-    - name: Check out repo
-      uses: actions/checkout@v6
-
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
 
