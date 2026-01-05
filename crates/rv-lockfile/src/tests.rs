@@ -122,6 +122,8 @@ fn test_parse_lobsters() {
 
 #[test]
 fn test_parse_mastodon() {
+    // Test parsing Mastodon's Gemfile.lock (has `ref:` field in GIT section)
+    // https://github.com/mastodon/mastodon
     let input = include_str!("../tests/inputs/Gemfile.mastodon.lock");
     let output = must_parse(input);
     insta::assert_yaml_snapshot!(output);
