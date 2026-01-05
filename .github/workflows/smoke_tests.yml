@@ -18,11 +18,16 @@ jobs:
   build:
     name: Build rv
     runs-on: ubuntu-latest
+    container: rust:slim-bookworm
     steps:
       - name: Check out repo
         uses: actions/checkout@v6
 
-      - uses: ./.github/actions/build-rv
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build rv
+        run: ./bin/build-rv
 
       - name: Upload rv binary
         uses: actions/upload-artifact@v6
