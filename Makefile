@@ -1,7 +1,3 @@
-# Smoke test Makefile
-# Usage: make smoke-test-<project>
-# Example: make smoke-test-discourse
-
 RV := ./target/release/rv
 
 # Build rv in release mode
@@ -16,7 +12,6 @@ test:
 
 $(RV): build
 
-# Project smoke tests (scripts in bin/smoke-tests/)
 # All smoke tests use Docker and build rv inside the container
 .PHONY: smoke-test-discourse
 smoke-test-discourse:
