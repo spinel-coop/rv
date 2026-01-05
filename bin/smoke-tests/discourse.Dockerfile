@@ -1,17 +1,10 @@
 # Test rv ci with Discourse
-# Two-stage build: compile rv, then test with Discourse
+# Expects rv binary to be passed as build argument
 
-# Stage 1: Build rv
-FROM rust:slim-bookworm AS builder
-WORKDIR /rv
-COPY . .
-RUN ./bin/build-rv
-
-# Stage 2: Test with Discourse
 FROM discourse/base:release
 
-# Copy rv binary from builder
-COPY --from=builder /rv/target/release/rv /usr/local/bin/rv
+# Copy rv binary (passed via build context)
+COPY rv /usr/local/bin/rv
 
 WORKDIR /var/www/discourse
 

@@ -1,17 +1,10 @@
 # Test rv ci with Huginn
-# Two-stage build: compile rv, then test with Huginn
+# Expects rv binary in build context
 
-# Stage 1: Build rv
-FROM rust:slim-bookworm AS builder
-WORKDIR /rv
-COPY . .
-RUN ./bin/build-rv
-
-# Stage 2: Test with Huginn
 FROM huginn/huginn
 
-# Copy rv binary from builder
-COPY --from=builder /rv/target/release/rv /usr/local/bin/rv
+# Copy rv binary (passed via build context)
+COPY rv /usr/local/bin/rv
 
 WORKDIR /app
 
