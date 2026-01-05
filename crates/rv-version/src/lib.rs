@@ -456,10 +456,7 @@ mod tests {
 
     #[test]
     fn test_canonical_segments() {
-        assert_eq!(
-            v("0").canonical_segments(),
-            vec![VersionSegment::Number(0)]
-        );
+        assert_eq!(v("0").canonical_segments(), vec![VersionSegment::Number(0)]);
         assert_eq!(
             v("0-rc").canonical_segments(),
             vec![
