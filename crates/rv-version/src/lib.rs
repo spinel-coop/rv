@@ -156,20 +156,15 @@ impl Version {
     }
 
     pub fn canonical_segments(&self) -> Vec<VersionSegment> {
-        // Step 1: Remove leading zeros that come before the first string segment
-        let mut canonical = Vec::new();
-        let first_string_index = self.segments.iter().position(|s| s.is_string());
+        let mut canonical = self.segments.clone();
 
-        // Copy segments, skipping zeros before first string
-        for (i, segment) in self.segments.iter().enumerate() {
-            if let Some(string_idx) = first_string_index {
-                // Skip zeros between first segment and string segment
-                if i > 0 && i < string_idx && segment.is_zero() {
-                    continue;
-                }
-            }
-            canonical.push(segment.clone());
-        }
+        // Step 1: Remove leading zeros, between first segment and upto the first string segment.
+        let first_string_index = canonical.iter().position(|s| s.is_string());
+        if let Some(index) = first_string_index {
+            canonical
+                .extract_if(1..index, |s| s.is_zero())
+                .for_each(drop);
+        };
 
         // Step 2: Remove trailing zeros, but keep at least one segment
         while canonical.len() > 1 {
