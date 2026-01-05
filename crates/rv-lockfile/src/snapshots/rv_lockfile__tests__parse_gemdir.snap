@@ -1,11 +1,14 @@
 ---
 source: crates/rv-lockfile/src/tests.rs
+assertion_line: 55
 expression: output
 ---
 git:
   - remote: "https://github.com/omniauth/omniauth-github.git"
     revision: f27bb4e018150d87e9444ad13955acfc9e76f4d7
     branch: master
+    ref: ~
+    tag: ~
     submodules: false
     specs:
       - gem_version:

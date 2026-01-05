@@ -1,0 +1,21 @@
+GIT
+  remote: https://gitlab.com/ekylibre/eky-possibly.git
+  revision: 483d102852e2ab8fcbf695b9e25a40902302a593
+  tag: v3.1.1
+  specs:
+    possibly (3.1.1)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    rake (13.0.6)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  possibly!
+  rake
+
+BUNDLED WITH
+   2.4.22
