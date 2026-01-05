@@ -167,12 +167,8 @@ impl Version {
         };
 
         // Step 2: Remove trailing zeros, but keep at least one segment
-        while canonical.len() > 1 {
-            if let Some(VersionSegment::Number(0)) = canonical.last() {
-                canonical.pop();
-            } else {
-                break;
-            }
+        if let Some(last_nonzero_index) = canonical.iter().rposition(|s| !s.is_zero()) {
+            canonical.truncate(1 + last_nonzero_index);
         }
 
         // Ensure we have at least one segment
