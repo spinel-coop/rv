@@ -18,8 +18,11 @@ WORKDIR /var/www/discourse
 # Clear pre-installed gems to test rv ci from scratch
 RUN rm -rf vendor/bundle .bundle
 
-# Use the Ruby version from the image (3.3.8)
-RUN ruby -e 'puts RUBY_VERSION' > .ruby-version
+# Discourse requires Ruby 3.3+
+RUN echo "3.3" > .ruby-version
 
-# Run rv ci
-RUN rv ci -q
+# Install Ruby and run rv ci
+# Need to source rv's shell env to set PATH for the installed Ruby
+RUN rv ruby install && \
+    eval "$(rv shell env bash)" && \
+    rv ci -q
