@@ -27,6 +27,8 @@ pub enum Error {
     EnvError(#[from] std::env::VarError),
     #[error(transparent)]
     JoinPathsError(#[from] JoinPathsError),
+    #[error("Tried to parse ruby version from Gemfile.lock, but that file was invalid: {0}")]
+    CouldNotParseGemfileLock(#[from] rv_lockfile::ParseErrors),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -154,6 +156,18 @@ pub fn find_requested_ruby(
                     version.parse()?,
                     Source::DotToolVersions(tools_versions),
                 )));
+            }
+        }
+
+        let lockfile = project_dir.join("Gemfile.lock");
+        if lockfile.exists() {
+            let lockfile_contents = std::fs::read_to_string(&lockfile)?;
+            let lockfile_ruby = rv_lockfile::parse(&lockfile_contents)
+                .map_err(Error::CouldNotParseGemfileLock)?
+                .ruby_version;
+            if let Some(lockfile_ruby) = lockfile_ruby {
+                tracing::debug!("Found ruby {lockfile_ruby} in Gemfile.lock");
+                // TODO: Parse the Ruby version
             }
         }
 
