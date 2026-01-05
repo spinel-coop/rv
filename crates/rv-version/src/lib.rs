@@ -482,6 +482,15 @@ mod tests {
             ]
         );
         assert_eq!(
+            v("1.0.1-rc1").canonical_segments(),
+            vec![
+                VersionSegment::Number(1),
+                VersionSegment::Number(1),
+                VersionSegment::String("pre".to_string()),
+                VersionSegment::String("rc1".to_string()),
+            ]
+        );
+        assert_eq!(
             v("1.2.3-1").canonical_segments(),
             vec![
                 VersionSegment::Number(1),
