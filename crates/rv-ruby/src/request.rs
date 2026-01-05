@@ -59,17 +59,6 @@ impl Default for RubyRequest {
     }
 }
 
-impl RubyRequest {
-    pub fn latest() -> Self {
-        RubyRequest {
-            major: Some(4),
-            minor: Some(0),
-            patch: Some(0),
-            ..Default::default()
-        }
-    }
-}
-
 impl PartialOrd for RubyRequest {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))

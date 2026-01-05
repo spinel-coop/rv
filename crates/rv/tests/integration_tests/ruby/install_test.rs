@@ -29,13 +29,7 @@ fn test_ruby_install_no_specific_version() {
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
-    let releases_body = r#"{
-    "name": "3.4.5",
-    "assets": [{
-        "name": "ruby-3.4.5.arm64_sonoma.tar.gz",
-        "browser_download_url": "http://..."}
-    ]}"#;
-    let mock = test.mock_releases(releases_body);
+    let mock = test.mock_releases("3.4.5");
 
     let output = test.rv(&["ruby", "install"]);
 
@@ -71,13 +65,7 @@ fn test_ruby_install_incomplete_request() {
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
-    let releases_body = r#"{
-    "name": "4.0.0",
-    "assets": [{
-        "name": "ruby-4.0.0.arm64_sonoma.tar.gz",
-        "browser_download_url": "http://..."}
-    ]}"#;
-    let mock = test.mock_releases(releases_body);
+    let mock = test.mock_releases("4.0.0");
 
     let output = test.rv(&["ruby", "install", "4"]);
 
