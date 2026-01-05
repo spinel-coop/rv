@@ -154,15 +154,7 @@ impl Version {
     pub fn canonical_segments(&self) -> Vec<VersionSegment> {
         // Step 1: Remove leading zeros that come before the first string segment
         let mut canonical = Vec::new();
-        let mut first_string_index = None;
-
-        // Find first string segment
-        for (i, segment) in self.segments.iter().enumerate() {
-            if segment.is_string() {
-                first_string_index = Some(i);
-                break;
-            }
-        }
+        let first_string_index = self.segments.iter().position(|s| s.is_string());
 
         // Copy segments, skipping zeros before first string
         for (i, segment) in self.segments.iter().enumerate() {
