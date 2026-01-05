@@ -15,32 +15,71 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  build:
+    name: Build rv
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/actions/build-rv
+
+      - name: Upload rv binary
+        uses: actions/upload-artifact@v6
+        with:
+          name: rv-linux
+          path: target/release/rv
+
   discourse:
     name: Discourse
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Check out repo
         uses: actions/checkout@v6
 
+      - name: Download rv binary
+        uses: actions/download-artifact@v7
+        with:
+          name: rv-linux
+          path: bin/smoke-tests
+
       - name: Install
-        run: make smoke-test-discourse
+        run: |
+          chmod +x bin/smoke-tests/rv
+          docker build -f bin/smoke-tests/discourse.Dockerfile -t rv-smoke-discourse bin/smoke-tests
 
   fastlane:
     name: Fastlane
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Check out repo
         uses: actions/checkout@v6
 
+      - name: Download rv binary
+        uses: actions/download-artifact@v4
+        with:
+          name: rv-linux
+          path: bin/smoke-tests
+
       - name: Install
-        run: make smoke-test-fastlane
+        run: |
+          chmod +x bin/smoke-tests/rv
+          docker build -f bin/smoke-tests/fastlane.Dockerfile -t rv-smoke-fastlane bin/smoke-tests
 
   huginn:
     name: Huginn
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Check out repo
         uses: actions/checkout@v6
 
+      - name: Download rv binary
+        uses: actions/download-artifact@v4
+        with:
+          name: rv-linux
+          path: bin/smoke-tests
+
       - name: Install
-        run: make smoke-test-huginn
+        run: |
+          chmod +x bin/smoke-tests/rv
+          docker build -f bin/smoke-tests/huginn.Dockerfile -t rv-smoke-huginn bin/smoke-tests
