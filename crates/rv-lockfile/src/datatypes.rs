@@ -46,6 +46,11 @@ pub struct GitSection<'i> {
     pub revision: &'i str,
     /// Branch used from the Git repo.
     pub branch: Option<&'i str>,
+    /// Ref used from the Git repo.
+    #[serde(rename = "ref")]
+    pub git_ref: Option<&'i str>,
+    /// Tag used from the Git repo.
+    pub tag: Option<&'i str>,
     /// Includes git submodules, or not.
     /// Optional, defaults to false.
     pub submodules: bool,

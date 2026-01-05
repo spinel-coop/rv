@@ -92,6 +92,24 @@ fn test_parse_commit_watcher() {
     insta::assert_yaml_snapshot!(output);
 }
 
+#[test]
+fn test_parse_git_ref() {
+    // Test parsing GIT sections with a `ref:` field, like from huginn's Gemfile.lock
+    // https://github.com/huginn/huginn/blob/master/Gemfile.lock#L51
+    let input = include_str!("../tests/inputs/Gemfile.git-ref.lock");
+    let output = must_parse(input);
+    insta::assert_yaml_snapshot!(output);
+}
+
+#[test]
+fn test_parse_git_tag() {
+    // Test parsing GIT sections with a `tag:` field, like from ekylibre's Gemfile.lock
+    // https://github.com/ekylibre/ekylibre/blob/main/Gemfile.lock
+    let input = include_str!("../tests/inputs/Gemfile.git-tag.lock");
+    let output = must_parse(input);
+    insta::assert_yaml_snapshot!(output);
+}
+
 fn must_parse(input: &str) -> crate::datatypes::GemfileDotLock<'_> {
     match crate::parse(input) {
         Ok(o) => o,

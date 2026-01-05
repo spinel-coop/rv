@@ -1,11 +1,14 @@
 ---
 source: crates/rv-lockfile/src/tests.rs
+assertion_line: 92
 expression: output
 ---
 git:
   - remote: "git://github.com/libgit2/rugged.git"
     revision: 34a492ec7c5165824f39d8027d73712b0346aac2
     branch: ~
+    ref: ~
+    tag: ~
     submodules: true
     specs:
       - gem_version:

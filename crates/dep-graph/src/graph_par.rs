@@ -89,9 +89,12 @@ where
     /// This will decrement the processing counter and notify the dispatcher thread.
     fn drop(&mut self) {
         (*self.counter).fetch_sub(1, Ordering::SeqCst);
-        self.item_done_tx
-            .send(self.inner.clone())
-            .expect("could not send message")
+        // Ignore send errors - the receiver may have been dropped.
+        // Drop implementations should not panic per Rust best practices,
+        // as panicking during unwinding from another panic will abort the program.
+        // See: https://doc.rust-lang.org/std/ops/trait.Drop.html
+        // See: https://github.com/nmoutschen/dep-graph/issues/3
+        let _ = self.item_done_tx.send(self.inner.clone());
     }
 }
 
@@ -169,14 +172,20 @@ where
         let (item_ready_tx, item_ready_rx) = crossbeam_channel::unbounded::<I>();
         let (item_done_tx, item_done_rx) = crossbeam_channel::unbounded::<I>();
 
+        // Track items in flight: dispatched but not yet completed.
+        // This is more reliable than checking counter + pending_items because
+        // there's a race window between recv() and Wrapper::new() where neither
+        // counter nor pending_items accounts for the item.
+        let mut in_flight: usize = 0;
+
         // Inject ready nodes
-        ready_nodes
-            .iter()
-            .for_each(|node| item_ready_tx.send(node.clone()).unwrap());
+        for node in &ready_nodes {
+            item_ready_tx.send(node.clone()).unwrap();
+            in_flight += 1;
+        }
 
         // Clone Arcs for dispatcher thread
         let loop_timeout = timeout.clone();
-        let loop_counter = counter.clone();
 
         // Start dispatcher thread
         thread::spawn(move || {
@@ -185,13 +194,16 @@ where
                     // Grab a processed node ID
                     recv(item_done_rx) -> id => {
                         let id = id.unwrap();
+                        in_flight -= 1;
+
                         // Remove the node from all reverse dependencies
                         let next_nodes = remove_node_id::<I>(id, &deps, &rdeps)?;
 
                         // Send the next available nodes to the channel.
-                        next_nodes
-                            .iter()
-                            .for_each(|node_id| item_ready_tx.send(node_id.clone()).unwrap());
+                        for node_id in &next_nodes {
+                            item_ready_tx.send(node_id.clone()).unwrap();
+                            in_flight += 1;
+                        }
 
                         // If there are no more nodes, leave the loop
                         if deps.read().unwrap().is_empty() {
@@ -201,11 +213,12 @@ where
                     // Timeout
                     default(*loop_timeout.read().unwrap()) => {
                         let deps = deps.read().unwrap();
-                        let counter_val = loop_counter.load(Ordering::SeqCst);
                         if deps.is_empty() {
                             break;
-                        // There are still some items processing.
-                        } else if counter_val > 0 {
+                        // There are still items in flight (dispatched but not completed).
+                        // This properly handles the race window between recv() and Wrapper::new().
+                        // See: https://github.com/nmoutschen/dep-graph/issues/3
+                        } else if in_flight > 0 {
                             continue;
                         } else {
                             return Err(Error::ResolveGraphError("circular dependency detected"));
@@ -269,7 +282,7 @@ where
         CB: ProducerCallback<Self::Item>,
     {
         callback.callback(DepGraphProducer {
-            counter: self.counter.clone(),
+            counter: self.counter,
             item_ready_rx: self.item_ready_rx,
             item_done_tx: self.item_done_tx,
         })
@@ -327,8 +340,8 @@ where
 
     fn into_iter(self) -> Self::IntoIter {
         Self {
-            counter: self.counter.clone(),
-            item_ready_rx: self.item_ready_rx.clone(),
+            counter: self.counter,
+            item_ready_rx: self.item_ready_rx,
             item_done_tx: self.item_done_tx,
         }
     }
