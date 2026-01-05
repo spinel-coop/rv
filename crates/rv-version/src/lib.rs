@@ -202,10 +202,6 @@ impl Version {
             release_segments.push(segment.clone());
         }
 
-        if release_segments.is_empty() {
-            release_segments.push(VersionSegment::Number(0));
-        }
-
         Self::from(release_segments)
     }
 
@@ -233,13 +229,17 @@ impl Version {
     }
 
     fn from(segments: Vec<VersionSegment>) -> Self {
-        let version = segments
-            .iter()
-            .map(|s| s.to_string())
-            .collect::<Vec<_>>()
-            .join(".");
+        if segments.is_empty() {
+            Self::default()
+        } else {
+            let version = segments
+                .iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>()
+                .join(".");
 
-        Self { version, segments }
+            Self { version, segments }
+        }
     }
 
     fn split_alphanumeric(s: &str) -> Vec<String> {
