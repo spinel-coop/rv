@@ -40,6 +40,28 @@ fn test_clean_install_download_test_gem() {
     mock.assert();
 }
 
+#[test]
+fn test_clean_install_respects_ruby() {
+    let mut test = RvTest::new();
+
+    let project_dir = test.temp_root().join("project");
+    std::fs::create_dir_all(project_dir.as_path()).unwrap();
+    std::fs::write(project_dir.join(".ruby-version"), b"3.4.8").unwrap();
+    test.cwd = project_dir;
+
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.empty");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.empty.lock");
+    test.replace_source("https://rubygems.org", &test.server_url());
+
+    let output = test.ci(&["--verbose"]);
+    output.assert_success();
+    assert!(
+        output
+            .normalized_stdout()
+            .contains("Installed Ruby version ruby-3.4.8 to /tmp/home/.local/share/rv/rubies")
+    );
+}
+
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #[test]
 fn test_clean_install_native_macos_aarch64() {
