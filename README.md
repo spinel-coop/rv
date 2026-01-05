@@ -105,7 +105,7 @@ sys  1m35.644s
 
 ## Requirements
 
-- **Operating Systems**: macOS 14+, Linux glibc 2.35+
+- **Operating Systems**: macOS 14+, Linux glibc 2.35+, Windows 10+ (via WSL)
 - **Architectures**: x86 on Intel, AMD, etc. and arm64 on Apple, Qualcomm, etc.
 - **Ruby Versions**: All non-EOL'ed Ruby versions. Currently Ruby 3.2.x, 3.3.x, 3.4.1 and up.
 - **Shells**: zsh, bash, fish, nushell. See [SHELL INTEGRATION](docs/SHELL_INTEGRATION.md) for more.
@@ -117,7 +117,11 @@ sys  1m35.644s
 brew install rv
 ```
 
-Or, visit the [releases page](https://github.com/spinel-coop/rv/releases) for an installer shell script.
+Or, install with our shell script:
+
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/spinel-coop/rv/releases/latest/download/rv-installer.sh | sh
+```
 
 ## Usage
 
