@@ -16,11 +16,31 @@ env:
 
 jobs:
   discourse:
-    name: Discourse clean-install test
+    name: Discourse
     runs-on: ubuntu-latest
     steps:
-      - name: Build rv
-        uses: ./.github/actions/build-rv
+      - name: Check out repo
+        uses: actions/checkout@v6
 
-      - name: Run smoke test
+      - name: Install
         run: make smoke-test-discourse
+
+  fastlane:
+    name: Fastlane
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Install
+        run: make smoke-test-fastlane
+
+  huginn:
+    name: Huginn
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Install
+        run: make smoke-test-huginn
