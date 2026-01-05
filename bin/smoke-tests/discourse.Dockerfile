@@ -2,10 +2,10 @@
 # Two-stage build: compile rv, then test with Discourse
 
 # Stage 1: Build rv
-FROM rust:bookworm AS builder
+FROM rust:slim-bookworm AS builder
 WORKDIR /rv
 COPY . .
-RUN cargo build --release -p rv
+RUN ./bin/build-rv
 
 # Stage 2: Test with Discourse
 FROM discourse/base:release

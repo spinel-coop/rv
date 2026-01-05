@@ -7,7 +7,7 @@ RV := ./target/release/rv
 # Build rv in release mode
 .PHONY: build
 build:
-	cargo build --release --locked --all-features --bin rv
+	./bin/build-rv
 
 # Run all tests
 .PHONY: test
@@ -17,16 +17,17 @@ test:
 $(RV): build
 
 # Project smoke tests (scripts in bin/smoke-tests/)
+# All smoke tests use Docker and build rv inside the container
 .PHONY: smoke-test-discourse
 smoke-test-discourse:
 	./bin/smoke-tests/discourse
 
 .PHONY: smoke-test-fastlane
-smoke-test-fastlane: $(RV)
+smoke-test-fastlane:
 	./bin/smoke-tests/fastlane
 
 .PHONY: smoke-test-huginn
-smoke-test-huginn: $(RV)
+smoke-test-huginn:
 	./bin/smoke-tests/huginn
 
 # Clean up smoke test cloned repos

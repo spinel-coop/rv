@@ -73,4 +73,4 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build
-        run: ./bin/rv --version
+        run: ./bin/build-rv

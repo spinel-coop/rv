@@ -15,4 +15,4 @@ runs:
 
     - name: Build rv
       shell: bash
-      run: cargo build --release --locked --all-features --bin rv
+      run: ./bin/build-rv
