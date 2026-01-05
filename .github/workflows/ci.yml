@@ -50,10 +50,7 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-
-      - name: Run clippy
+      - name: Run linters and formatters
         run: ./bin/lint
 
       - name: Run rv
