@@ -3,28 +3,17 @@ set -euo pipefail
 
 # Smoke test for Discourse
 # https://github.com/discourse/discourse
+#
+# Uses Docker multi-stage build:
+# - Stage 1: Build rv from source
+# - Stage 2: Run rv ci in discourse/base image
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-SMOKE_TEST_DIR="$ROOT_DIR/temp/smoke-tests"
-PROJECT_DIR="$SMOKE_TEST_DIR/discourse"
-RV="$ROOT_DIR/target/release/rv"
+IMAGE_NAME="rv-smoke-discourse"
 
-# Clone if needed
-mkdir -p "$SMOKE_TEST_DIR"
-if [ ! -d "$PROJECT_DIR" ]; then
-    echo "Cloning discourse..."
-    git clone --depth 1 https://github.com/discourse/discourse.git "$PROJECT_DIR"
-else
-    echo "discourse already cloned, using existing copy"
-fi
+echo "Building Docker image and running smoke test..."
+docker build -f "$SCRIPT_DIR/discourse.Dockerfile" -t "$IMAGE_NAME" "$ROOT_DIR"
 
-cd "$PROJECT_DIR"
-
-echo "Installing Ruby version for discourse..."
-"$RV" ruby install
-
-echo "Running rv ci for discourse..."
-"$RV" ci
-
+echo ""
 echo "Smoke test for discourse passed!"
