@@ -150,15 +150,8 @@ type Result<T> = std::result::Result<T, Error>;
 
 pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     // We need some Ruby installed, because we might need to run Ruby code when installing
-    // various gems. So, pick a stable version of Ruby, ensure it's installed,
-    // so we can use it later.
+    // various gems. So, ensure Ruby is installed, so we can use it later.
     let ruby_request = config.ruby_request();
-    let ruby_request = if ruby_request == RubyRequest::default() {
-        RubyRequest::latest()
-    } else {
-        ruby_request
-    };
-
     if config.matching_ruby(&ruby_request).is_none() {
         crate::ruby_install(config, None, Some(ruby_request.clone()), None).await?;
     }

@@ -125,7 +125,20 @@ impl RvTest {
 
     /// Mocks the /releases API endpoint. Returns the mock handle
     /// so that tests can optionally assert it was called.
-    pub fn mock_releases(&mut self, body: &str) -> Mock {
+    pub fn mock_releases(&mut self, version: &str) -> Mock {
+        use indoc::formatdoc;
+
+        let body = formatdoc!(
+            r#"
+            {{
+                "name": "{version}",
+                "assets": [{{
+                    "name": "ruby-{version}.arm64_sonoma.tar.gz",
+                    "browser_download_url": "http://..."
+                }}]
+            }}"#
+        );
+
         self.server
             .mock("GET", "/repos/spinel-coop/rv-ruby/releases/latest")
             .with_status(200)
