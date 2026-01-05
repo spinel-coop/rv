@@ -1,38 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Smoke test for fastlane
+# Smoke test for Fastlane
 # https://github.com/fastlane/fastlane
 #
-# fastlane requires Ruby >= 2.6 but doesn't specify a .ruby-version,
-# so we pin to a stable version for testing.
-
-RUBY_VERSION="3.3"
+# Uses Docker multi-stage build:
+# - Stage 1: Build rv from source
+# - Stage 2: Clone fastlane, install Ruby via rv, run rv ci
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-SMOKE_TEST_DIR="$ROOT_DIR/temp/smoke-tests"
-PROJECT_DIR="$SMOKE_TEST_DIR/fastlane"
-RV="$ROOT_DIR/target/release/rv"
+IMAGE_NAME="rv-smoke-fastlane"
 
-# Clone if needed
-mkdir -p "$SMOKE_TEST_DIR"
-if [ ! -d "$PROJECT_DIR" ]; then
-    echo "Cloning fastlane..."
-    git clone --depth 1 https://github.com/fastlane/fastlane.git "$PROJECT_DIR"
-else
-    echo "fastlane already cloned, using existing copy"
-fi
+echo "Building Docker image and running smoke test..."
+docker build -f "$SCRIPT_DIR/fastlane.Dockerfile" -t "$IMAGE_NAME" "$ROOT_DIR"
 
-cd "$PROJECT_DIR"
-
-# Create .ruby-version since fastlane doesn't have one
-echo "$RUBY_VERSION" > .ruby-version
-
-echo "Installing Ruby $RUBY_VERSION for fastlane..."
-"$RV" ruby install
-
-echo "Running rv ci for fastlane..."
-"$RV" ci
-
+echo ""
 echo "Smoke test for fastlane passed!"

@@ -4,43 +4,16 @@ set -euo pipefail
 # Smoke test for Huginn
 # https://github.com/huginn/huginn
 #
-# Uses Docker to provide system dependencies for native extensions.
-# Builds rv from source inside the container (Mac binary won't run on Linux).
+# Uses Docker multi-stage build:
+# - Stage 1: Build rv from source
+# - Stage 2: Clone Huginn, install Ruby via rv, run rv ci
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-IMAGE_NAME="rv-smoke-test-huginn"
+IMAGE_NAME="rv-smoke-huginn"
 
-# Build Docker image
-echo "Building Docker image..."
-docker build -t "$IMAGE_NAME" -f "$SCRIPT_DIR/huginn.Dockerfile" "$SCRIPT_DIR"
+echo "Building Docker image and running smoke test..."
+docker build -f "$SCRIPT_DIR/huginn.Dockerfile" -t "$IMAGE_NAME" "$ROOT_DIR"
 
-# Run smoke test in container
-echo "Running smoke test in container..."
-docker run --rm \
-    -v "$ROOT_DIR:/rv-src:ro" \
-    "$IMAGE_NAME" \
-    bash -c '
-        set -euo pipefail
-
-        # Build rv from source
-        echo "Building rv..."
-        cp -r /rv-src /tmp/rv-build
-        cd /tmp/rv-build
-        cargo build --release --locked --all-features --bin rv
-        cp target/release/rv /usr/local/bin/rv
-
-        # Clone Huginn
-        cd /root
-        echo "Cloning huginn..."
-        git clone --depth 1 https://github.com/huginn/huginn.git
-        cd huginn
-
-        echo "Installing Ruby version for huginn..."
-        rv ruby install
-
-        echo "Running rv ci for huginn..."
-        rv ci
-
-        echo "Smoke test for huginn passed!"
-    '
+echo ""
+echo "Smoke test for huginn passed!"
