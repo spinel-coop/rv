@@ -43,20 +43,18 @@ pub async fn install(
     version: Option<RubyRequest>,
     tarball_path: Option<String>,
 ) -> Result<()> {
-    let mut requested = match version {
+    let requested_range = match version {
         None => config.ruby_request(),
         Some(version) => version,
     };
 
-    if !requested.is_specific() {
-        let mut rubies_for_this_platform = config.remote_rubies().await;
-        rubies_for_this_platform.sort();
+    let mut rubies_for_this_platform = config.remote_rubies().await;
+    rubies_for_this_platform.sort();
 
-        requested = match requested.find_match_in(rubies_for_this_platform) {
-            None => return Err(Error::NoMatchingRuby),
-            Some(ruby) => ruby.version,
-        }
-    }
+    let selected_version = requested_range
+        .find_match_in(rubies_for_this_platform)
+        .ok_or(Error::NoMatchingRuby)?
+        .version;
 
     let install_dir = match install_dir {
         Some(dir) => Utf8PathBuf::from(dir),
@@ -68,16 +66,18 @@ pub async fn install(
 
     match tarball_path {
         Some(tarball_path) => {
-            extract_local_ruby_tarball(tarball_path, &install_dir, &requested.number()).await?
+            extract_local_ruby_tarball(tarball_path, &install_dir, &selected_version.number())
+                .await?
         }
         None => {
-            download_and_extract_remote_tarball(config, &install_dir, &requested.number()).await?
+            download_and_extract_remote_tarball(config, &install_dir, &selected_version.number())
+                .await?
         }
     }
 
     println!(
         "Installed Ruby version {} to {}",
-        requested.to_string().cyan(),
+        selected_version.to_string().cyan(),
         install_dir.cyan()
     );
 

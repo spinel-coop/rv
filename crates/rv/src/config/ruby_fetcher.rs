@@ -12,7 +12,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 
-use rv_ruby::{Asset, Release, Ruby, request::RequestError};
+use rv_ruby::{Asset, Release, Ruby, request::RequestError, version::ParseVersionError};
 
 // Use GitHub's TTL, but don't re-check more than every 60 seconds.
 const MINIMUM_CACHE_TTL: Duration = Duration::from_secs(60);
@@ -40,6 +40,8 @@ pub enum Error {
     Request(#[from] RequestError),
     #[error("Failed to fetch available ruby versions from GitHub")]
     GithubRequest(#[from] reqwest::Error),
+    #[error(transparent)]
+    ParseVersion(#[from] ParseVersionError),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -280,7 +282,7 @@ fn ruby_from_asset(asset: &Asset) -> Result<Ruby> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rv_ruby::request::RubyRequest;
+    use rv_ruby::version::RubyVersion;
 
     #[test]
     fn test_parse_cache_header() {
@@ -297,11 +299,11 @@ mod tests {
         let actual = ruby_from_asset(&release.assets[0]).unwrap();
         let expected = Ruby {
             key: "ruby-3.3.0-linux-aarch64".to_owned(),
-            version: RubyRequest {
+            version: RubyVersion{
                 engine: rv_ruby::engine::RubyEngine::Ruby,
-                major: Some(3),
-                minor: Some(3),
-                patch: Some(0),
+                major: 3,
+                minor: 3,
+                patch: 0,
                 tiny: None,
                 prerelease: None,
             },

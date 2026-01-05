@@ -3,8 +3,7 @@ use std::io;
 
 use anstream::println;
 use owo_colors::OwoColorize;
-use rv_ruby::Ruby;
-use rv_ruby::request::RubyRequest;
+use rv_ruby::{Ruby, version::RubyVersion};
 use serde::Serialize;
 use tracing::{info, warn};
 
@@ -134,12 +133,12 @@ fn latest_patch_version(rubies_for_this_platform: Vec<Ruby>) -> Vec<Ruby> {
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
     struct NonPatchRelease {
         engine: rv_ruby::engine::RubyEngine,
-        major: Option<rv_ruby::request::VersionPart>,
-        minor: Option<rv_ruby::request::VersionPart>,
+        major: rv_ruby::request::VersionPart,
+        minor: rv_ruby::request::VersionPart,
     }
 
-    impl From<RubyRequest> for NonPatchRelease {
-        fn from(value: RubyRequest) -> Self {
+    impl From<RubyVersion> for NonPatchRelease {
+        fn from(value: RubyVersion) -> Self {
             Self {
                 engine: value.engine,
                 major: value.major,
@@ -150,7 +149,7 @@ fn latest_patch_version(rubies_for_this_platform: Vec<Ruby>) -> Vec<Ruby> {
     let mut available_rubies: BTreeMap<NonPatchRelease, Ruby> = BTreeMap::new();
     for ruby in rubies_for_this_platform {
         // Skip 3.5 series since they only include pre-releases
-        if ruby.version.major == Some(3) && ruby.version.minor == Some(5) {
+        if ruby.version.major == 3 && ruby.version.minor == 5 {
             continue;
         }
 
