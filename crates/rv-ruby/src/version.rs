@@ -9,7 +9,7 @@ use serde_with::{DeserializeFromStr, SerializeDisplay};
 /// A specific version of Ruby, which can be run and downloaded.
 /// This is different from a RubyRequest, which represents a range of possible
 /// Ruby versions.
-#[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay)]
+#[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay, Ord, PartialOrd)]
 pub struct RubyVersion {
     pub engine: RubyEngine,
     pub major: VersionPart,
@@ -17,6 +17,54 @@ pub struct RubyVersion {
     pub patch: VersionPart,
     pub tiny: Option<VersionPart>,
     pub prerelease: Option<String>,
+}
+
+impl RubyVersion {
+    /// Does this version satisfy the given Ruby requested range?
+    pub fn satisfies(&self, request: &RubyRequest) -> bool {
+        if self.engine != request.engine {
+            return false;
+        }
+        if let Some(major) = request.major
+            && self.major != major
+        {
+            return false;
+        }
+        if let Some(minor) = request.minor
+            && self.minor != minor
+        {
+            return false;
+        }
+        if let Some(patch) = request.patch
+            && self.patch != patch
+        {
+            return false;
+        }
+        if self.tiny.is_some() && self.tiny != request.tiny {
+            return false;
+        }
+        if self.prerelease != request.prerelease {
+            return false;
+        }
+
+        true
+    }
+
+    /// Get the Ruby number. Basically like calling `.to_string()` except without the Ruby engine.
+    pub fn number(&self) -> String {
+        use std::fmt::Write;
+        let mut version = format!("{}.{}.{}", self.major, self.minor, self.patch);
+
+        if let Some(tiny) = self.tiny {
+            version.push('.');
+            write!(&mut version, "{}", tiny).unwrap();
+        }
+        if let Some(ref prerelease) = self.prerelease {
+            version.push('-');
+            version.push_str(prerelease);
+        }
+        version
+    }
 }
 
 impl std::fmt::Display for RubyVersion {
