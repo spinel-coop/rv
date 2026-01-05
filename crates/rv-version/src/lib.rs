@@ -193,16 +193,14 @@ impl Version {
     }
 
     pub fn release(&self) -> Self {
-        let mut release_segments = Vec::new();
+        let segments = self
+            .segments
+            .clone()
+            .into_iter()
+            .take_while(|s| s.is_number())
+            .collect::<Vec<_>>();
 
-        for segment in &self.segments {
-            if segment.is_string() {
-                break;
-            }
-            release_segments.push(segment.clone());
-        }
-
-        Self::from(release_segments)
+        Self::from(segments)
     }
 
     pub fn bump(&self) -> Version {
