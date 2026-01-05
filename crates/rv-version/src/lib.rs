@@ -170,11 +170,6 @@ impl Version {
             canonical.truncate(1 + last_nonzero_index);
         }
 
-        // Ensure we have at least one segment
-        if canonical.is_empty() {
-            canonical.push(VersionSegment::Number(0));
-        }
-
         canonical
     }
 
@@ -461,6 +456,18 @@ mod tests {
 
     #[test]
     fn test_canonical_segments() {
+        assert_eq!(
+            v("0").canonical_segments(),
+            vec![VersionSegment::Number(0)]
+        );
+        assert_eq!(
+            v("0-rc").canonical_segments(),
+            vec![
+                VersionSegment::Number(0),
+                VersionSegment::String("pre".to_string()),
+                VersionSegment::String("rc".to_string())
+            ]
+        );
         assert_eq!(
             v("1.0.0").canonical_segments(),
             vec![VersionSegment::Number(1)]
