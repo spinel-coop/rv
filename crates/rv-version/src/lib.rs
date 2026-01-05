@@ -159,10 +159,9 @@ impl Version {
         let mut canonical = self.segments.clone();
 
         // Step 1: Remove leading zeros, between first segment and upto the first string segment.
-        let first_string_index = canonical.iter().position(|s| s.is_string());
-        if let Some(index) = first_string_index {
+        if let Some(first_string_index) = canonical.iter().position(|s| s.is_string()) {
             canonical
-                .extract_if(1..index, |s| s.is_zero())
+                .extract_if(1..first_string_index, |s| s.is_zero())
                 .for_each(drop);
         };
 
