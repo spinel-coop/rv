@@ -1,6 +1,73 @@
-use crate::request::RubyRequest;
+use std::str::FromStr;
 
-pub type RubyVersion = RubyRequest;
+use crate::{
+    engine::RubyEngine,
+    request::{RequestError, RubyRequest, VersionPart},
+};
+use serde_with::{DeserializeFromStr, SerializeDisplay};
+
+/// A specific version of Ruby, which can be run and downloaded.
+/// This is different from a RubyRequest, which represents a range of possible
+/// Ruby versions.
+#[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay)]
+pub struct RubyVersion {
+    pub engine: RubyEngine,
+    pub major: VersionPart,
+    pub minor: VersionPart,
+    pub patch: VersionPart,
+    pub tiny: Option<VersionPart>,
+    pub prerelease: Option<String>,
+}
+
+impl std::fmt::Display for RubyVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.engine)?;
+        write!(f, "-{}", self.major)?;
+        write!(f, ".{}", self.minor)?;
+        write!(f, ".{}", self.patch)?;
+
+        if let Some(tiny) = self.tiny {
+            write!(f, ".{tiny}")?;
+        }
+
+        if let Some(ref pre_release) = self.prerelease {
+            write!(f, "-{pre_release}")?;
+        };
+
+        Ok(())
+    }
+}
+
+/// Ways that a ruby version could fail to be parsed.
+#[derive(thiserror::Error, Debug)]
+pub enum ParseVersionError {
+    #[error(transparent)]
+    Invalid(#[from] RequestError),
+    #[error("Missing major version")]
+    MissingMajor,
+    #[error("Missing minor version")]
+    MissingMinor,
+    #[error("Missing patch version")]
+    MissingPatch,
+}
+
+impl FromStr for RubyVersion {
+    type Err = ParseVersionError;
+    fn from_str(input: &str) -> Result<Self, ParseVersionError> {
+        let req = RubyRequest::from_str(input)?;
+        let major = req.major.ok_or(ParseVersionError::MissingMajor)?;
+        let minor = req.minor.ok_or(ParseVersionError::MissingMinor)?;
+        let patch = req.patch.ok_or(ParseVersionError::MissingPatch)?;
+        Ok(Self {
+            engine: req.engine,
+            major,
+            minor,
+            patch,
+            tiny: req.tiny,
+            prerelease: req.prerelease,
+        })
+    }
+}
 
 #[cfg(test)]
 mod tests {
