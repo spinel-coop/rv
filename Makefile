@@ -14,9 +14,7 @@ $(RV): build
 # Project smoke tests (scripts in bin/smoke-tests/)
 .PHONY: smoke-test-discourse
 smoke-test-discourse:
-	docker build -f smoke-tests/discourse/Dockerfile -t rv-smoke-discourse .
-	@echo ""
-	@echo "✅ Smoke test passed: rv ci successfully installed all Discourse gems"
+	./bin/smoke-tests/discourse
 
 .PHONY: smoke-test-fastlane
 smoke-test-fastlane: $(RV)
