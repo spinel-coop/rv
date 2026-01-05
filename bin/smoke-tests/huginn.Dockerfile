@@ -1,31 +1,28 @@
-# Dockerfile for Huginn smoke test
-# Includes system dependencies needed for native Ruby extensions
+# Test rv ci with Huginn
+# Two-stage build: compile rv, then test with Huginn
 
-FROM debian:bookworm-slim
+# Stage 1: Build rv
+FROM rust:slim-bookworm AS builder
+WORKDIR /rv
+COPY . .
+RUN ./bin/build-rv
 
-# Install Ruby build dependencies and common native extension requirements
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Ruby build essentials
-    build-essential \
-    curl \
-    ca-certificates \
-    git \
-    # Ruby dependencies
-    libssl-dev \
-    libreadline-dev \
-    zlib1g-dev \
-    libyaml-dev \
-    libffi-dev \
-    # Native extension dependencies (nokogiri, mysql2, pg, etc.)
-    libxml2-dev \
-    libxslt1-dev \
-    libpq-dev \
-    default-libmysqlclient-dev \
-    && rm -rf /var/lib/apt/lists/*
+# Stage 2: Test with Huginn
+FROM huginn/huginn
 
-# Install Rust for building rv
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
-ENV PATH="/root/.cargo/bin:${PATH}"
+# Copy rv binary from builder
+COPY --from=builder /rv/target/release/rv /usr/local/bin/rv
 
-# Entry point will be provided by the smoke test script
-CMD ["/bin/bash"]
+WORKDIR /app
+
+# Clear pre-installed gems to test rv ci from scratch
+RUN rm -rf vendor/bundle .bundle
+
+# Huginn uses Ruby 3.2
+RUN echo "3.2" > .ruby-version
+
+# Install Ruby and run rv ci
+# Need to source rv's shell env to set PATH for the installed Ruby
+RUN rv ruby install && \
+    eval "$(rv shell env bash)" && \
+    rv ci -q
