@@ -116,13 +116,7 @@ fn test_ruby_list_with_available_and_installed() {
     let mut test = RvTest::new();
     test.create_ruby_dir("ruby-3.1.4");
 
-    let releases_body = r#"{
-    "name": "3.4.5",
-    "assets": [{
-        "name": "ruby-3.4.5.arm64_sonoma.tar.gz",
-        "browser_download_url": "http://..."}
-    ]}"#;
-    let mock = test.mock_releases(releases_body);
+    let mock = test.mock_releases("3.4.5");
     let output = test.rv(&["ruby", "list"]);
 
     mock.assert();
