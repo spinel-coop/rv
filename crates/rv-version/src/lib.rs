@@ -19,12 +19,16 @@ pub enum VersionSegment {
 }
 
 impl VersionSegment {
+    pub fn is_zero(&self) -> bool {
+        matches!(self, Self::Number(0))
+    }
+
     pub fn is_string(&self) -> bool {
-        matches!(self, VersionSegment::String(_))
+        matches!(self, Self::String(_))
     }
 
     pub fn is_number(&self) -> bool {
-        matches!(self, VersionSegment::Number(_))
+        matches!(self, Self::Number(_))
     }
 }
 
@@ -160,7 +164,7 @@ impl Version {
         for (i, segment) in self.segments.iter().enumerate() {
             if let Some(string_idx) = first_string_index {
                 // Skip zeros between first segment and string segment
-                if i > 0 && i < string_idx && matches!(segment, VersionSegment::Number(0)) {
+                if i > 0 && i < string_idx && segment.is_zero() {
                     continue;
                 }
             }
