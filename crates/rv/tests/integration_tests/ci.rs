@@ -128,7 +128,7 @@ fn find_all_files_in_dir(cwd: &std::path::Path) -> String {
         // This file is created when running with coverage, we don't want to include it.
         .filter(|line| !line.ends_with("profraw"))
         // We don't want to test how rv installs ruby, just the CI files.
-        .filter(|line| !line.contains("rv/rubies/ruby-4.0.0"))
+        .filter(|line| !line.contains("rv/rubies/"))
         .collect();
     lines.sort();
     lines.join("\n")
