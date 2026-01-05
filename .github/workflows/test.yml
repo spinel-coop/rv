@@ -1,13 +1,19 @@
+name: Test
+
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    branches: [main]
   pull_request:
+    branches: [main]
   merge_group:
     types: [checks_requested]
+  workflow_dispatch:
+
 permissions: read-all
-name: Test
+
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   run-tests:
     name: Run tests
@@ -22,32 +28,45 @@ jobs:
           - macos-15-intel # x86
 
     steps:
-      - uses: actions/checkout@v6
+      - name: Check out repo
+        uses: actions/checkout@v6
+
       - name: Install additional shells
         if: startsWith(matrix.runs-on, 'ubuntu')
         run: sudo apt-get update && sudo apt-get install -y zsh fish
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+
       - name: Install nextest
         uses: taiki-e/install-action@nextest
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
-      - run: ./bin/test
+
+      - name: Run tests
+        run: ./bin/test
 
   run-tests-coverage:
     name: Run tests with coverage
     runs-on: ubuntu-latest
     if: ${{ github.repository == 'spinel-coop/rv' }}
     steps:
-      - uses: actions/checkout@v6
+      - name: Check out repo
+        uses: actions/checkout@v6
+
       - name: Install additional shells
         run: sudo apt-get update && sudo apt-get install -y zsh fish
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+
       - name: Install cargo llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
+
       - name: Install nextest
         uses: taiki-e/install-action@nextest
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
