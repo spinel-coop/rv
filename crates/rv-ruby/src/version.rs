@@ -9,7 +9,7 @@ use serde_with::{DeserializeFromStr, SerializeDisplay};
 /// A specific version of Ruby, which can be run and downloaded.
 /// This is different from a RubyRequest, which represents a range of possible
 /// Ruby versions.
-#[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay, Ord, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay)]
 pub struct RubyVersion {
     pub engine: RubyEngine,
     pub major: VersionPart,
@@ -17,6 +17,37 @@ pub struct RubyVersion {
     pub patch: VersionPart,
     pub tiny: Option<VersionPart>,
     pub prerelease: Option<String>,
+}
+
+impl Ord for RubyVersion {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        use std::cmp::Ordering;
+
+        // TODO: Deduplicate this logic which is repeated in request.rs on RubyRequest.
+
+        if self.major != other.major {
+            self.major.cmp(&other.major)
+        } else if self.minor != other.minor {
+            self.minor.cmp(&other.minor)
+        } else if self.patch != other.patch {
+            self.patch.cmp(&other.patch)
+        } else if self.tiny != other.tiny {
+            self.tiny.cmp(&other.tiny)
+        } else {
+            match (&self.prerelease, &other.prerelease) {
+                (None, None) => Ordering::Equal,
+                (None, Some(_prerelease)) => Ordering::Greater,
+                (Some(_prerelease), None) => Ordering::Less,
+                (prerelease, other_prerelease) => prerelease.cmp(other_prerelease),
+            }
+        }
+    }
+}
+
+impl PartialOrd for RubyVersion {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 /// If the Ruby request is very specific, it can be made into a specific Ruby version.
@@ -40,6 +71,21 @@ impl TryFrom<RubyRequest> for RubyVersion {
             Err(format!(
                 "The range {request} was not specific enough to pick a specific Ruby version"
             ))
+        }
+    }
+}
+
+// TODO: Test that a RubyVersion can be converted into a RubyRequest and then back to a RubyVersion with no changes.
+// Use property test I guess, after deriving Arbitrary on RubyVersion.
+impl From<RubyVersion> for RubyRequest {
+    fn from(version: RubyVersion) -> Self {
+        Self {
+            engine: version.engine,
+            major: Some(version.major),
+            minor: Some(version.minor),
+            patch: Some(version.patch),
+            tiny: version.tiny,
+            prerelease: version.prerelease,
         }
     }
 }
