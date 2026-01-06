@@ -78,12 +78,13 @@ impl Config {
         // Filter releases+assets for current platform
         let (desired_os, desired_arch) = current_os_and_arch();
 
-        let rubies: Vec<Ruby> = release
+        let mut rubies: Vec<Ruby> = release
             .assets
             .iter()
             .filter_map(|asset| ruby_from_asset(asset).ok())
             .filter(|ruby| ruby.os == desired_os && ruby.arch == desired_arch)
             .collect();
+        rubies.sort();
 
         debug!(
             "Found {} available rubies for platform {}/{}",
@@ -299,7 +300,7 @@ mod tests {
         let actual = ruby_from_asset(&release.assets[0]).unwrap();
         let expected = Ruby {
             key: "ruby-3.3.0-linux-aarch64".to_owned(),
-            version: RubyVersion{
+            version: RubyVersion {
                 engine: rv_ruby::engine::RubyEngine::Ruby,
                 major: 3,
                 minor: 3,
