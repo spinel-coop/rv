@@ -418,7 +418,7 @@ mod tests {
         ];
 
         for version in versions {
-            let request = v(version);
+            let request = r(version);
             let output = request.to_string();
             assert_eq!(
                 output, version,
@@ -441,7 +441,7 @@ mod tests {
             "jruby",
         ];
         for version in versions {
-            let request = v(version);
+            let request = r(version);
             let output = request.to_string();
             assert_eq!(
                 output, version,
@@ -489,7 +489,7 @@ mod tests {
             "truffleruby+graalvm-24.1.0\n",
         ];
         for version in versions {
-            let request = v(version);
+            let request = r(version);
             let output = request.to_string();
             assert_eq!(
                 output,
@@ -503,7 +503,7 @@ mod tests {
     fn test_parsing_ruby_version_files_without_engine() {
         let versions = ["3\n", "3.4\n", "3.4.5\n", "3.4.5-rc1\n", "3.4-dev\n"];
         for version in versions {
-            let request = v(version);
+            let request = r(version);
             let output = request.to_string();
             assert_eq!(
                 output,
@@ -515,7 +515,7 @@ mod tests {
 
     #[test]
     fn test_ruby_request_from_str() {
-        let version = "3";
+        let version = "3.0.0";
         let request = v(version);
         let output = request.to_string();
         assert_eq!(
@@ -535,7 +535,7 @@ mod tests {
     fn test_ruby_request_satisfied_by() {
         let request = RubyRequest::default();
 
-        let mut version = v("3");
+        let mut version = v("3.0.0");
         assert!(request.is_satisfied_by(&version));
 
         version = v("4.0.0-preview3");
