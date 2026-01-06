@@ -149,8 +149,8 @@ pub enum Error {
 type Result<T> = std::result::Result<T, Error>;
 
 pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
-    // We need some Ruby installed, because we might need to run Ruby code when installing
-    // various gems. So, ensure Ruby is installed, so we can use it later.
+    // We need some Ruby installed, because we need to run Ruby code when installing
+    // gems. Ensure Ruby is installed here so we can use it later.
     let ruby_request = config.ruby_request();
     if config.matching_ruby(&ruby_request).is_none() {
         crate::ruby_install(config, None, Some(ruby_request.clone()), None).await?;
