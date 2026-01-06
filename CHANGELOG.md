@@ -1,5 +1,23 @@
 # `rv` changelog
 
+## rv 0.4.0 (6 January, 2025)
+
+Major new command: `rv clean-install`. Similar to `bundle install --frozen`, you can use `rv ci` to install gems that have already been resolved and recorded in your `Gemfile.lock`. If you notice anything wrong when installing your gems, please [let us know](https://github.com/spinel-coop/rv/issues/new)!
+
+Improves listing Ruby versions, hiding (uninstalled) pre-releases once a final is out.
+
+- Hide 3.5.0-preview1 in `rv ruby list` (<https://github.com/spinel-coop/rv/pull/270>, @deivid-rodriguez)
+- Install submodules for git sources (<https://github.com/spinel-coop/rv/pull/274>, @adamchalmers)
+- Download gems in parallel (<https://github.com/spinel-coop/rv/pull/275>, @adamchalmers)
+- Install Ruby once for `ci` (<https://github.com/spinel-coop/rv/pull/278>, @adamchalmers)
+- Install path gems (<https://github.com/spinel-coop/rv/pull/282>, @indirect)
+- Fix dep graph race condition (<https://github.com/spinel-coop/rv/pull/309>, @case)
+- Compile gems in dependency order (<https://github.com/spinel-coop/rv/pull/295>, @indirect)
+- Integrate tracing with Instruments.app (<https://github.com/spinel-coop/rv/pull/301>, @adamchalmers)
+- Parse branches and tags for git gems (<https://github.com/spinel-coop/rv/pull/313>, @case)
+- Add `Version::from(segments)` (<https://github.com/spinel-coop/rv/pull/320>, @kaspth)
+- Separate `RubyVersion` from `RubyRequest` (<https://github.com/spinel-coop/rv/pull/322>, @adamchalmers)
+
 ## rv 0.3.1 (30 December, 2025)
 
 Ruby 4.0.0 is now available! (and has been since Christmas Day). This release is mainly a fix to make sure that previews are considered "before" final releases, so we will stop showing 4.0.0-preview3 as if you might want to install it after 4.0.0.
