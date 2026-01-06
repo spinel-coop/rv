@@ -314,4 +314,55 @@ mod tests {
             assert!(version_str.contains(&num));
         }
     }
+
+    #[test]
+    fn test_from_gemfile_lock_with_patchlevel() {
+        // Gemfile.lock format: "ruby 3.3.1p55"
+        let version = RubyVersion::from_gemfile_lock("ruby 3.3.1p55").unwrap();
+        assert_eq!(version.major, 3);
+        assert_eq!(version.minor, 3);
+        assert_eq!(version.patch, 1);
+        assert_eq!(version.prerelease, None);
+    }
+
+    #[test]
+    fn test_from_gemfile_lock_without_patchlevel() {
+        // Gemfile.lock format: "ruby 4.0.0" (no patchlevel)
+        let version = RubyVersion::from_gemfile_lock("ruby 4.0.0").unwrap();
+        assert_eq!(version.major, 4);
+        assert_eq!(version.minor, 0);
+        assert_eq!(version.patch, 0);
+        assert_eq!(version.prerelease, None);
+    }
+
+    #[test]
+    fn test_from_gemfile_lock_with_p0() {
+        // Gemfile.lock format: "ruby 3.2.0p0"
+        let version = RubyVersion::from_gemfile_lock("ruby 3.2.0p0").unwrap();
+        assert_eq!(version.major, 3);
+        assert_eq!(version.minor, 2);
+        assert_eq!(version.patch, 0);
+    }
+
+    #[test]
+    fn test_from_gemfile_lock_preserves_preview() {
+        // Real format from GitHub: "ruby 3.3.0.preview2" (dot, not dash)
+        // https://github.com/akitaonrails/rinhabackend-rails-api/blob/main/Gemfile.lock
+        let version = RubyVersion::from_gemfile_lock("ruby 3.3.0.preview2").unwrap();
+        assert_eq!(version.major, 3);
+        assert_eq!(version.minor, 3);
+        assert_eq!(version.patch, 0);
+        assert_eq!(version.prerelease, Some("preview2".to_string()));
+    }
+
+    #[test]
+    fn test_from_gemfile_lock_preserves_rc() {
+        // Real format from GitHub: "ruby 3.3.0.rc1" (dot, not dash)
+        // https://github.com/pbstriker38/is_ruby_dead/blob/main/Gemfile.lock
+        let version = RubyVersion::from_gemfile_lock("ruby 3.3.0.rc1").unwrap();
+        assert_eq!(version.major, 3);
+        assert_eq!(version.minor, 3);
+        assert_eq!(version.patch, 0);
+        assert_eq!(version.prerelease, Some("rc1".to_string()));
+    }
 }
