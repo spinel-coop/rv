@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
 use tracing::debug;
 
-use rv_ruby::request::RubyRequest;
+use rv_ruby::{request::RubyRequest, version::RubyVersion};
 
 use crate::config::Config;
 
@@ -49,19 +49,20 @@ pub async fn install(
         Some(version) => version,
     };
 
-    if requested_range.is_specific() {
+    let selected_version = if let Ok(version) = RubyVersion::try_from(requested_range.clone()) {
         debug!(
-            "Skipping the rv-ruby releases fetch because the user has given a specific ruby version {reqquested}"
+            "Skipping the rv-ruby releases fetch because the user has given a specific ruby version {version}"
         );
+        version
     } else {
+        debug!("Fetching available rubies, because user gave an underspecified Ruby range");
         let mut rubies_for_this_platform = config.remote_rubies().await;
         rubies_for_this_platform.sort();
-    }
-
-    let selected_version = requested_range
-        .find_match_in(rubies_for_this_platform)
-        .ok_or(Error::NoMatchingRuby)?
-        .version;
+        requested_range
+            .find_match_in(rubies_for_this_platform)
+            .ok_or(Error::NoMatchingRuby)?
+            .version
+    };
 
     let install_dir = match install_dir {
         Some(dir) => Utf8PathBuf::from(dir),
