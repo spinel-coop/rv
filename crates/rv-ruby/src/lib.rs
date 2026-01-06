@@ -181,6 +181,8 @@ pub enum RubyError {
     InvalidVersion(String),
     #[error(transparent)]
     RequestError(#[from] crate::request::RequestError),
+    #[error(transparent)]
+    ParseVersionError(#[from] crate::version::ParseVersionError),
 }
 
 /// Extract all Ruby information from the executable in a single call
@@ -320,7 +322,7 @@ fn find_symlink_target(path: &Utf8PathBuf) -> Option<Utf8PathBuf> {
 }
 
 fn ruby_049_version() -> Result<Ruby, RubyError> {
-    let version = "0.49".parse()?;
+    let version = "0.49.0".parse()?;
     let arch = normalize_arch(ARCH);
     let os = normalize_os(OS);
     let key = format!("{version}-{os}-{arch}");
@@ -409,9 +411,9 @@ mod tests {
     fn test_extract_ruby_info() {
         let ruby_path = Utf8PathBuf::from("/root/.local/share/rv/rubies/ruby-0.49/bin/ruby");
         let ruby = extract_ruby_info(&ruby_path).unwrap();
-        assert_eq!(ruby.version.major, Some(0));
-        assert_eq!(ruby.version.minor, Some(49));
-        assert_eq!(ruby.version.patch, None);
+        assert_eq!(ruby.version.major, 0);
+        assert_eq!(ruby.version.minor, 49);
+        assert_eq!(ruby.version.patch, 0);
         assert_eq!(ruby.arch, ARCH);
     }
 

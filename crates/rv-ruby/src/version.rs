@@ -1,6 +1,190 @@
-use crate::request::RubyRequest;
+use std::str::FromStr;
 
-pub type RubyVersion = RubyRequest;
+use crate::{
+    engine::RubyEngine,
+    request::{RequestError, RubyRequest, VersionPart},
+};
+use serde_with::{DeserializeFromStr, SerializeDisplay};
+
+/// A specific version of Ruby, which can be run and downloaded.
+/// This is different from a RubyRequest, which represents a range of possible
+/// Ruby versions.
+#[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay)]
+pub struct RubyVersion {
+    pub engine: RubyEngine,
+    pub major: VersionPart,
+    pub minor: VersionPart,
+    pub patch: VersionPart,
+    pub tiny: Option<VersionPart>,
+    pub prerelease: Option<String>,
+}
+
+impl Ord for RubyVersion {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        use std::cmp::Ordering;
+
+        // TODO: Deduplicate this logic which is repeated in request.rs on RubyRequest.
+
+        if self.major != other.major {
+            self.major.cmp(&other.major)
+        } else if self.minor != other.minor {
+            self.minor.cmp(&other.minor)
+        } else if self.patch != other.patch {
+            self.patch.cmp(&other.patch)
+        } else if self.tiny != other.tiny {
+            self.tiny.cmp(&other.tiny)
+        } else {
+            match (&self.prerelease, &other.prerelease) {
+                (None, None) => Ordering::Equal,
+                (None, Some(_prerelease)) => Ordering::Greater,
+                (Some(_prerelease), None) => Ordering::Less,
+                (prerelease, other_prerelease) => prerelease.cmp(other_prerelease),
+            }
+        }
+    }
+}
+
+impl PartialOrd for RubyVersion {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+/// If the Ruby request is very specific, it can be made into a specific Ruby version.
+impl TryFrom<RubyRequest> for RubyVersion {
+    type Error = String;
+
+    fn try_from(request: RubyRequest) -> Result<Self, Self::Error> {
+        if let Some(major) = request.major
+            && let Some(minor) = request.minor
+            && let Some(patch) = request.patch
+        {
+            Ok(RubyVersion {
+                major,
+                minor,
+                patch,
+                engine: request.engine,
+                tiny: request.tiny,
+                prerelease: request.prerelease,
+            })
+        } else {
+            Err(format!(
+                "The range {request} was not specific enough to pick a specific Ruby version"
+            ))
+        }
+    }
+}
+
+impl From<RubyVersion> for RubyRequest {
+    fn from(version: RubyVersion) -> Self {
+        Self {
+            engine: version.engine,
+            major: Some(version.major),
+            minor: Some(version.minor),
+            patch: Some(version.patch),
+            tiny: version.tiny,
+            prerelease: version.prerelease,
+        }
+    }
+}
+
+impl RubyVersion {
+    /// Does this version satisfy the given Ruby requested range?
+    pub fn satisfies(&self, request: &RubyRequest) -> bool {
+        if self.engine != request.engine {
+            return false;
+        }
+        if let Some(major) = request.major
+            && self.major != major
+        {
+            return false;
+        }
+        if let Some(minor) = request.minor
+            && self.minor != minor
+        {
+            return false;
+        }
+        if let Some(patch) = request.patch
+            && self.patch != patch
+        {
+            return false;
+        }
+        if request.tiny.is_some() && self.tiny != request.tiny {
+            return false;
+        }
+        if self.prerelease != request.prerelease {
+            return false;
+        }
+
+        true
+    }
+
+    /// Get the Ruby number. Basically like calling `.to_string()` except without the Ruby engine.
+    pub fn number(&self) -> String {
+        use std::fmt::Write;
+        let mut version = format!("{}.{}.{}", self.major, self.minor, self.patch);
+
+        if let Some(tiny) = self.tiny {
+            version.push('.');
+            write!(&mut version, "{}", tiny).unwrap();
+        }
+        if let Some(ref prerelease) = self.prerelease {
+            version.push('-');
+            version.push_str(prerelease);
+        }
+        version
+    }
+}
+
+impl std::fmt::Display for RubyVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.engine)?;
+        write!(f, "-{}", self.major)?;
+        write!(f, ".{}", self.minor)?;
+        write!(f, ".{}", self.patch)?;
+
+        if let Some(tiny) = self.tiny {
+            write!(f, ".{tiny}")?;
+        }
+
+        if let Some(ref pre_release) = self.prerelease {
+            write!(f, "-{pre_release}")?;
+        };
+
+        Ok(())
+    }
+}
+
+/// Ways that a ruby version could fail to be parsed.
+#[derive(thiserror::Error, Debug)]
+pub enum ParseVersionError {
+    #[error(transparent)]
+    Invalid(#[from] RequestError),
+    #[error("Missing major version")]
+    MissingMajor,
+    #[error("Missing minor version")]
+    MissingMinor,
+    #[error("Missing patch version")]
+    MissingPatch,
+}
+
+impl FromStr for RubyVersion {
+    type Err = ParseVersionError;
+    fn from_str(input: &str) -> Result<Self, ParseVersionError> {
+        let req = RubyRequest::from_str(input)?;
+        let major = req.major.ok_or(ParseVersionError::MissingMajor)?;
+        let minor = req.minor.ok_or(ParseVersionError::MissingMinor)?;
+        let patch = req.patch.ok_or(ParseVersionError::MissingPatch)?;
+        Ok(Self {
+            engine: req.engine,
+            major,
+            minor,
+            patch,
+            tiny: req.tiny,
+            prerelease: req.prerelease,
+        })
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -10,7 +194,6 @@ mod tests {
         use std::str::FromStr as _;
 
         let versions = [
-            "ruby-3.2-dev",
             "ruby-3.2.0",
             "ruby-3.2.0-preview1",
             "ruby-3.2.0-preview2",
@@ -25,7 +208,6 @@ mod tests {
             "ruby-3.2.7",
             "ruby-3.2.8",
             "ruby-3.2.9",
-            "ruby-3.3-dev",
             "ruby-3.3.0",
             "ruby-3.3.0-preview1",
             "ruby-3.3.0-preview2",
@@ -40,7 +222,6 @@ mod tests {
             "ruby-3.3.7",
             "ruby-3.3.8",
             "ruby-3.3.9",
-            "ruby-3.4-dev",
             "ruby-3.4.0",
             "ruby-3.4.0-preview1",
             "ruby-3.4.0-preview2",
@@ -50,9 +231,8 @@ mod tests {
             "ruby-3.4.3",
             "ruby-3.4.4",
             "ruby-3.4.5",
-            "ruby-3.5-dev",
             "ruby-3.5.0-preview1",
-            "artichoke-dev",
+            "ruby-4.0.0",
             "jruby-9.4.0.0",
             "jruby-9.4.1.0",
             "jruby-9.4.10.0",
@@ -68,34 +248,42 @@ mod tests {
             "jruby-9.4.7.0",
             "jruby-9.4.8.0",
             "jruby-9.4.9.0",
-            "jruby-dev",
             "mruby-3.2.0",
             "mruby-3.3.0",
             "mruby-3.4.0",
-            "mruby-dev",
             "picoruby-3.0.0",
-            "ruby-dev",
             "truffleruby-24.1.0",
             "truffleruby-24.1.1",
             "truffleruby-24.1.2",
             "truffleruby-24.2.0",
             "truffleruby-24.2.1",
-            "truffleruby-dev",
             "truffleruby+graalvm-24.1.0",
             "truffleruby+graalvm-24.1.1",
             "truffleruby+graalvm-24.1.2",
             "truffleruby+graalvm-24.2.0",
             "truffleruby+graalvm-24.2.1",
-            "truffleruby+graalvm-dev",
         ];
 
-        for version in versions {
-            let request = RubyVersion::from_str(version).expect("Failed to parse version");
-            let output = request.to_string();
+        for version_str in versions {
+            // Invariant: all these strings should be valid Ruby versions.
+            let version = RubyVersion::from_str(version_str)
+                .unwrap_or_else(|_| panic!("Failed to parse version in {version_str}"));
+            let output = version.to_string();
             assert_eq!(
-                output, version,
-                "Parsed output does not match input for {version}"
+                output, version_str,
+                "Parsed output does not match input for {version_str}"
             );
+            // Invariant: all Ruby versions should be convertible into RubyRequest
+            // and back to RubyVersion, unchanged.
+            let request = RubyRequest::from(version.clone());
+            let version_out = RubyVersion::try_from(request).unwrap();
+            assert_eq!(
+                version_out, version,
+                "Version did not survive the roundtrip to/from RubyRequest"
+            );
+            // Invariant: the number should appear in the version.
+            let num = version.number();
+            assert!(version_str.contains(&num));
         }
     }
 }

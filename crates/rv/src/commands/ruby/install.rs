@@ -6,8 +6,9 @@ use futures_util::StreamExt;
 use owo_colors::OwoColorize;
 use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
+use tracing::debug;
 
-use rv_ruby::request::RubyRequest;
+use rv_ruby::{request::RubyRequest, version::RubyVersion};
 
 use crate::config::Config;
 
@@ -40,23 +41,27 @@ type Result<T> = miette::Result<T, Error>;
 pub async fn install(
     config: &Config,
     install_dir: Option<String>,
-    version: Option<RubyRequest>,
+    requested: Option<RubyRequest>,
     tarball_path: Option<String>,
 ) -> Result<()> {
-    let mut requested = match version {
+    let requested_range = match requested {
         None => config.ruby_request(),
         Some(version) => version,
     };
 
-    if !requested.is_specific() {
-        let mut rubies_for_this_platform = config.remote_rubies().await;
-        rubies_for_this_platform.sort();
-
-        requested = match requested.find_match_in(rubies_for_this_platform) {
-            None => return Err(Error::NoMatchingRuby),
-            Some(ruby) => ruby.version,
-        }
-    }
+    let selected_version = if let Ok(version) = RubyVersion::try_from(requested_range.clone()) {
+        debug!(
+            "Skipping the rv-ruby releases fetch because the user has given a specific ruby version {version}"
+        );
+        version
+    } else {
+        debug!("Fetching available rubies, because user gave an underspecified Ruby range");
+        let rubies_for_this_platform = config.remote_rubies().await;
+        requested_range
+            .find_match_in(rubies_for_this_platform)
+            .ok_or(Error::NoMatchingRuby)?
+            .version
+    };
 
     let install_dir = match install_dir {
         Some(dir) => Utf8PathBuf::from(dir),
@@ -68,16 +73,18 @@ pub async fn install(
 
     match tarball_path {
         Some(tarball_path) => {
-            extract_local_ruby_tarball(tarball_path, &install_dir, &requested.number()).await?
+            extract_local_ruby_tarball(tarball_path, &install_dir, &selected_version.number())
+                .await?
         }
         None => {
-            download_and_extract_remote_tarball(config, &install_dir, &requested.number()).await?
+            download_and_extract_remote_tarball(config, &install_dir, &selected_version.number())
+                .await?
         }
     }
 
     println!(
         "Installed Ruby version {} to {}",
-        requested.to_string().cyan(),
+        selected_version.to_string().cyan(),
         install_dir.cyan()
     );
 

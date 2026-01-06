@@ -2,11 +2,13 @@ use camino::Utf8PathBuf;
 use rv_cache::{CacheKey, CacheKeyHasher};
 use std::{fmt::Display, str::FromStr};
 
-use crate::{Ruby, engine::RubyEngine};
+use crate::{Ruby, engine::RubyEngine, version::RubyVersion};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 pub type VersionPart = u32;
 
+/// A range of possible Ruby versions. E.g. "3.4" spans the range 3.4.0, 3.4.1, etc.
+/// This is different to a RubyVersion, which is one specific version in this requested range.
 #[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay)]
 pub struct RubyRequest {
     pub engine: RubyEngine,
@@ -93,34 +95,18 @@ impl RubyRequest {
         self.major.is_some() && self.minor.is_some() && self.patch.is_some()
     }
 
+    /// Resolve the Ruby request to a specific version of ruby, chosen from
+    /// the given list.
     pub fn find_match_in(&self, rubies: Vec<Ruby>) -> Option<Ruby> {
         rubies
             .into_iter()
             .rev()
-            .find(|r| self.satisfied_by(&r.version))
+            .find(|r| self.is_satisfied_by(&r.version))
     }
 
-    pub fn satisfied_by(&self, version: &RubyRequest) -> bool {
-        if self.engine != version.engine {
-            return false;
-        }
-        if self.major.is_some() && self.major != version.major {
-            return false;
-        }
-        if self.minor.is_some() && self.minor != version.minor {
-            return false;
-        }
-        if self.patch.is_some() && self.patch != version.patch {
-            return false;
-        }
-        if self.tiny.is_some() && self.tiny != version.tiny {
-            return false;
-        }
-        if self.prerelease != version.prerelease {
-            return false;
-        }
-
-        true
+    /// Does the given Ruby version satisfy this requested range?
+    pub fn is_satisfied_by(&self, version: &RubyVersion) -> bool {
+        version.satisfies(self)
     }
 
     pub fn number(&self) -> String {
@@ -286,7 +272,12 @@ mod tests {
     use super::*;
 
     #[track_caller]
-    fn v(version: &str) -> RubyRequest {
+    fn v(version: &str) -> RubyVersion {
+        RubyVersion::from_str(version).unwrap()
+    }
+
+    #[track_caller]
+    fn r(version: &str) -> RubyRequest {
         RubyRequest::from_str(version).unwrap()
     }
 
@@ -305,7 +296,7 @@ mod tests {
 
     #[test]
     fn test_adding_ruby_engine() {
-        let request = v("3.0.0");
+        let request = r("3.0.0");
         assert_eq!(request.engine, "ruby".into());
         assert_eq!(request.major, Some(3));
         assert_eq!(request.minor, Some(0));
@@ -315,14 +306,31 @@ mod tests {
     }
 
     #[test]
+    fn test_adding_ruby_engine_version() {
+        let request = v("3.0.0");
+        assert_eq!(request.engine, "ruby".into());
+        assert_eq!(request.major, (3));
+        assert_eq!(request.minor, (0));
+        assert_eq!(request.patch, (0));
+        assert_eq!(request.tiny, None);
+        assert_eq!(request.prerelease, None);
+    }
+
+    #[test]
     fn test_major_only() {
-        let request = v("3");
+        let request = r("3");
         assert_eq!(request.engine, "ruby".into());
         assert_eq!(request.major, Some(3));
         assert_eq!(request.minor, None);
         assert_eq!(request.patch, None);
         assert_eq!(request.tiny, None);
         assert_eq!(request.prerelease, None);
+    }
+
+    #[test]
+    fn test_major_only_version() {
+        let request = RubyVersion::from_str("3");
+        let _err = request.unwrap_err();
     }
 
     #[test]
@@ -410,7 +418,7 @@ mod tests {
         ];
 
         for version in versions {
-            let request = v(version);
+            let request = r(version);
             let output = request.to_string();
             assert_eq!(
                 output, version,
@@ -433,7 +441,7 @@ mod tests {
             "jruby",
         ];
         for version in versions {
-            let request = v(version);
+            let request = r(version);
             let output = request.to_string();
             assert_eq!(
                 output, version,
@@ -456,7 +464,7 @@ mod tests {
 
     #[test]
     fn test_parsing_engine_without_version() {
-        let request = v("jruby-");
+        let request = r("jruby-");
         assert_eq!(request.engine, "jruby".into());
         assert_eq!(request.major, None);
         assert_eq!(request.minor, None);
@@ -481,7 +489,7 @@ mod tests {
             "truffleruby+graalvm-24.1.0\n",
         ];
         for version in versions {
-            let request = v(version);
+            let request = r(version);
             let output = request.to_string();
             assert_eq!(
                 output,
@@ -495,7 +503,7 @@ mod tests {
     fn test_parsing_ruby_version_files_without_engine() {
         let versions = ["3\n", "3.4\n", "3.4.5\n", "3.4.5-rc1\n", "3.4-dev\n"];
         for version in versions {
-            let request = v(version);
+            let request = r(version);
             let output = request.to_string();
             assert_eq!(
                 output,
@@ -507,7 +515,7 @@ mod tests {
 
     #[test]
     fn test_ruby_request_from_str() {
-        let version = "3";
+        let version = "3.0.0";
         let request = v(version);
         let output = request.to_string();
         assert_eq!(
@@ -527,10 +535,10 @@ mod tests {
     fn test_ruby_request_satisfied_by() {
         let request = RubyRequest::default();
 
-        let mut version = v("3");
-        assert!(request.satisfied_by(&version));
+        let mut version = v("3.0.0");
+        assert!(request.is_satisfied_by(&version));
 
         version = v("4.0.0-preview3");
-        assert!(!request.satisfied_by(&version));
+        assert!(!request.is_satisfied_by(&version));
     }
 }
