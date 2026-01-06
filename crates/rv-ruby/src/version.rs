@@ -75,8 +75,6 @@ impl TryFrom<RubyRequest> for RubyVersion {
     }
 }
 
-// TODO: Test that a RubyVersion can be converted into a RubyRequest and then back to a RubyVersion with no changes.
-// Use property test I guess, after deriving Arbitrary on RubyVersion.
 impl From<RubyVersion> for RubyRequest {
     fn from(version: RubyVersion) -> Self {
         Self {
@@ -234,6 +232,7 @@ mod tests {
             "ruby-3.4.4",
             "ruby-3.4.5",
             "ruby-3.5.0-preview1",
+            "ruby-4.0.0",
             "jruby-9.4.0.0",
             "jruby-9.4.1.0",
             "jruby-9.4.10.0",
@@ -265,14 +264,26 @@ mod tests {
             "truffleruby+graalvm-24.2.1",
         ];
 
-        for version in versions {
-            let request = RubyVersion::from_str(version)
-                .unwrap_or_else(|_| panic!("Failed to parse version in {version}"));
-            let output = request.to_string();
+        for version_str in versions {
+            // Invariant: all these strings should be valid Ruby versions.
+            let version = RubyVersion::from_str(version_str)
+                .unwrap_or_else(|_| panic!("Failed to parse version in {version_str}"));
+            let output = version.to_string();
             assert_eq!(
-                output, version,
-                "Parsed output does not match input for {version}"
+                output, version_str,
+                "Parsed output does not match input for {version_str}"
             );
+            // Invariant: all Ruby versions should be convertible into RubyRequest
+            // and back to RubyVersion, unchanged.
+            let request = RubyRequest::from(version.clone());
+            let version_out = RubyVersion::try_from(request).unwrap();
+            assert_eq!(
+                version_out, version,
+                "Version did not survive the roundtrip to/from RubyRequest"
+            );
+            // Invariant: the number should appear in the version.
+            let num = version.number();
+            assert!(version_str.contains(&num));
         }
     }
 }
