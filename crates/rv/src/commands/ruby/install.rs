@@ -6,6 +6,7 @@ use futures_util::StreamExt;
 use owo_colors::OwoColorize;
 use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
+use tracing::debug;
 
 use rv_ruby::request::RubyRequest;
 
@@ -40,16 +41,22 @@ type Result<T> = miette::Result<T, Error>;
 pub async fn install(
     config: &Config,
     install_dir: Option<String>,
-    version: Option<RubyRequest>,
+    requested: Option<RubyRequest>,
     tarball_path: Option<String>,
 ) -> Result<()> {
-    let requested_range = match version {
+    let requested_range = match requested {
         None => config.ruby_request(),
         Some(version) => version,
     };
 
-    let mut rubies_for_this_platform = config.remote_rubies().await;
-    rubies_for_this_platform.sort();
+    if requested_range.is_specific() {
+        debug!(
+            "Skipping the rv-ruby releases fetch because the user has given a specific ruby version {reqquested}"
+        );
+    } else {
+        let mut rubies_for_this_platform = config.remote_rubies().await;
+        rubies_for_this_platform.sort();
+    }
 
     let selected_version = requested_range
         .find_match_in(rubies_for_this_platform)
