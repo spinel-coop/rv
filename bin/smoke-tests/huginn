@@ -3,17 +3,33 @@ set -euo pipefail
 
 # Smoke test for Huginn
 # https://github.com/huginn/huginn
-#
-# Uses Docker multi-stage build:
-# - Stage 1: Build rv from source
-# - Stage 2: Clone Huginn, install Ruby via rv, run rv ci
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 IMAGE_NAME="rv-smoke-huginn"
 
+# Build rv for Linux (matches host architecture)
+echo "Building rv..."
+"$ROOT_DIR/bin/build-ci"
+
+# Get binary from correct location based on architecture
+if [[ "$(uname -m)" == "arm64" ]]; then
+    TARGET="aarch64-unknown-linux-gnu"
+else
+    TARGET="x86_64-unknown-linux-gnu"
+fi
+
+if [ -f "$ROOT_DIR/target/$TARGET/release/rv" ]; then
+    cp "$ROOT_DIR/target/$TARGET/release/rv" "$SCRIPT_DIR/rv"
+else
+    cp "$ROOT_DIR/target/release/rv" "$SCRIPT_DIR/rv"
+fi
+
+# Clean up on exit
+trap 'rm -f "$SCRIPT_DIR/rv"' EXIT
+
 echo "Building Docker image and running smoke test..."
-docker build -f "$SCRIPT_DIR/huginn.Dockerfile" -t "$IMAGE_NAME" "$ROOT_DIR"
+docker build --no-cache --progress=plain -f "$SCRIPT_DIR/huginn.Dockerfile" -t "$IMAGE_NAME" "$SCRIPT_DIR"
 
 echo ""
 echo "Smoke test for huginn passed!"

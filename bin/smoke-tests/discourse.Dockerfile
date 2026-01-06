@@ -15,4 +15,4 @@ RUN rm -rf vendor/bundle .bundle
 RUN ruby -e 'puts RUBY_VERSION' > .ruby-version
 
 # Run rv ci
-RUN rv ci -q
+RUN rv ci

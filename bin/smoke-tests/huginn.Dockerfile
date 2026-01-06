@@ -1,21 +1,20 @@
 # Test rv ci with Huginn
-# Expects rv binary in build context
+# Uses Huginn's own prepare script for dependencies
 
-FROM huginn/huginn
+FROM rubylang/ruby:3.2-jammy
 
-# Copy rv binary (passed via build context)
+# Clone Huginn and run their prepare script for dependencies
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+RUN git clone --depth 1 https://github.com/huginn/huginn.git .
+RUN cp -r docker/scripts /scripts && chmod +x /scripts/*
+RUN /scripts/prepare
+
+# Copy rv binary
 COPY rv /usr/local/bin/rv
 
-WORKDIR /app
+# Use the Ruby version from the image
+RUN ruby -e 'puts RUBY_VERSION' > .ruby-version
 
-# Clear pre-installed gems to test rv ci from scratch
-RUN rm -rf vendor/bundle .bundle
-
-# Huginn uses Ruby 3.2
-RUN echo "3.2" > .ruby-version
-
-# Install Ruby and run rv ci
-# Need to source rv's shell env to set PATH for the installed Ruby
-RUN rv ruby install && \
-    eval "$(rv shell env bash)" && \
-    rv ci -q
+# Run rv ci
+RUN rv ci

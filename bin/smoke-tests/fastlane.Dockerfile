@@ -32,4 +32,4 @@ RUN echo "3.3" > .ruby-version
 # Install Ruby and run rv ci
 RUN rv ruby install && \
     eval "$(rv shell env bash)" && \
-    rv ci -q
+    rv ci
