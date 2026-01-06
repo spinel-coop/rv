@@ -129,3 +129,22 @@ jobs:
         run: |
           chmod +x bin/smoke-tests/rv
           docker build -f bin/smoke-tests/gitlab.Dockerfile -t rv-smoke-gitlab bin/smoke-tests
+
+  homebrew:
+    name: Homebrew
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Download rv binary
+        uses: actions/download-artifact@v7
+        with:
+          name: rv-linux
+          path: bin/smoke-tests
+
+      - name: Install
+        run: |
+          chmod +x bin/smoke-tests/rv
+          docker build -f bin/smoke-tests/homebrew.Dockerfile -t rv-smoke-homebrew bin/smoke-tests
