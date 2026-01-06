@@ -156,21 +156,24 @@ impl Version {
     }
 
     pub fn canonical_segments(&self) -> Vec<VersionSegment> {
-        let mut canonical = self.segments.clone();
+        // Step 1: Split on the first string segment
+        let parts: [_; 2] = self.segments.split_at(
+            self.segments
+                .iter()
+                .position(|s| s.is_string())
+                .unwrap_or(self.segments.len()),
+        ).into();
 
-        // Step 1: Remove leading zeros, between first segment and upto the first string segment.
-        if let Some(first_string_index) = canonical.iter().position(|s| s.is_string()) {
-            canonical
-                .extract_if(1..first_string_index, |s| s.is_zero())
-                .for_each(drop);
-        };
-
-        // Step 2: Remove trailing zeros, but keep at least one segment
-        if let Some(last_nonzero_index) = canonical.iter().rposition(|s| !s.is_zero()) {
-            canonical.truncate(1 + last_nonzero_index);
-        }
-
-        canonical
+        // Step 2: seek behind from each tail and remove contigous zero chains.
+        parts
+            .iter()
+            .flat_map(|part| {
+                let mut part = part.to_vec();
+                let last_nonzero_index = part.iter().rposition(|s| !s.is_zero()).unwrap_or(0);
+                part.truncate(1 + last_nonzero_index); // `1 +` to keep at least one element.
+                part
+            })
+            .collect::<Vec<_>>()
     }
 
     pub fn release(&self) -> Self {
@@ -489,9 +492,18 @@ mod tests {
             v("1.0.1-rc1").canonical_segments(),
             vec![
                 VersionSegment::Number(1),
+                VersionSegment::Number(0),
                 VersionSegment::Number(1),
                 VersionSegment::String("pre".to_string()),
                 VersionSegment::String("rc1".to_string()),
+            ]
+        );
+        assert_eq!(
+            v("0.0.beta.1").canonical_segments(),
+            vec![
+                VersionSegment::Number(0),
+                VersionSegment::String("beta".to_string()),
+                VersionSegment::Number(1),
             ]
         );
         assert_eq!(
