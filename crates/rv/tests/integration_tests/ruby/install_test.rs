@@ -293,9 +293,11 @@ fn test_ruby_install_cached_file_reused() {
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
+    // This one should actually download tarballs, from the mocked server.
     let output1 = test.rv(&["ruby", "install", "3.4.5"]);
     output1.assert_success();
 
+    // This one should just reuse the cached tarball without downloading.
     let output2 = test.rv(&["ruby", "install", "3.4.5"]);
     output2.assert_success();
 
