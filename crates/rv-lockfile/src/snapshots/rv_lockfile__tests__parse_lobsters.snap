@@ -1,0 +1,9460 @@
+---
+source: crates/rv-lockfile/src/tests.rs
+expression: output
+---
+gem:
+  - remote: "https://rubygems.org/"
+    specs:
+      - gem_version:
+          name: Ascii85
+          version: 2.0.1
+        deps: []
+      - gem_version:
+          name: actioncable
+          version: 8.0.3
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: nio4r
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.0"
+            nonstandard: false
+          - name: websocket-driver
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.6.1
+            nonstandard: false
+          - name: zeitwerk
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.6"
+            nonstandard: false
+      - gem_version:
+          name: actionmailbox
+          version: 8.0.3
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activejob
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activerecord
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activestorage
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: mail
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.8.0
+            nonstandard: false
+      - gem_version:
+          name: actionmailer
+          version: 8.0.3
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: actionview
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activejob
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: mail
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.8.0
+            nonstandard: false
+          - name: rails-dom-testing
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.2"
+            nonstandard: false
+      - gem_version:
+          name: actionpack
+          version: 8.0.3
+        deps:
+          - name: actionview
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: nokogiri
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.8.5
+            nonstandard: false
+          - name: rack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.2.4
+            nonstandard: false
+          - name: rack-session
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.0.1
+            nonstandard: false
+          - name: rack-test
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.6.3
+            nonstandard: false
+          - name: rails-dom-testing
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.2"
+            nonstandard: false
+          - name: rails-html-sanitizer
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.6"
+            nonstandard: false
+          - name: useragent
+            semver:
+              - semver_constraint: Pessimistic
+                version: "0.16"
+            nonstandard: false
+      - gem_version:
+          name: actionpack-page_caching
+          version: 1.2.4
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 4.0.0
+            nonstandard: false
+      - gem_version:
+          name: actiontext
+          version: 8.0.3
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activerecord
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activestorage
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: globalid
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.6.0
+            nonstandard: false
+          - name: nokogiri
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.8.5
+            nonstandard: false
+      - gem_version:
+          name: actionview
+          version: 8.0.3
+        deps:
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: builder
+            semver:
+              - semver_constraint: Pessimistic
+                version: "3.1"
+            nonstandard: false
+          - name: erubi
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.11"
+            nonstandard: false
+          - name: rails-dom-testing
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.2"
+            nonstandard: false
+          - name: rails-html-sanitizer
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.6"
+            nonstandard: false
+      - gem_version:
+          name: active_record_doctor
+          version: 1.15.0
+        deps:
+          - name: activerecord
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 4.2.0
+            nonstandard: false
+      - gem_version:
+          name: activejob
+          version: 8.0.3
+        deps:
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: globalid
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.3.6
+            nonstandard: false
+      - gem_version:
+          name: activemodel
+          version: 8.0.3
+        deps:
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+      - gem_version:
+          name: activerecord
+          version: 8.0.3
+        deps:
+          - name: activemodel
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: timeout
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.4.0
+            nonstandard: false
+      - gem_version:
+          name: activerecord-typedstore
+          version: 1.6.0
+        deps:
+          - name: activerecord
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "6.1"
+            nonstandard: false
+      - gem_version:
+          name: activestorage
+          version: 8.0.3
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activejob
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activerecord
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: marcel
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+            nonstandard: false
+      - gem_version:
+          name: activesupport
+          version: 8.0.3
+        deps:
+          - name: base64
+            semver: ~
+            nonstandard: false
+          - name: benchmark
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "0.3"
+            nonstandard: false
+          - name: bigdecimal
+            semver: ~
+            nonstandard: false
+          - name: concurrent-ruby
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.3.1
+            nonstandard: false
+          - name: connection_pool
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.2.5
+            nonstandard: false
+          - name: drb
+            semver: ~
+            nonstandard: false
+          - name: i18n
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "1.6"
+              - semver_constraint: LessThan
+                version: "2"
+            nonstandard: false
+          - name: logger
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.4.2
+            nonstandard: false
+          - name: minitest
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "5.1"
+            nonstandard: false
+          - name: securerandom
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "0.3"
+            nonstandard: false
+          - name: tzinfo
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.0"
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.0.5
+            nonstandard: false
+          - name: uri
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.13.1
+            nonstandard: false
+      - gem_version:
+          name: addressable
+          version: 2.8.7
+        deps:
+          - name: public_suffix
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.0.2
+              - semver_constraint: LessThan
+                version: "7.0"
+            nonstandard: false
+      - gem_version:
+          name: afm
+          version: 0.2.2
+        deps: []
+      - gem_version:
+          name: ast
+          version: 2.4.2
+        deps: []
+      - gem_version:
+          name: attr_extras
+          version: 7.1.0
+        deps: []
+      - gem_version:
+          name: base64
+          version: 0.3.0
+        deps: []
+      - gem_version:
+          name: bcrypt
+          version: 3.1.20
+        deps: []
+      - gem_version:
+          name: benchmark
+          version: 0.4.1
+        deps: []
+      - gem_version:
+          name: benchmark-perf
+          version: 0.6.0
+        deps: []
+      - gem_version:
+          name: bigdecimal
+          version: 3.2.3
+        deps: []
+      - gem_version:
+          name: brakeman
+          version: 7.1.2
+        deps:
+          - name: racc
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: builder
+          version: 3.3.0
+        deps: []
+      - gem_version:
+          name: byebug
+          version: 12.0.0
+        deps: []
+      - gem_version:
+          name: capybara
+          version: 3.40.0
+        deps:
+          - name: addressable
+            semver: ~
+            nonstandard: false
+          - name: matrix
+            semver: ~
+            nonstandard: false
+          - name: mini_mime
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.1.3
+            nonstandard: false
+          - name: nokogiri
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.11"
+            nonstandard: false
+          - name: rack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.6.0
+            nonstandard: false
+          - name: rack-test
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.6.3
+            nonstandard: false
+          - name: regexp_parser
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "1.5"
+              - semver_constraint: LessThan
+                version: "3.0"
+            nonstandard: false
+          - name: xpath
+            semver:
+              - semver_constraint: Pessimistic
+                version: "3.2"
+            nonstandard: false
+      - gem_version:
+          name: childprocess
+          version: 5.1.0
+        deps:
+          - name: logger
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.5"
+            nonstandard: false
+      - gem_version:
+          name: chunky_png
+          version: 1.4.0
+        deps: []
+      - gem_version:
+          name: coderay
+          version: 1.1.3
+        deps: []
+      - gem_version:
+          name: commonmarker
+          version: 2.6.0
+        deps:
+          - name: rb_sys
+            semver:
+              - semver_constraint: Pessimistic
+                version: "0.9"
+            nonstandard: false
+      - gem_version:
+          name: commonmarker
+          version: 2.6.0-arm64-darwin
+        deps: []
+      - gem_version:
+          name: commonmarker
+          version: 2.6.0-x86_64-linux
+        deps: []
+      - gem_version:
+          name: concurrent-ruby
+          version: 1.3.5
+        deps: []
+      - gem_version:
+          name: connection_pool
+          version: 2.5.4
+        deps: []
+      - gem_version:
+          name: crack
+          version: 1.0.0
+        deps:
+          - name: bigdecimal
+            semver: ~
+            nonstandard: false
+          - name: rexml
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: crass
+          version: 1.0.6
+        deps: []
+      - gem_version:
+          name: database_cleaner
+          version: 2.1.0
+        deps:
+          - name: database_cleaner-active_record
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "2"
+              - semver_constraint: LessThan
+                version: "3"
+            nonstandard: false
+      - gem_version:
+          name: database_cleaner-active_record
+          version: 2.2.0
+        deps:
+          - name: activerecord
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 5.a
+            nonstandard: false
+          - name: database_cleaner-core
+            semver:
+              - semver_constraint: Pessimistic
+                version: 2.0.0
+            nonstandard: false
+      - gem_version:
+          name: database_cleaner-core
+          version: 2.0.1
+        deps: []
+      - gem_version:
+          name: database_consistency
+          version: 1.7.26
+        deps:
+          - name: activerecord
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "3.2"
+            nonstandard: false
+      - gem_version:
+          name: date
+          version: 3.4.1
+        deps: []
+      - gem_version:
+          name: diff-lcs
+          version: 1.5.1
+        deps: []
+      - gem_version:
+          name: docile
+          version: 1.4.1
+        deps: []
+      - gem_version:
+          name: drb
+          version: 2.2.3
+        deps: []
+      - gem_version:
+          name: erb
+          version: 5.0.2
+        deps: []
+      - gem_version:
+          name: erubi
+          version: 1.13.1
+        deps: []
+      - gem_version:
+          name: et-orbi
+          version: 1.4.0
+        deps:
+          - name: tzinfo
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: factory_bot
+          version: 6.5.0
+        deps:
+          - name: activesupport
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 5.0.0
+            nonstandard: false
+      - gem_version:
+          name: factory_bot_rails
+          version: 6.4.4
+        deps:
+          - name: factory_bot
+            semver:
+              - semver_constraint: Pessimistic
+                version: "6.5"
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 5.0.0
+            nonstandard: false
+      - gem_version:
+          name: faker
+          version: 3.5.1
+        deps:
+          - name: i18n
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.8.11
+              - semver_constraint: LessThan
+                version: "2"
+            nonstandard: false
+      - gem_version:
+          name: ffi
+          version: 1.17.2
+        deps: []
+      - gem_version:
+          name: ffi
+          version: 1.17.2-arm64-darwin
+        deps: []
+      - gem_version:
+          name: ffi
+          version: 1.17.2-x86_64-linux-gnu
+        deps: []
+      - gem_version:
+          name: flamegraph
+          version: 0.9.5
+        deps: []
+      - gem_version:
+          name: foreman
+          version: 0.88.1
+        deps: []
+      - gem_version:
+          name: fugit
+          version: 1.11.1
+        deps:
+          - name: et-orbi
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1"
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.2.11
+            nonstandard: false
+          - name: raabro
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.4"
+            nonstandard: false
+      - gem_version:
+          name: globalid
+          version: 1.3.0
+        deps:
+          - name: activesupport
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "6.1"
+            nonstandard: false
+      - gem_version:
+          name: hashdiff
+          version: 1.1.2
+        deps: []
+      - gem_version:
+          name: hashery
+          version: 2.1.2
+        deps: []
+      - gem_version:
+          name: hashie
+          version: 5.0.0
+        deps: []
+      - gem_version:
+          name: htmlentities
+          version: 4.3.4
+        deps: []
+      - gem_version:
+          name: i18n
+          version: 1.14.7
+        deps:
+          - name: concurrent-ruby
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+            nonstandard: false
+      - gem_version:
+          name: importmap-rails
+          version: 2.1.0
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 6.0.0
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 6.0.0
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 6.0.0
+            nonstandard: false
+      - gem_version:
+          name: io-console
+          version: 0.8.1
+        deps: []
+      - gem_version:
+          name: irb
+          version: 1.15.2
+        deps:
+          - name: pp
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.6.0
+            nonstandard: false
+          - name: rdoc
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 4.0.0
+            nonstandard: false
+          - name: reline
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.4.2
+            nonstandard: false
+      - gem_version:
+          name: json
+          version: 2.9.1
+        deps: []
+      - gem_version:
+          name: language_server-protocol
+          version: 3.17.0.3
+        deps: []
+      - gem_version:
+          name: launchy
+          version: 3.0.1
+        deps:
+          - name: addressable
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.8"
+            nonstandard: false
+          - name: childprocess
+            semver:
+              - semver_constraint: Pessimistic
+                version: "5.0"
+            nonstandard: false
+      - gem_version:
+          name: letter_opener
+          version: 1.10.0
+        deps:
+          - name: launchy
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "2.2"
+              - semver_constraint: LessThan
+                version: "4"
+            nonstandard: false
+      - gem_version:
+          name: lint_roller
+          version: 1.1.0
+        deps: []
+      - gem_version:
+          name: listen
+          version: 3.9.0
+        deps:
+          - name: rb-fsevent
+            semver:
+              - semver_constraint: Pessimistic
+                version: "0.10"
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.10.3
+            nonstandard: false
+          - name: rb-inotify
+            semver:
+              - semver_constraint: Pessimistic
+                version: "0.9"
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.9.10
+            nonstandard: false
+      - gem_version:
+          name: logger
+          version: 1.7.0
+        deps: []
+      - gem_version:
+          name: lograge
+          version: 0.14.0
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "4"
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "4"
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "4"
+            nonstandard: false
+          - name: request_store
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+            nonstandard: false
+      - gem_version:
+          name: loofah
+          version: 2.24.1
+        deps:
+          - name: crass
+            semver:
+              - semver_constraint: Pessimistic
+                version: 1.0.2
+            nonstandard: false
+          - name: nokogiri
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.12.0
+            nonstandard: false
+      - gem_version:
+          name: mail
+          version: 2.8.1
+        deps:
+          - name: mini_mime
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.1.1
+            nonstandard: false
+          - name: net-imap
+            semver: ~
+            nonstandard: false
+          - name: net-pop
+            semver: ~
+            nonstandard: false
+          - name: net-smtp
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: marcel
+          version: 1.1.0
+        deps: []
+      - gem_version:
+          name: matrix
+          version: 0.4.2
+        deps: []
+      - gem_version:
+          name: memory_profiler
+          version: 1.1.0
+        deps: []
+      - gem_version:
+          name: method_source
+          version: 1.1.0
+        deps: []
+      - gem_version:
+          name: mini_mime
+          version: 1.1.5
+        deps: []
+      - gem_version:
+          name: mini_portile2
+          version: 2.8.9
+        deps: []
+      - gem_version:
+          name: minitest
+          version: 6.0.0
+        deps:
+          - name: prism
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.5"
+            nonstandard: false
+      - gem_version:
+          name: mission_control-jobs
+          version: 1.1.0
+        deps:
+          - name: actioncable
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.1"
+            nonstandard: false
+          - name: actionpack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.1"
+            nonstandard: false
+          - name: activejob
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.1"
+            nonstandard: false
+          - name: activerecord
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.1"
+            nonstandard: false
+          - name: importmap-rails
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.2.1
+            nonstandard: false
+          - name: irb
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.13"
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.1"
+            nonstandard: false
+          - name: stimulus-rails
+            semver: ~
+            nonstandard: false
+          - name: turbo-rails
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: net-imap
+          version: 0.5.11
+        deps:
+          - name: date
+            semver: ~
+            nonstandard: false
+          - name: net-protocol
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: net-pop
+          version: 0.1.2
+        deps:
+          - name: net-protocol
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: net-protocol
+          version: 0.2.2
+        deps:
+          - name: timeout
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: net-smtp
+          version: 0.5.1
+        deps:
+          - name: net-protocol
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: nio4r
+          version: 2.7.4
+        deps: []
+      - gem_version:
+          name: nokogiri
+          version: 1.18.10
+        deps:
+          - name: mini_portile2
+            semver:
+              - semver_constraint: Pessimistic
+                version: 2.8.2
+            nonstandard: false
+          - name: racc
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.4"
+            nonstandard: false
+      - gem_version:
+          name: nokogiri
+          version: 1.18.10-arm64-darwin
+        deps:
+          - name: racc
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.4"
+            nonstandard: false
+      - gem_version:
+          name: nokogiri
+          version: 1.18.10-x86_64-linux-gnu
+        deps:
+          - name: racc
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.4"
+            nonstandard: false
+      - gem_version:
+          name: oauth
+          version: 1.1.2
+        deps:
+          - name: oauth-tty
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.0.6
+            nonstandard: false
+          - name: snaky_hash
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.0"
+            nonstandard: false
+          - name: version_gem
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.1"
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.1.9
+            nonstandard: false
+      - gem_version:
+          name: oauth-tty
+          version: 1.0.6
+        deps:
+          - name: version_gem
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.1"
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.1.9
+            nonstandard: false
+      - gem_version:
+          name: optimist
+          version: 3.2.0
+        deps: []
+      - gem_version:
+          name: parallel
+          version: 1.26.3
+        deps: []
+      - gem_version:
+          name: parser
+          version: 3.3.9.0
+        deps:
+          - name: ast
+            semver:
+              - semver_constraint: Pessimistic
+                version: 2.4.1
+            nonstandard: false
+          - name: racc
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: parslet
+          version: 2.0.0
+        deps: []
+      - gem_version:
+          name: patience_diff
+          version: 1.2.0
+        deps:
+          - name: optimist
+            semver:
+              - semver_constraint: Pessimistic
+                version: "3.0"
+            nonstandard: false
+      - gem_version:
+          name: pdf-reader
+          version: 2.15.0
+        deps:
+          - name: Ascii85
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "1.0"
+              - semver_constraint: LessThan
+                version: "3.0"
+              - semver_constraint: NotEqual
+                version: 2.0.0
+            nonstandard: false
+          - name: afm
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.2.1
+              - semver_constraint: LessThan
+                version: "2"
+            nonstandard: false
+          - name: hashery
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.0"
+            nonstandard: false
+          - name: ruby-rc4
+            semver: ~
+            nonstandard: false
+          - name: ttfunk
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: pp
+          version: 0.6.2
+        deps:
+          - name: prettyprint
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: prettyprint
+          version: 0.2.0
+        deps: []
+      - gem_version:
+          name: prism
+          version: 1.7.0
+        deps: []
+      - gem_version:
+          name: propshaft
+          version: 1.1.0
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 7.0.0
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 7.0.0
+            nonstandard: false
+          - name: rack
+            semver: ~
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 7.0.0
+            nonstandard: false
+      - gem_version:
+          name: pry
+          version: 0.15.2
+        deps:
+          - name: coderay
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.1"
+            nonstandard: false
+          - name: method_source
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+            nonstandard: false
+      - gem_version:
+          name: pry-byebug
+          version: 3.11.0
+        deps:
+          - name: byebug
+            semver:
+              - semver_constraint: Pessimistic
+                version: "12.0"
+            nonstandard: false
+          - name: pry
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "0.13"
+              - semver_constraint: LessThan
+                version: "0.16"
+            nonstandard: false
+      - gem_version:
+          name: pry-rails
+          version: 0.3.11
+        deps:
+          - name: pry
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.13.0
+            nonstandard: false
+      - gem_version:
+          name: psych
+          version: 5.2.6
+        deps:
+          - name: date
+            semver: ~
+            nonstandard: false
+          - name: stringio
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: public_suffix
+          version: 6.0.1
+        deps: []
+      - gem_version:
+          name: puma
+          version: 6.6.0
+        deps:
+          - name: nio4r
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.0"
+            nonstandard: false
+      - gem_version:
+          name: raabro
+          version: 1.4.0
+        deps: []
+      - gem_version:
+          name: racc
+          version: 1.8.1
+        deps: []
+      - gem_version:
+          name: rack
+          version: 3.2.3
+        deps: []
+      - gem_version:
+          name: rack-attack
+          version: 6.7.0
+        deps:
+          - name: rack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "1.0"
+              - semver_constraint: LessThan
+                version: "4"
+            nonstandard: false
+      - gem_version:
+          name: rack-mini-profiler
+          version: 4.0.0
+        deps:
+          - name: rack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.2.0
+            nonstandard: false
+      - gem_version:
+          name: rack-session
+          version: 2.1.1
+        deps:
+          - name: base64
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.1.0
+            nonstandard: false
+          - name: rack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 3.0.0
+            nonstandard: false
+      - gem_version:
+          name: rack-test
+          version: 2.2.0
+        deps:
+          - name: rack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "1.3"
+            nonstandard: false
+      - gem_version:
+          name: rackup
+          version: 2.2.1
+        deps:
+          - name: rack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "3"
+            nonstandard: false
+      - gem_version:
+          name: rails
+          version: 8.0.3
+        deps:
+          - name: actioncable
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: actionmailbox
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: actionmailer
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: actionpack
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: actiontext
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: actionview
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activejob
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activemodel
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activerecord
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activestorage
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: bundler
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.15.0
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+      - gem_version:
+          name: rails-dom-testing
+          version: 2.3.0
+        deps:
+          - name: activesupport
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 5.0.0
+            nonstandard: false
+          - name: minitest
+            semver: ~
+            nonstandard: false
+          - name: nokogiri
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "1.6"
+            nonstandard: false
+      - gem_version:
+          name: rails-html-sanitizer
+          version: 1.6.2
+        deps:
+          - name: loofah
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.21"
+            nonstandard: false
+          - name: nokogiri
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.15.7
+              - semver_constraint: NotEqual
+                version: 1.16.7
+              - semver_constraint: NotEqual
+                version: 1.16.6
+              - semver_constraint: NotEqual
+                version: 1.16.5
+              - semver_constraint: NotEqual
+                version: 1.16.4
+              - semver_constraint: NotEqual
+                version: 1.16.3
+              - semver_constraint: NotEqual
+                version: 1.16.2
+              - semver_constraint: NotEqual
+                version: 1.16.1
+              - semver_constraint: NotEqual
+                version: 1.16.0.rc1
+              - semver_constraint: NotEqual
+                version: 1.16.0
+            nonstandard: false
+      - gem_version:
+          name: railties
+          version: 8.0.3
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: Exact
+                version: 8.0.3
+            nonstandard: false
+          - name: irb
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.13"
+            nonstandard: false
+          - name: rackup
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.0.0
+            nonstandard: false
+          - name: rake
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "12.2"
+            nonstandard: false
+          - name: thor
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.2.2
+            nonstandard: false
+          - name: tsort
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "0.2"
+            nonstandard: false
+          - name: zeitwerk
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.6"
+            nonstandard: false
+      - gem_version:
+          name: rainbow
+          version: 3.1.1
+        deps: []
+      - gem_version:
+          name: rake
+          version: 13.3.0
+        deps: []
+      - gem_version:
+          name: rake-compiler-dock
+          version: 1.10.0
+        deps: []
+      - gem_version:
+          name: rb-fsevent
+          version: 0.11.2
+        deps: []
+      - gem_version:
+          name: rb-inotify
+          version: 0.11.1
+        deps:
+          - name: ffi
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+            nonstandard: false
+      - gem_version:
+          name: rb-readline
+          version: 0.5.5
+        deps: []
+      - gem_version:
+          name: rb_sys
+          version: 0.9.123
+        deps:
+          - name: rake-compiler-dock
+            semver:
+              - semver_constraint: Exact
+                version: 1.10.0
+            nonstandard: false
+      - gem_version:
+          name: rdoc
+          version: 6.15.0
+        deps:
+          - name: erb
+            semver: ~
+            nonstandard: false
+          - name: psych
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 4.0.0
+            nonstandard: false
+          - name: tsort
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: regexp_parser
+          version: 2.11.3
+        deps: []
+      - gem_version:
+          name: reline
+          version: 0.6.2
+        deps:
+          - name: io-console
+            semver:
+              - semver_constraint: Pessimistic
+                version: "0.5"
+            nonstandard: false
+      - gem_version:
+          name: request_store
+          version: 1.7.0
+        deps:
+          - name: rack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "1.4"
+            nonstandard: false
+      - gem_version:
+          name: rexml
+          version: 3.4.4
+        deps: []
+      - gem_version:
+          name: rotp
+          version: 6.3.0
+        deps: []
+      - gem_version:
+          name: rqrcode
+          version: 3.1.1
+        deps:
+          - name: chunky_png
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+            nonstandard: false
+          - name: rqrcode_core
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.0"
+            nonstandard: false
+      - gem_version:
+          name: rqrcode_core
+          version: 2.0.1
+        deps: []
+      - gem_version:
+          name: rspec-core
+          version: 3.13.5
+        deps:
+          - name: rspec-support
+            semver:
+              - semver_constraint: Pessimistic
+                version: 3.13.0
+            nonstandard: false
+      - gem_version:
+          name: rspec-expectations
+          version: 3.13.5
+        deps:
+          - name: diff-lcs
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.2.0
+              - semver_constraint: LessThan
+                version: "2.0"
+            nonstandard: false
+          - name: rspec-support
+            semver:
+              - semver_constraint: Pessimistic
+                version: 3.13.0
+            nonstandard: false
+      - gem_version:
+          name: rspec-mocks
+          version: 3.13.5
+        deps:
+          - name: diff-lcs
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.2.0
+              - semver_constraint: LessThan
+                version: "2.0"
+            nonstandard: false
+          - name: rspec-support
+            semver:
+              - semver_constraint: Pessimistic
+                version: 3.13.0
+            nonstandard: false
+      - gem_version:
+          name: rspec-rails
+          version: 8.0.2
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.2"
+            nonstandard: false
+          - name: activesupport
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.2"
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.2"
+            nonstandard: false
+          - name: rspec-core
+            semver:
+              - semver_constraint: Pessimistic
+                version: "3.13"
+            nonstandard: false
+          - name: rspec-expectations
+            semver:
+              - semver_constraint: Pessimistic
+                version: "3.13"
+            nonstandard: false
+          - name: rspec-mocks
+            semver:
+              - semver_constraint: Pessimistic
+                version: "3.13"
+            nonstandard: false
+          - name: rspec-support
+            semver:
+              - semver_constraint: Pessimistic
+                version: "3.13"
+            nonstandard: false
+      - gem_version:
+          name: rspec-support
+          version: 3.13.6
+        deps: []
+      - gem_version:
+          name: rubocop
+          version: 1.81.7
+        deps:
+          - name: json
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.3"
+            nonstandard: false
+          - name: language_server-protocol
+            semver:
+              - semver_constraint: Pessimistic
+                version: 3.17.0.2
+            nonstandard: false
+          - name: lint_roller
+            semver:
+              - semver_constraint: Pessimistic
+                version: 1.1.0
+            nonstandard: false
+          - name: parallel
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.10"
+            nonstandard: false
+          - name: parser
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 3.3.0.2
+            nonstandard: false
+          - name: rainbow
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.2.2
+              - semver_constraint: LessThan
+                version: "4.0"
+            nonstandard: false
+          - name: regexp_parser
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.9.3
+              - semver_constraint: LessThan
+                version: "3.0"
+            nonstandard: false
+          - name: rubocop-ast
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.47.1
+              - semver_constraint: LessThan
+                version: "2.0"
+            nonstandard: false
+          - name: ruby-progressbar
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.7"
+            nonstandard: false
+          - name: unicode-display_width
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.4.0
+              - semver_constraint: LessThan
+                version: "4.0"
+            nonstandard: false
+      - gem_version:
+          name: rubocop-ast
+          version: 1.48.0
+        deps:
+          - name: parser
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 3.3.7.2
+            nonstandard: false
+          - name: prism
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.4"
+            nonstandard: false
+      - gem_version:
+          name: rubocop-performance
+          version: 1.26.1
+        deps:
+          - name: lint_roller
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.1"
+            nonstandard: false
+          - name: rubocop
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.75.0
+              - semver_constraint: LessThan
+                version: "2.0"
+            nonstandard: false
+          - name: rubocop-ast
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.47.1
+              - semver_constraint: LessThan
+                version: "2.0"
+            nonstandard: false
+      - gem_version:
+          name: rubocop-rails
+          version: 2.34.2
+        deps:
+          - name: activesupport
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 4.2.0
+            nonstandard: false
+          - name: lint_roller
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.1"
+            nonstandard: false
+          - name: rack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "1.1"
+            nonstandard: false
+          - name: rubocop
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.75.0
+              - semver_constraint: LessThan
+                version: "2.0"
+            nonstandard: false
+          - name: rubocop-ast
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.44.0
+              - semver_constraint: LessThan
+                version: "2.0"
+            nonstandard: false
+      - gem_version:
+          name: ruby-progressbar
+          version: 1.13.0
+        deps: []
+      - gem_version:
+          name: ruby-rc4
+          version: 0.1.5
+        deps: []
+      - gem_version:
+          name: securerandom
+          version: 0.4.1
+        deps: []
+      - gem_version:
+          name: sentry-rails
+          version: 5.28.0
+        deps:
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "5.0"
+            nonstandard: false
+          - name: sentry-ruby
+            semver:
+              - semver_constraint: Pessimistic
+                version: 5.28.0
+            nonstandard: false
+      - gem_version:
+          name: sentry-ruby
+          version: 5.28.0
+        deps:
+          - name: bigdecimal
+            semver: ~
+            nonstandard: false
+          - name: concurrent-ruby
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.0.2
+            nonstandard: false
+      - gem_version:
+          name: silencer
+          version: 2.0.0
+        deps: []
+      - gem_version:
+          name: simplecov
+          version: 0.22.0
+        deps:
+          - name: docile
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.1"
+            nonstandard: false
+          - name: simplecov-html
+            semver:
+              - semver_constraint: Pessimistic
+                version: "0.11"
+            nonstandard: false
+          - name: simplecov_json_formatter
+            semver:
+              - semver_constraint: Pessimistic
+                version: "0.1"
+            nonstandard: false
+      - gem_version:
+          name: simplecov-html
+          version: 0.13.2
+        deps: []
+      - gem_version:
+          name: simplecov_json_formatter
+          version: 0.1.4
+        deps: []
+      - gem_version:
+          name: sitemap_generator
+          version: 6.3.0
+        deps:
+          - name: builder
+            semver:
+              - semver_constraint: Pessimistic
+                version: "3.0"
+            nonstandard: false
+      - gem_version:
+          name: snaky_hash
+          version: 2.0.3
+        deps:
+          - name: hashie
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.1.0
+              - semver_constraint: LessThan
+                version: "6"
+            nonstandard: false
+          - name: version_gem
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.1.8
+              - semver_constraint: LessThan
+                version: "3"
+            nonstandard: false
+      - gem_version:
+          name: solid_cache
+          version: 1.0.7
+        deps:
+          - name: activejob
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.2"
+            nonstandard: false
+          - name: activerecord
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.2"
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.2"
+            nonstandard: false
+      - gem_version:
+          name: solid_queue
+          version: 1.2.1
+        deps:
+          - name: activejob
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.1"
+            nonstandard: false
+          - name: activerecord
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.1"
+            nonstandard: false
+          - name: concurrent-ruby
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.3.1
+            nonstandard: false
+          - name: fugit
+            semver:
+              - semver_constraint: Pessimistic
+                version: 1.11.0
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: "7.1"
+            nonstandard: false
+          - name: thor
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.3.1
+            nonstandard: false
+      - gem_version:
+          name: sqlite3
+          version: 2.7.4
+        deps:
+          - name: mini_portile2
+            semver:
+              - semver_constraint: Pessimistic
+                version: 2.8.0
+            nonstandard: false
+      - gem_version:
+          name: sqlite3
+          version: 2.7.4-arm64-darwin
+        deps: []
+      - gem_version:
+          name: sqlite3
+          version: 2.7.4-x86_64-linux-gnu
+        deps: []
+      - gem_version:
+          name: stackprof
+          version: 0.2.27
+        deps: []
+      - gem_version:
+          name: standard
+          version: 1.52.0
+        deps:
+          - name: language_server-protocol
+            semver:
+              - semver_constraint: Pessimistic
+                version: 3.17.0.2
+            nonstandard: false
+          - name: lint_roller
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+            nonstandard: false
+          - name: rubocop
+            semver:
+              - semver_constraint: Pessimistic
+                version: 1.81.7
+            nonstandard: false
+          - name: standard-custom
+            semver:
+              - semver_constraint: Pessimistic
+                version: 1.0.0
+            nonstandard: false
+          - name: standard-performance
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.8"
+            nonstandard: false
+      - gem_version:
+          name: standard-custom
+          version: 1.0.2
+        deps:
+          - name: lint_roller
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+            nonstandard: false
+          - name: rubocop
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.50"
+            nonstandard: false
+      - gem_version:
+          name: standard-performance
+          version: 1.9.0
+        deps:
+          - name: lint_roller
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.1"
+            nonstandard: false
+          - name: rubocop-performance
+            semver:
+              - semver_constraint: Pessimistic
+                version: 1.26.0
+            nonstandard: false
+      - gem_version:
+          name: standard-rails
+          version: 1.6.0
+        deps:
+          - name: lint_roller
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+            nonstandard: false
+          - name: rubocop-rails
+            semver:
+              - semver_constraint: Pessimistic
+                version: 2.34.0
+            nonstandard: false
+      - gem_version:
+          name: stimulus-rails
+          version: 1.3.4
+        deps:
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 6.0.0
+            nonstandard: false
+      - gem_version:
+          name: stringio
+          version: 3.1.7
+        deps: []
+      - gem_version:
+          name: super_diff
+          version: 0.16.0
+        deps:
+          - name: attr_extras
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 6.2.4
+            nonstandard: false
+          - name: diff-lcs
+            semver: ~
+            nonstandard: false
+          - name: patience_diff
+            semver: ~
+            nonstandard: false
+      - gem_version:
+          name: svg-graph
+          version: 2.2.2
+        deps: []
+      - gem_version:
+          name: thor
+          version: 1.4.0
+        deps: []
+      - gem_version:
+          name: timeout
+          version: 0.4.3
+        deps: []
+      - gem_version:
+          name: trilogy
+          version: 2.9.0
+        deps: []
+      - gem_version:
+          name: tsort
+          version: 0.2.0
+        deps: []
+      - gem_version:
+          name: ttfunk
+          version: 1.8.0
+        deps:
+          - name: bigdecimal
+            semver:
+              - semver_constraint: Pessimistic
+                version: "3.1"
+            nonstandard: false
+      - gem_version:
+          name: turbo-rails
+          version: 2.0.17
+        deps:
+          - name: actionpack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 7.1.0
+            nonstandard: false
+          - name: railties
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 7.1.0
+            nonstandard: false
+      - gem_version:
+          name: typeid
+          version: 0.2.2
+        deps:
+          - name: uuid7
+            semver:
+              - semver_constraint: Pessimistic
+                version: 0.2.0
+            nonstandard: false
+      - gem_version:
+          name: tzinfo
+          version: 2.0.6
+        deps:
+          - name: concurrent-ruby
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.0"
+            nonstandard: false
+      - gem_version:
+          name: unicode-display_width
+          version: 3.2.0
+        deps:
+          - name: unicode-emoji
+            semver:
+              - semver_constraint: Pessimistic
+                version: "4.1"
+            nonstandard: false
+      - gem_version:
+          name: unicode-emoji
+          version: 4.2.0
+        deps: []
+      - gem_version:
+          name: uri
+          version: 1.0.4
+        deps: []
+      - gem_version:
+          name: useragent
+          version: 0.16.11
+        deps: []
+      - gem_version:
+          name: uuid7
+          version: 0.2.0
+        deps:
+          - name: zeitwerk
+            semver:
+              - semver_constraint: Pessimistic
+                version: "2.4"
+            nonstandard: false
+      - gem_version:
+          name: vcr
+          version: 6.4.0
+        deps: []
+      - gem_version:
+          name: version_gem
+          version: 1.1.9
+        deps: []
+      - gem_version:
+          name: webmock
+          version: 3.25.1
+        deps:
+          - name: addressable
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 2.8.0
+            nonstandard: false
+          - name: crack
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.3.2
+            nonstandard: false
+          - name: hashdiff
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.4.0
+              - semver_constraint: LessThan
+                version: 2.0.0
+            nonstandard: false
+      - gem_version:
+          name: websocket-driver
+          version: 0.8.0
+        deps:
+          - name: base64
+            semver: ~
+            nonstandard: false
+          - name: websocket-extensions
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 0.1.0
+            nonstandard: false
+      - gem_version:
+          name: websocket-extensions
+          version: 0.1.5
+        deps: []
+      - gem_version:
+          name: xpath
+          version: 3.2.0
+        deps:
+          - name: nokogiri
+            semver:
+              - semver_constraint: Pessimistic
+                version: "1.8"
+            nonstandard: false
+      - gem_version:
+          name: zeitwerk
+          version: 2.7.3
+        deps: []
+platforms:
+  - arm64-darwin
+  - ruby
+  - x86_64-linux
+dependencies:
+  - name: actionpack-page_caching
+    semver: ~
+    nonstandard: false
+  - name: active_record_doctor
+    semver: ~
+    nonstandard: false
+  - name: activerecord-typedstore
+    semver: ~
+    nonstandard: false
+  - name: bcrypt
+    semver: ~
+    nonstandard: false
+  - name: benchmark-perf
+    semver: ~
+    nonstandard: false
+  - name: brakeman
+    semver: ~
+    nonstandard: false
+  - name: builder
+    semver: ~
+    nonstandard: false
+  - name: capybara
+    semver: ~
+    nonstandard: false
+  - name: commonmarker
+    semver: ~
+    nonstandard: false
+  - name: database_cleaner
+    semver: ~
+    nonstandard: false
+  - name: database_consistency
+    semver: ~
+    nonstandard: false
+  - name: factory_bot_rails
+    semver: ~
+    nonstandard: false
+  - name: faker
+    semver: ~
+    nonstandard: false
+  - name: flamegraph
+    semver: ~
+    nonstandard: false
+  - name: foreman
+    semver: ~
+    nonstandard: false
+  - name: htmlentities
+    semver: ~
+    nonstandard: false
+  - name: importmap-rails
+    semver:
+      - semver_constraint: Pessimistic
+        version: "2.0"
+    nonstandard: false
+  - name: json
+    semver: ~
+    nonstandard: false
+  - name: letter_opener
+    semver: ~
+    nonstandard: false
+  - name: listen
+    semver: ~
+    nonstandard: false
+  - name: lograge
+    semver: ~
+    nonstandard: false
+  - name: mail
+    semver: ~
+    nonstandard: false
+  - name: memory_profiler
+    semver: ~
+    nonstandard: false
+  - name: mission_control-jobs
+    semver: ~
+    nonstandard: false
+  - name: nokogiri
+    semver: ~
+    nonstandard: false
+  - name: oauth
+    semver: ~
+    nonstandard: false
+  - name: parslet
+    semver: ~
+    nonstandard: false
+  - name: pdf-reader
+    semver: ~
+    nonstandard: false
+  - name: propshaft
+    semver: ~
+    nonstandard: false
+  - name: pry-byebug
+    semver: ~
+    nonstandard: false
+  - name: pry-rails
+    semver: ~
+    nonstandard: false
+  - name: puma
+    semver: ~
+    nonstandard: false
+  - name: rack-attack
+    semver: ~
+    nonstandard: false
+  - name: rack-mini-profiler
+    semver: ~
+    nonstandard: false
+  - name: rails
+    semver: ~
+    nonstandard: false
+  - name: rb-readline
+    semver: ~
+    nonstandard: false
+  - name: rexml
+    semver: ~
+    nonstandard: false
+  - name: rotp
+    semver: ~
+    nonstandard: false
+  - name: rqrcode
+    semver: ~
+    nonstandard: false
+  - name: rspec-rails
+    semver: ~
+    nonstandard: false
+  - name: sentry-rails
+    semver: ~
+    nonstandard: false
+  - name: silencer
+    semver: ~
+    nonstandard: false
+  - name: simplecov
+    semver: ~
+    nonstandard: false
+  - name: sitemap_generator
+    semver: ~
+    nonstandard: false
+  - name: solid_cache
+    semver: ~
+    nonstandard: false
+  - name: solid_queue
+    semver: ~
+    nonstandard: false
+  - name: sqlite3
+    semver: ~
+    nonstandard: false
+  - name: stackprof
+    semver: ~
+    nonstandard: false
+  - name: standard
+    semver: ~
+    nonstandard: false
+  - name: standard-performance
+    semver: ~
+    nonstandard: false
+  - name: standard-rails
+    semver: ~
+    nonstandard: false
+  - name: super_diff
+    semver: ~
+    nonstandard: false
+  - name: svg-graph
+    semver: ~
+    nonstandard: false
+  - name: trilogy
+    semver: ~
+    nonstandard: false
+  - name: typeid
+    semver: ~
+    nonstandard: false
+  - name: vcr
+    semver: ~
+    nonstandard: false
+  - name: webmock
+    semver: ~
+    nonstandard: false
+ruby_version: ruby 4.0.0
+bundled_with: 4.0.3
+checksums:
+  - gem_version:
+      name: Ascii85
+      version: 2.0.1
+    algorithm: SHA256
+    value:
+      - 21
+      - 203
+      - 93
+      - 148
+      - 24
+      - 8
+      - 84
+      - 60
+      - 187
+      - 158
+      - 126
+      - 106
+      - 234
+      - 60
+      - 142
+      - 195
+      - 135
+      - 127
+      - 21
+      - 76
+      - 52
+      - 97
+      - 232
+      - 179
+      - 103
+      - 62
+      - 151
+      - 247
+      - 236
+      - 237
+      - 190
+      - 90
+  - gem_version:
+      name: actioncable
+      version: 8.0.3
+    algorithm: SHA256
+    value:
+      - 248
+      - 202
+      - 211
+      - 156
+      - 235
+      - 239
+      - 170
+      - 28
+      - 157
+      - 73
+      - 4
+      - 243
+      - 232
+      - 67
+      - 2
+      - 47
+      - 34
+      - 238
+      - 122
+      - 146
+      - 1
+      - 181
+      - 157
+      - 183
+      - 3
+      - 191
+      - 62
+      - 247
+      - 242
+      - 135
+      - 116
+      - 147
+  - gem_version:
+      name: actionmailbox
+      version: 8.0.3
+    algorithm: SHA256
+    value:
+      - 42
+      - 4
+      - 68
+      - 248
+      - 147
+      - 124
+      - 100
+      - 29
+      - 177
+      - 0
+      - 18
+      - 138
+      - 24
+      - 38
+      - 85
+      - 76
+      - 82
+      - 152
+      - 173
+      - 230
+      - 92
+      - 98
+      - 182
+      - 35
+      - 161
+      - 252
+      - 179
+      - 74
+      - 29
+      - 198
+      - 189
+      - 47
+  - gem_version:
+      name: actionmailer
+      version: 8.0.3
+    algorithm: SHA256
+    value:
+      - 109
+      - 192
+      - 195
+      - 112
+      - 16
+      - 101
+      - 169
+      - 111
+      - 132
+      - 90
+      - 5
+      - 162
+      - 142
+      - 157
+      - 122
+      - 96
+      - 5
+      - 82
+      - 34
+      - 207
+      - 195
+      - 36
+      - 204
+      - 108
+      - 58
+      - 40
+      - 28
+      - 236
+      - 20
+      - 140
+      - 199
+      - 35
+  - gem_version:
+      name: actionpack
+      version: 8.0.3
+    algorithm: SHA256
+    value:
+      - 214
+      - 60
+      - 33
+      - 203
+      - 16
+      - 158
+      - 5
+      - 41
+      - 215
+      - 133
+      - 255
+      - 219
+      - 101
+      - 122
+      - 9
+      - 41
+      - 40
+      - 137
+      - 3
+      - 39
+      - 197
+      - 200
+      - 234
+      - 46
+      - 70
+      - 246
+      - 59
+      - 103
+      - 81
+      - 190
+      - 90
+      - 211
+  - gem_version:
+      name: actionpack-page_caching
+      version: 1.2.4
+    algorithm: SHA256
+    value:
+      - 134
+      - 126
+      - 140
+      - 56
+      - 127
+      - 247
+      - 18
+      - 12
+      - 20
+      - 66
+      - 98
+      - 23
+      - 44
+      - 29
+      - 88
+      - 214
+      - 253
+      - 116
+      - 180
+      - 65
+      - 49
+      - 59
+      - 30
+      - 220
+      - 124
+      - 250
+      - 33
+      - 83
+      - 119
+      - 120
+      - 152
+      - 241
+  - gem_version:
+      name: actiontext
+      version: 8.0.3
+    algorithm: SHA256
+    value:
+      - 28
+      - 70
+      - 253
+      - 250
+      - 96
+      - 255
+      - 162
+      - 130
+      - 191
+      - 41
+      - 204
+      - 204
+      - 7
+      - 20
+      - 7
+      - 17
+      - 40
+      - 130
+      - 107
+      - 239
+      - 87
+      - 64
+      - 196
+      - 242
+      - 168
+      - 141
+      - 55
+      - 93
+      - 32
+      - 106
+      - 157
+      - 244
+  - gem_version:
+      name: actionview
+      version: 8.0.3
+    algorithm: SHA256
+    value:
+      - 81
+      - 113
+      - 148
+      - 111
+      - 240
+      - 125
+      - 30
+      - 149
+      - 191
+      - 61
+      - 128
+      - 90
+      - 217
+      - 66
+      - 90
+      - 137
+      - 4
+      - 10
+      - 1
+      - 61
+      - 234
+      - 17
+      - 187
+      - 31
+      - 76
+      - 246
+      - 4
+      - 241
+      - 8
+      - 177
+      - 206
+      - 102
+  - gem_version:
+      name: active_record_doctor
+      version: 1.15.0
+    algorithm: SHA256
+    value:
+      - 97
+      - 74
+      - 73
+      - 226
+      - 89
+      - 166
+      - 121
+      - 209
+      - 124
+      - 188
+      - 98
+      - 222
+      - 173
+      - 146
+      - 23
+      - 172
+      - 175
+      - 113
+      - 145
+      - 163
+      - 113
+      - 17
+      - 86
+      - 6
+      - 19
+      - 36
+      - 115
+      - 18
+      - 59
+      - 66
+      - 107
+      - 19
+  - gem_version:
+      name: activejob
+      version: 8.0.3
+    algorithm: SHA256
+    value:
+      - 70
+      - 158
+      - 221
+      - 179
+      - 130
+      - 42
+      - 255
+      - 28
+      - 106
+      - 13
+      - 240
+      - 189
+      - 51
+      - 152
+      - 242
+      - 139
+      - 255
+      - 143
+      - 205
+      - 27
+      - 208
+      - 233
+      - 211
+      - 9
+      - 230
+      - 183
+      - 204
+      - 189
+      - 11
+      - 219
+      - 161
+      - 182
+  - gem_version:
+      name: activemodel
+      version: 8.0.3
+    algorithm: SHA256
+    value:
+      - 64
+      - 105
+      - 7
+      - 36
+      - 90
+      - 28
+      - 108
+      - 4
+      - 205
+      - 242
+      - 24
+      - 124
+      - 196
+      - 89
+      - 15
+      - 220
+      - 8
+      - 29
+      - 122
+      - 7
+      - 57
+      - 33
+      - 35
+      - 211
+      - 34
+      - 18
+      - 86
+      - 119
+      - 2
+      - 46
+      - 166
+      - 124
+  - gem_version:
+      name: activerecord
+      version: 8.0.3
+    algorithm: SHA256
+    value:
+      - 155
+      - 149
+      - 198
+      - 59
+      - 42
+      - 233
+      - 204
+      - 181
+      - 123
+      - 177
+      - 93
+      - 183
+      - 48
+      - 48
+      - 15
+      - 221
+      - 2
+      - 175
+      - 56
+      - 126
+      - 18
+      - 71
+      - 78
+      - 185
+      - 0
+      - 42
+      - 102
+      - 138
+      - 202
+      - 179
+      - 206
+      - 168
+  - gem_version:
+      name: activerecord-typedstore
+      version: 1.6.0
+    algorithm: SHA256
+    value:
+      - 201
+      - 64
+      - 54
+      - 192
+      - 165
+      - 94
+      - 39
+      - 172
+      - 160
+      - 72
+      - 249
+      - 96
+      - 91
+      - 42
+      - 60
+      - 101
+      - 3
+      - 195
+      - 163
+      - 62
+      - 118
+      - 239
+      - 67
+      - 5
+      - 13
+      - 130
+      - 203
+      - 219
+      - 166
+      - 28
+      - 26
+      - 64
+  - gem_version:
+      name: activestorage
+      version: 8.0.3
+    algorithm: SHA256
+    value:
+      - 79
+      - 78
+      - 173
+      - 235
+      - 93
+      - 18
+      - 138
+      - 53
+      - 237
+      - 33
+      - 217
+      - 96
+      - 238
+      - 236
+      - 224
+      - 39
+      - 34
+      - 91
+      - 54
+      - 213
+      - 69
+      - 66
+      - 81
+      - 44
+      - 138
+      - 54
+      - 173
+      - 83
+      - 22
+      - 152
+      - 140
+      - 94
+  - gem_version:
+      name: activesupport
+      version: 8.0.3
+    algorithm: SHA256
+    value:
+      - 167
+      - 17
+      - 206
+      - 94
+      - 48
+      - 102
+      - 11
+      - 35
+      - 35
+      - 47
+      - 38
+      - 163
+      - 134
+      - 153
+      - 70
+      - 159
+      - 141
+      - 133
+      - 157
+      - 71
+      - 170
+      - 31
+      - 114
+      - 46
+      - 24
+      - 63
+      - 218
+      - 109
+      - 124
+      - 193
+      - 120
+      - 35
+  - gem_version:
+      name: addressable
+      version: 2.8.7
+    algorithm: SHA256
+    value:
+      - 70
+      - 41
+      - 134
+      - 83
+      - 124
+      - 243
+      - 115
+      - 90
+      - 181
+      - 243
+      - 192
+      - 245
+      - 87
+      - 241
+      - 65
+      - 85
+      - 215
+      - 120
+      - 244
+      - 180
+      - 62
+      - 164
+      - 244
+      - 133
+      - 169
+      - 222
+      - 185
+      - 200
+      - 247
+      - 197
+      - 130
+      - 50
+  - gem_version:
+      name: afm
+      version: 0.2.2
+    algorithm: SHA256
+    value:
+      - 200
+      - 62
+      - 105
+      - 142
+      - 117
+      - 154
+      - 176
+      - 6
+      - 51
+      - 49
+      - 255
+      - 132
+      - 202
+      - 57
+      - 196
+      - 103
+      - 59
+      - 3
+      - 49
+      - 143
+      - 77
+      - 220
+      - 190
+      - 142
+      - 144
+      - 23
+      - 125
+      - 208
+      - 30
+      - 76
+      - 114
+      - 26
+  - gem_version:
+      name: ast
+      version: 2.4.2
+    algorithm: SHA256
+    value:
+      - 30
+      - 40
+      - 2
+      - 50
+      - 230
+      - 163
+      - 55
+      - 84
+      - 205
+      - 229
+      - 66
+      - 188
+      - 94
+      - 248
+      - 85
+      - 32
+      - 183
+      - 77
+      - 178
+      - 170
+      - 199
+      - 62
+      - 193
+      - 74
+      - 206
+      - 244
+      - 83
+      - 120
+      - 68
+      - 71
+      - 204
+      - 18
+  - gem_version:
+      name: attr_extras
+      version: 7.1.0
+    algorithm: SHA256
+    value:
+      - 217
+      - 111
+      - 201
+      - 169
+      - 221
+      - 93
+      - 133
+      - 186
+      - 45
+      - 55
+      - 118
+      - 36
+      - 64
+      - 168
+      - 22
+      - 248
+      - 64
+      - 9
+      - 57
+      - 89
+      - 174
+      - 38
+      - 187
+      - 144
+      - 218
+      - 153
+      - 76
+      - 45
+      - 159
+      - 31
+      - 200
+      - 39
+  - gem_version:
+      name: base64
+      version: 0.3.0
+    algorithm: SHA256
+    value:
+      - 39
+      - 51
+      - 122
+      - 234
+      - 186
+      - 214
+      - 255
+      - 174
+      - 5
+      - 194
+      - 101
+      - 196
+      - 80
+      - 73
+      - 6
+      - 40
+      - 239
+      - 62
+      - 189
+      - 75
+      - 103
+      - 190
+      - 88
+      - 37
+      - 115
+      - 147
+      - 34
+      - 117
+      - 136
+      - 245
+      - 169
+      - 123
+  - gem_version:
+      name: bcrypt
+      version: 3.1.20
+    algorithm: SHA256
+    value:
+      - 132
+      - 16
+      - 248
+      - 199
+      - 179
+      - 237
+      - 84
+      - 163
+      - 192
+      - 12
+      - 210
+      - 69
+      - 107
+      - 241
+      - 57
+      - 23
+      - 214
+      - 149
+      - 17
+      - 127
+      - 3
+      - 50
+      - 24
+      - 226
+      - 72
+      - 59
+      - 46
+      - 64
+      - 176
+      - 120
+      - 64
+      - 153
+  - gem_version:
+      name: benchmark
+      version: 0.4.1
+    algorithm: SHA256
+    value:
+      - 212
+      - 239
+      - 64
+      - 3
+      - 123
+      - 186
+      - 39
+      - 240
+      - 59
+      - 40
+      - 1
+      - 62
+      - 33
+      - 155
+      - 149
+      - 11
+      - 130
+      - 186
+      - 206
+      - 41
+      - 101
+      - 73
+      - 236
+      - 21
+      - 167
+      - 128
+      - 22
+      - 85
+      - 47
+      - 141
+      - 44
+      - 206
+  - gem_version:
+      name: benchmark-perf
+      version: 0.6.0
+    algorithm: SHA256
+    value:
+      - 254
+      - 43
+      - 1
+      - 149
+      - 159
+      - 61
+      - 224
+      - 249
+      - 221
+      - 52
+      - 130
+      - 13
+      - 84
+      - 239
+      - 136
+      - 30
+      - 180
+      - 243
+      - 88
+      - 159
+      - 204
+      - 183
+      - 209
+      - 123
+      - 99
+      - 6
+      - 138
+      - 201
+      - 45
+      - 127
+      - 150
+      - 33
+  - gem_version:
+      name: bigdecimal
+      version: 3.2.3
+    algorithm: SHA256
+    value:
+      - 255
+      - 209
+      - 29
+      - 26
+      - 198
+      - 122
+      - 13
+      - 59
+      - 47
+      - 68
+      - 174
+      - 192
+      - 166
+      - 72
+      - 114
+      - 16
+      - 179
+      - 248
+      - 19
+      - 243
+      - 99
+      - 221
+      - 17
+      - 241
+      - 252
+      - 204
+      - 245
+      - 186
+      - 0
+      - 218
+      - 78
+      - 27
+  - gem_version:
+      name: brakeman
+      version: 7.1.2
+    algorithm: SHA256
+    value:
+      - 107
+      - 4
+      - 146
+      - 119
+      - 16
+      - 162
+      - 231
+      - 209
+      - 58
+      - 114
+      - 36
+      - 139
+      - 93
+      - 64
+      - 76
+      - 99
+      - 49
+      - 136
+      - 224
+      - 36
+      - 23
+      - 242
+      - 143
+      - 61
+      - 133
+      - 62
+      - 75
+      - 99
+      - 112
+      - 210
+      - 109
+      - 206
+  - gem_version:
+      name: builder
+      version: 3.3.0
+    algorithm: SHA256
+    value:
+      - 73
+      - 121
+      - 24
+      - 210
+      - 249
+      - 220
+      - 165
+      - 40
+      - 253
+      - 202
+      - 75
+      - 136
+      - 216
+      - 78
+      - 78
+      - 244
+      - 56
+      - 114
+      - 86
+      - 217
+      - 132
+      - 184
+      - 21
+      - 78
+      - 157
+      - 93
+      - 63
+      - 229
+      - 169
+      - 200
+      - 131
+      - 95
+  - gem_version:
+      name: byebug
+      version: 12.0.0
+    algorithm: SHA256
+    value:
+      - 212
+      - 161
+      - 80
+      - 210
+      - 145
+      - 204
+      - 164
+      - 11
+      - 102
+      - 236
+      - 156
+      - 163
+      - 31
+      - 117
+      - 78
+      - 147
+      - 254
+      - 216
+      - 170
+      - 38
+      - 106
+      - 23
+      - 51
+      - 95
+      - 113
+      - 187
+      - 10
+      - 250
+      - 127
+      - 202
+      - 26
+      - 30
+  - gem_version:
+      name: capybara
+      version: 3.40.0
+    algorithm: SHA256
+    value:
+      - 66
+      - 219
+      - 167
+      - 32
+      - 87
+      - 142
+      - 161
+      - 202
+      - 101
+      - 253
+      - 122
+      - 65
+      - 209
+      - 99
+      - 221
+      - 54
+      - 133
+      - 2
+      - 193
+      - 145
+      - 128
+      - 69
+      - 88
+      - 246
+      - 224
+      - 247
+      - 27
+      - 57
+      - 16
+      - 84
+      - 174
+      - 239
+  - gem_version:
+      name: childprocess
+      version: 5.1.0
+    algorithm: SHA256
+    value:
+      - 154
+      - 141
+      - 72
+      - 75
+      - 226
+      - 253
+      - 64
+      - 150
+      - 160
+      - 233
+      - 10
+      - 12
+      - 211
+      - 228
+      - 73
+      - 160
+      - 91
+      - 195
+      - 170
+      - 51
+      - 248
+      - 172
+      - 158
+      - 77
+      - 109
+      - 206
+      - 246
+      - 172
+      - 20
+      - 85
+      - 182
+      - 236
+  - gem_version:
+      name: chunky_png
+      version: 1.4.0
+    algorithm: SHA256
+    value:
+      - 137
+      - 213
+      - 179
+      - 27
+      - 85
+      - 192
+      - 207
+      - 77
+      - 163
+      - 207
+      - 137
+      - 162
+      - 180
+      - 235
+      - 195
+      - 23
+      - 141
+      - 138
+      - 190
+      - 140
+      - 186
+      - 241
+      - 22
+      - 161
+      - 219
+      - 169
+      - 86
+      - 104
+      - 80
+      - 47
+      - 220
+      - 254
+  - gem_version:
+      name: coderay
+      version: 1.1.3
+    algorithm: SHA256
+    value:
+      - 220
+      - 83
+      - 0
+      - 24
+      - 164
+      - 104
+      - 69
+      - 18
+      - 248
+      - 243
+      - 129
+      - 67
+      - 205
+      - 42
+      - 9
+      - 108
+      - 159
+      - 2
+      - 161
+      - 252
+      - 36
+      - 89
+      - 237
+      - 207
+      - 229
+      - 52
+      - 120
+      - 122
+      - 127
+      - 199
+      - 125
+      - 75
+  - gem_version:
+      name: commonmarker
+      version: 2.6.0
+    algorithm: SHA256
+    value:
+      - 42
+      - 242
+      - 191
+      - 243
+      - 155
+      - 207
+      - 110
+      - 82
+      - 25
+      - 141
+      - 202
+      - 134
+      - 23
+      - 47
+      - 76
+      - 105
+      - 30
+      - 102
+      - 30
+      - 172
+      - 136
+      - 102
+      - 121
+      - 88
+      - 164
+      - 10
+      - 113
+      - 129
+      - 6
+      - 160
+      - 242
+      - 84
+  - gem_version:
+      name: commonmarker
+      version: 2.6.0-arm64-darwin
+    algorithm: SHA256
+    value:
+      - 30
+      - 21
+      - 73
+      - 85
+      - 197
+      - 227
+      - 39
+      - 53
+      - 190
+      - 199
+      - 213
+      - 119
+      - 158
+      - 15
+      - 177
+      - 210
+      - 30
+      - 85
+      - 244
+      - 107
+      - 207
+      - 205
+      - 67
+      - 57
+      - 158
+      - 193
+      - 203
+      - 252
+      - 16
+      - 80
+      - 48
+      - 160
+  - gem_version:
+      name: commonmarker
+      version: 2.6.0-x86_64-linux
+    algorithm: SHA256
+    value:
+      - 205
+      - 218
+      - 231
+      - 9
+      - 41
+      - 174
+      - 164
+      - 92
+      - 106
+      - 138
+      - 167
+      - 43
+      - 252
+      - 2
+      - 209
+      - 80
+      - 41
+      - 97
+      - 27
+      - 14
+      - 136
+      - 254
+      - 233
+      - 101
+      - 208
+      - 21
+      - 27
+      - 201
+      - 69
+      - 63
+      - 216
+      - 187
+  - gem_version:
+      name: concurrent-ruby
+      version: 1.3.5
+    algorithm: SHA256
+    value:
+      - 129
+      - 59
+      - 62
+      - 55
+      - 172
+      - 166
+      - 223
+      - 42
+      - 33
+      - 163
+      - 185
+      - 241
+      - 212
+      - 151
+      - 248
+      - 203
+      - 171
+      - 36
+      - 162
+      - 185
+      - 76
+      - 171
+      - 50
+      - 91
+      - 255
+      - 230
+      - 94
+      - 224
+      - 246
+      - 203
+      - 235
+      - 198
+  - gem_version:
+      name: connection_pool
+      version: 2.5.4
+    algorithm: SHA256
+    value:
+      - 233
+      - 225
+      - 146
+      - 35
+      - 39
+      - 65
+      - 96
+      - 145
+      - 243
+      - 246
+      - 84
+      - 47
+      - 95
+      - 68
+      - 70
+      - 194
+      - 162
+      - 7
+      - 69
+      - 39
+      - 107
+      - 154
+      - 167
+      - 150
+      - 221
+      - 11
+      - 178
+      - 253
+      - 14
+      - 161
+      - 231
+      - 10
+  - gem_version:
+      name: crack
+      version: 1.0.0
+    algorithm: SHA256
+    value:
+      - 200
+      - 58
+      - 239
+      - 219
+      - 66
+      - 140
+      - 220
+      - 123
+      - 102
+      - 199
+      - 242
+      - 135
+      - 228
+      - 136
+      - 199
+      - 150
+      - 240
+      - 85
+      - 192
+      - 131
+      - 158
+      - 110
+      - 84
+      - 95
+      - 236
+      - 44
+      - 112
+      - 71
+      - 116
+      - 60
+      - 74
+      - 73
+  - gem_version:
+      name: crass
+      version: 1.0.6
+    algorithm: SHA256
+    value:
+      - 220
+      - 81
+      - 96
+      - 34
+      - 165
+      - 110
+      - 123
+      - 59
+      - 21
+      - 96
+      - 153
+      - 171
+      - 200
+      - 27
+      - 109
+      - 43
+      - 8
+      - 234
+      - 30
+      - 209
+      - 38
+      - 118
+      - 172
+      - 122
+      - 86
+      - 87
+      - 97
+      - 127
+      - 1
+      - 43
+      - 212
+      - 93
+  - gem_version:
+      name: database_cleaner
+      version: 2.1.0
+    algorithm: SHA256
+    value:
+      - 29
+      - 203
+      - 162
+      - 110
+      - 59
+      - 21
+      - 118
+      - 218
+      - 105
+      - 47
+      - 198
+      - 186
+      - 193
+      - 1
+      - 54
+      - 164
+      - 116
+      - 77
+      - 165
+      - 188
+      - 194
+      - 147
+      - 210
+      - 72
+      - 170
+      - 225
+      - 150
+      - 64
+      - 198
+      - 93
+      - 137
+      - 205
+  - gem_version:
+      name: database_cleaner-active_record
+      version: 2.2.0
+    algorithm: SHA256
+    value:
+      - 50
+      - 40
+      - 214
+      - 216
+      - 236
+      - 31
+      - 33
+      - 3
+      - 253
+      - 106
+      - 180
+      - 104
+      - 218
+      - 233
+      - 35
+      - 66
+      - 67
+      - 24
+      - 188
+      - 250
+      - 188
+      - 245
+      - 221
+      - 91
+      - 2
+      - 229
+      - 252
+      - 176
+      - 196
+      - 134
+      - 225
+      - 199
+  - gem_version:
+      name: database_cleaner-core
+      version: 2.0.1
+    algorithm: SHA256
+    value:
+      - 134
+      - 70
+      - 87
+      - 76
+      - 50
+      - 22
+      - 46
+      - 89
+      - 237
+      - 123
+      - 82
+      - 88
+      - 169
+      - 122
+      - 32
+      - 141
+      - 60
+      - 68
+      - 85
+      - 27
+      - 133
+      - 78
+      - 81
+      - 9
+      - 148
+      - 242
+      - 70
+      - 131
+      - 134
+      - 93
+      - 132
+      - 108
+  - gem_version:
+      name: database_consistency
+      version: 1.7.26
+    algorithm: SHA256
+    value:
+      - 92
+      - 43
+      - 168
+      - 188
+      - 32
+      - 30
+      - 217
+      - 230
+      - 68
+      - 135
+      - 250
+      - 53
+      - 33
+      - 108
+      - 185
+      - 183
+      - 117
+      - 158
+      - 230
+      - 17
+      - 39
+      - 249
+      - 80
+      - 7
+      - 214
+      - 105
+      - 96
+      - 106
+      - 19
+      - 108
+      - 66
+      - 8
+  - gem_version:
+      name: date
+      version: 3.4.1
+    algorithm: SHA256
+    value:
+      - 191
+      - 38
+      - 142
+      - 20
+      - 239
+      - 113
+      - 88
+      - 0
+      - 155
+      - 254
+      - 174
+      - 196
+      - 11
+      - 95
+      - 163
+      - 199
+      - 39
+      - 25
+      - 6
+      - 232
+      - 139
+      - 25
+      - 109
+      - 149
+      - 138
+      - 137
+      - 212
+      - 180
+      - 8
+      - 171
+      - 230
+      - 79
+  - gem_version:
+      name: diff-lcs
+      version: 1.5.1
+    algorithm: SHA256
+    value:
+      - 39
+      - 50
+      - 35
+      - 223
+      - 180
+      - 6
+      - 133
+      - 84
+      - 132
+      - 54
+      - 211
+      - 43
+      - 71
+      - 51
+      - 170
+      - 103
+      - 53
+      - 23
+      - 105
+      - 199
+      - 222
+      - 166
+      - 33
+      - 218
+      - 125
+      - 157
+      - 212
+      - 129
+      - 62
+      - 99
+      - 221
+      - 254
+  - gem_version:
+      name: docile
+      version: 1.4.1
+    algorithm: SHA256
+    value:
+      - 150
+      - 21
+      - 155
+      - 231
+      - 153
+      - 191
+      - 167
+      - 60
+      - 219
+      - 114
+      - 27
+      - 132
+      - 14
+      - 152
+      - 2
+      - 18
+      - 110
+      - 78
+      - 3
+      - 223
+      - 194
+      - 104
+      - 99
+      - 219
+      - 115
+      - 100
+      - 114
+      - 4
+      - 199
+      - 39
+      - 242
+      - 30
+  - gem_version:
+      name: drb
+      version: 2.2.3
+    algorithm: SHA256
+    value:
+      - 11
+      - 0
+      - 214
+      - 253
+      - 181
+      - 9
+      - 149
+      - 254
+      - 74
+      - 69
+      - 222
+      - 161
+      - 54
+      - 99
+      - 73
+      - 60
+      - 132
+      - 17
+      - 18
+      - 228
+      - 6
+      - 134
+      - 86
+      - 133
+      - 70
+      - 70
+      - 244
+      - 24
+      - 253
+      - 161
+      - 51
+      - 115
+  - gem_version:
+      name: erb
+      version: 5.0.2
+    algorithm: SHA256
+    value:
+      - 211
+      - 15
+      - 37
+      - 129
+      - 67
+      - 212
+      - 48
+      - 15
+      - 180
+      - 236
+      - 244
+      - 48
+      - 4
+      - 42
+      - 193
+      - 41
+      - 112
+      - 201
+      - 187
+      - 75
+      - 51
+      - 201
+      - 116
+      - 165
+      - 69
+      - 184
+      - 245
+      - 140
+      - 30
+      - 194
+      - 108
+      - 15
+  - gem_version:
+      name: erubi
+      version: 1.13.1
+    algorithm: SHA256
+    value:
+      - 160
+      - 130
+      - 16
+      - 59
+      - 8
+      - 133
+      - 219
+      - 197
+      - 236
+      - 241
+      - 23
+      - 47
+      - 237
+      - 232
+      - 151
+      - 249
+      - 235
+      - 219
+      - 116
+      - 90
+      - 75
+      - 151
+      - 165
+      - 232
+      - 220
+      - 99
+      - 149
+      - 61
+      - 177
+      - 238
+      - 74
+      - 217
+  - gem_version:
+      name: et-orbi
+      version: 1.4.0
+    algorithm: SHA256
+    value:
+      - 108
+      - 126
+      - 60
+      - 144
+      - 119
+      - 152
+      - 33
+      - 249
+      - 227
+      - 179
+      - 36
+      - 197
+      - 233
+      - 111
+      - 218
+      - 151
+      - 103
+      - 247
+      - 41
+      - 149
+      - 214
+      - 174
+      - 67
+      - 91
+      - 150
+      - 103
+      - 138
+      - 79
+      - 62
+      - 45
+      - 232
+      - 188
+  - gem_version:
+      name: factory_bot
+      version: 6.5.0
+    algorithm: SHA256
+    value:
+      - 99
+      - 116
+      - 179
+      - 163
+      - 89
+      - 59
+      - 128
+      - 119
+      - 238
+      - 152
+      - 86
+      - 213
+      - 83
+      - 210
+      - 232
+      - 77
+      - 117
+      - 180
+      - 123
+      - 145
+      - 44
+      - 194
+      - 78
+      - 175
+      - 234
+      - 64
+      - 98
+      - 249
+      - 54
+      - 61
+      - 34
+      - 97
+  - gem_version:
+      name: factory_bot_rails
+      version: 6.4.4
+    algorithm: SHA256
+    value:
+      - 19
+      - 158
+      - 23
+      - 202
+      - 162
+      - 197
+      - 15
+      - 9
+      - 143
+      - 221
+      - 245
+      - 229
+      - 225
+      - 242
+      - 158
+      - 128
+      - 103
+      - 53
+      - 32
+      - 36
+      - 233
+      - 28
+      - 161
+      - 24
+      - 109
+      - 1
+      - 139
+      - 54
+      - 88
+      - 158
+      - 92
+      - 136
+  - gem_version:
+      name: faker
+      version: 3.5.1
+    algorithm: SHA256
+    value:
+      - 26
+      - 209
+      - 251
+      - 234
+      - 39
+      - 157
+      - 136
+      - 47
+      - 72
+      - 96
+      - 89
+      - 194
+      - 63
+      - 227
+      - 221
+      - 184
+      - 22
+      - 204
+      - 209
+      - 215
+      - 5
+      - 44
+      - 5
+      - 164
+      - 80
+      - 20
+      - 180
+      - 69
+      - 13
+      - 133
+      - 155
+      - 252
+  - gem_version:
+      name: ffi
+      version: 1.17.2
+    algorithm: SHA256
+    value:
+      - 41
+      - 114
+      - 53
+      - 132
+      - 46
+      - 89
+      - 71
+      - 204
+      - 48
+      - 54
+      - 235
+      - 230
+      - 64
+      - 119
+      - 88
+      - 75
+      - 255
+      - 88
+      - 60
+      - 215
+      - 164
+      - 233
+      - 78
+      - 154
+      - 2
+      - 253
+      - 236
+      - 57
+      - 158
+      - 244
+      - 109
+      - 166
+  - gem_version:
+      name: ffi
+      version: 1.17.2-arm64-darwin
+    algorithm: SHA256
+    value:
+      - 84
+      - 221
+      - 151
+      - 137
+      - 190
+      - 29
+      - 48
+      - 21
+      - 119
+      - 130
+      - 184
+      - 222
+      - 66
+      - 216
+      - 248
+      - 135
+      - 163
+      - 195
+      - 195
+      - 69
+      - 41
+      - 59
+      - 87
+      - 255
+      - 182
+      - 180
+      - 91
+      - 77
+      - 17
+      - 101
+      - 248
+      - 19
+  - gem_version:
+      name: ffi
+      version: 1.17.2-x86_64-linux-gnu
+    algorithm: SHA256
+    value:
+      - 5
+      - 210
+      - 2
+      - 111
+      - 201
+      - 219
+      - 183
+      - 207
+      - 210
+      - 26
+      - 89
+      - 52
+      - 85
+      - 159
+      - 22
+      - 41
+      - 56
+      - 21
+      - 183
+      - 206
+      - 3
+      - 20
+      - 132
+      - 111
+      - 238
+      - 42
+      - 200
+      - 239
+      - 189
+      - 184
+      - 35
+      - 234
+  - gem_version:
+      name: flamegraph
+      version: 0.9.5
+    algorithm: SHA256
+    value:
+      - 166
+      - 131
+      - 2
+      - 6
+      - 55
+      - 255
+      - 160
+      - 225
+      - 74
+      - 114
+      - 100
+      - 15
+      - 164
+      - 27
+      - 171
+      - 241
+      - 77
+      - 146
+      - 107
+      - 254
+      - 174
+      - 216
+      - 126
+      - 49
+      - 144
+      - 124
+      - 253
+      - 6
+      - 171
+      - 45
+      - 232
+      - 220
+  - gem_version:
+      name: foreman
+      version: 0.88.1
+    algorithm: SHA256
+    value:
+      - 89
+      - 192
+      - 34
+      - 18
+      - 91
+      - 106
+      - 50
+      - 138
+      - 44
+      - 230
+      - 61
+      - 168
+      - 215
+      - 11
+      - 115
+      - 31
+      - 93
+      - 209
+      - 53
+      - 25
+      - 232
+      - 217
+      - 164
+      - 24
+      - 76
+      - 105
+      - 101
+      - 56
+      - 8
+      - 142
+      - 160
+      - 10
+  - gem_version:
+      name: fugit
+      version: 1.11.1
+    algorithm: SHA256
+    value:
+      - 232
+      - 148
+      - 133
+      - 231
+      - 190
+      - 34
+      - 34
+      - 109
+      - 142
+      - 156
+      - 109
+      - 164
+      - 17
+      - 102
+      - 77
+      - 6
+      - 96
+      - 40
+      - 75
+      - 75
+      - 28
+      - 8
+      - 202
+      - 203
+      - 84
+      - 15
+      - 80
+      - 89
+      - 7
+      - 134
+      - 152
+      - 104
+  - gem_version:
+      name: globalid
+      version: 1.3.0
+    algorithm: SHA256
+    value:
+      - 5
+      - 198
+      - 57
+      - 173
+      - 110
+      - 180
+      - 89
+      - 69
+      - 34
+      - 160
+      - 176
+      - 121
+      - 131
+      - 2
+      - 47
+      - 4
+      - 170
+      - 114
+      - 84
+      - 98
+      - 106
+      - 182
+      - 148
+      - 69
+      - 160
+      - 228
+      - 147
+      - 170
+      - 55
+      - 134
+      - 255
+      - 17
+  - gem_version:
+      name: hashdiff
+      version: 1.1.2
+    algorithm: SHA256
+    value:
+      - 44
+      - 48
+      - 238
+      - 222
+      - 214
+      - 237
+      - 61
+      - 206
+      - 132
+      - 1
+      - 210
+      - 181
+      - 185
+      - 158
+      - 105
+      - 99
+      - 254
+      - 95
+      - 20
+      - 237
+      - 133
+      - 230
+      - 13
+      - 217
+      - 227
+      - 60
+      - 84
+      - 90
+      - 68
+      - 183
+      - 26
+      - 119
+  - gem_version:
+      name: hashery
+      version: 2.1.2
+    algorithm: SHA256
+    value:
+      - 210
+      - 57
+      - 204
+      - 35
+      - 16
+      - 64
+      - 25
+      - 3
+      - 246
+      - 183
+      - 157
+      - 69
+      - 140
+      - 43
+      - 190
+      - 245
+      - 191
+      - 116
+      - 196
+      - 111
+      - 63
+      - 151
+      - 74
+      - 233
+      - 193
+      - 6
+      - 31
+      - 183
+      - 74
+      - 64
+      - 72
+      - 98
+  - gem_version:
+      name: hashie
+      version: 5.0.0
+    algorithm: SHA256
+    value:
+      - 157
+      - 108
+      - 78
+      - 81
+      - 242
+      - 163
+      - 109
+      - 70
+      - 22
+      - 203
+      - 200
+      - 163
+      - 34
+      - 214
+      - 25
+      - 161
+      - 98
+      - 216
+      - 244
+      - 40
+      - 21
+      - 167
+      - 146
+      - 89
+      - 96
+      - 57
+      - 252
+      - 149
+      - 89
+      - 86
+      - 3
+      - 218
+  - gem_version:
+      name: htmlentities
+      version: 4.3.4
+    algorithm: SHA256
+    value:
+      - 18
+      - 90
+      - 115
+      - 198
+      - 201
+      - 242
+      - 209
+      - 182
+      - 33
+      - 0
+      - 183
+      - 195
+      - 196
+      - 1
+      - 227
+      - 98
+      - 68
+      - 65
+      - 182
+      - 99
+      - 118
+      - 42
+      - 250
+      - 127
+      - 228
+      - 40
+      - 71
+      - 100
+      - 53
+      - 166
+      - 115
+      - 218
+  - gem_version:
+      name: i18n
+      version: 1.14.7
+    algorithm: SHA256
+    value:
+      - 206
+      - 186
+      - 87
+      - 63
+      - 129
+      - 56
+      - 255
+      - 44
+      - 9
+      - 21
+      - 66
+      - 127
+      - 31
+      - 197
+      - 189
+      - 244
+      - 170
+      - 58
+      - 184
+      - 174
+      - 136
+      - 200
+      - 206
+      - 37
+      - 94
+      - 179
+      - 236
+      - 240
+      - 161
+      - 26
+      - 93
+      - 15
+  - gem_version:
+      name: importmap-rails
+      version: 2.1.0
+    algorithm: SHA256
+    value:
+      - 159
+      - 16
+      - 198
+      - 125
+      - 96
+      - 101
+      - 26
+      - 84
+      - 117
+      - 121
+      - 244
+      - 72
+      - 16
+      - 13
+      - 3
+      - 61
+      - 243
+      - 17
+      - 197
+      - 213
+      - 219
+      - 87
+      - 131
+      - 1
+      - 55
+      - 74
+      - 235
+      - 119
+      - 79
+      - 170
+      - 231
+      - 65
+  - gem_version:
+      name: io-console
+      version: 0.8.1
+    algorithm: SHA256
+    value:
+      - 30
+      - 21
+      - 68
+      - 10
+      - 107
+      - 47
+      - 103
+      - 182
+      - 234
+      - 73
+      - 109
+      - 247
+      - 196
+      - 116
+      - 237
+      - 98
+      - 200
+      - 96
+      - 173
+      - 17
+      - 35
+      - 127
+      - 41
+      - 179
+      - 189
+      - 24
+      - 127
+      - 5
+      - 75
+      - 146
+      - 95
+      - 203
+  - gem_version:
+      name: irb
+      version: 1.15.2
+    algorithm: SHA256
+    value:
+      - 34
+      - 47
+      - 50
+      - 149
+      - 46
+      - 39
+      - 141
+      - 163
+      - 75
+      - 88
+      - 255
+      - 228
+      - 94
+      - 134
+      - 52
+      - 191
+      - 74
+      - 252
+      - 45
+      - 199
+      - 170
+      - 157
+      - 162
+      - 63
+      - 237
+      - 103
+      - 229
+      - 129
+      - 170
+      - 80
+      - 253
+      - 186
+  - gem_version:
+      name: json
+      version: 2.9.1
+    algorithm: SHA256
+    value:
+      - 210
+      - 189
+      - 239
+      - 70
+      - 68
+      - 5
+      - 47
+      - 173
+      - 145
+      - 193
+      - 120
+      - 93
+      - 72
+      - 38
+      - 55
+      - 86
+      - 254
+      - 50
+      - 252
+      - 172
+      - 8
+      - 185
+      - 106
+      - 32
+      - 187
+      - 21
+      - 132
+      - 14
+      - 150
+      - 85
+      - 13
+      - 17
+  - gem_version:
+      name: language_server-protocol
+      version: 3.17.0.3
+    algorithm: SHA256
+    value:
+      - 61
+      - 92
+      - 88
+      - 192
+      - 47
+      - 68
+      - 162
+      - 13
+      - 151
+      - 41
+      - 87
+      - 169
+      - 254
+      - 190
+      - 56
+      - 109
+      - 126
+      - 116
+      - 104
+      - 171
+      - 57
+      - 0
+      - 206
+      - 107
+      - 210
+      - 181
+      - 99
+      - 221
+      - 145
+      - 12
+      - 107
+      - 63
+  - gem_version:
+      name: launchy
+      version: 3.0.1
+    algorithm: SHA256
+    value:
+      - 183
+      - 250
+      - 96
+      - 189
+      - 160
+      - 25
+      - 124
+      - 245
+      - 118
+      - 20
+      - 226
+      - 113
+      - 162
+      - 80
+      - 168
+      - 202
+      - 31
+      - 106
+      - 52
+      - 171
+      - 136
+      - 154
+      - 60
+      - 115
+      - 246
+      - 126
+      - 197
+      - 213
+      - 124
+      - 138
+      - 127
+      - 44
+  - gem_version:
+      name: letter_opener
+      version: 1.10.0
+    algorithm: SHA256
+    value:
+      - 47
+      - 243
+      - 63
+      - 46
+      - 59
+      - 92
+      - 60
+      - 38
+      - 209
+      - 149
+      - 155
+      - 229
+      - 75
+      - 57
+      - 92
+      - 8
+      - 108
+      - 166
+      - 212
+      - 72
+      - 38
+      - 232
+      - 191
+      - 65
+      - 161
+      - 79
+      - 249
+      - 111
+      - 223
+      - 27
+      - 219
+      - 178
+  - gem_version:
+      name: lint_roller
+      version: 1.1.0
+    algorithm: SHA256
+    value:
+      - 44
+      - 12
+      - 132
+      - 91
+      - 99
+      - 42
+      - 125
+      - 23
+      - 44
+      - 184
+      - 73
+      - 204
+      - 144
+      - 193
+      - 188
+      - 233
+      - 55
+      - 162
+      - 140
+      - 92
+      - 140
+      - 204
+      - 203
+      - 80
+      - 223
+      - 212
+      - 106
+      - 72
+      - 80
+      - 3
+      - 204
+      - 135
+  - gem_version:
+      name: listen
+      version: 3.9.0
+    algorithm: SHA256
+    value:
+      - 219
+      - 158
+      - 68
+      - 36
+      - 224
+      - 229
+      - 131
+      - 68
+      - 128
+      - 56
+      - 81
+      - 151
+      - 193
+      - 57
+      - 203
+      - 107
+      - 10
+      - 224
+      - 239
+      - 40
+      - 204
+      - 19
+      - 49
+      - 12
+      - 253
+      - 28
+      - 167
+      - 131
+      - 119
+      - 213
+      - 156
+      - 103
+  - gem_version:
+      name: logger
+      version: 1.7.0
+    algorithm: SHA256
+    value:
+      - 25
+      - 110
+      - 222
+      - 199
+      - 204
+      - 68
+      - 182
+      - 108
+      - 251
+      - 64
+      - 249
+      - 117
+      - 92
+      - 225
+      - 27
+      - 57
+      - 47
+      - 33
+      - 247
+      - 150
+      - 118
+      - 150
+      - 175
+      - 21
+      - 210
+      - 116
+      - 221
+      - 231
+      - 237
+      - 255
+      - 2
+      - 3
+  - gem_version:
+      name: lograge
+      version: 0.14.0
+    algorithm: SHA256
+    value:
+      - 66
+      - 55
+      - 26
+      - 117
+      - 130
+      - 55
+      - 117
+      - 241
+      - 102
+      - 247
+      - 39
+      - 99
+      - 159
+      - 93
+      - 220
+      - 231
+      - 61
+      - 209
+      - 73
+      - 69
+      - 42
+      - 85
+      - 252
+      - 148
+      - 185
+      - 12
+      - 48
+      - 50
+      - 19
+      - 220
+      - 154
+      - 225
+  - gem_version:
+      name: loofah
+      version: 2.24.1
+    algorithm: SHA256
+    value:
+      - 101
+      - 90
+      - 48
+      - 132
+      - 43
+      - 112
+      - 236
+      - 71
+      - 100
+      - 16
+      - 179
+      - 71
+      - 171
+      - 28
+      - 210
+      - 165
+      - 185
+      - 45
+      - 164
+      - 106
+      - 25
+      - 4
+      - 67
+      - 87
+      - 187
+      - 217
+      - 244
+      - 1
+      - 176
+      - 9
+      - 163
+      - 55
+  - gem_version:
+      name: mail
+      version: 2.8.1
+    algorithm: SHA256
+    value:
+      - 236
+      - 59
+      - 159
+      - 173
+      - 207
+      - 43
+      - 55
+      - 85
+      - 199
+      - 135
+      - 133
+      - 203
+      - 23
+      - 188
+      - 154
+      - 12
+      - 169
+      - 238
+      - 152
+      - 87
+      - 16
+      - 138
+      - 100
+      - 182
+      - 245
+      - 207
+      - 201
+      - 192
+      - 181
+      - 191
+      - 201
+      - 173
+  - gem_version:
+      name: marcel
+      version: 1.1.0
+    algorithm: SHA256
+    value:
+      - 253
+      - 207
+      - 207
+      - 163
+      - 60
+      - 197
+      - 46
+      - 147
+      - 196
+      - 48
+      - 141
+      - 64
+      - 228
+      - 9
+      - 10
+      - 93
+      - 78
+      - 162
+      - 121
+      - 225
+      - 96
+      - 167
+      - 246
+      - 175
+      - 152
+      - 130
+      - 96
+      - 250
+      - 151
+      - 14
+      - 11
+      - 238
+  - gem_version:
+      name: matrix
+      version: 0.4.2
+    algorithm: SHA256
+    value:
+      - 113
+      - 8
+      - 60
+      - 203
+      - 214
+      - 122
+      - 20
+      - 164
+      - 59
+      - 250
+      - 120
+      - 211
+      - 228
+      - 220
+      - 15
+      - 75
+      - 80
+      - 59
+      - 156
+      - 193
+      - 142
+      - 91
+      - 75
+      - 29
+      - 104
+      - 109
+      - 192
+      - 249
+      - 239
+      - 124
+      - 76
+      - 192
+  - gem_version:
+      name: memory_profiler
+      version: 1.1.0
+    algorithm: SHA256
+    value:
+      - 121
+      - 161
+      - 125
+      - 247
+      - 152
+      - 10
+      - 20
+      - 12
+      - 131
+      - 196
+      - 105
+      - 120
+      - 89
+      - 5
+      - 64
+      - 157
+      - 48
+      - 39
+      - 202
+      - 97
+      - 76
+      - 66
+      - 192
+      - 134
+      - 8
+      - 157
+      - 18
+      - 139
+      - 128
+      - 90
+      - 168
+      - 248
+  - gem_version:
+      name: method_source
+      version: 1.1.0
+    algorithm: SHA256
+    value:
+      - 24
+      - 19
+      - 1
+      - 201
+      - 196
+      - 91
+      - 115
+      - 27
+      - 71
+      - 105
+      - 188
+      - 129
+      - 232
+      - 134
+      - 14
+      - 114
+      - 249
+      - 22
+      - 26
+      - 215
+      - 214
+      - 109
+      - 217
+      - 145
+      - 3
+      - 201
+      - 171
+      - 132
+      - 245
+      - 96
+      - 245
+      - 197
+  - gem_version:
+      name: mini_mime
+      version: 1.1.5
+    algorithm: SHA256
+    value:
+      - 134
+      - 129
+      - 183
+      - 226
+      - 228
+      - 33
+      - 95
+      - 42
+      - 21
+      - 159
+      - 148
+      - 0
+      - 181
+      - 129
+      - 109
+      - 133
+      - 233
+      - 216
+      - 198
+      - 198
+      - 180
+      - 145
+      - 233
+      - 106
+      - 18
+      - 121
+      - 126
+      - 121
+      - 143
+      - 139
+      - 204
+      - 239
+  - gem_version:
+      name: mini_portile2
+      version: 2.8.9
+    algorithm: SHA256
+    value:
+      - 12
+      - 215
+      - 199
+      - 248
+      - 36
+      - 224
+      - 16
+      - 192
+      - 114
+      - 227
+      - 63
+      - 104
+      - 188
+      - 2
+      - 216
+      - 90
+      - 0
+      - 174
+      - 182
+      - 252
+      - 224
+      - 91
+      - 180
+      - 129
+      - 156
+      - 3
+      - 223
+      - 211
+      - 193
+      - 64
+      - 194
+      - 137
+  - gem_version:
+      name: minitest
+      version: 6.0.0
+    algorithm: SHA256
+    value:
+      - 76
+      - 165
+      - 151
+      - 252
+      - 29
+      - 115
+      - 94
+      - 161
+      - 141
+      - 43
+      - 75
+      - 152
+      - 197
+      - 251
+      - 29
+      - 90
+      - 109
+      - 164
+      - 166
+      - 243
+      - 93
+      - 223
+      - 50
+      - 189
+      - 95
+      - 163
+      - 237
+      - 237
+      - 51
+      - 164
+      - 83
+      - 190
+  - gem_version:
+      name: mission_control-jobs
+      version: 1.1.0
+    algorithm: SHA256
+    value:
+      - 177
+      - 61
+      - 169
+      - 205
+      - 227
+      - 52
+      - 79
+      - 236
+      - 124
+      - 116
+      - 75
+      - 121
+      - 210
+      - 163
+      - 76
+      - 62
+      - 205
+      - 69
+      - 79
+      - 69
+      - 212
+      - 213
+      - 147
+      - 212
+      - 201
+      - 104
+      - 186
+      - 118
+      - 35
+      - 21
+      - 232
+      - 76
+  - gem_version:
+      name: net-imap
+      version: 0.5.11
+    algorithm: SHA256
+    value:
+      - 118
+      - 17
+      - 67
+      - 173
+      - 175
+      - 21
+      - 50
+      - 8
+      - 196
+      - 158
+      - 142
+      - 157
+      - 82
+      - 225
+      - 177
+      - 140
+      - 225
+      - 122
+      - 36
+      - 220
+      - 79
+      - 127
+      - 79
+      - 54
+      - 116
+      - 128
+      - 181
+      - 185
+      - 128
+      - 16
+      - 242
+      - 33
+  - gem_version:
+      name: net-pop
+      version: 0.1.2
+    algorithm: SHA256
+    value:
+      - 132
+      - 139
+      - 78
+      - 152
+      - 32
+      - 19
+      - 193
+      - 91
+      - 47
+      - 3
+      - 130
+      - 121
+      - 34
+      - 104
+      - 118
+      - 59
+      - 116
+      - 140
+      - 206
+      - 145
+      - 201
+      - 233
+      - 30
+      - 54
+      - 176
+      - 242
+      - 126
+      - 210
+      - 100
+      - 32
+      - 223
+      - 243
+  - gem_version:
+      name: net-protocol
+      version: 0.2.2
+    algorithm: SHA256
+    value:
+      - 170
+      - 115
+      - 224
+      - 203
+      - 166
+      - 161
+      - 37
+      - 54
+      - 157
+      - 233
+      - 131
+      - 123
+      - 141
+      - 142
+      - 248
+      - 42
+      - 97
+      - 132
+      - 147
+      - 96
+      - 235
+      - 160
+      - 82
+      - 25
+      - 0
+      - 226
+      - 195
+      - 113
+      - 58
+      - 161
+      - 98
+      - 168
+  - gem_version:
+      name: net-smtp
+      version: 0.5.1
+    algorithm: SHA256
+    value:
+      - 237
+      - 150
+      - 160
+      - 175
+      - 99
+      - 197
+      - 36
+      - 252
+      - 235
+      - 75
+      - 41
+      - 176
+      - 211
+      - 82
+      - 25
+      - 92
+      - 48
+      - 216
+      - 45
+      - 217
+      - 22
+      - 164
+      - 47
+      - 3
+      - 198
+      - 42
+      - 58
+      - 112
+      - 229
+      - 183
+      - 7
+      - 54
+  - gem_version:
+      name: nio4r
+      version: 2.7.4
+    algorithm: SHA256
+    value:
+      - 217
+      - 93
+      - 238
+      - 104
+      - 224
+      - 187
+      - 37
+      - 27
+      - 143
+      - 249
+      - 10
+      - 195
+      - 66
+      - 58
+      - 81
+      - 30
+      - 59
+      - 120
+      - 65
+      - 36
+      - 229
+      - 219
+      - 127
+      - 245
+      - 244
+      - 129
+      - 58
+      - 34
+      - 10
+      - 231
+      - 60
+      - 169
+  - gem_version:
+      name: nokogiri
+      version: 1.18.10
+    algorithm: SHA256
+    value:
+      - 213
+      - 204
+      - 7
+      - 49
+      - 0
+      - 138
+      - 163
+      - 179
+      - 168
+      - 123
+      - 54
+      - 18
+      - 3
+      - 234
+      - 61
+      - 25
+      - 178
+      - 6
+      - 150
+      - 40
+      - 203
+      - 85
+      - 228
+      - 106
+      - 199
+      - 216
+      - 74
+      - 4
+      - 69
+      - 230
+      - 156
+      - 193
+  - gem_version:
+      name: nokogiri
+      version: 1.18.10-arm64-darwin
+    algorithm: SHA256
+    value:
+      - 194
+      - 176
+      - 222
+      - 48
+      - 119
+      - 15
+      - 80
+      - 185
+      - 44
+      - 147
+      - 35
+      - 250
+      - 52
+      - 164
+      - 225
+      - 207
+      - 90
+      - 10
+      - 243
+      - 34
+      - 175
+      - 202
+      - 205
+      - 35
+      - 156
+      - 214
+      - 110
+      - 225
+      - 193
+      - 178
+      - 44
+      - 133
+  - gem_version:
+      name: nokogiri
+      version: 1.18.10-x86_64-linux-gnu
+    algorithm: SHA256
+    value:
+      - 255
+      - 91
+      - 162
+      - 107
+      - 162
+      - 219
+      - 206
+      - 92
+      - 4
+      - 185
+      - 234
+      - 32
+      - 7
+      - 119
+      - 253
+      - 34
+      - 80
+      - 97
+      - 215
+      - 163
+      - 147
+      - 5
+      - 72
+      - 128
+      - 111
+      - 49
+      - 219
+      - 144
+      - 126
+      - 80
+      - 15
+      - 114
+  - gem_version:
+      name: oauth
+      version: 1.1.2
+    algorithm: SHA256
+    value:
+      - 226
+      - 154
+      - 150
+      - 249
+      - 172
+      - 205
+      - 43
+      - 38
+      - 156
+      - 170
+      - 89
+      - 65
+      - 216
+      - 47
+      - 55
+      - 212
+      - 132
+      - 255
+      - 229
+      - 218
+      - 119
+      - 122
+      - 105
+      - 159
+      - 235
+      - 118
+      - 108
+      - 81
+      - 200
+      - 86
+      - 251
+      - 134
+  - gem_version:
+      name: oauth-tty
+      version: 1.0.6
+    algorithm: SHA256
+    value:
+      - 158
+      - 139
+      - 209
+      - 134
+      - 29
+      - 54
+      - 124
+      - 206
+      - 24
+      - 49
+      - 141
+      - 143
+      - 33
+      - 79
+      - 46
+      - 26
+      - 29
+      - 124
+      - 179
+      - 137
+      - 141
+      - 224
+      - 169
+      - 234
+      - 121
+      - 22
+      - 43
+      - 79
+      - 222
+      - 203
+      - 49
+      - 82
+  - gem_version:
+      name: optimist
+      version: 3.2.0
+    algorithm: SHA256
+    value:
+      - 1
+      - 201
+      - 228
+      - 130
+      - 107
+      - 188
+      - 174
+      - 4
+      - 143
+      - 150
+      - 206
+      - 7
+      - 158
+      - 239
+      - 102
+      - 37
+      - 100
+      - 130
+      - 144
+      - 22
+      - 176
+      - 143
+      - 31
+      - 27
+      - 220
+      - 2
+      - 75
+      - 15
+      - 179
+      - 152
+      - 119
+      - 28
+  - gem_version:
+      name: parallel
+      version: 1.26.3
+    algorithm: SHA256
+    value:
+      - 216
+      - 107
+      - 171
+      - 183
+      - 162
+      - 184
+      - 20
+      - 190
+      - 159
+      - 75
+      - 129
+      - 88
+      - 123
+      - 240
+      - 182
+      - 206
+      - 45
+      - 167
+      - 212
+      - 89
+      - 105
+      - 250
+      - 178
+      - 77
+      - 138
+      - 228
+      - 191
+      - 43
+      - 180
+      - 212
+      - 199
+      - 239
+  - gem_version:
+      name: parser
+      version: 3.3.9.0
+    algorithm: SHA256
+    value:
+      - 148
+      - 214
+      - 146
+      - 147
+      - 84
+      - 177
+      - 166
+      - 227
+      - 225
+      - 248
+      - 157
+      - 121
+      - 212
+      - 211
+      - 2
+      - 204
+      - 143
+      - 90
+      - 168
+      - 20
+      - 67
+      - 26
+      - 108
+      - 156
+      - 126
+      - 6
+      - 35
+      - 51
+      - 93
+      - 118
+      - 135
+      - 242
+  - gem_version:
+      name: parslet
+      version: 2.0.0
+    algorithm: SHA256
+    value:
+      - 212
+      - 81
+      - 48
+      - 105
+      - 93
+      - 57
+      - 180
+      - 61
+      - 126
+      - 106
+      - 145
+      - 244
+      - 210
+      - 236
+      - 102
+      - 179
+      - 136
+      - 168
+      - 216
+      - 34
+      - 186
+      - 227
+      - 141
+      - 233
+      - 180
+      - 222
+      - 154
+      - 95
+      - 189
+      - 225
+      - 246
+      - 6
+  - gem_version:
+      name: patience_diff
+      version: 1.2.0
+    algorithm: SHA256
+    value:
+      - 244
+      - 146
+      - 9
+      - 68
+      - 134
+      - 175
+      - 2
+      - 255
+      - 244
+      - 168
+      - 0
+      - 112
+      - 250
+      - 107
+      - 77
+      - 14
+      - 187
+      - 207
+      - 77
+      - 66
+      - 251
+      - 56
+      - 187
+      - 162
+      - 157
+      - 9
+      - 94
+      - 239
+      - 67
+      - 246
+      - 130
+      - 44
+  - gem_version:
+      name: pdf-reader
+      version: 2.15.0
+    algorithm: SHA256
+    value:
+      - 197
+      - 2
+      - 87
+      - 80
+      - 190
+      - 200
+      - 222
+      - 123
+      - 17
+      - 207
+      - 209
+      - 209
+      - 204
+      - 194
+      - 185
+      - 68
+      - 210
+      - 120
+      - 44
+      - 54
+      - 56
+      - 205
+      - 21
+      - 181
+      - 238
+      - 21
+      - 49
+      - 209
+      - 32
+      - 108
+      - 8
+      - 134
+  - gem_version:
+      name: pp
+      version: 0.6.2
+    algorithm: SHA256
+    value:
+      - 148
+      - 126
+      - 195
+      - 18
+      - 12
+      - 111
+      - 146
+      - 25
+      - 95
+      - 142
+      - 232
+      - 170
+      - 37
+      - 167
+      - 178
+      - 197
+      - 41
+      - 123
+      - 177
+      - 6
+      - 216
+      - 59
+      - 65
+      - 186
+      - 160
+      - 41
+      - 131
+      - 104
+      - 101
+      - 119
+      - 182
+      - 255
+  - gem_version:
+      name: prettyprint
+      version: 0.2.0
+    algorithm: SHA256
+    value:
+      - 43
+      - 201
+      - 225
+      - 85
+      - 129
+      - 169
+      - 71
+      - 66
+      - 6
+      - 74
+      - 60
+      - 200
+      - 176
+      - 251
+      - 157
+      - 69
+      - 170
+      - 227
+      - 208
+      - 58
+      - 27
+      - 170
+      - 110
+      - 248
+      - 9
+      - 34
+      - 98
+      - 122
+      - 7
+      - 102
+      - 241
+      - 147
+  - gem_version:
+      name: prism
+      version: 1.7.0
+    algorithm: SHA256
+    value:
+      - 16
+      - 6
+      - 47
+      - 115
+      - 75
+      - 247
+      - 152
+      - 92
+      - 132
+      - 36
+      - 196
+      - 79
+      - 172
+      - 56
+      - 42
+      - 192
+      - 74
+      - 88
+      - 18
+      - 78
+      - 163
+      - 210
+      - 32
+      - 236
+      - 59
+      - 169
+      - 254
+      - 79
+      - 45
+      - 166
+      - 81
+      - 3
+  - gem_version:
+      name: propshaft
+      version: 1.1.0
+    algorithm: SHA256
+    value:
+      - 211
+      - 137
+      - 54
+      - 31
+      - 175
+      - 102
+      - 174
+      - 177
+      - 126
+      - 141
+      - 32
+      - 72
+      - 40
+      - 150
+      - 44
+      - 30
+      - 80
+      - 110
+      - 221
+      - 20
+      - 161
+      - 161
+      - 122
+      - 219
+      - 63
+      - 164
+      - 117
+      - 67
+      - 92
+      - 7
+      - 15
+      - 107
+  - gem_version:
+      name: pry
+      version: 0.15.2
+    algorithm: SHA256
+    value:
+      - 18
+      - 213
+      - 75
+      - 134
+      - 64
+      - 211
+      - 250
+      - 41
+      - 201
+      - 33
+      - 29
+      - 212
+      - 255
+      - 176
+      - 143
+      - 63
+      - 216
+      - 191
+      - 122
+      - 79
+      - 217
+      - 181
+      - 167
+      - 60
+      - 229
+      - 181
+      - 156
+      - 135
+      - 9
+      - 56
+      - 91
+      - 107
+  - gem_version:
+      name: pry-byebug
+      version: 3.11.0
+    algorithm: SHA256
+    value:
+      - 11
+      - 10
+      - 187
+      - 125
+      - 48
+      - 155
+      - 199
+      - 240
+      - 0
+      - 68
+      - 213
+      - 18
+      - 163
+      - 200
+      - 86
+      - 114
+      - 116
+      - 247
+      - 1
+      - 43
+      - 148
+      - 75
+      - 56
+      - 190
+      - 204
+      - 132
+      - 64
+      - 67
+      - 154
+      - 28
+      - 234
+      - 114
+  - gem_version:
+      name: pry-rails
+      version: 0.3.11
+    algorithm: SHA256
+    value:
+      - 166
+      - 158
+      - 40
+      - 226
+      - 74
+      - 52
+      - 215
+      - 93
+      - 31
+      - 96
+      - 188
+      - 242
+      - 65
+      - 25
+      - 42
+      - 84
+      - 37
+      - 63
+      - 143
+      - 126
+      - 248
+      - 166
+      - 44
+      - 186
+      - 30
+      - 117
+      - 117
+      - 10
+      - 150
+      - 83
+      - 89
+      - 61
+  - gem_version:
+      name: psych
+      version: 5.2.6
+    algorithm: SHA256
+    value:
+      - 129
+      - 67
+      - 40
+      - 170
+      - 93
+      - 203
+      - 109
+      - 96
+      - 77
+      - 50
+      - 18
+      - 106
+      - 32
+      - 188
+      - 28
+      - 188
+      - 240
+      - 85
+      - 33
+      - 165
+      - 180
+      - 157
+      - 187
+      - 26
+      - 139
+      - 48
+      - 160
+      - 126
+      - 88
+      - 15
+      - 49
+      - 110
+  - gem_version:
+      name: public_suffix
+      version: 6.0.1
+    algorithm: SHA256
+    value:
+      - 97
+      - 212
+      - 78
+      - 28
+      - 171
+      - 92
+      - 187
+      - 190
+      - 91
+      - 49
+      - 6
+      - 132
+      - 129
+      - 207
+      - 22
+      - 151
+      - 109
+      - 208
+      - 220
+      - 27
+      - 107
+      - 7
+      - 189
+      - 149
+      - 97
+      - 126
+      - 248
+      - 197
+      - 227
+      - 224
+      - 12
+      - 111
+  - gem_version:
+      name: puma
+      version: 6.6.0
+    algorithm: SHA256
+    value:
+      - 242
+      - 92
+      - 6
+      - 135
+      - 62
+      - 179
+      - 213
+      - 222
+      - 95
+      - 10
+      - 78
+      - 188
+      - 120
+      - 58
+      - 204
+      - 129
+      - 164
+      - 204
+      - 254
+      - 88
+      - 12
+      - 118
+      - 12
+      - 254
+      - 50
+      - 52
+      - 151
+      - 121
+      - 128
+      - 24
+      - 173
+      - 135
+  - gem_version:
+      name: raabro
+      version: 1.4.0
+    algorithm: SHA256
+    value:
+      - 212
+      - 250
+      - 159
+      - 245
+      - 23
+      - 35
+      - 145
+      - 237
+      - 185
+      - 43
+      - 36
+      - 46
+      - 237
+      - 139
+      - 232
+      - 2
+      - 209
+      - 147
+      - 75
+      - 20
+      - 100
+      - 6
+      - 26
+      - 229
+      - 231
+      - 13
+      - 128
+      - 150
+      - 44
+      - 93
+      - 168
+      - 130
+  - gem_version:
+      name: racc
+      version: 1.8.1
+    algorithm: SHA256
+    value:
+      - 74
+      - 127
+      - 105
+      - 41
+      - 105
+      - 29
+      - 190
+      - 200
+      - 181
+      - 32
+      - 154
+      - 11
+      - 55
+      - 59
+      - 194
+      - 97
+      - 72
+      - 130
+      - 181
+      - 95
+      - 197
+      - 210
+      - 228
+      - 71
+      - 162
+      - 26
+      - 170
+      - 105
+      - 19
+      - 3
+      - 214
+      - 47
+  - gem_version:
+      name: rack
+      version: 3.2.3
+    algorithm: SHA256
+    value:
+      - 35
+      - 154
+      - 55
+      - 61
+      - 166
+      - 88
+      - 69
+      - 116
+      - 242
+      - 95
+      - 4
+      - 45
+      - 142
+      - 212
+      - 186
+      - 33
+      - 230
+      - 145
+      - 201
+      - 121
+      - 159
+      - 29
+      - 43
+      - 92
+      - 137
+      - 32
+      - 187
+      - 188
+      - 35
+      - 202
+      - 61
+      - 65
+  - gem_version:
+      name: rack-attack
+      version: 6.7.0
+    algorithm: SHA256
+    value:
+      - 60
+      - 164
+      - 126
+      - 143
+      - 102
+      - 205
+      - 51
+      - 178
+      - 201
+      - 106
+      - 245
+      - 62
+      - 164
+      - 117
+      - 69
+      - 37
+      - 205
+      - 146
+      - 142
+      - 211
+      - 250
+      - 141
+      - 161
+      - 14
+      - 230
+      - 218
+      - 208
+      - 39
+      - 119
+      - 145
+      - 215
+      - 124
+  - gem_version:
+      name: rack-mini-profiler
+      version: 4.0.0
+    algorithm: SHA256
+    value:
+      - 195
+      - 123
+      - 237
+      - 203
+      - 125
+      - 1
+      - 227
+      - 58
+      - 212
+      - 173
+      - 221
+      - 140
+      - 78
+      - 116
+      - 41
+      - 134
+      - 231
+      - 93
+      - 183
+      - 205
+      - 137
+      - 8
+      - 203
+      - 163
+      - 67
+      - 44
+      - 96
+      - 180
+      - 232
+      - 18
+      - 224
+      - 15
+  - gem_version:
+      name: rack-session
+      version: 2.1.1
+    algorithm: SHA256
+    value:
+      - 11
+      - 109
+      - 192
+      - 125
+      - 234
+      - 126
+      - 75
+      - 88
+      - 63
+      - 88
+      - 164
+      - 142
+      - 139
+      - 128
+      - 109
+      - 76
+      - 159
+      - 28
+      - 108
+      - 146
+      - 20
+      - 235
+      - 194
+      - 2
+      - 236
+      - 148
+      - 86
+      - 44
+      - 190
+      - 162
+      - 228
+      - 233
+  - gem_version:
+      name: rack-test
+      version: 2.2.0
+    algorithm: SHA256
+    value:
+      - 0
+      - 90
+      - 54
+      - 105
+      - 44
+      - 48
+      - 106
+      - 192
+      - 180
+      - 169
+      - 53
+      - 3
+      - 85
+      - 238
+      - 8
+      - 15
+      - 208
+      - 157
+      - 222
+      - 241
+      - 20
+      - 138
+      - 95
+      - 139
+      - 42
+      - 198
+      - 54
+      - 199
+      - 32
+      - 245
+      - 196
+      - 99
+  - gem_version:
+      name: rackup
+      version: 2.2.1
+    algorithm: SHA256
+    value:
+      - 247
+      - 55
+      - 25
+      - 31
+      - 213
+      - 197
+      - 179
+      - 72
+      - 183
+      - 240
+      - 164
+      - 65
+      - 42
+      - 59
+      - 134
+      - 56
+      - 63
+      - 136
+      - 196
+      - 62
+      - 19
+      - 184
+      - 33
+      - 123
+      - 99
+      - 212
+      - 200
+      - 217
+      - 11
+      - 158
+      - 121
+      - 141
+  - gem_version:
+      name: rails
+      version: 8.0.3
+    algorithm: SHA256
+    value:
+      - 93
+      - 131
+      - 192
+      - 130
+      - 45
+      - 26
+      - 174
+      - 163
+      - 42
+      - 39
+      - 138
+      - 153
+      - 177
+      - 175
+      - 237
+      - 211
+      - 242
+      - 142
+      - 20
+      - 207
+      - 255
+      - 132
+      - 110
+      - 150
+      - 152
+      - 123
+      - 178
+      - 78
+      - 188
+      - 179
+      - 253
+      - 69
+  - gem_version:
+      name: rails-dom-testing
+      version: 2.3.0
+    algorithm: SHA256
+    value:
+      - 138
+      - 204
+      - 121
+      - 83
+      - 167
+      - 185
+      - 17
+      - 202
+      - 68
+      - 88
+      - 139
+      - 240
+      - 135
+      - 55
+      - 188
+      - 22
+      - 113
+      - 159
+      - 67
+      - 26
+      - 28
+      - 195
+      - 9
+      - 26
+      - 41
+      - 43
+      - 202
+      - 115
+      - 23
+      - 146
+      - 92
+      - 29
+  - gem_version:
+      name: rails-html-sanitizer
+      version: 1.6.2
+    algorithm: SHA256
+    value:
+      - 53
+      - 252
+      - 226
+      - 202
+      - 130
+      - 66
+      - 218
+      - 135
+      - 117
+      - 200
+      - 59
+      - 107
+      - 169
+      - 193
+      - 188
+      - 170
+      - 214
+      - 117
+      - 29
+      - 158
+      - 183
+      - 60
+      - 26
+      - 186
+      - 168
+      - 64
+      - 52
+      - 117
+      - 171
+      - 137
+      - 165
+      - 96
+  - gem_version:
+      name: railties
+      version: 8.0.3
+    algorithm: SHA256
+    value:
+      - 172
+      - 227
+      - 29
+      - 202
+      - 215
+      - 19
+      - 66
+      - 153
+      - 166
+      - 77
+      - 109
+      - 150
+      - 49
+      - 13
+      - 118
+      - 211
+      - 40
+      - 104
+      - 117
+      - 110
+      - 88
+      - 226
+      - 152
+      - 62
+      - 37
+      - 177
+      - 33
+      - 172
+      - 212
+      - 87
+      - 241
+      - 210
+  - gem_version:
+      name: rainbow
+      version: 3.1.1
+    algorithm: SHA256
+    value:
+      - 3
+      - 148
+      - 145
+      - 170
+      - 58
+      - 137
+      - 244
+      - 46
+      - 250
+      - 29
+      - 109
+      - 236
+      - 47
+      - 196
+      - 230
+      - 46
+      - 222
+      - 150
+      - 235
+      - 106
+      - 205
+      - 149
+      - 229
+      - 47
+      - 26
+      - 213
+      - 129
+      - 24
+      - 43
+      - 121
+      - 188
+      - 106
+  - gem_version:
+      name: rake
+      version: 13.3.0
+    algorithm: SHA256
+    value:
+      - 150
+      - 245
+      - 9
+      - 45
+      - 120
+      - 111
+      - 244
+      - 18
+      - 198
+      - 47
+      - 222
+      - 118
+      - 247
+      - 147
+      - 204
+      - 5
+      - 65
+      - 189
+      - 132
+      - 210
+      - 235
+      - 87
+      - 156
+      - 170
+      - 82
+      - 154
+      - 168
+      - 160
+      - 89
+      - 147
+      - 68
+      - 147
+  - gem_version:
+      name: rake-compiler-dock
+      version: 1.10.0
+    algorithm: SHA256
+    value:
+      - 221
+      - 98
+      - 238
+      - 25
+      - 223
+      - 42
+      - 24
+      - 90
+      - 51
+      - 21
+      - 105
+      - 126
+      - 86
+      - 12
+      - 250
+      - 140
+      - 201
+      - 18
+      - 153
+      - 1
+      - 51
+      - 33
+      - 82
+      - 133
+      - 30
+      - 2
+      - 63
+      - 171
+      - 14
+      - 148
+      - 191
+      - 17
+  - gem_version:
+      name: rb-fsevent
+      version: 0.11.2
+    algorithm: SHA256
+    value:
+      - 67
+      - 144
+      - 11
+      - 151
+      - 46
+      - 115
+      - 1
+      - 214
+      - 87
+      - 15
+      - 100
+      - 184
+      - 80
+      - 165
+      - 170
+      - 103
+      - 131
+      - 62
+      - 231
+      - 216
+      - 123
+      - 69
+      - 142
+      - 233
+      - 40
+      - 5
+      - 213
+      - 107
+      - 115
+      - 24
+      - 174
+      - 254
+  - gem_version:
+      name: rb-inotify
+      version: 0.11.1
+    algorithm: SHA256
+    value:
+      - 160
+      - 167
+      - 0
+      - 68
+      - 18
+      - 57
+      - 176
+      - 255
+      - 24
+      - 235
+      - 101
+      - 227
+      - 134
+      - 98
+      - 54
+      - 205
+      - 120
+      - 97
+      - 61
+      - 107
+      - 159
+      - 120
+      - 254
+      - 161
+      - 249
+      - 172
+      - 71
+      - 168
+      - 94
+      - 71
+      - 190
+      - 110
+  - gem_version:
+      name: rb-readline
+      version: 0.5.5
+    algorithm: SHA256
+    value:
+      - 158
+      - 155
+      - 215
+      - 225
+      - 152
+      - 189
+      - 239
+      - 8
+      - 34
+      - 196
+      - 105
+      - 2
+      - 246
+      - 197
+      - 146
+      - 184
+      - 130
+      - 193
+      - 249
+      - 119
+      - 120
+      - 148
+      - 164
+      - 195
+      - 220
+      - 245
+      - 179
+      - 32
+      - 130
+      - 74
+      - 135
+      - 147
+  - gem_version:
+      name: rb_sys
+      version: 0.9.123
+    algorithm: SHA256
+    value:
+      - 194
+      - 42
+      - 232
+      - 77
+      - 27
+      - 202
+      - 62
+      - 236
+      - 15
+      - 19
+      - 164
+      - 90
+      - 228
+      - 202
+      - 155
+      - 166
+      - 234
+      - 206
+      - 147
+      - 213
+      - 190
+      - 39
+      - 10
+      - 64
+      - 169
+      - 192
+      - 169
+      - 165
+      - 185
+      - 42
+      - 52
+      - 229
+  - gem_version:
+      name: rdoc
+      version: 6.15.0
+    algorithm: SHA256
+    value:
+      - 15
+      - 14
+      - 104
+      - 134
+      - 73
+      - 105
+      - 231
+      - 124
+      - 42
+      - 205
+      - 64
+      - 99
+      - 169
+      - 88
+      - 91
+      - 170
+      - 82
+      - 22
+      - 211
+      - 98
+      - 112
+      - 29
+      - 130
+      - 122
+      - 147
+      - 254
+      - 170
+      - 156
+      - 186
+      - 231
+      - 139
+      - 5
+  - gem_version:
+      name: regexp_parser
+      version: 2.11.3
+    algorithm: SHA256
+    value:
+      - 202
+      - 19
+      - 243
+      - 129
+      - 161
+      - 115
+      - 183
+      - 169
+      - 52
+      - 80
+      - 229
+      - 52
+      - 89
+      - 7
+      - 92
+      - 155
+      - 118
+      - 161
+      - 4
+      - 51
+      - 202
+      - 173
+      - 203
+      - 47
+      - 17
+      - 128
+      - 242
+      - 199
+      - 65
+      - 252
+      - 85
+      - 164
+  - gem_version:
+      name: reline
+      version: 0.6.2
+    algorithm: SHA256
+    value:
+      - 29
+      - 173
+      - 38
+      - 166
+      - 0
+      - 136
+      - 114
+      - 213
+      - 156
+      - 142
+      - 5
+      - 36
+      - 75
+      - 17
+      - 147
+      - 71
+      - 201
+      - 242
+      - 221
+      - 175
+      - 74
+      - 83
+      - 220
+      - 233
+      - 120
+      - 86
+      - 205
+      - 95
+      - 48
+      - 160
+      - 40
+      - 70
+  - gem_version:
+      name: request_store
+      version: 1.7.0
+    algorithm: SHA256
+    value:
+      - 225
+      - 183
+      - 93
+      - 83
+      - 70
+      - 163
+      - 21
+      - 244
+      - 82
+      - 36
+      - 42
+      - 104
+      - 201
+      - 55
+      - 239
+      - 142
+      - 72
+      - 178
+      - 21
+      - 185
+      - 69
+      - 58
+      - 119
+      - 166
+      - 192
+      - 172
+      - 220
+      - 162
+      - 147
+      - 76
+      - 136
+      - 203
+  - gem_version:
+      name: rexml
+      version: 3.4.4
+    algorithm: SHA256
+    value:
+      - 25
+      - 224
+      - 162
+      - 195
+      - 66
+      - 93
+      - 251
+      - 242
+      - 212
+      - 252
+      - 17
+      - 137
+      - 116
+      - 123
+      - 219
+      - 47
+      - 132
+      - 155
+      - 108
+      - 94
+      - 116
+      - 24
+      - 4
+      - 1
+      - 177
+      - 87
+      - 52
+      - 188
+      - 151
+      - 181
+      - 209
+      - 66
+  - gem_version:
+      name: rotp
+      version: 6.3.0
+    algorithm: SHA256
+    value:
+      - 117
+      - 212
+      - 0
+      - 135
+      - 230
+      - 94
+      - 208
+      - 216
+      - 2
+      - 44
+      - 51
+      - 5
+      - 90
+      - 99
+      - 6
+      - 193
+      - 196
+      - 0
+      - 209
+      - 193
+      - 34
+      - 97
+      - 147
+      - 37
+      - 51
+      - 181
+      - 214
+      - 203
+      - 205
+      - 134
+      - 136
+      - 84
+  - gem_version:
+      name: rqrcode
+      version: 3.1.1
+    algorithm: SHA256
+    value:
+      - 76
+      - 46
+      - 30
+      - 54
+      - 218
+      - 184
+      - 7
+      - 32
+      - 6
+      - 35
+      - 136
+      - 207
+      - 200
+      - 39
+      - 152
+      - 106
+      - 182
+      - 34
+      - 220
+      - 101
+      - 36
+      - 55
+      - 33
+      - 74
+      - 95
+      - 182
+      - 56
+      - 41
+      - 133
+      - 182
+      - 240
+      - 15
+  - gem_version:
+      name: rqrcode_core
+      version: 2.0.1
+    algorithm: SHA256
+    value:
+      - 82
+      - 247
+      - 109
+      - 151
+      - 236
+      - 131
+      - 127
+      - 169
+      - 27
+      - 21
+      - 161
+      - 90
+      - 149
+      - 197
+      - 194
+      - 116
+      - 11
+      - 34
+      - 215
+      - 34
+      - 219
+      - 93
+      - 107
+      - 7
+      - 31
+      - 118
+      - 212
+      - 180
+      - 10
+      - 59
+      - 169
+      - 138
+  - gem_version:
+      name: rspec-core
+      version: 3.13.5
+    algorithm: SHA256
+    value:
+      - 171
+      - 63
+      - 104
+      - 40
+      - 151
+      - 198
+      - 19
+      - 28
+      - 103
+      - 249
+      - 161
+      - 124
+      - 254
+      - 229
+      - 2
+      - 42
+      - 89
+      - 127
+      - 40
+      - 58
+      - 235
+      - 230
+      - 84
+      - 211
+      - 41
+      - 165
+      - 101
+      - 249
+      - 147
+      - 122
+      - 79
+      - 163
+  - gem_version:
+      name: rspec-expectations
+      version: 3.13.5
+    algorithm: SHA256
+    value:
+      - 51
+      - 164
+      - 211
+      - 161
+      - 217
+      - 80
+      - 96
+      - 174
+      - 164
+      - 201
+      - 78
+      - 159
+      - 35
+      - 112
+      - 48
+      - 168
+      - 249
+      - 234
+      - 229
+      - 97
+      - 94
+      - 155
+      - 216
+      - 87
+      - 24
+      - 254
+      - 58
+      - 9
+      - 228
+      - 181
+      - 136
+      - 54
+  - gem_version:
+      name: rspec-mocks
+      version: 3.13.5
+    algorithm: SHA256
+    value:
+      - 228
+      - 51
+      - 138
+      - 111
+      - 40
+      - 90
+      - 218
+      - 159
+      - 229
+      - 111
+      - 88
+      - 147
+      - 245
+      - 69
+      - 119
+      - 131
+      - 175
+      - 129
+      - 148
+      - 245
+      - 208
+      - 136
+      - 132
+      - 209
+      - 122
+      - 135
+      - 50
+      - 29
+      - 81
+      - 149
+      - 234
+      - 129
+  - gem_version:
+      name: rspec-rails
+      version: 8.0.2
+    algorithm: SHA256
+    value:
+      - 17
+      - 49
+      - 57
+      - 165
+      - 63
+      - 93
+      - 6
+      - 141
+      - 79
+      - 72
+      - 209
+      - 194
+      - 154
+      - 213
+      - 249
+      - 130
+      - 1
+      - 62
+      - 217
+      - 176
+      - 218
+      - 166
+      - 157
+      - 127
+      - 123
+      - 38
+      - 110
+      - 218
+      - 93
+      - 67
+      - 58
+      - 206
+  - gem_version:
+      name: rspec-support
+      version: 3.13.6
+    algorithm: SHA256
+    value:
+      - 46
+      - 141
+      - 227
+      - 112
+      - 36
+      - 39
+      - 234
+      - 176
+      - 100
+      - 201
+      - 53
+      - 47
+      - 231
+      - 68
+      - 136
+      - 204
+      - 18
+      - 161
+      - 191
+      - 174
+      - 136
+      - 122
+      - 216
+      - 185
+      - 28
+      - 186
+      - 72
+      - 14
+      - 201
+      - 248
+      - 175
+      - 178
+  - gem_version:
+      name: rubocop
+      version: 1.81.7
+    algorithm: SHA256
+    value:
+      - 111
+      - 181
+      - 204
+      - 41
+      - 140
+      - 115
+      - 22
+      - 145
+      - 226
+      - 164
+      - 20
+      - 254
+      - 0
+      - 65
+      - 161
+      - 62
+      - 177
+      - 190
+      - 237
+      - 123
+      - 171
+      - 35
+      - 174
+      - 193
+      - 49
+      - 218
+      - 27
+      - 204
+      - 82
+      - 122
+      - 240
+      - 148
+  - gem_version:
+      name: rubocop-ast
+      version: 1.48.0
+    algorithm: SHA256
+    value:
+      - 34
+      - 223
+      - 155
+      - 191
+      - 63
+      - 122
+      - 110
+      - 204
+      - 222
+      - 15
+      - 173
+      - 84
+      - 230
+      - 133
+      - 71
+      - 174
+      - 30
+      - 42
+      - 112
+      - 75
+      - 248
+      - 113
+      - 158
+      - 124
+      - 131
+      - 129
+      - 58
+      - 153
+      - 192
+      - 93
+      - 46
+      - 118
+  - gem_version:
+      name: rubocop-performance
+      version: 1.26.1
+    algorithm: SHA256
+    value:
+      - 205
+      - 25
+      - 185
+      - 54
+      - 255
+      - 25
+      - 109
+      - 248
+      - 88
+      - 41
+      - 210
+      - 100
+      - 181
+      - 34
+      - 253
+      - 79
+      - 152
+      - 182
+      - 200
+      - 154
+      - 210
+      - 113
+      - 250
+      - 82
+      - 116
+      - 74
+      - 140
+      - 17
+      - 184
+      - 247
+      - 24
+      - 52
+  - gem_version:
+      name: rubocop-rails
+      version: 2.34.2
+    algorithm: SHA256
+    value:
+      - 16
+      - 255
+      - 36
+      - 110
+      - 228
+      - 139
+      - 37
+      - 255
+      - 234
+      - 189
+      - 220
+      - 95
+      - 238
+      - 134
+      - 209
+      - 89
+      - 214
+      - 144
+      - 187
+      - 60
+      - 123
+      - 145
+      - 5
+      - 117
+      - 90
+      - 156
+      - 117
+      - 8
+      - 161
+      - 29
+      - 110
+      - 34
+  - gem_version:
+      name: ruby-progressbar
+      version: 1.13.0
+    algorithm: SHA256
+    value:
+      - 128
+      - 252
+      - 156
+      - 71
+      - 169
+      - 182
+      - 64
+      - 214
+      - 131
+      - 78
+      - 13
+      - 199
+      - 179
+      - 201
+      - 76
+      - 157
+      - 243
+      - 127
+      - 8
+      - 203
+      - 7
+      - 43
+      - 119
+      - 97
+      - 228
+      - 167
+      - 30
+      - 34
+      - 207
+      - 242
+      - 155
+      - 51
+  - gem_version:
+      name: ruby-rc4
+      version: 0.1.5
+    algorithm: SHA256
+    value:
+      - 0
+      - 204
+      - 64
+      - 163
+      - 157
+      - 32
+      - 181
+      - 63
+      - 84
+      - 89
+      - 231
+      - 234
+      - 0
+      - 106
+      - 146
+      - 207
+      - 88
+      - 78
+      - 155
+      - 194
+      - 117
+      - 226
+      - 166
+      - 247
+      - 170
+      - 21
+      - 21
+      - 81
+      - 14
+      - 137
+      - 108
+      - 3
+  - gem_version:
+      name: securerandom
+      version: 0.4.1
+    algorithm: SHA256
+    value:
+      - 204
+      - 81
+      - 147
+      - 212
+      - 20
+      - 164
+      - 52
+      - 27
+      - 110
+      - 34
+      - 95
+      - 12
+      - 180
+      - 68
+      - 106
+      - 206
+      - 202
+      - 142
+      - 80
+      - 213
+      - 225
+      - 136
+      - 135
+      - 67
+      - 250
+      - 193
+      - 105
+      - 135
+      - 99
+      - 142
+      - 160
+      - 177
+  - gem_version:
+      name: sentry-rails
+      version: 5.28.0
+    algorithm: SHA256
+    value:
+      - 160
+      - 203
+      - 186
+      - 124
+      - 232
+      - 99
+      - 18
+      - 23
+      - 45
+      - 185
+      - 209
+      - 179
+      - 195
+      - 156
+      - 83
+      - 2
+      - 222
+      - 7
+      - 228
+      - 70
+      - 231
+      - 223
+      - 63
+      - 104
+      - 228
+      - 244
+      - 177
+      - 210
+      - 64
+      - 169
+      - 31
+      - 194
+  - gem_version:
+      name: sentry-ruby
+      version: 5.28.0
+    algorithm: SHA256
+    value:
+      - 116
+      - 92
+      - 29
+      - 179
+      - 184
+      - 92
+      - 118
+      - 89
+      - 147
+      - 223
+      - 235
+      - 148
+      - 24
+      - 48
+      - 174
+      - 175
+      - 255
+      - 130
+      - 216
+      - 83
+      - 48
+      - 205
+      - 149
+      - 52
+      - 16
+      - 199
+      - 243
+      - 113
+      - 151
+      - 176
+      - 189
+      - 153
+  - gem_version:
+      name: silencer
+      version: 2.0.0
+    algorithm: SHA256
+    value:
+      - 153
+      - 126
+      - 255
+      - 183
+      - 56
+      - 97
+      - 119
+      - 168
+      - 122
+      - 142
+      - 179
+      - 165
+      - 252
+      - 11
+      - 58
+      - 50
+      - 121
+      - 156
+      - 89
+      - 130
+      - 147
+      - 197
+      - 189
+      - 180
+      - 24
+      - 173
+      - 232
+      - 111
+      - 119
+      - 55
+      - 75
+      - 38
+  - gem_version:
+      name: simplecov
+      version: 0.22.0
+    algorithm: SHA256
+    value:
+      - 254
+      - 38
+      - 34
+      - 199
+      - 131
+      - 79
+      - 242
+      - 59
+      - 152
+      - 6
+      - 107
+      - 176
+      - 168
+      - 84
+      - 40
+      - 75
+      - 39
+      - 41
+      - 165
+      - 105
+      - 172
+      - 101
+      - 159
+      - 130
+      - 98
+      - 31
+      - 194
+      - 46
+      - 243
+      - 98
+      - 19
+      - 165
+  - gem_version:
+      name: simplecov-html
+      version: 0.13.2
+    algorithm: SHA256
+    value:
+      - 189
+      - 11
+      - 142
+      - 84
+      - 231
+      - 194
+      - 215
+      - 104
+      - 89
+      - 39
+      - 232
+      - 214
+      - 40
+      - 100
+      - 102
+      - 53
+      - 155
+      - 111
+      - 22
+      - 177
+      - 140
+      - 176
+      - 223
+      - 71
+      - 181
+      - 8
+      - 232
+      - 215
+      - 60
+      - 119
+      - 114
+      - 70
+  - gem_version:
+      name: simplecov_json_formatter
+      version: 0.1.4
+    algorithm: SHA256
+    value:
+      - 82
+      - 148
+      - 24
+      - 251
+      - 232
+      - 222
+      - 23
+      - 19
+      - 172
+      - 43
+      - 45
+      - 97
+      - 42
+      - 163
+      - 218
+      - 165
+      - 109
+      - 49
+      - 105
+      - 117
+      - 211
+      - 7
+      - 36
+      - 67
+      - 153
+      - 250
+      - 72
+      - 56
+      - 198
+      - 1
+      - 180
+      - 40
+  - gem_version:
+      name: sitemap_generator
+      version: 6.3.0
+    algorithm: SHA256
+    value:
+      - 29
+      - 128
+      - 60
+      - 191
+      - 3
+      - 196
+      - 71
+      - 54
+      - 190
+      - 160
+      - 91
+      - 158
+      - 51
+      - 99
+      - 211
+      - 82
+      - 63
+      - 236
+      - 78
+      - 36
+      - 243
+      - 171
+      - 237
+      - 173
+      - 41
+      - 77
+      - 156
+      - 87
+      - 202
+      - 185
+      - 148
+      - 243
+  - gem_version:
+      name: snaky_hash
+      version: 2.0.3
+    algorithm: SHA256
+    value:
+      - 37
+      - 163
+      - 210
+      - 153
+      - 86
+      - 110
+      - 129
+      - 83
+      - 251
+      - 2
+      - 250
+      - 35
+      - 253
+      - 154
+      - 147
+      - 88
+      - 132
+      - 89
+      - 80
+      - 247
+      - 165
+      - 35
+      - 221
+      - 187
+      - 225
+      - 250
+      - 30
+      - 13
+      - 121
+      - 166
+      - 212
+      - 86
+  - gem_version:
+      name: solid_cache
+      version: 1.0.7
+    algorithm: SHA256
+    value:
+      - 88
+      - 230
+      - 144
+      - 204
+      - 238
+      - 5
+      - 123
+      - 231
+      - 53
+      - 31
+      - 33
+      - 177
+      - 148
+      - 13
+      - 95
+      - 156
+      - 246
+      - 187
+      - 19
+      - 32
+      - 116
+      - 49
+      - 110
+      - 112
+      - 71
+      - 142
+      - 85
+      - 74
+      - 121
+      - 230
+      - 164
+      - 144
+  - gem_version:
+      name: solid_queue
+      version: 1.2.1
+    algorithm: SHA256
+    value:
+      - 121
+      - 118
+      - 179
+      - 105
+      - 10
+      - 8
+      - 8
+      - 14
+      - 246
+      - 61
+      - 27
+      - 17
+      - 40
+      - 31
+      - 11
+      - 119
+      - 57
+      - 143
+      - 118
+      - 151
+      - 219
+      - 237
+      - 160
+      - 226
+      - 197
+      - 83
+      - 38
+      - 130
+      - 99
+      - 157
+      - 75
+      - 21
+  - gem_version:
+      name: sqlite3
+      version: 2.7.4
+    algorithm: SHA256
+    value:
+      - 127
+      - 188
+      - 31
+      - 219
+      - 24
+      - 186
+      - 28
+      - 7
+      - 152
+      - 251
+      - 41
+      - 140
+      - 179
+      - 195
+      - 92
+      - 53
+      - 187
+      - 23
+      - 67
+      - 184
+      - 50
+      - 169
+      - 174
+      - 185
+      - 26
+      - 221
+      - 2
+      - 106
+      - 86
+      - 20
+      - 136
+      - 156
+  - gem_version:
+      name: sqlite3
+      version: 2.7.4-arm64-darwin
+    algorithm: SHA256
+    value:
+      - 213
+      - 176
+      - 156
+      - 212
+      - 233
+      - 84
+      - 42
+      - 160
+      - 95
+      - 13
+      - 176
+      - 235
+      - 125
+      - 216
+      - 104
+      - 16
+      - 44
+      - 194
+      - 48
+      - 114
+      - 174
+      - 55
+      - 142
+      - 4
+      - 83
+      - 229
+      - 158
+      - 14
+      - 250
+      - 237
+      - 137
+      - 184
+  - gem_version:
+      name: sqlite3
+      version: 2.7.4-x86_64-linux-gnu
+    algorithm: SHA256
+    value:
+      - 7
+      - 85
+      - 180
+      - 88
+      - 245
+      - 80
+      - 30
+      - 137
+      - 192
+      - 213
+      - 160
+      - 0
+      - 58
+      - 252
+      - 79
+      - 221
+      - 111
+      - 208
+      - 89
+      - 235
+      - 31
+      - 177
+      - 66
+      - 66
+      - 33
+      - 83
+      - 41
+      - 23
+      - 9
+      - 109
+      - 164
+      - 190
+  - gem_version:
+      name: stackprof
+      version: 0.2.27
+    algorithm: SHA256
+    value:
+      - 175
+      - 246
+      - 210
+      - 134
+      - 86
+      - 200
+      - 82
+      - 231
+      - 76
+      - 246
+      - 50
+      - 204
+      - 32
+      - 70
+      - 248
+      - 73
+      - 3
+      - 61
+      - 193
+      - 222
+      - 223
+      - 254
+      - 124
+      - 184
+      - 192
+      - 48
+      - 214
+      - 27
+      - 87
+      - 69
+      - 232
+      - 12
+  - gem_version:
+      name: standard
+      version: 1.52.0
+    algorithm: SHA256
+    value:
+      - 236
+      - 5
+      - 14
+      - 99
+      - 34
+      - 142
+      - 49
+      - 250
+      - 190
+      - 64
+      - 218
+      - 62
+      - 249
+      - 109
+      - 167
+      - 237
+      - 218
+      - 71
+      - 111
+      - 122
+      - 205
+      - 243
+      - 231
+      - 194
+      - 173
+      - 71
+      - 182
+      - 225
+      - 83
+      - 246
+      - 160
+      - 118
+  - gem_version:
+      name: standard-custom
+      version: 1.0.2
+    algorithm: SHA256
+    value:
+      - 66
+      - 74
+      - 220
+      - 132
+      - 23
+      - 154
+      - 7
+      - 79
+      - 26
+      - 42
+      - 48
+      - 155
+      - 185
+      - 207
+      - 124
+      - 214
+      - 191
+      - 219
+      - 43
+      - 101
+      - 65
+      - 242
+      - 12
+      - 107
+      - 249
+      - 67
+      - 108
+      - 11
+      - 162
+      - 42
+      - 101
+      - 43
+  - gem_version:
+      name: standard-performance
+      version: 1.9.0
+    algorithm: SHA256
+    value:
+      - 73
+      - 72
+      - 61
+      - 49
+      - 190
+      - 68
+      - 130
+      - 146
+      - 149
+      - 29
+      - 128
+      - 229
+      - 230
+      - 124
+      - 220
+      - 181
+      - 118
+      - 194
+      - 80
+      - 33
+      - 3
+      - 199
+      - 180
+      - 10
+      - 236
+      - 111
+      - 27
+      - 110
+      - 156
+      - 136
+      - 227
+      - 242
+  - gem_version:
+      name: standard-rails
+      version: 1.6.0
+    algorithm: SHA256
+    value:
+      - 143
+      - 29
+      - 25
+      - 164
+      - 2
+      - 73
+      - 25
+      - 1
+      - 238
+      - 129
+      - 72
+      - 173
+      - 180
+      - 49
+      - 104
+      - 32
+      - 18
+      - 131
+      - 138
+      - 115
+      - 187
+      - 125
+      - 59
+      - 14
+      - 149
+      - 170
+      - 51
+      - 158
+      - 168
+      - 114
+      - 73
+      - 122
+  - gem_version:
+      name: stimulus-rails
+      version: 1.3.4
+    algorithm: SHA256
+    value:
+      - 118
+      - 86
+      - 118
+      - 255
+      - 161
+      - 243
+      - 58
+      - 246
+      - 76
+      - 224
+      - 38
+      - 210
+      - 107
+      - 72
+      - 232
+      - 255
+      - 178
+      - 224
+      - 185
+      - 78
+      - 15
+      - 80
+      - 233
+      - 17
+      - 158
+      - 17
+      - 214
+      - 16
+      - 125
+      - 103
+      - 203
+      - 6
+  - gem_version:
+      name: stringio
+      version: 3.1.7
+    algorithm: SHA256
+    value:
+      - 91
+      - 120
+      - 183
+      - 203
+      - 36
+      - 42
+      - 49
+      - 95
+      - 180
+      - 252
+      - 166
+      - 26
+      - 130
+      - 85
+      - 214
+      - 46
+      - 196
+      - 56
+      - 245
+      - 141
+      - 162
+      - 185
+      - 11
+      - 230
+      - 96
+      - 72
+      - 84
+      - 106
+      - 222
+      - 69
+      - 7
+      - 250
+  - gem_version:
+      name: super_diff
+      version: 0.16.0
+    algorithm: SHA256
+    value:
+      - 190
+      - 145
+      - 93
+      - 95
+      - 207
+      - 19
+      - 165
+      - 5
+      - 149
+      - 207
+      - 180
+      - 115
+      - 237
+      - 7
+      - 194
+      - 195
+      - 197
+      - 203
+      - 40
+      - 233
+      - 233
+      - 100
+      - 36
+      - 54
+      - 81
+      - 8
+      - 215
+      - 127
+      - 221
+      - 71
+      - 202
+      - 217
+  - gem_version:
+      name: svg-graph
+      version: 2.2.2
+    algorithm: SHA256
+    value:
+      - 249
+      - 40
+      - 134
+      - 100
+      - 3
+      - 5
+      - 94
+      - 101
+      - 57
+      - 175
+      - 223
+      - 218
+      - 181
+      - 246
+      - 38
+      - 141
+      - 16
+      - 139
+      - 42
+      - 188
+      - 159
+      - 0
+      - 46
+      - 15
+      - 197
+      - 27
+      - 22
+      - 81
+      - 24
+      - 9
+      - 81
+      - 58
+  - gem_version:
+      name: thor
+      version: 1.4.0
+    algorithm: SHA256
+    value:
+      - 135
+      - 99
+      - 232
+      - 34
+      - 204
+      - 176
+      - 241
+      - 215
+      - 190
+      - 232
+      - 140
+      - 222
+      - 19
+      - 27
+      - 25
+      - 166
+      - 86
+      - 6
+      - 101
+      - 123
+      - 132
+      - 124
+      - 199
+      - 183
+      - 180
+      - 184
+      - 46
+      - 119
+      - 43
+      - 205
+      - 138
+      - 61
+  - gem_version:
+      name: timeout
+      version: 0.4.3
+    algorithm: SHA256
+    value:
+      - 149
+      - 9
+      - 240
+      - 121
+      - 178
+      - 181
+      - 95
+      - 228
+      - 35
+      - 109
+      - 121
+      - 99
+      - 59
+      - 215
+      - 94
+      - 52
+      - 193
+      - 193
+      - 231
+      - 227
+      - 251
+      - 75
+      - 86
+      - 203
+      - 95
+      - 218
+      - 97
+      - 248
+      - 10
+      - 15
+      - 227
+      - 14
+  - gem_version:
+      name: trilogy
+      version: 2.9.0
+    algorithm: SHA256
+    value:
+      - 162
+      - 214
+      - 59
+      - 102
+      - 59
+      - 166
+      - 138
+      - 71
+      - 88
+      - 225
+      - 93
+      - 31
+      - 154
+      - 251
+      - 34
+      - 143
+      - 93
+      - 22
+      - 239
+      - 199
+      - 254
+      - 124
+      - 234
+      - 104
+      - 105
+      - 158
+      - 28
+      - 16
+      - 110
+      - 246
+      - 6
+      - 127
+  - gem_version:
+      name: tsort
+      version: 0.2.0
+    algorithm: SHA256
+    value:
+      - 150
+      - 80
+      - 167
+      - 147
+      - 246
+      - 133
+      - 154
+      - 67
+      - 182
+      - 100
+      - 22
+      - 113
+      - 39
+      - 143
+      - 121
+      - 207
+      - 234
+      - 214
+      - 10
+      - 199
+      - 20
+      - 20
+      - 138
+      - 171
+      - 228
+      - 227
+      - 240
+      - 6
+      - 4
+      - 128
+      - 8
+      - 159
+  - gem_version:
+      name: ttfunk
+      version: 1.8.0
+    algorithm: SHA256
+    value:
+      - 167
+      - 203
+      - 199
+      - 228
+      - 137
+      - 204
+      - 70
+      - 233
+      - 121
+      - 221
+      - 224
+      - 77
+      - 52
+      - 181
+      - 185
+      - 228
+      - 245
+      - 200
+      - 241
+      - 238
+      - 95
+      - 198
+      - 177
+      - 167
+      - 190
+      - 57
+      - 184
+      - 41
+      - 145
+      - 157
+      - 32
+      - 202
+  - gem_version:
+      name: turbo-rails
+      version: 2.0.17
+    algorithm: SHA256
+    value:
+      - 73
+      - 253
+      - 48
+      - 75
+      - 98
+      - 225
+      - 183
+      - 243
+      - 8
+      - 244
+      - 254
+      - 218
+      - 73
+      - 209
+      - 225
+      - 148
+      - 30
+      - 201
+      - 14
+      - 108
+      - 210
+      - 241
+      - 108
+      - 208
+      - 217
+      - 248
+      - 56
+      - 14
+      - 114
+      - 194
+      - 25
+      - 38
+  - gem_version:
+      name: typeid
+      version: 0.2.2
+    algorithm: SHA256
+    value:
+      - 58
+      - 183
+      - 127
+      - 8
+      - 145
+      - 178
+      - 24
+      - 114
+      - 49
+      - 16
+      - 243
+      - 194
+      - 213
+      - 48
+      - 193
+      - 106
+      - 75
+      - 168
+      - 85
+      - 221
+      - 85
+      - 12
+      - 38
+      - 208
+      - 137
+      - 147
+      - 233
+      - 144
+      - 161
+      - 110
+      - 38
+      - 239
+  - gem_version:
+      name: tzinfo
+      version: 2.0.6
+    algorithm: SHA256
+    value:
+      - 141
+      - 175
+      - 130
+      - 140
+      - 199
+      - 123
+      - 207
+      - 125
+      - 99
+      - 176
+      - 227
+      - 189
+      - 182
+      - 202
+      - 164
+      - 126
+      - 34
+      - 114
+      - 220
+      - 250
+      - 244
+      - 251
+      - 254
+      - 70
+      - 248
+      - 195
+      - 169
+      - 223
+      - 8
+      - 122
+      - 130
+      - 155
+  - gem_version:
+      name: unicode-display_width
+      version: 3.2.0
+    algorithm: SHA256
+    value:
+      - 12
+      - 221
+      - 150
+      - 181
+      - 104
+      - 26
+      - 89
+      - 73
+      - 205
+      - 188
+      - 44
+      - 85
+      - 231
+      - 180
+      - 32
+      - 250
+      - 202
+      - 231
+      - 76
+      - 74
+      - 175
+      - 154
+      - 152
+      - 21
+      - 238
+      - 225
+      - 8
+      - 124
+      - 177
+      - 133
+      - 60
+      - 66
+  - gem_version:
+      name: unicode-emoji
+      version: 4.2.0
+    algorithm: SHA256
+    value:
+      - 81
+      - 158
+      - 105
+      - 21
+      - 15
+      - 117
+      - 101
+      - 46
+      - 64
+      - 191
+      - 115
+      - 97
+      - 6
+      - 207
+      - 188
+      - 143
+      - 15
+      - 115
+      - 170
+      - 63
+      - 182
+      - 166
+      - 90
+      - 254
+      - 98
+      - 254
+      - 250
+      - 127
+      - 128
+      - 176
+      - 248
+      - 15
+  - gem_version:
+      name: uri
+      version: 1.0.4
+    algorithm: SHA256
+    value:
+      - 52
+      - 72
+      - 93
+      - 19
+      - 124
+      - 7
+      - 159
+      - 135
+      - 83
+      - 160
+      - 202
+      - 29
+      - 136
+      - 56
+      - 65
+      - 167
+      - 186
+      - 46
+      - 95
+      - 174
+      - 85
+      - 110
+      - 60
+      - 48
+      - 194
+      - 170
+      - 176
+      - 221
+      - 230
+      - 22
+      - 52
+      - 75
+  - gem_version:
+      name: useragent
+      version: 0.16.11
+    algorithm: SHA256
+    value:
+      - 112
+      - 14
+      - 100
+      - 19
+      - 173
+      - 75
+      - 185
+      - 84
+      - 187
+      - 99
+      - 84
+      - 127
+      - 160
+      - 152
+      - 221
+      - 223
+      - 123
+      - 14
+      - 190
+      - 117
+      - 180
+      - 12
+      - 198
+      - 249
+      - 59
+      - 141
+      - 84
+      - 37
+      - 91
+      - 23
+      - 56
+      - 68
+  - gem_version:
+      name: uuid7
+      version: 0.2.0
+    algorithm: SHA256
+    value:
+      - 125
+      - 97
+      - 117
+      - 60
+      - 44
+      - 142
+      - 183
+      - 159
+      - 96
+      - 198
+      - 10
+      - 90
+      - 250
+      - 26
+      - 62
+      - 241
+      - 129
+      - 73
+      - 45
+      - 116
+      - 177
+      - 29
+      - 48
+      - 103
+      - 175
+      - 136
+      - 137
+      - 135
+      - 4
+      - 221
+      - 172
+      - 67
+  - gem_version:
+      name: vcr
+      version: 6.4.0
+    algorithm: SHA256
+    value:
+      - 7
+      - 122
+      - 201
+      - 44
+      - 193
+      - 110
+      - 252
+      - 89
+      - 4
+      - 235
+      - 144
+      - 73
+      - 42
+      - 24
+      - 21
+      - 59
+      - 94
+      - 108
+      - 165
+      - 57
+      - 128
+      - 70
+      - 216
+      - 162
+      - 73
+      - 167
+      - 201
+      - 106
+      - 158
+      - 162
+      - 74
+      - 230
+  - gem_version:
+      name: version_gem
+      version: 1.1.9
+    algorithm: SHA256
+    value:
+      - 12
+      - 26
+      - 9
+      - 98
+      - 174
+      - 84
+      - 60
+      - 132
+      - 160
+      - 8
+      - 137
+      - 187
+      - 1
+      - 141
+      - 159
+      - 20
+      - 216
+      - 248
+      - 175
+      - 96
+      - 41
+      - 210
+      - 107
+      - 41
+      - 93
+      - 152
+      - 119
+      - 78
+      - 61
+      - 46
+      - 185
+      - 164
+  - gem_version:
+      name: webmock
+      version: 3.25.1
+    algorithm: SHA256
+    value:
+      - 171
+      - 157
+      - 93
+      - 147
+      - 83
+      - 188
+      - 190
+      - 99
+      - 34
+      - 200
+      - 62
+      - 28
+      - 96
+      - 167
+      - 16
+      - 57
+      - 136
+      - 239
+      - 199
+      - 182
+      - 124
+      - 215
+      - 47
+      - 251
+      - 144
+      - 18
+      - 98
+      - 156
+      - 61
+      - 57
+      - 99
+      - 35
+  - gem_version:
+      name: websocket-driver
+      version: 0.8.0
+    algorithm: SHA256
+    value:
+      - 237
+      - 13
+      - 186
+      - 75
+      - 148
+      - 60
+      - 34
+      - 241
+      - 127
+      - 154
+      - 115
+      - 72
+      - 23
+      - 232
+      - 8
+      - 188
+      - 132
+      - 205
+      - 206
+      - 106
+      - 126
+      - 34
+      - 4
+      - 95
+      - 83
+      - 21
+      - 170
+      - 87
+      - 103
+      - 109
+      - 73
+      - 98
+  - gem_version:
+      name: websocket-extensions
+      version: 0.1.5
+    algorithm: SHA256
+    value:
+      - 28
+      - 107
+      - 166
+      - 48
+      - 146
+      - 205
+      - 163
+      - 67
+      - 235
+      - 83
+      - 252
+      - 101
+      - 113
+      - 16
+      - 199
+      - 28
+      - 117
+      - 76
+      - 86
+      - 72
+      - 74
+      - 173
+      - 66
+      - 87
+      - 132
+      - 149
+      - 34
+      - 125
+      - 113
+      - 122
+      - 130
+      - 65
+  - gem_version:
+      name: xpath
+      version: 3.2.0
+    algorithm: SHA256
+    value:
+      - 109
+      - 253
+      - 167
+      - 157
+      - 145
+      - 187
+      - 59
+      - 148
+      - 155
+      - 148
+      - 126
+      - 204
+      - 89
+      - 25
+      - 240
+      - 66
+      - 239
+      - 47
+      - 57
+      - 155
+      - 144
+      - 64
+      - 19
+      - 235
+      - 62
+      - 246
+      - 210
+      - 13
+      - 211
+      - 164
+      - 8
+      - 46
+  - gem_version:
+      name: zeitwerk
+      version: 2.7.3
+    algorithm: SHA256
+    value:
+      - 178
+      - 232
+      - 107
+      - 74
+      - 155
+      - 87
+      - 210
+      - 107
+      - 166
+      - 138
+      - 21
+      - 35
+      - 13
+      - 204
+      - 127
+      - 230
+      - 240
+      - 64
+      - 240
+      - 104
+      - 49
+      - 206
+      - 100
+      - 65
+      - 123
+      - 6
+      - 33
+      - 173
+      - 150
+      - 186
+      - 62
+      - 133

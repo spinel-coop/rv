@@ -23,6 +23,7 @@ pub struct RubyRequest {
 pub enum Source {
     DotToolVersions(Utf8PathBuf),
     DotRubyVersion(Utf8PathBuf),
+    GemfileLock(Utf8PathBuf),
     Other,
 }
 
@@ -31,6 +32,7 @@ impl std::fmt::Debug for Source {
         match self {
             Self::DotToolVersions(arg0) => f.debug_tuple("DotToolVersions").field(arg0).finish(),
             Self::DotRubyVersion(arg0) => f.debug_tuple("DotRubyVersion").field(arg0).finish(),
+            Self::GemfileLock(arg0) => f.debug_tuple("GemfileLock").field(arg0).finish(),
             Self::Other => write!(f, "Other"),
         }
     }
@@ -162,7 +164,14 @@ impl FromStr for RubyRequest {
             } else if let Some(pos) = version.find('-') {
                 (Some(&version[..pos]), Some(&version[pos + 1..]))
             } else if let Some(pos) = version.find(char::is_alphabetic) {
-                (Some(&version[..pos]), Some(&version[pos..]))
+                // Handle both "3.3.0-preview2" and "3.3.0.preview2" formats
+                // If preceded by a dot, exclude it from the numbers portion
+                let num_end = if pos > 0 && version.as_bytes()[pos - 1] == b'.' {
+                    pos - 1
+                } else {
+                    pos
+                };
+                (Some(&version[..num_end]), Some(&version[pos..]))
             } else {
                 (Some(version), None)
             };

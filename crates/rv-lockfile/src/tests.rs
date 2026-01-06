@@ -110,6 +110,16 @@ fn test_parse_git_tag() {
     insta::assert_yaml_snapshot!(output);
 }
 
+#[test]
+fn test_parse_lobsters() {
+    // Test parsing a lockfile with a Ruby version without patchlevel (e.g., "ruby 4.0.0")
+    // https://github.com/lobsters/lobsters/blob/main/Gemfile.lock
+    let input = include_str!("../tests/inputs/Gemfile.lobsters.lock");
+    let output = must_parse(input);
+    assert_eq!(output.ruby_version, Some("ruby 4.0.0"));
+    insta::assert_yaml_snapshot!(output);
+}
+
 fn must_parse(input: &str) -> crate::datatypes::GemfileDotLock<'_> {
     match crate::parse(input) {
         Ok(o) => o,
