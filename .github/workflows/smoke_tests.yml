@@ -27,7 +27,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build rv
-        run: ./bin/build-rv
+        run: ./bin/build
 
       - name: Upload rv binary
         uses: actions/upload-artifact@v6
