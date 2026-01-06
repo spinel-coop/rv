@@ -10,7 +10,7 @@ IMAGE_NAME="rv-smoke-gitlab"
 
 # Build rv for Linux (matches host architecture)
 echo "Building rv..."
-"$ROOT_DIR/bin/build-ci"
+"$ROOT_DIR/bin/build-ci-linux"
 
 # Get binary from correct location based on architecture
 if [[ "$(uname -m)" == "arm64" ]]; then
