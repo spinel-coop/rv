@@ -40,7 +40,7 @@ impl RubyVersion {
         {
             return false;
         }
-        if self.tiny.is_some() && self.tiny != request.tiny {
+        if request.tiny.is_some() && self.tiny != request.tiny {
             return false;
         }
         if self.prerelease != request.prerelease {
