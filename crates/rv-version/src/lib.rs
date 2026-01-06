@@ -192,24 +192,15 @@ impl Version {
         canonical
     }
 
-    pub fn release(&self) -> Version {
-        let mut release_segments = Vec::new();
+    pub fn release(&self) -> Self {
+        let segments = self
+            .segments
+            .clone()
+            .into_iter()
+            .take_while(|s| s.is_number())
+            .collect::<Vec<_>>();
 
-        for segment in &self.segments {
-            if segment.is_string() {
-                break;
-            }
-            release_segments.push(segment.clone());
-        }
-
-        if release_segments.is_empty() {
-            release_segments.push(VersionSegment::Number(0));
-        }
-
-        Version {
-            version: Self::segments_to_string(&release_segments),
-            segments: release_segments,
-        }
+        Self::from(segments)
     }
 
     pub fn bump(&self) -> Version {
@@ -232,18 +223,21 @@ impl Version {
             *last_segment = VersionSegment::Number(*num + 1);
         }
 
-        Version {
-            version: Self::segments_to_string(&segments),
-            segments,
-        }
+        Self::from(segments)
     }
 
-    fn segments_to_string(segments: &[VersionSegment]) -> String {
-        segments
-            .iter()
-            .map(|seg| seg.to_string())
-            .collect::<Vec<_>>()
-            .join(".")
+    fn from(segments: Vec<VersionSegment>) -> Self {
+        if segments.is_empty() {
+            Self::default()
+        } else {
+            let version = segments
+                .iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>()
+                .join(".");
+
+            Self { version, segments }
+        }
     }
 
     fn split_alphanumeric(s: &str) -> Vec<String> {
