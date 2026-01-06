@@ -134,6 +134,34 @@ impl RubyVersion {
         }
         version
     }
+
+    /// Parse a Ruby version from Gemfile.lock format.
+    ///
+    /// Gemfile.lock uses the format "ruby X.Y.ZpNN" where:
+    /// - "ruby " is a prefix (with a space, not a dash)
+    /// - "pNN" is an optional patchlevel suffix that should be ignored
+    ///
+    /// Examples:
+    /// - "ruby 3.3.1p55" -> RubyVersion for 3.3.1
+    /// - "ruby 4.0.0" -> RubyVersion for 4.0.0
+    pub fn from_gemfile_lock(input: &str) -> Result<Self, ParseVersionError> {
+        // Strip "ruby " prefix
+        let version = input.strip_prefix("ruby ").unwrap_or(input);
+
+        // Strip patchlevel suffix (e.g., "p55" from "3.3.1p55")
+        // Only strip if 'p' is followed by all digits
+        let version = if let Some(p_pos) = version.find('p') {
+            if version[p_pos + 1..].chars().all(|c| c.is_ascii_digit()) {
+                &version[..p_pos]
+            } else {
+                version
+            }
+        } else {
+            version
+        };
+
+        version.parse()
+    }
 }
 
 impl std::fmt::Display for RubyVersion {
