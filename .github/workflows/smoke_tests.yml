@@ -91,3 +91,22 @@ jobs:
         run: |
           chmod +x bin/smoke-tests/rv
           docker build -f bin/smoke-tests/huginn.Dockerfile -t rv-smoke-huginn bin/smoke-tests
+
+  mastodon:
+    name: Mastodon
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Download rv binary
+        uses: actions/download-artifact@v7
+        with:
+          name: rv-linux
+          path: bin/smoke-tests
+
+      - name: Install
+        run: |
+          chmod +x bin/smoke-tests/rv
+          docker build -f bin/smoke-tests/mastodon.Dockerfile -t rv-smoke-mastodon bin/smoke-tests
