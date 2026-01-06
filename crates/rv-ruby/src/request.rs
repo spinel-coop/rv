@@ -23,6 +23,7 @@ pub struct RubyRequest {
 pub enum Source {
     DotToolVersions(Utf8PathBuf),
     DotRubyVersion(Utf8PathBuf),
+    GemfileLock(Utf8PathBuf),
     Other,
 }
 
@@ -31,6 +32,7 @@ impl std::fmt::Debug for Source {
         match self {
             Self::DotToolVersions(arg0) => f.debug_tuple("DotToolVersions").field(arg0).finish(),
             Self::DotRubyVersion(arg0) => f.debug_tuple("DotRubyVersion").field(arg0).finish(),
+            Self::GemfileLock(arg0) => f.debug_tuple("GemfileLock").field(arg0).finish(),
             Self::Other => write!(f, "Other"),
         }
     }
