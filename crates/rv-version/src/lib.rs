@@ -157,12 +157,13 @@ impl Version {
 
     pub fn canonical_segments(&self) -> Vec<VersionSegment> {
         // Step 1: Split on the first string segment
-        let parts: [_; 2] = self.segments.split_at(
-            self.segments
-                .iter()
-                .position(|s| s.is_string())
-                .unwrap_or(self.segments.len()),
-        ).into();
+        let index = self
+            .segments
+            .iter()
+            .position(|s| s.is_string())
+            .unwrap_or(self.segments.len());
+
+        let parts: [_; 2] = self.segments.split_at(index).into();
 
         // Step 2: seek behind from each tail and remove contigous zero chains.
         parts
