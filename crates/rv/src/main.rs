@@ -338,7 +338,7 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
             }
             Some(ShellCommand::Env { shell }) => shell_env(config, shell)?,
         },
-        Commands::Selfupdate => selfupdate().await.unwrap(), // FIXME: don't unwrap
+        Commands::Selfupdate => selfupdate().await?
     };
 
     Ok(())
