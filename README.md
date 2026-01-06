@@ -1,99 +1,16 @@
-# Meet `rv`, the super fast no-fuss Ruby version manager
+# `rv`, fast Ruby version and gem management
 
-Welcome to `rv`, the Ruby version manager that revs your Ruby installs so [they take just seconds](#install-benchmark).
+Today, `rv` can install Ruby versions in a second or two, removing the compile step and fixing OpenSSL errors forever.
 
-[In the future](#future-features), rv can also manage your tools, gems, and packages, faster than you would believe is possible.
+Soon, you'll be able to manage your entire project and all of its gems, faster and more easily than ever before.
 
-`rv` is greatly inspired by & builds on top of tons of work done by other package managers & their maintainers. See our [acknowledgements](#acknowledgements).
+**New in 0.4:** Try `rv clean-install` to install your locked gems.
 
-## Why `rv`
+## Install Ruby in under 2 seconds
 
 ![rv installs ruby 3.4.7 in 1.8 seconds](docs/img/rv-ruby-install.svg)
 
-We precompile Ruby 3.2+ for [macOS & Linux](#requirements) to vastly improve install times & make a number of installation issues a thing of the past.
-
-- **Super fast install**: rv installs Ruby 3.2+ in seconds.
-- **Unbreakable**: Homebrew updating OpenSSL will never break your Ruby install again.
-- **Zero compile time**: no more waiting 5-40min to compile Ruby on your dev machine or deployment dyno.
-- **Zero compile errors**: your Ruby install won't fail to compile due to low-level libraries being missing or unlinked.
-- **Eco-friendly**: saving minutes of compilation time across thousands of dev machines and deployment dynos across Ruby releases all add up.
-
-### Install Benchmark
-
-Here's the install time difference running on a base M5 MacBook Pro in Low Power Mode and High Power Mode:
-
-| | seconds | times slower |
-| ---: | ---: | ---: |
-| rv | 2.479 | 1.0x |
-| ruby-build (High Power) | 89.611 | 36.14x |
-| ruby-build (Low Power) | 159.752 | 64.44x |
-
-We happen to be using `rbenv` here, but `chruby`, `mise` and other tools all use `ruby-build` under the hood to compile Ruby during install.
-
-`rv` install time is constrained by network speed so your mileage will vary. This was run from Copenhagen, Denmark on a reasonably fast connection.
-
-<details>
-  <summary>See the benchmark commands we ran</summary>
-
-#### rv install time
-
-```bash
-time rv ruby install 3.4.7
-Downloaded https://github.com/spinel-coop/rv-ruby/releases/latest/download/ruby-3.4.7.arm64_sonoma.tar.gz to ~/.cache/rv/ruby-v0/tarballs/8758fed525bd3750.tar.gz
-Installed Ruby version ruby-3.4.7 to ~/.local/share/rv/rubies
-
-real 0m2.479s
-user 0m0.362s
-sys  0m0.551s
-```
-
-#### rbenv + ruby-build install in High Power Mode
-
-```bash
-time rbenv install 3.4.7
-ruby-build: using openssl@3 from homebrew
-==> Downloading ruby-3.4.7.tar.gz...
--> curl -q -fL -o ruby-3.4.7.tar.gz https://cache.ruby-lang.org/pub/ruby/3.4/ruby-3.4.7.tar.gz
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100 22.1M  100 22.1M    0     0  11.9M      0  0:00:01  0:00:01 --:--:-- 11.9M
-==> Installing ruby-3.4.7...
-ruby-build: using libyaml from homebrew
-ruby-build: using gmp from homebrew
--> ./configure "--prefix=$HOME/.rbenv/versions/3.4.7" --with-openssl-dir=/opt/homebrew/opt/openssl@3 --enable-shared --with-libyaml-dir=/opt/homebrew/opt/libyaml --with-gmp-dir=/opt/homebrew/opt/gmp --with-ext=openssl,psych,+
--> make -j 10
--> make install
-==> Installed ruby-3.4.7 to ~/.rbenv/versions/3.4.7
-
-real 1m29.611s
-user 2m54.163s
-sys  0m57.157s
-```
-
-#### rbenv + ruby-build install in Low Power Mode
-
-```bash
-time rbenv install 3.4.7
-ruby-build: using openssl@3 from homebrew
-==> Downloading ruby-3.4.7.tar.gz...
--> curl -q -fL -o ruby-3.4.7.tar.gz https://cache.ruby-lang.org/pub/ruby/3.4/ruby-3.4.7.tar.gz
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100 22.1M  100 22.1M    0     0  6721k      0  0:00:03  0:00:03 --:--:-- 6719k
-==> Installing ruby-3.4.7...
-ruby-build: using libyaml from homebrew
-ruby-build: using gmp from homebrew
--> ./configure "--prefix=$HOME/.rbenv/versions/3.4.7" --with-openssl-dir=/opt/homebrew/opt/openssl@3 --enable-shared --with-libyaml-dir=/opt/homebrew/opt/libyaml --with-gmp-dir=/opt/homebrew/opt/gmp --with-ext=openssl,psych,+
--> make -j 10
--> make install
-==> Installed ruby-3.4.7 to ~/.rbenv/versions/3.4.7
-
-real 2m39.752s
-user 4m41.813s
-sys  1m35.644s
-```
-
-</details>
+For details, see [INSTALL_BENCHMARK.md](docs/INSTALL_BENCHMARK.md).
 
 ## Testimonials
 
@@ -106,8 +23,8 @@ sys  1m35.644s
 ## Requirements
 
 - **Operating Systems**: macOS 14+, Linux glibc 2.35+
-- **Architectures**: x86 on Intel, AMD, etc. and arm64 on Apple, Qualcomm, etc.
-- **Ruby Versions**: All non-EOL'ed Ruby versions. Currently Ruby 3.2.x, 3.3.x, 3.4.1 and up.
+- **Architectures**: x86, arm64
+- **Ruby Versions**: Ruby 3.2, 3.3, 3.4, and 4.0.
 - **Shells**: zsh, bash, fish, nushell. See [SHELL INTEGRATION](docs/SHELL_INTEGRATION.md) for more.
 
 ## Install
@@ -117,32 +34,26 @@ sys  1m35.644s
 brew install rv
 ```
 
-Or, visit the [releases page](https://github.com/spinel-coop/rv/releases) for an installer shell script.
+Or, visit [releases](https://github.com/spinel-coop/rv/releases) for an installer shell script.
 
-## Usage
-
-You call `rv ruby run` and we'll install Ruby for you on the first run:
+## Quickstart
 
 ```bash
-time rv ruby run 3.4.7 -- --version
+rv ruby install 4.0.0 # install Ruby version
+rv ruby run 4.0.0 # run Ruby version
+
+rv shell [zsh|bash|fish|nu] # set up automatic version switching
+rv ruby pin 4.0.0 # set Ruby version
+rv ruby pin # show Ruby version
+
+rv clean-install # install Ruby and gems from Gemfile.lock
 ```
 
-> [!NOTE]
-> We've prepended `time` to show how fast rv installs Ruby on the first run, it's not needed to use rv.
+See [SHELL INTEGRATION](docs/SHELL_INTEGRATION.md) for more about `.ruby-version` and automatic version switching.
 
-For automatic Ruby version selection, like `rbenv` or `chruby`, you can add a line of configuration to your shell. After this one-time setup, `rv` will automatically use `.ruby-version` or `.tool-versions` files to give you the requested Ruby. Set or update the version of Ruby used in a project by running `rv ruby pin VERSION`.
+## From Spinel Cooperative
 
-See [SHELL INTEGRATION](docs/SHELL_INTEGRATION.md) for instructions to configure zsh, bash, fish, and nushell.
-
-## Brought to you by Spinel
-
-[Spinel.coop](https://spinel.coop) makes engineering teams more effective with decades of lessons learned on the core teams of Rails, Hotwire, Bundler, and rbenv. Let us [multiply the team you already have](https://spinel.coop).
-
-## Similar Work
-
-See [Ruby Butler](https://github.com/RubyElders/ruby-butler) for similar next-level tooling ideas for Ruby.
-
-We appreciate any tooling that improves Ruby and the lives of Ruby developers. We're all richer for people contributing their time & energy to make us all better. If you're reading this and you've contributed to Ruby in any way, thank you!
+[Spinel.coop](https://spinel.coop) can bring your team an obsession with developer productivity and decades of experience from the core teams of Rails, Hotwire, Bundler, and rbenv. [Book a free call with us](https://savvycal.com/spinel/client) to get started today.
 
 ## Future Plans
 
@@ -166,6 +77,12 @@ All-in-one tooling for Ruby developers.
 
 See [PLANS.md](docs/PLANS.md) for more on our future plans.
 
+## Contributing
+
+Install dependencies on macOS or Ubuntu with `bin/setup`. Make changes, and then run the development binary with `bin/rv`, or install the development binary to your system with `bin/install`.
+
+When you're done, make sure to run the tests with `bin/test`, and the linter with `bin/lint`. Then, send us a pull request! We love pull requests.
+
 ## FAQ
 
 **Does rv have a website?**
@@ -174,17 +91,11 @@ Yes! You're looking at it. You can reach this page with the URL [rv.dev](https:/
 
 **Why are you doing this?**
 
-[@indirect](https://github.com/indirect) wrote [a blog post about his motivation to create `rv`](https://andre.arko.net/2025/08/25/rv-a-new-kind-of-ruby-management-tool/).
+[@indirect](https://github.com/indirect), long-time project lead for [Bundler](https://bundler.io) and [RubyGems](https://rubygems.org), wrote [a blog post about his motivation to create `rv`](https://andre.arko.net/2025/08/25/rv-a-new-kind-of-ruby-management-tool/).
 
 **How do you pronounce rv?**
 
 "arr vee", the names of the two letters, spelled out.
-
-## Contributing
-
-Install dependencies on macOS or Ubuntu with `bin/setup`. Make changes, and then run the development binary with `bin/rv`, or install the development binary to your system with `bin/install`.
-
-When you're done, make sure to run the tests with `bin/test`, and the linter with `bin/lint`. Then, send us a pull request! We love pull requests.
 
 ## Acknowledgements
 
@@ -193,6 +104,11 @@ When you're done, make sure to run the tests with `bin/test`, and the linter wit
 It also takes inspiration, features, and approaches from [Bundler](https://bundler.io), [Frum](https://github.com/TaKO8Ki/frum), [Homebrew](https://brew.sh), [npm](https://npmjs.com), [Cargo](https://github.com/rust-lang/cargo), and [Orogene](https://github.com/orogene/orogene).
 
 We'd also like to thank everyone who has ever worked on a package manager in the past for helping get all of us to where we are today.
+
+## Similar Projects
+
+- [Bundler](https://bundler.io) manages project gems.
+- [Ruby Butler](https://github.com/RubyElders/ruby-butler) manages project tasks, Rubies, and gems.
 
 ## License
 
