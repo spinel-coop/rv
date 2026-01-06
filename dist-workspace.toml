@@ -4,21 +4,36 @@ members = ["cargo:."]
 # Config for 'dist'
 [dist]
 # The preferred dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.30.0"
+cargo-dist-version = "0.30.3"
 # CI backends to support
 ci = "github"
 # The installers to generate for each app
 installers = ["shell"]
 # Target platforms to build apps for (Rust target-triple syntax)
-targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu"]
+targets = [
+    "aarch64-apple-darwin",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-apple-darwin",
+    "x86_64-unknown-linux-gnu",
+]
 # Path that installers should place binaries in
 install-path = "CARGO_HOME"
 # Whether to install an updater program
 install-updater = false
 # Build only the required packages, and individually
 precise-builds = true
+# Whether to sign macOS executables
+macos-sign = true
+# Provide sigstore attestations from GitHub
+github-attestions = true
 
 [dist.github-custom-runners]
+x86_64-apple-darwin = "macos-14"
 aarch64-apple-darwin = "macos-14"
 aarch64-unknown-linux-gnu = "ubuntu-24.04-arm"
 x86_64-unknown-linux-gnu = "ubuntu-24.04"
+
+[dist.github-action-commits]
+"actions/checkout" = "v6"
+"actions/upload-artifact" = "v5"
+"actions/download-artifact" = "v6"

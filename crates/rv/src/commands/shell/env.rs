@@ -9,12 +9,14 @@ pub enum Error {
     ConfigError(#[from] config::Error),
     #[error("No Ruby installations found in configuration.")]
     NoRubyFound,
+    #[error("Could not serialize JSON: {0}")]
+    Serde(#[from] serde_json::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
 
 pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
-    let ruby = config.project_ruby();
+    let ruby = config.current_ruby();
     let (unset, set) = config::env_for(ruby.as_ref())?;
 
     match shell {
@@ -43,7 +45,7 @@ pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
             // Emit JSON which will be run by `load-env`.
             // See <https://www.nushell.sh/commands/docs/load-env.html>
             let env_json = nu_env(unset, set);
-            let serialized = serde_json::to_string(&env_json).expect("serializing JSON");
+            let serialized = serde_json::to_string(&env_json)?;
             println!("{}", serialized);
             Ok(())
         }
@@ -82,8 +84,39 @@ fn fish_var_escape(s: String) -> String {
 
 #[cfg(test)]
 mod tests {
+    use crate::config::Config;
+
     use super::*;
+    use assert_fs::TempDir;
+    use camino::Utf8PathBuf;
+    use indexmap::indexset;
+    use rv_ruby::request::Source;
     use serde_json::json;
+
+    fn test_config() -> Result<Config> {
+        let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
+        let ruby_dir = root.join("opt/rubies");
+        std::fs::create_dir_all(&ruby_dir)?;
+        let current_dir = root.join("project");
+        std::fs::create_dir_all(&current_dir)?;
+
+        let config = Config {
+            ruby_dirs: indexset![ruby_dir],
+            current_exe: root.join("bin").join("rv"),
+            requested_ruby: Some(("3.5.0".parse().unwrap(), Source::Other)),
+            current_dir,
+            cache: rv_cache::Cache::temp().unwrap(),
+            root,
+        };
+
+        Ok(config)
+    }
+
+    #[test]
+    fn env_runs() {
+        let config = test_config().unwrap();
+        env(&config, Shell::Zsh).unwrap();
+    }
 
     #[test]
     fn nushell_env_serializes_changes() {

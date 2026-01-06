@@ -6,8 +6,9 @@ use futures_util::StreamExt;
 use owo_colors::OwoColorize;
 use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
+use tracing::debug;
 
-use rv_ruby::request::RubyRequest;
+use rv_ruby::{request::RubyRequest, version::RubyVersion};
 
 use crate::config::Config;
 
@@ -19,8 +20,8 @@ pub enum Error {
     IoError(#[from] std::io::Error),
     #[error(transparent)]
     StripPrefixError(#[from] std::path::StripPrefixError),
-    #[error("Major, minor, and patch version is required, but got {0}")]
-    IncompleteVersion(RubyRequest),
+    #[error("no matching ruby version found")]
+    NoMatchingRuby,
     #[error("Download from URL {url} failed with status code {status}. Response body was {body}")]
     DownloadFailed {
         url: String,
@@ -40,9 +41,28 @@ type Result<T> = miette::Result<T, Error>;
 pub async fn install(
     config: &Config,
     install_dir: Option<String>,
-    requested: RubyRequest,
+    requested: Option<RubyRequest>,
     tarball_path: Option<String>,
 ) -> Result<()> {
+    let requested_range = match requested {
+        None => config.ruby_request(),
+        Some(version) => version,
+    };
+
+    let selected_version = if let Ok(version) = RubyVersion::try_from(requested_range.clone()) {
+        debug!(
+            "Skipping the rv-ruby releases fetch because the user has given a specific ruby version {version}"
+        );
+        version
+    } else {
+        debug!("Fetching available rubies, because user gave an underspecified Ruby range");
+        let rubies_for_this_platform = config.remote_rubies().await;
+        requested_range
+            .find_match_in(rubies_for_this_platform)
+            .ok_or(Error::NoMatchingRuby)?
+            .version
+    };
+
     let install_dir = match install_dir {
         Some(dir) => Utf8PathBuf::from(dir),
         None => match config.ruby_dirs.first() {
@@ -53,14 +73,18 @@ pub async fn install(
 
     match tarball_path {
         Some(tarball_path) => {
-            extract_local_ruby_tarball(tarball_path, &install_dir, &requested.number()).await?
+            extract_local_ruby_tarball(tarball_path, &install_dir, &selected_version.number())
+                .await?
         }
-        None => download_and_extract_remote_tarball(config, &install_dir, &requested).await?,
+        None => {
+            download_and_extract_remote_tarball(config, &install_dir, &selected_version.number())
+                .await?
+        }
     }
 
     println!(
         "Installed Ruby version {} to {}",
-        requested.to_string().cyan(),
+        selected_version.to_string().cyan(),
         install_dir.cyan()
     );
 
@@ -71,18 +95,14 @@ pub async fn install(
 async fn download_and_extract_remote_tarball(
     config: &Config,
     install_dir: &Utf8PathBuf,
-    requested: &RubyRequest,
+    version: &str,
 ) -> Result<()> {
-    if requested.patch.is_none() {
-        Err(Error::IncompleteVersion(requested.clone()))?;
-    }
-
-    let url = ruby_url(&requested.to_string())?;
+    let url = ruby_url(version)?;
     let tarball_path = tarball_path(config, &url);
 
     let new_dir = tarball_path.parent().unwrap();
     if !new_dir.exists() {
-        std::fs::create_dir_all(new_dir)?;
+        fs_err::create_dir_all(new_dir)?;
     }
 
     if valid_tarball_exists(&tarball_path) {
@@ -94,7 +114,7 @@ async fn download_and_extract_remote_tarball(
         download_ruby_tarball(config, &url, &tarball_path).await?;
     }
 
-    extract_ruby_tarball(&tarball_path, install_dir, &requested.number())?;
+    extract_ruby_tarball(&tarball_path, install_dir, version)?;
 
     Ok(())
 }
@@ -112,20 +132,10 @@ async fn extract_local_ruby_tarball(
 
 /// Does a usable tarball already exist at this path?
 fn valid_tarball_exists(path: &Utf8Path) -> bool {
-    let Ok(f) = std::fs::File::open(path) else {
-        return false;
-    };
-    let Ok(metadata) = f.metadata() else {
-        return false;
-    };
-    if metadata.len() == 0 {
-        return false;
-    }
-    true
+    fs_err::metadata(path).is_ok_and(|m| m.is_file() && m.len() > 0)
 }
 
 fn ruby_url(version: &str) -> Result<String> {
-    let version = version.strip_prefix("ruby-").unwrap();
     let arch = match CURRENT_PLATFORM {
         "aarch64-apple-darwin" => "arm64_sonoma",
         "x86_64-apple-darwin" => "ventura",
@@ -134,13 +144,10 @@ fn ruby_url(version: &str) -> Result<String> {
         other => return Err(Error::UnsupportedPlatform(other)),
     };
 
-    let download_base = std::env::var("RV_RELEASES_URL")
-        .unwrap_or("https://github.com/spinel-coop/rv-ruby/releases".to_owned());
+    let download_base = std::env::var("RV_INSTALL_URL")
+        .unwrap_or("https://github.com/spinel-coop/rv-ruby/releases/latest/download".to_owned());
 
-    Ok(format!(
-        "{}/latest/download/ruby-{version}.{arch}.tar.gz",
-        download_base
-    ))
+    Ok(format!("{download_base}/ruby-{version}.{arch}.tar.gz"))
 }
 
 fn tarball_path(config: &Config, url: impl AsRef<str>) -> Utf8PathBuf {
@@ -218,9 +225,9 @@ fn extract_ruby_tarball(
     version: &str,
 ) -> Result<()> {
     if !rubies_dir.exists() {
-        std::fs::create_dir_all(rubies_dir)?;
+        fs_err::create_dir_all(rubies_dir)?;
     }
-    let tarball = std::fs::File::open(tarball_path)?;
+    let tarball = fs_err::File::open(tarball_path)?;
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
     for e in archive.entries()? {
         let mut entry = e?;

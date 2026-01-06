@@ -66,7 +66,10 @@ impl FromStr for RubyEngine {
 
 impl From<&str> for RubyEngine {
     fn from(val: &str) -> Self {
-        RubyEngine::from_str(val).unwrap_or_else(|_| RubyEngine::Unknown(val.to_string()))
+        match RubyEngine::from_str(val) {
+            Ok(engine) => engine,
+            Err(e) => match e {},
+        }
     }
 }
 

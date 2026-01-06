@@ -21,18 +21,14 @@ impl NameTuple {
     }
 
     pub fn from_array(array: &[String]) -> Result<Self, NameTupleError> {
-        if !(2..=3).contains(&array.len()) {
+        let Some(name) = array.first().cloned() else {
             return Err(NameTupleError::InvalidArray);
-        }
-
-        let name = array[0].clone();
-        let version = Version::new(&array[1])?;
-        let platform = if array.len() == 3 {
-            Some(array[2].clone())
-        } else {
-            None
         };
-
+        let Some(version) = array.get(1).map(Version::new) else {
+            return Err(NameTupleError::InvalidArray);
+        };
+        let version = version?;
+        let platform = array.get(2).cloned();
         Ok(Self::new(name, version, platform))
     }
 
@@ -110,9 +106,11 @@ impl From<(String, Version, Option<String>)> for NameTuple {
     }
 }
 
-impl From<&[String]> for NameTuple {
-    fn from(array: &[String]) -> Self {
-        Self::from_array(array).unwrap()
+impl TryFrom<&[String]> for NameTuple {
+    type Error = NameTupleError;
+
+    fn try_from(array: &[String]) -> Result<Self, Self::Error> {
+        Self::from_array(array)
     }
 }
 

@@ -1,13 +1,52 @@
---- !ruby/object:Gem::Specification 
-name: terminal-table
-version: !ruby/object:Gem::Version 
-  version: 1.4.5
-summary: Simple table library
-required_ruby_version: !ruby/object:Gem::Version::Requirement 
-  requirements: 
-  - - ">"
-    - !ruby/object:Gem::Version 
-      version: 0.0.0
-authors:
-- Test Author
+--- !ruby/object:Gem::Specification
+rubygems_version: 0.8.1
+specification_version: 1
+name: rubypants
+version: !ruby/object:Gem::Version
+  version: 0.2.0
+date: 2004-11-15
+summary: RubyPants is a Ruby port of the smart-quotes library SmartyPants.
+require_paths:
+  - "."
+author: Christian Neukirchen
+email: chneukirchen@gmail.com
+homepage: http://www.kronavita.de/chris/blog/projects/rubypants.html
+rubyforge_project:
+description: "RubyPants is a Ruby port of the smart-quotes library SmartyPants.  The original
+  \"SmartyPants\" is a free web publishing plug-in for Movable Type, Blosxom, and
+  BBEdit that easily translates plain ASCII punctuation characters into \"smart\"
+  typographic punctuation HTML entities."
+autorequire:
+default_executable:
+bindir: bin
+has_rdoc: false
+required_ruby_version: !ruby/object:Gem::Version::Requirement
+  requirements:
+    -
+      - ">"
+      - !ruby/object:Gem::Version
+        version: 0.0.0
+  version:
+platform: ruby
+files:
+  - install.rb
+  - rubypants.rb
+  - test_rubypants.rb
+  - README
+  - Rakefile
+test_files:
+  - test_rubypants.rb
+rdoc_options:
+  - "--main"
+  - README
+  - "--line-numbers"
+  - "--inline-source"
+  - "--all"
+  - "--exclude"
+  - test_rubypants.rb
+extra_rdoc_files:
+  - README
+executables: []
+extensions: []
+requirements: []
 dependencies: []

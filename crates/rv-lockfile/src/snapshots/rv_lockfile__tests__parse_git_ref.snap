@@ -1,0 +1,34 @@
+---
+source: crates/rv-lockfile/src/tests.rs
+assertion_line: 101
+expression: output
+---
+git:
+  - remote: "https://github.com/dsander/dropbox-api.git"
+    revision: 86cb7b5a1254dc5b054de7263835713c4c1018c7
+    branch: ~
+    ref: 86cb7b5a1254dc5b054de7263835713c4c1018c7
+    tag: ~
+    submodules: false
+    specs:
+      - gem_version:
+          name: dropbox-api
+          version: 0.5.0
+        deps:
+          - name: multi_json
+            semver: ~
+            nonstandard: false
+gem:
+  - remote: "https://rubygems.org/"
+    specs:
+      - gem_version:
+          name: multi_json
+          version: 1.15.0
+        deps: []
+platforms:
+  - ruby
+dependencies:
+  - name: dropbox-api
+    semver: ~
+    nonstandard: true
+bundled_with: 2.4.22

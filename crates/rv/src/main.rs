@@ -4,9 +4,11 @@ use clap::builder::Styles;
 use clap::builder::styling::AnsiColor;
 use clap::{ArgAction, CommandFactory, Parser, Subcommand};
 use config::Config;
+use indexmap::IndexSet;
 use miette::Report;
 use rv_cache::CacheArgs;
 use tokio::main;
+use tracing::debug;
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
@@ -14,6 +16,8 @@ pub mod commands;
 pub mod config;
 
 use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir, cache_prune};
+#[cfg(unix)]
+use crate::commands::ci::{CleanInstallArgs, ci};
 use crate::commands::ruby::dir::dir as ruby_dir;
 use crate::commands::ruby::find::find as ruby_find;
 use crate::commands::ruby::install::install as ruby_install;
@@ -27,6 +31,7 @@ use crate::commands::selfupdate::selfupdate;
 use crate::commands::shell::completions::shell_completions;
 use crate::commands::shell::env::env as shell_env;
 use crate::commands::shell::init::init as shell_init;
+use crate::commands::shell::setup as shell_setup;
 use crate::commands::shell::{ShellArgs, ShellCommand};
 
 const STYLES: Styles = Styles::styled()
@@ -46,15 +51,8 @@ const STYLES: Styles = Styles::styled()
 #[command(disable_help_flag = true)]
 struct Cli {
     /// Ruby directories to search for installations
-    #[arg(long = "ruby-dir")]
+    #[arg(long = "ruby-dir", env = "RUBIES_PATH", value_delimiter = ':')]
     ruby_dir: Vec<Utf8PathBuf>,
-
-    #[arg(long = "project-dir")]
-    project_dir: Option<Utf8PathBuf>,
-
-    /// Path to Gemfile
-    #[arg(long, env = "BUNDLE_GEMFILE")]
-    gemfile: Option<Utf8PathBuf>,
 
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity<clap_verbosity_flag::InfoLevel>,
@@ -70,7 +68,7 @@ struct Cli {
     cache_args: CacheArgs,
 
     #[command(subcommand)]
-    command: Option<Commands>,
+    command: Commands,
 
     /// Root directory for testing (hidden)
     #[arg(long, hide = true, env = "RV_ROOT_DIR")]
@@ -90,34 +88,33 @@ impl Cli {
         };
 
         let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
-        let project_dir = if let Some(project_dir) = &self.project_dir {
-            Some(project_dir.clone())
-        } else {
-            config::find_project_dir(current_dir.clone(), root.clone())
-        };
         let ruby_dirs = if self.ruby_dir.is_empty() {
-            config::default_ruby_dirs(&root)
+            config::default_ruby_dirs()
         } else {
             self.ruby_dir
                 .iter()
                 .map(|path: &Utf8PathBuf| root.join(path))
                 .collect()
         };
+        let ruby_dirs: IndexSet<Utf8PathBuf> = ruby_dirs.into_iter().collect();
         let cache = self.cache_args.to_cache()?;
         let current_exe = if let Some(exe) = self.current_exe.clone() {
             exe
         } else {
             std::env::current_exe()?.to_str().unwrap().into()
         };
+        let requested_ruby = config::find_requested_ruby(current_dir.clone(), root.clone())?;
+        if let Some(req) = &requested_ruby {
+            debug!("Found request for {} in {:?}", req.0, req.1);
+        }
 
         Ok(Config {
             ruby_dirs,
-            gemfile: self.gemfile.clone(),
             root,
             current_dir,
-            project_dir,
             cache,
             current_exe,
+            requested_ruby,
         })
     }
 }
@@ -130,6 +127,13 @@ enum Commands {
     Cache(CacheCommandArgs),
     #[command(about = "Configure your shell to use rv")]
     Shell(ShellArgs),
+    #[cfg(unix)]
+    #[command(
+        about = "Clean install from a Gemfile.lock",
+        visible_alias = "ci",
+        hide = true
+    )]
+    CleanInstall(CleanInstallArgs),
     #[command(about = "Update rv itself, if an update is available")]
     Selfupdate,
 }
@@ -196,11 +200,16 @@ pub enum Error {
     UninstallError(#[from] commands::ruby::uninstall::Error),
     #[cfg(unix)]
     #[error(transparent)]
+    CiError(#[from] commands::ci::Error),
+    #[cfg(unix)]
+    #[error(transparent)]
     RunError(#[from] commands::ruby::run::Error),
     #[error(transparent)]
     NonUtf8Path(#[from] FromPathBufError),
     #[error(transparent)]
-    InitError(#[from] commands::shell::init::Error),
+    Error(#[from] commands::shell::init::Error),
+    #[error(transparent)]
+    ShellError(#[from] commands::shell::Error),
     #[error(transparent)]
     EnvError(#[from] commands::shell::env::Error),
 }
@@ -262,6 +271,11 @@ async fn run() -> Result<()> {
                 // an `anstream::AutoStream` that handles color output for us.
                 .with_writer(writer),
         )
+        .with(if cfg!(target_os = "macos") {
+            Some(tracing_oslog::OsLogger::new("dev.rv.tracing", "default"))
+        } else {
+            None
+        })
         .with(filter);
 
     if std::env::var("RV_DISABLE_INDICATIF").is_err() {
@@ -271,44 +285,61 @@ async fn run() -> Result<()> {
     }
 
     let config = cli.config()?;
+    run_cmd(&config, cli.command).await
+}
 
-    match cli.command {
-        None => {}
-        Some(cmd) => match cmd {
-            Commands::Ruby(ruby) => match ruby.command {
-                RubyCommand::Find { request } => ruby_find(&config, &request)?,
-                RubyCommand::List {
-                    format,
-                    installed_only,
-                } => ruby_list(&config, format, installed_only).await?,
-                RubyCommand::Pin { version_request } => ruby_pin(&config, version_request)?,
-                RubyCommand::Dir => ruby_dir(&config),
-                RubyCommand::Install {
-                    version,
-                    install_dir,
-                    tarball_path,
-                } => ruby_install(&config, install_dir, version, tarball_path).await?,
-                RubyCommand::Uninstall {
-                    version: version_request,
-                } => ruby_uninstall(&config, version_request).await?,
-                #[cfg(unix)]
-                RubyCommand::Run { version, args } => ruby_run(&config, &version, &args)?,
-            },
-            Commands::Cache(cache) => match cache.command {
-                CacheCommand::Dir => cache_dir(&config)?,
-                CacheCommand::Clean => cache_clean(&config)?,
-                CacheCommand::Prune => cache_prune(&config)?,
-            },
-            Commands::Selfupdate => selfupdate().await.unwrap(), // FIXME: don't unwrap
-            Commands::Shell(shell) => match shell.command {
-                ShellCommand::Init { shell } => shell_init(&config, shell)?,
-                ShellCommand::Completions { shell } => {
-                    shell_completions(&mut Cli::command(), shell)
-                }
-                ShellCommand::Env { shell } => shell_env(&config, shell)?,
-            },
+/// Run an `rv` subcommand.
+/// This is like shelling out to `rv` except it reuses the current context
+/// and doesn't need to start a new process.
+async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
+    match command {
+        Commands::Ruby(ruby) => match ruby.command {
+            RubyCommand::Find { version } => ruby_find(config, version)?,
+            RubyCommand::List {
+                format,
+                installed_only,
+            } => ruby_list(config, format, installed_only).await?,
+            RubyCommand::Pin { version } => ruby_pin(config, version)?,
+            RubyCommand::Dir => ruby_dir(config),
+            RubyCommand::Install {
+                version,
+                install_dir,
+                tarball_path,
+            } => ruby_install(config, install_dir, version, tarball_path).await?,
+            RubyCommand::Uninstall { version } => ruby_uninstall(config, version).await?,
+            #[cfg(unix)]
+            RubyCommand::Run {
+                version,
+                no_install,
+                args,
+            } => ruby_run(
+                config,
+                version,
+                no_install,
+                &args,
+                Default::default(),
+                Default::default(),
+            )
+            .await
+            .map(|_| ())?,
         },
-    }
+        #[cfg(unix)]
+        Commands::CleanInstall(ci_args) => ci(config, ci_args).await?,
+        Commands::Cache(cache) => match cache.command {
+            CacheCommand::Dir => cache_dir(config)?,
+            CacheCommand::Clean => cache_clean(config)?,
+            CacheCommand::Prune => cache_prune(config)?,
+        },
+        Commands::Shell(shell_args) => match shell_args.command {
+            None => shell_setup(config, shell_args.shell.unwrap())?,
+            Some(ShellCommand::Init { shell }) => shell_init(config, shell)?,
+            Some(ShellCommand::Completions { shell }) => {
+                shell_completions(&mut Cli::command(), shell)
+            }
+            Some(ShellCommand::Env { shell }) => shell_env(config, shell)?,
+        },
+        Commands::Selfupdate => selfupdate().await.unwrap(), // FIXME: don't unwrap
+    };
 
     Ok(())
 }

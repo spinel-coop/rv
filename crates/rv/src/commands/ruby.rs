@@ -34,7 +34,7 @@ pub enum RubyCommand {
     #[command(about = "Show or set the Ruby version for the current project")]
     Pin {
         /// The Ruby version to pin
-        version_request: Option<String>,
+        version: Option<String>,
     },
 
     #[command(about = "Show the Ruby installation directory")]
@@ -43,7 +43,7 @@ pub enum RubyCommand {
     #[command(about = "Search for a Ruby installation")]
     Find {
         /// Ruby version to find
-        request: Option<RubyRequest>,
+        version: Option<RubyRequest>,
     },
 
     #[command(about = "Install a Ruby version")]
@@ -53,7 +53,7 @@ pub enum RubyCommand {
         install_dir: Option<String>,
 
         /// Ruby version to install
-        version: RubyRequest,
+        version: Option<RubyRequest>,
 
         /// Path to a local ruby tarball
         #[arg(long, value_name = "TARBALL_PATH")]
@@ -69,8 +69,14 @@ pub enum RubyCommand {
     #[cfg(unix)]
     #[command(about = "Run a specific Ruby", dont_delimit_trailing_values = true)]
     Run {
+        /// By default, if your requested Ruby version isn't installed,
+        /// it will be installed with `rv ruby install`'s default options.
+        /// This option disables that behaviour.
+        #[arg(long)]
+        no_install: bool,
+
         /// Ruby version to run
-        version: RubyRequest,
+        version: Option<RubyRequest>,
 
         /// Arguments passed to the `ruby` invocation
         #[arg(last = true, allow_hyphen_values = true)]

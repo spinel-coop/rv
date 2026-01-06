@@ -1,0 +1,58 @@
+name: Integration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions: read-all
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  alpine-linux:
+    name: Run on Alpine Linux
+    runs-on: ubuntu-latest
+    container:
+      image: rust:alpine
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: |
+          apk add --no-cache build-base bash
+
+      - name: Build rv
+        run: ./bin/rv --version
+
+      - name: Test rv runs
+        run: |
+          ./target/release/rv --version
+          ./target/release/rv --help
+
+  arch-linux:
+    name: Run on Arch Linux
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm rust
+
+      - name: Build rv
+        run: ./bin/rv --version
+
+      - name: Test rv installs and runs ruby
+        run: |
+          ./target/release/rv --version
+          ./target/release/rv --help
+          ./target/release/rv ruby run 3.4.7 -- -e 'puts RUBY_DESCRIPTION'

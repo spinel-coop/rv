@@ -343,23 +343,6 @@ fn test_unsupported_folded_scalar_syntax() {
     assert!(error_msg.contains("YAML parsing error") || error_msg.contains("parse"));
 }
 
-#[test]
-fn test_unsupported_version_requirement_class() {
-    // Current limitation: terminal-table-1.4.5.gem uses Gem::Version::Requirement instead of Gem::Requirement
-    // This is valid Ruby but uses a different class hierarchy than we currently support
-    let yaml_content = load_fixture("version_requirement_class");
-    let result = parse(&yaml_content);
-
-    // Currently fails because we only support !ruby/object:Gem::Requirement, not Gem::Version::Requirement
-    assert!(
-        result.is_err(),
-        "Gem::Version::Requirement class is not yet supported"
-    );
-
-    let error_msg = format!("{:?}", result.unwrap_err());
-    assert!(error_msg.contains("expected_event") || error_msg.contains("Gem::Requirement"));
-}
-
 // Integration tests for real-world failing gems - these document specific parsing limitations
 
 #[test]
@@ -388,34 +371,5 @@ fn test_bacon_1_2_0_folded_scalar() {
     assert!(
         debug_msg.contains("invalid indentation in quoted scalar") || debug_msg.contains("line 14"),
         "Expected folded scalar error details, got: {debug_msg}"
-    );
-}
-
-#[test]
-fn test_terminal_table_1_4_5_version_requirement_class() {
-    // terminal-table-1.4.5.gem fails due to Gem::Version::Requirement instead of Gem::Requirement
-    // Uses !ruby/object:Gem::Version::Requirement which we don't support
-    let yaml_content = std::fs::read_to_string("tests/fixtures/terminal-table-1.4.5.gemspec.yaml")
-        .expect("terminal-table-1.4.5 fixture should exist");
-    let result = parse(&yaml_content);
-
-    // Should fail when parsing Gem::Version::Requirement tag
-    assert!(
-        result.is_err(),
-        "terminal-table-1.4.5 should fail due to Gem::Version::Requirement class"
-    );
-
-    let error = result.unwrap_err();
-    let error_msg = format!("{error}");
-    assert!(
-        error_msg.contains("Expected") && error_msg.contains("`ruby/object:Gem::Requirement`"),
-        "Expected Gem::Requirement vs Gem::Version::Requirement error, got: {error_msg}"
-    );
-
-    // Should specifically mention the Gem::Requirement expectation
-    let debug_msg = format!("{error:?}");
-    assert!(
-        debug_msg.contains("expected_event") || debug_msg.contains("requirements"),
-        "Expected requirement class error details, got: {debug_msg}"
     );
 }

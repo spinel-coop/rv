@@ -3,7 +3,7 @@ source: crates/rv-lockfile/src/tests.rs
 expression: output
 ---
 gem:
-  - remote: "https://example.com"
+  - remote: "https://gem.coop"
     specs:
       - gem_version:
           name: actioncable

@@ -1,29 +1,13 @@
 use std::collections::BTreeMap;
 use std::io;
-use std::time::{Duration, SystemTime};
 
 use anstream::println;
-use camino::Utf8PathBuf;
-use current_platform::CURRENT_PLATFORM;
-use fs_err as fs;
-use once_cell::sync::Lazy;
 use owo_colors::OwoColorize;
-use regex::Regex;
-use rv_ruby::Ruby;
-use rv_ruby::request::RubyRequest;
-use rv_ruby::{Asset, Release};
-use serde::{Deserialize, Serialize};
-use tracing::{debug, info, warn};
+use rv_ruby::{Ruby, version::RubyVersion};
+use serde::Serialize;
+use tracing::{info, warn};
 
 use crate::config::Config;
-
-// Use GitHub's TTL, but don't re-check more than every 60 seconds.
-const MINIMUM_CACHE_TTL: Duration = Duration::from_secs(60);
-
-static ARCH_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"ruby-[\d\.]+\.(?P<arch>[a-zA-Z0-9_]+)\.tar\.gz").unwrap());
-
-static PARSE_MAX_AGE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"max-age=(\d+)").unwrap());
 
 #[derive(clap::ValueEnum, Clone, Debug, PartialEq, Eq)]
 pub enum OutputFormat {
@@ -37,8 +21,6 @@ pub enum Error {
     SerdeJsonError(#[from] serde_json::Error),
     #[error(transparent)]
     ConfigError(#[from] crate::config::Error),
-    #[error("Failed to fetch available ruby versions from GitHub")]
-    RequestError(#[from] reqwest::Error),
     #[error(transparent)]
     IoError(#[from] std::io::Error),
     #[error(transparent)]
@@ -48,14 +30,6 @@ pub enum Error {
 }
 
 type Result<T> = miette::Result<T, Error>;
-
-// Updated struct to hold ETag and calculated expiry time
-#[derive(Serialize, Deserialize, Debug)]
-struct CachedRelease {
-    expires_at: SystemTime,
-    etag: Option<String>,
-    release: Release,
-}
 
 // Struct for JSON output and maintaing the list of installed/active rubies
 #[derive(Serialize)]
@@ -67,189 +41,10 @@ struct JsonRubyEntry {
     active: bool,
 }
 
-/// Parses the `max-age` value from a `Cache-Control` header.
-fn parse_max_age(header: &str) -> Option<Duration> {
-    PARSE_MAX_AGE_REGEX
-        .captures(header)
-        .and_then(|caps| caps.get(1))
-        .and_then(|age| age.as_str().parse::<u64>().ok())
-        .map(Duration::from_secs)
-}
-
-/// Parses the OS and architecture from the arch part of the asset name.
-fn parse_arch_str(arch_str: &str) -> (&'static str, &'static str) {
-    match arch_str {
-        "arm64_sonoma" => ("macos", "aarch64"),
-        "x86_64_linux" => ("linux", "x86_64"),
-        "arm64_linux" => ("linux", "aarch64"),
-        _ => ("unknown", "unknown"),
-    }
-}
-
-fn current_platform_arch_str() -> &'static str {
-    let platform =
-        std::env::var("RV_TEST_PLATFORM").unwrap_or_else(|_| CURRENT_PLATFORM.to_string());
-
-    match platform.as_str() {
-        "aarch64-apple-darwin" => "arm64_sonoma",
-        "x86_64-unknown-linux-gnu" => "x86_64_linux",
-        "aarch64-unknown-linux-gnu" => "arm64_linux",
-        _ => "unsupported",
-    }
-}
-
-fn all_suffixes() -> impl IntoIterator<Item = &'static str> {
-    [
-        ".arm64_linux.tar.gz",
-        ".arm64_sonoma.tar.gz",
-        "x86_64_linux.tar.gz",
-        // We follow the Homebrew convention that if there's no arch, it defaults to x86.
-        ".ventura.tar.gz",
-    ]
-}
-
-/// Creates a Rubies info struct from a release asset
-fn ruby_from_asset(asset: &Asset) -> Result<Ruby> {
-    let version: rv_ruby::version::RubyVersion = {
-        let mut curr = asset.name.as_str();
-        for suffix in all_suffixes() {
-            curr = curr.strip_suffix(suffix).unwrap_or(curr);
-        }
-        curr.parse()
-    }?;
-    let display_name = version.to_string();
-
-    let arch_str = ARCH_REGEX
-        .captures(&asset.name)
-        .and_then(|caps| caps.name("arch"))
-        .map_or("unknown", |m| m.as_str());
-
-    let (os, arch) = parse_arch_str(arch_str);
-
-    Ok(Ruby {
-        key: format!("{display_name}-{os}-{arch}"),
-        version,
-        path: Utf8PathBuf::from(&asset.browser_download_url),
-        symlink: None,
-        arch: arch.to_string(),
-        os: os.to_string(),
-        gem_root: None,
-    })
-}
-
-/// Fetches available rubies
-pub(crate) async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Release> {
-    let cache_entry = cache.entry(
-        rv_cache::CacheBucket::Ruby,
-        "releases",
-        "available_rubies.json",
-    );
-    let client = reqwest::Client::new();
-
-    let api_base =
-        std::env::var("RV_RELEASES_URL").unwrap_or_else(|_| "https://api.github.com".to_string());
-    if api_base == "-" {
-        // Special case to return empty list
-        tracing::debug!("RV_RELEASES_URL is '-', returning empty list without network request.");
-        return Ok(Release {
-            name: "Empty release".to_owned(),
-            assets: Vec::new(),
-        });
-    }
-    let url = format!("{}/repos/spinel-coop/rv-ruby/releases/latest", api_base);
-
-    // 1. Try to read from the disk cache.
-    let cached_data: Option<CachedRelease> =
-        if let Ok(content) = fs::read_to_string(cache_entry.path()) {
-            serde_json::from_str(&content).ok()
-        } else {
-            None
-        };
-
-    // 2. If we have fresh cached data, use it immediately.
-    if let Some(cache) = &cached_data {
-        if SystemTime::now() < cache.expires_at {
-            debug!("Using cached list of available rubies.");
-            return Ok(cache.release.clone());
-        }
-        debug!("Cached ruby list is stale, re-validating with server.");
-    }
-
-    // 3. Cache is stale or missing
-    let etag = cached_data.as_ref().and_then(|c| c.etag.clone());
-    let mut request_builder = client
-        .get(url)
-        .header("User-Agent", "rv-cli")
-        .header("Accept", "application/vnd.github+json");
-
-    // 4. Use ETag for conditional requests if we have one
-    if let Some(etag) = &etag {
-        debug!("Using ETag to make a conditional request: {}", etag);
-        request_builder = request_builder.header("If-None-Match", etag.clone());
-    }
-
-    let response = request_builder.send().await?;
-
-    // 4. Handle the server's response.
-    match response.status() {
-        reqwest::StatusCode::NOT_MODIFIED => {
-            debug!("GitHub API confirmed releases list is unchanged (304 Not Modified).");
-            let mut stale_cache =
-                cached_data.ok_or_else(|| io::Error::other("304 response without prior cache"))?;
-
-            // Update the expiry time based on the latest Cache-Control header
-            let max_age = response
-                .headers()
-                .get("Cache-Control")
-                .and_then(|v| v.to_str().ok())
-                .and_then(parse_max_age)
-                .unwrap_or(Duration::from_secs(60));
-
-            stale_cache.expires_at = SystemTime::now() + max_age.max(MINIMUM_CACHE_TTL);
-            fs::write(cache_entry.path(), serde_json::to_string(&stale_cache)?)?;
-            Ok(stale_cache.release)
-        }
-        reqwest::StatusCode::OK => {
-            debug!("Received new releases list from GitHub (200 OK).");
-            let headers = response.headers().clone();
-            let new_etag = headers
-                .get("ETag")
-                .and_then(|v| v.to_str().ok())
-                .map(String::from);
-
-            let max_age = headers
-                .get("Cache-Control")
-                .and_then(|v| v.to_str().ok())
-                .and_then(parse_max_age)
-                .unwrap_or(Duration::from_secs(60)); // Default to 60s if header is missing
-
-            let release: Release = response.json().await?;
-            debug!("Fetched latest release {}", release.name);
-
-            let new_cache_entry = CachedRelease {
-                expires_at: SystemTime::now() + max_age.max(MINIMUM_CACHE_TTL),
-                etag: new_etag,
-                release: release.clone(),
-            };
-
-            if let Some(parent) = cache_entry.path().parent() {
-                fs::create_dir_all(parent)?;
-            }
-            fs::write(cache_entry.path(), serde_json::to_string(&new_cache_entry)?)?;
-
-            Ok(release)
-        }
-        status => {
-            warn!("Failed to fetch releases, status: {}", status);
-            Err(response.error_for_status().unwrap_err().into())
-        }
-    }
-}
-
 /// Lists the available and installed rubies.
 pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -> Result<()> {
     let installed_rubies = config.rubies();
-    let active_ruby = config.project_ruby();
+    let active_ruby = config.current_ruby();
 
     if installed_only {
         if installed_rubies.is_empty() && format == OutputFormat::Text {
@@ -273,38 +68,9 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
         return print_entries(&entries, format);
     }
 
-    let release = match fetch_available_rubies(&config.cache).await {
-        Ok(release) => release,
-        Err(e) => {
-            warn!(
-                "Could not fetch or re-validate available Ruby versions: {}",
-                e
-            );
-            let cache_entry = config.cache.entry(
-                rv_cache::CacheBucket::Ruby,
-                "releases",
-                "available_rubies.json",
-            );
-            if let Ok(content) = fs::read_to_string(cache_entry.path())
-                && let Ok(cached_data) = serde_json::from_str::<CachedRelease>(&content)
-            {
-                warn!("Displaying stale list of available rubies from cache.");
-                cached_data.release
-            } else {
-                Release {
-                    name: "Empty".to_owned(),
-                    assets: Vec::new(),
-                }
-            }
-        }
-    };
+    let rubies_for_this_platform = config.remote_rubies().await;
 
-    let entries = rubies_to_show(
-        release,
-        installed_rubies,
-        active_ruby,
-        current_platform_arch_str(),
-    );
+    let entries = rubies_to_show(rubies_for_this_platform, installed_rubies, active_ruby);
     if entries.is_empty() && format == OutputFormat::Text {
         warn!("No rubies found for your platform.");
         return Ok(());
@@ -317,10 +83,9 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
 /// E.g. don't show rv-ruby installable 3.3.2 if a later patch 3.3.9 is available.
 /// Don't show duplicates, etc.
 fn rubies_to_show(
-    release: Release,
+    rubies_for_this_platform: Vec<Ruby>,
     installed_rubies: Vec<Ruby>,
     active_ruby: Option<Ruby>,
-    current_platform: &'static str,
 ) -> Vec<JsonRubyEntry> {
     // Might have multiple installed rubies with the same version (e.g., "ruby-3.2.0" and "mruby-3.2.0").
     let mut rubies_map: BTreeMap<String, Vec<Ruby>> = BTreeMap::new();
@@ -331,23 +96,11 @@ fn rubies_to_show(
             .push(ruby);
     }
 
-    // Filter releases+assets for current platform
-    let (desired_os, desired_arch) = parse_arch_str(current_platform);
-    let rubies_for_this_platform: Vec<Ruby> = release
-        .assets
-        .iter()
-        .filter_map(|asset| ruby_from_asset(asset).ok())
-        .filter(|ruby| ruby.os == desired_os && ruby.arch == desired_arch)
-        .collect();
+    let mut available_rubies: Vec<Ruby> = vec![];
 
-    let available_rubies = latest_patch_version(rubies_for_this_platform);
-
-    debug!(
-        "Found {} available rubies for platform {}/{}",
-        available_rubies.len(),
-        desired_os,
-        desired_arch
-    );
+    for ruby in latest_patch_version(rubies_for_this_platform) {
+        available_rubies.push(ruby)
+    }
 
     // Merge in installed rubies, replacing any available ones with the installed versions
     for ruby in available_rubies {
@@ -380,12 +133,12 @@ fn latest_patch_version(rubies_for_this_platform: Vec<Ruby>) -> Vec<Ruby> {
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
     struct NonPatchRelease {
         engine: rv_ruby::engine::RubyEngine,
-        major: Option<rv_ruby::request::VersionPart>,
-        minor: Option<rv_ruby::request::VersionPart>,
+        major: rv_ruby::request::VersionPart,
+        minor: rv_ruby::request::VersionPart,
     }
 
-    impl From<RubyRequest> for NonPatchRelease {
-        fn from(value: RubyRequest) -> Self {
+    impl From<RubyVersion> for NonPatchRelease {
+        fn from(value: RubyVersion) -> Self {
             Self {
                 engine: value.engine,
                 major: value.major,
@@ -395,6 +148,11 @@ fn latest_patch_version(rubies_for_this_platform: Vec<Ruby>) -> Vec<Ruby> {
     }
     let mut available_rubies: BTreeMap<NonPatchRelease, Ruby> = BTreeMap::new();
     for ruby in rubies_for_this_platform {
+        // Skip 3.5 series since they only include pre-releases
+        if ruby.version.major == 3 && ruby.version.minor == 5 {
+            continue;
+        }
+
         let key = NonPatchRelease::from(ruby.version.clone());
         let skip = available_rubies
             .get(&key)
@@ -445,40 +203,34 @@ fn format_ruby_entry(entry: &JsonRubyEntry, width: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_fs::TempDir;
     use camino::Utf8PathBuf;
-    use rv_ruby::version::RubyVersion;
+    use indexmap::indexset;
+    use rv_ruby::{request::Source, version::RubyVersion};
     use std::str::FromStr as _;
 
-    #[test]
-    fn test_parse_cache_header() {
-        let input_header = "Cache-Control: max-age=3600, must-revalidate";
-        let actual = parse_max_age(input_header).unwrap();
-        let expected = Duration::from_secs(3600);
-        assert_eq!(actual, expected);
-    }
+    fn test_config() -> Result<Config> {
+        let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
+        let ruby_dir = root.join("opt/rubies");
+        fs_err::create_dir_all(&ruby_dir)?;
+        let current_dir = root.join("project");
+        fs_err::create_dir_all(&current_dir)?;
 
-    #[test]
-    fn test_deser_release() {
-        let jtxt = std::fs::read_to_string("../../testdata/api.json").unwrap();
-        let release: Release = serde_json::from_str(&jtxt).unwrap();
-        let actual = ruby_from_asset(&release.assets[0]).unwrap();
-        let expected = Ruby {
-            key: "ruby-3.3.0-linux-aarch64".to_owned(),
-            version: RubyRequest {
-                engine: rv_ruby::engine::RubyEngine::Ruby,
-                major: Some(3),
-                minor: Some(3),
-                patch: Some(0),
-                tiny: None,
-                prerelease: None,
-            },
-            path: "https://github.com/spinel-coop/rv-ruby/releases/download/20251006/ruby-3.3.0.arm64_linux.tar.gz".into(),
-            symlink: None,
-            arch: "aarch64".to_owned(),
-            os: "linux".to_owned(),
-            gem_root: None,
+        let config = Config {
+            ruby_dirs: indexset![ruby_dir],
+            current_exe: root.join("bin").join("rv"),
+            requested_ruby: Some(("3.5.0".parse().unwrap(), Source::Other)),
+            current_dir,
+            cache: rv_cache::Cache::temp().unwrap(),
+            root,
         };
-        assert_eq!(actual, expected);
+
+        Ok(config)
+    }
+    #[tokio::test]
+    async fn test_list() {
+        let config = test_config().unwrap();
+        list(&config, OutputFormat::Text, false).await.unwrap();
     }
 
     fn ruby(version: &str) -> Ruby {
@@ -501,35 +253,40 @@ mod tests {
     fn test_rubies_to_show() {
         struct Test {
             test_name: &'static str,
-            release: Release,
+            rubies_for_this_platform: Vec<Ruby>,
             installed_rubies: Vec<Ruby>,
             active_ruby: Option<Ruby>,
-            current_platform_arch: &'static str,
             expected: Vec<JsonRubyEntry>,
-        }
-
-        fn u(version: &str) -> String {
-            format!(
-                "https://github.com/spinel-coop/rv-ruby/releases/download/latest/ruby-{version}.arm64_linux.tar.gz"
-            )
         }
 
         let tests = vec![
             // Nothing weird should happen if there's no locally-installed versions.
             Test {
                 test_name: "no local installs",
-                release: Release {
-                    name: "latest".to_owned(),
-                    assets: vec![Asset {
-                        name: "ruby-3.3.0.arm64_sonoma.tar.gz".to_owned(),
-                        browser_download_url: u("3.3.0"),
-                    }],
-                },
+                rubies_for_this_platform: vec![ruby("ruby-3.3.0"), ruby("ruby-4.0.0")],
                 installed_rubies: Vec::new(),
                 active_ruby: None,
-                current_platform_arch: "arm64_sonoma",
+                expected: vec![
+                    JsonRubyEntry {
+                        details: ruby("ruby-3.3.0"),
+                        installed: false,
+                        active: false,
+                    },
+                    JsonRubyEntry {
+                        details: ruby("ruby-4.0.0"),
+                        installed: false,
+                        active: false,
+                    },
+                ],
+            },
+            // Ruby 3.5 is skipped
+            Test {
+                test_name: "Ruby 3.5 is skipped",
+                rubies_for_this_platform: vec![ruby("ruby-3.5.0-preview1"), ruby("ruby-4.0.0")],
+                installed_rubies: Vec::new(),
+                active_ruby: None,
                 expected: vec![JsonRubyEntry {
-                    details: ruby("ruby-3.3.0"),
+                    details: ruby("ruby-4.0.0"),
                     installed: false,
                     active: false,
                 }],
@@ -537,13 +294,9 @@ mod tests {
             // Nothing weird should happen if there's no remotely-available versions.
             Test {
                 test_name: "only local installs, no remote available",
-                release: Release {
-                    name: "latest".to_owned(),
-                    assets: Vec::new(),
-                },
+                rubies_for_this_platform: Vec::new(),
                 installed_rubies: vec![ruby("ruby-3.3.0")],
                 active_ruby: None,
-                current_platform_arch: "arm64_sonoma",
                 expected: vec![JsonRubyEntry {
                     details: ruby("ruby-3.3.0"),
                     installed: false,
@@ -553,16 +306,9 @@ mod tests {
             // Locally-installed and remotely-available both get merged together.
             Test {
                 test_name: "both local and remote, different minor versions",
-                release: Release {
-                    name: "latest".to_owned(),
-                    assets: vec![Asset {
-                        name: "ruby-3.4.0.arm64_sonoma.tar.gz".to_owned(),
-                        browser_download_url: u("3.4.0"),
-                    }],
-                },
+                rubies_for_this_platform: vec![ruby("ruby-3.4.0")],
                 installed_rubies: vec![ruby("ruby-3.3.0")],
                 active_ruby: None,
-                current_platform_arch: "arm64_sonoma",
                 expected: vec![
                     JsonRubyEntry {
                         details: ruby("ruby-3.3.0"),
@@ -581,16 +327,9 @@ mod tests {
             // on remote.
             Test {
                 test_name: "both local and remote, different patch versions",
-                release: Release {
-                    name: "latest".to_owned(),
-                    assets: vec![Asset {
-                        name: "ruby-3.4.0.arm64_sonoma.tar.gz".to_owned(),
-                        browser_download_url: u("3.4.0"),
-                    }],
-                },
+                rubies_for_this_platform: vec![ruby("ruby-3.4.0")],
                 installed_rubies: vec![ruby("ruby-3.4.1")],
                 active_ruby: None,
-                current_platform_arch: "arm64_sonoma",
                 expected: vec![
                     JsonRubyEntry {
                         details: ruby("ruby-3.4.0"),
@@ -607,22 +346,9 @@ mod tests {
             // Only the remote with the latest version should be shown.
             Test {
                 test_name: "both local and remote, different patch versions",
-                release: Release {
-                    name: "latest".to_owned(),
-                    assets: vec![
-                        Asset {
-                            name: "ruby-3.4.0.arm64_sonoma.tar.gz".to_owned(),
-                            browser_download_url: u("3.4.0"),
-                        },
-                        Asset {
-                            name: "ruby-3.4.1.arm64_sonoma.tar.gz".to_owned(),
-                            browser_download_url: u("3.4.1"),
-                        },
-                    ],
-                },
+                rubies_for_this_platform: vec![ruby("ruby-3.4.0"), ruby("ruby-3.4.1")],
                 installed_rubies: vec![ruby("ruby-3.3.1")],
                 active_ruby: None,
-                current_platform_arch: "arm64_sonoma",
                 expected: vec![
                     JsonRubyEntry {
                         details: ruby("ruby-3.3.1"),
@@ -640,19 +366,13 @@ mod tests {
 
         for Test {
             test_name,
-            release,
+            rubies_for_this_platform,
             installed_rubies,
             active_ruby,
-            current_platform_arch,
             expected,
         } in tests
         {
-            let actual = rubies_to_show(
-                release,
-                installed_rubies,
-                active_ruby,
-                current_platform_arch,
-            );
+            let actual = rubies_to_show(rubies_for_this_platform, installed_rubies, active_ruby);
             pretty_assertions::assert_eq!(actual, expected, "failed test case '{test_name}'");
         }
     }
@@ -684,6 +404,15 @@ mod tests {
                     ruby("ruby-3.2.0-preview3"),
                 ],
                 expected: vec![ruby("ruby-3.2.0-rc1")],
+            },
+            Test {
+                name: "prefers_stable_release_over_any_prerelease",
+                input: vec![
+                    ruby("ruby-3.2.0-preview1"),
+                    ruby("ruby-3.2.0"),
+                    ruby("ruby-3.2.0-preview3"),
+                ],
+                expected: vec![ruby("ruby-3.2.0")],
             },
             Test {
                 name: "respects_engine_boundaries",

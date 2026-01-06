@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use indexmap::IndexMap;
-use miette::{Diagnostic, Result, SourceSpan};
+use miette::{Result, SourceSpan};
 use saphyr::Scalar;
 use saphyr_parser::{Event, Parser as SaphyrParser, Span, StrInput};
 use winnow::combinator::*;
@@ -9,93 +11,10 @@ use winnow::{ModalResult, Parser};
 
 use rv_gem_types::{Dependency, DependencyType, Platform, Requirement, Specification, Version};
 
-#[derive(Debug, thiserror::Error, Diagnostic)]
-pub enum DeserializationError {
-    #[error("YAML parsing error")]
-    #[diagnostic(
-        code(yaml::de::parse),
-        help("Check YAML syntax - this typically indicates malformed YAML structure")
-    )]
-    Parse {
-        #[source]
-        source: saphyr_parser::ScanError,
-        #[label("{source}")]
-        bad_bit: SourceSpan,
-    },
-    #[error("Expected {expected}, found {found}")]
-    #[diagnostic(
-        code(yaml::de::expected_event),
-        help("Check YAML structure for correct event types")
-    )]
-    ExpectedEvent {
-        expected: String,
-        found: String,
+pub use error::DeserializationError;
 
-        #[label("expected {expected}")]
-        bad_bit: SourceSpan,
-    },
-    #[error("Unexpected tag: expected {expected}, found {found}")]
-    #[diagnostic(
-        code(yaml::de::unexpected_tag),
-        help("YAML tags must match the expected Ruby object types")
-    )]
-    UnexpectedTag {
-        expected: String,
-        found: String,
-
-        #[label("unexpected tag here")]
-        bad_bit: SourceSpan,
-    },
-    #[error("Unexpected end of input: {message}")]
-    #[diagnostic(
-        code(yaml::de::unexpected_end),
-        help("YAML document ended unexpectedly")
-    )]
-    UnexpectedEnd {
-        message: String,
-
-        #[label("unexpected end here")]
-        bad_bit: SourceSpan,
-    },
-    #[error("Missing required field: {field}")]
-    #[diagnostic(
-        code(yaml::de::missing_field),
-        help("All Gem::Specification objects must have 'name' and 'version' fields")
-    )]
-    MissingField {
-        field: String,
-
-        #[label("field '{field}' is required but missing")]
-        bad_bit: SourceSpan,
-    },
-    #[error("Invalid type for field {field}: expected {expected}")]
-    #[diagnostic(
-        code(yaml::de::invalid_type),
-        help("Check the YAML field type matches the expected Ruby object structure")
-    )]
-    InvalidType {
-        field: String,
-        expected: String,
-
-        #[label("expected {expected}")]
-        bad_bit: SourceSpan,
-    },
-    #[error("Dependency error: {0}")]
-    #[diagnostic(code(yaml::de::dependency))]
-    Dependency(#[from] rv_gem_types::DependencyError),
-    #[error("Version error: {0}")]
-    #[diagnostic(code(yaml::de::version))]
-    Version(#[from] rv_gem_types::VersionError),
-    #[error("Requirement error: {0}")]
-    #[diagnostic(code(yaml::de::requirement))]
-    Requirement(#[from] rv_gem_types::requirement::RequirementError),
-    #[error("Specification error: {0}")]
-    #[diagnostic(code(yaml::de::specification))]
-    Specification(#[from] rv_gem_types::SpecificationError),
-    #[error("Platform error: {0}")]
-    #[diagnostic(code(yaml::de::platform))]
-    Platform(#[from] rv_gem_types::platform::PlatformError),
-}
+mod error;
+type AnchorMap = HashMap<usize, String>;
 
 // Helper function to parse YAML into events
 fn parse_yaml_events<'a>(source: &'a str) -> Result<Vec<(Event<'a>, Span)>> {
@@ -167,9 +86,9 @@ fn mapping_end<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<(), Conte
     .parse_next(input)
 }
 
-fn sequence_start<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<(), ContextError> {
+fn sequence_start<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<usize, ContextError> {
     any.verify_map(|(event, _span)| match event {
-        Event::SequenceStart(_, _) => Some(()),
+        Event::SequenceStart(anchor_id, _) => Some(anchor_id),
         _ => None,
     })
     .parse_next(input)
@@ -217,13 +136,13 @@ fn document_end<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<(), Cont
 
 fn tagged_mapping_start<'a>(
     expected_tag: &'static str,
-) -> impl winnow::Parser<&'a [(Event<'a>, Span)], (), ContextError> + 'a {
+) -> impl winnow::Parser<&'a [(Event<'a>, Span)], usize, ContextError> + 'a {
     move |input: &mut &'a [(Event<'a>, Span)]| {
         any.verify_map(|(event, _span)| match event {
-            Event::MappingStart(_, Some(tag))
+            Event::MappingStart(anchor_id, Some(tag))
                 if tag.handle == "!" && tag.suffix == expected_tag =>
             {
-                Some(())
+                Some(anchor_id)
             }
             _ => None,
         })
@@ -386,18 +305,21 @@ fn parse_metadata_as_map<'a>(
 }
 
 fn parse_requirement<'a>(
+    anchors: &mut AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Requirement, ContextError> {
-    delimited(
+    alt([
         tagged_mapping_start("ruby/object:Gem::Requirement"),
-        parse_requirement_fields,
-        mapping_end,
-    )
-    .context(StrContext::Label("Gem::Requirement object"))
-    .parse_next(input)
+        tagged_mapping_start("ruby/object:Gem::Version::Requirement"),
+    ])
+    .parse_next(input)?;
+    let fields = parse_requirement_fields(anchors, input)?;
+    mapping_end.parse_next(input)?;
+    Ok(fields)
 }
 
 fn parse_requirement_fields<'a>(
+    anchors: &mut AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Requirement, ContextError> {
     let mut constraints: Option<Vec<String>> = None;
@@ -421,15 +343,7 @@ fn parse_requirement_fields<'a>(
             .parse_next(input)?;
         match key.as_str() {
             "requirements" => {
-                constraints = Some(
-                    delimited(
-                        sequence_start,
-                        repeat(0.., parse_constraint_pair),
-                        sequence_end,
-                    )
-                    .context(StrContext::Label("requirements array"))
-                    .parse_next(input)?,
-                );
+                constraints = Some(parse_constraint_array(anchors, input)?);
             }
             "none" => {
                 // Skip the 'none' field - it's legacy metadata
@@ -446,31 +360,70 @@ fn parse_requirement_fields<'a>(
     Requirement::new(constraints).map_err(|_e| ErrMode::Cut(ContextError::new()))
 }
 
+fn parse_constraint_array<'a>(
+    anchors: &mut AnchorMap,
+    input: &mut &'a [(Event<'a>, Span)],
+) -> ModalResult<Vec<String>, ContextError> {
+    sequence_start.parse_next(input)?;
+    let mut constraints = Vec::new();
+    loop {
+        match peek(any::<_, ContextError>).parse_next(input) {
+            Ok((Event::SequenceEnd, _)) => break,
+            Ok(_) => {
+                let context = StrContext::Label("constraint array");
+                constraints.push(parse_constraint_pair(input, anchors, context)?);
+            }
+            Err(_) => break,
+        }
+    }
+    sequence_end.parse_next(input)?;
+    Ok(constraints)
+}
+
 fn parse_constraint_pair<'a>(
     input: &mut &'a [(Event<'a>, Span)],
+    anchors: &mut AnchorMap,
+    context: StrContext,
 ) -> ModalResult<String, ContextError> {
-    // Parse a sequence like [">=", version_object]
-    delimited(
-        sequence_start,
-        (string, parse_version).map(|(op, version)| format!("{op} {version}")),
-        sequence_end,
-    )
-    .parse_next(input)
+    // Check what kind of event we have
+    match peek(any::<_, ContextError>)
+        .context(context)
+        .parse_next(input)
+    {
+        Ok((Event::Alias(anchor_id), _)) => {
+            // Consume the alias event
+            let _ = any::<_, ContextError>.parse_next(input)?;
+            match anchors.get(&anchor_id) {
+                Some(source) => Ok(source.to_string()),
+                _ => Err(ErrMode::Backtrack(ContextError::new())),
+            }
+        }
+        Ok((Event::SequenceStart(_, _), _)) => {
+            // Parse a sequence like [">=", "2.0"]
+            let anchor_id = sequence_start.parse_next(input)?;
+            let constraint = (string, parse_version)
+                .map(|(op, version)| format!("{op} {version}"))
+                .parse_next(input)?;
+            anchors.insert(anchor_id, constraint.to_string());
+            sequence_end.parse_next(input)?;
+            Ok(constraint)
+        }
+        _ => Err(ErrMode::Backtrack(ContextError::new())),
+    }
 }
 
 fn parse_dependency<'a>(
+    anchors: &mut AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Dependency, ContextError> {
-    delimited(
-        tagged_mapping_start("ruby/object:Gem::Dependency"),
-        parse_dependency_fields.context(StrContext::Label("dependency fields")),
-        mapping_end,
-    )
-    .context(StrContext::Label("Gem::Dependency object"))
-    .parse_next(input)
+    tagged_mapping_start("ruby/object:Gem::Dependency").parse_next(input)?;
+    let fields = parse_dependency_fields(anchors, input);
+    mapping_end.parse_next(input)?;
+    fields
 }
 
 fn parse_dependency_fields<'a>(
+    anchors: &mut AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Dependency, ContextError> {
     let mut name: Option<String> = None;
@@ -495,7 +448,7 @@ fn parse_dependency_fields<'a>(
                 name = Some(string.parse_next(input)?);
             }
             "requirement" => {
-                requirement = Some(parse_requirement.parse_next(input)?);
+                requirement = Some(parse_requirement(anchors, input)?);
             }
             // Handle older gem specification field names
             "version_requirements" => {
@@ -504,7 +457,7 @@ fn parse_dependency_fields<'a>(
                         skip_value.parse_next(input)?;
                         Some(r)
                     }
-                    None => Some(parse_requirement.parse_next(input)?),
+                    None => Some(parse_requirement(anchors, input)?),
                 };
             }
             "type" => {
@@ -537,14 +490,23 @@ fn parse_dependency_fields<'a>(
 }
 
 fn parse_dependencies<'a>(
+    anchors: &mut AnchorMap,
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Vec<Dependency>, ContextError> {
-    delimited(sequence_start, repeat(0.., parse_dependency), sequence_end).parse_next(input)
+    let _ = sequence_start.parse_next(input)?;
+    let mut deps = Vec::new();
+    while let Ok(dep) = parse_dependency(anchors, input) {
+        deps.push(dep);
+    }
+    sequence_end.parse_next(input)?;
+    Ok(deps)
 }
 
 fn parse_gem_specification_winnow<'a>(
     input: &mut &'a [(Event<'a>, Span)],
 ) -> ModalResult<Specification, ContextError> {
+    let anchors: &mut AnchorMap = &mut Default::default();
+
     // Skip stream/document start events
     let _ = opt(stream_start).parse_next(input)?;
     let _ = opt(document_start).parse_next(input)?;
@@ -627,7 +589,7 @@ fn parse_gem_specification_winnow<'a>(
                 authors = parse_optional_string_array.parse_next(input)?;
             }
             "dependencies" => {
-                dependencies = parse_dependencies.parse_next(input)?;
+                dependencies = parse_dependencies(anchors, input)?;
             }
             "cert_chain" => {
                 cert_chain = parse_string_array.parse_next(input)?;
@@ -660,10 +622,10 @@ fn parse_gem_specification_winnow<'a>(
                 test_files = parse_string_array.parse_next(input)?;
             }
             "required_ruby_version" => {
-                required_ruby_version = Some(parse_requirement.parse_next(input)?);
+                required_ruby_version = Some(parse_requirement(anchors, input)?);
             }
             "required_rubygems_version" => {
-                required_rubygems_version = Some(parse_requirement.parse_next(input)?);
+                required_rubygems_version = Some(parse_requirement(anchors, input)?);
             }
             "metadata" => {
                 metadata = parse_metadata_as_map.parse_next(input)?;
@@ -843,16 +805,32 @@ fn get_error_details(
             Event::StreamEnd => "stream end".to_string(),
             Event::DocumentStart(_) => "document start".to_string(),
             Event::DocumentEnd => "document end".to_string(),
-            Event::MappingStart(_, Some(tag)) => format!("mapping start with tag '{}'", tag.suffix),
+            Event::MappingStart(anchor_id, Some(tag)) => {
+                if *anchor_id > 0 {
+                    format!(
+                        "mapping start with tag '{}' and anchor '{}'",
+                        tag.suffix, anchor_id
+                    )
+                } else {
+                    format!("mapping start with tag '{}'", tag.suffix)
+                }
+            }
             Event::MappingStart(_, None) => "mapping start".to_string(),
             Event::MappingEnd => "mapping end".to_string(),
-            Event::SequenceStart(_, Some(tag)) => {
-                format!("sequence start with tag '{}'", tag.suffix)
+            Event::SequenceStart(anchor_id, Some(tag)) => {
+                if *anchor_id > 0 {
+                    format!(
+                        "sequence start with tag '{}' and anchor '{}'",
+                        tag.suffix, anchor_id
+                    )
+                } else {
+                    format!("sequence start with tag '{}'", tag.suffix)
+                }
             }
             Event::SequenceStart(_, None) => "sequence start".to_string(),
             Event::SequenceEnd => "sequence end".to_string(),
             Event::Scalar(value, _, _, _) => format!("scalar value '{value}'"),
-            Event::Alias(_) => "alias".to_string(),
+            Event::Alias(value) => format!("alias id '{value}'"),
             Event::Nothing => "nothing".to_string(),
         };
         (found_description, start_idx, length)

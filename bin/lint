@@ -2,5 +2,11 @@
 set -euo pipefail
 set -x
 
-cargo fmt --all -- --check
+if [ $# -gt 0 ] && [ "$1" = "--fix" ]
+then
+  cargo fmt --all
+else
+  cargo fmt --all -- --check
+fi
+
 cargo clippy --all-targets --all-features "$@" -- -D warnings

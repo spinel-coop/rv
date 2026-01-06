@@ -1,7 +1,14 @@
 use camino::Utf8PathBuf;
 use camino_tempfile_ext::camino_tempfile::Utf8TempDir;
 use mockito::Mock;
+use rexpect::{reader::Options, session::PtyReplSession};
 use std::{collections::HashMap, process::Command};
+
+pub struct Shell {
+    pub name: &'static str,
+    pub startup_flag: &'static str,
+    pub prompt_setter: &'static str,
+}
 
 pub struct RvTest {
     pub temp_dir: Utf8TempDir,
@@ -24,7 +31,7 @@ impl RvTest {
         };
 
         test.env
-            .insert("RV_ROOT_DIR".into(), test.temp_dir.path().as_str().into());
+            .insert("RV_ROOT_DIR".into(), test.temp_root().as_str().into());
         // Set consistent arch/os for cross-platform testing
         test.env
             .insert("RV_TEST_PLATFORM".into(), "aarch64-apple-darwin".into()); // For mocking current_platform::CURRENT_PLATFORM
@@ -32,11 +39,24 @@ impl RvTest {
         test.env.insert("RV_TEST_OS".into(), "macos".into());
 
         test.env.insert("RV_TEST_EXE".into(), "/tmp/bin/rv".into());
-        test.env.insert("HOME".into(), "/tmp/home".into());
+        test.env.insert("HOME".into(), test.temp_home().into());
+        test.env
+            .insert("BUNDLE_PATH".into(), test.cwd.join("app").into());
         test.env.insert("RV_DISABLE_INDICATIF".into(), "1".into()); // Disable indicatif progress bars in tests due to a bug in tracing-indicatif
 
         // Disable network requests by default
-        test.env.insert("RV_RELEASES_URL".into(), test.server.url());
+        test.env.insert(
+            "RV_LIST_URL".into(),
+            format!(
+                "{}/{}",
+                test.server.url(),
+                "repos/spinel-coop/rv-ruby/releases/latest"
+            ),
+        );
+        test.env.insert(
+            "RV_INSTALL_URL".into(),
+            format!("{}/{}", test.server.url(), "latest/download"),
+        );
 
         // Disable caching for tests by default
         test.env.insert("RV_NO_CACHE".into(), "true".into());
@@ -44,16 +64,60 @@ impl RvTest {
         test
     }
 
+    pub fn temp_root(&self) -> Utf8PathBuf {
+        self.temp_dir.path().canonicalize_utf8().unwrap()
+    }
+
+    pub fn temp_home(&self) -> Utf8PathBuf {
+        self.temp_root().join("home")
+    }
+
     pub fn rv(&self, args: &[&str]) -> RvOutput {
         let mut cmd = self.rv_command();
         cmd.args(args);
 
         let output = cmd.output().expect("Failed to execute rv command");
-        RvOutput::new(self.temp_dir.path().as_str(), output)
+        RvOutput::new(self.temp_root().as_str(), output)
     }
 
     pub fn rv_command(&self) -> Command {
-        let mut cmd = Command::new(env!("CARGO_BIN_EXE_rv"));
+        self.command(env!("CARGO_BIN_EXE_rv"))
+    }
+
+    pub fn make_session(&self, shell: Shell) -> Result<PtyReplSession, Box<dyn std::error::Error>> {
+        let mut cmd = self.command(shell.name);
+        cmd.arg(shell.startup_flag);
+        cmd.env("TERM", "xterm-256color").env_remove("RV_TEST_EXE");
+
+        let pty_session = rexpect::spawn_with_options(
+            cmd,
+            Options {
+                timeout_ms: Some(4000),
+                strip_ansi_escape_codes: true,
+            },
+        )?;
+        let mut session = PtyReplSession {
+            prompt: "PEXPECT>".to_owned(),
+            pty_session,
+            quit_command: Some("builtin exit".to_owned()),
+            echo_on: false,
+        };
+
+        session.send_line(shell.prompt_setter)?;
+        session.wait_for_prompt()?;
+
+        session.send_line(&format!(
+            "eval \"$({} shell init {})\"",
+            self.rv_command().get_program().display(),
+            shell.name,
+        ))?;
+        session.wait_for_prompt()?;
+
+        Ok(session)
+    }
+
+    pub fn command<S: AsRef<std::ffi::OsStr>>(&self, program: S) -> Command {
+        let mut cmd = Command::new(program);
         cmd.current_dir(&self.cwd);
         cmd.env_clear().envs(&self.env);
         cmd
@@ -61,7 +125,20 @@ impl RvTest {
 
     /// Mocks the /releases API endpoint. Returns the mock handle
     /// so that tests can optionally assert it was called.
-    pub fn mock_releases(&mut self, body: &str) -> Mock {
+    pub fn mock_releases(&mut self, version: &str) -> Mock {
+        use indoc::formatdoc;
+
+        let body = formatdoc!(
+            r#"
+            {{
+                "name": "{version}",
+                "assets": [{{
+                    "name": "ruby-{version}.arm64_sonoma.tar.gz",
+                    "browser_download_url": "http://..."
+                }}]
+            }}"#
+        );
+
         self.server
             .mock("GET", "/repos/spinel-coop/rv-ruby/releases/latest")
             .with_status(200)
@@ -80,9 +157,14 @@ impl RvTest {
             .with_body(content)
     }
 
+    pub fn mock_gem_download(&mut self, filename: &str, content: &[u8]) -> Mock {
+        let path = format!("gems/{}", filename);
+        self.mock_tarball_download(&path, content)
+    }
+
     /// Mock a tarball on disk for testing
     pub fn mock_tarball_on_disk(&mut self, filename: &str, content: &[u8]) -> Utf8PathBuf {
-        let temp_dir = self.temp_dir.path().join("tmp");
+        let temp_dir = self.temp_root().join("tmp");
         std::fs::create_dir_all(&temp_dir).expect("Failed to create TMP directory");
         let full_path = temp_dir.join(filename);
         std::fs::write(&full_path, content).expect("Failed to write path");
@@ -96,11 +178,14 @@ impl RvTest {
     }
 
     pub fn create_ruby_dir(&self, name: &str) -> Utf8PathBuf {
-        let ruby_dir = self.temp_dir.path().join("opt").join("rubies").join(name);
+        let ruby_dir = self.temp_home().join(".local/share/rv/rubies").join(name);
         std::fs::create_dir_all(&ruby_dir).expect("Failed to create ruby directory");
 
         let bin_dir = ruby_dir.join("bin");
         std::fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
+
+        let man_dir = ruby_dir.join("share/man");
+        std::fs::create_dir_all(&man_dir).expect("Failed to create man directory");
 
         // Extract Ruby information from directory name
         // Extract version from directory name: ruby-3.1.4 -> 3.1.4
@@ -143,8 +228,29 @@ echo ""
 
         ruby_dir
     }
+
+    pub fn use_gemfile(&self, path: &str) {
+        let gemfile = fs_err::read_to_string(path).unwrap();
+        let _ = fs_err::write(self.cwd.join("Gemfile"), &gemfile);
+    }
+
+    pub fn use_lockfile(&self, path: &str) {
+        let lockfile = fs_err::read_to_string(path).unwrap();
+        let _ = fs_err::write(self.cwd.join("Gemfile.lock"), &lockfile);
+    }
+
+    pub fn replace_source(&self, from: &str, to: &str) {
+        let gemfile_path = self.cwd.join("Gemfile");
+        let gemfile = fs_err::read_to_string(&gemfile_path).unwrap();
+        let _ = fs_err::write(gemfile_path, gemfile.replace(from, to));
+
+        let lockfile_path = self.cwd.join("Gemfile.lock");
+        let lockfile = fs_err::read_to_string(&lockfile_path).unwrap();
+        let _ = fs_err::write(lockfile_path, lockfile.replace(from, to));
+    }
 }
 
+#[derive(Debug)]
 pub struct RvOutput {
     pub output: std::process::Output,
     pub test_root: String,
@@ -204,12 +310,7 @@ impl RvOutput {
         }
 
         // Remove test root from paths
-        let mut full_test_root = self.test_root.clone();
-        // On macOS, the test root might be prefixed with "/private"
-        if cfg!(target_os = "macos") {
-            full_test_root.insert_str(0, "/private");
-        }
-        output.replace(&full_test_root, "")
+        output.replace(&self.test_root, "/tmp")
     }
 
     /// Normalize stderr for cross-platform snapshot testing
@@ -222,6 +323,6 @@ impl RvOutput {
             output = output.replace('\\', "/");
         }
 
-        output.to_string()
+        output
     }
 }

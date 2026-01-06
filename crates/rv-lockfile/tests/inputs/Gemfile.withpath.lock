@@ -4,7 +4,7 @@ PATH
     pathgem (0.1.0)
 
 GEM
-  remote: https://example.com
+  remote: https://gem.coop
   specs:
     actioncable (7.2.2.1)
 

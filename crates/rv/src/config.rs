@@ -3,20 +3,20 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8PathBuf;
+use indexmap::IndexSet;
 use tracing::{debug, instrument};
 
 use rv_ruby::{
     Ruby,
-    request::{RequestError, RubyRequest},
+    request::{RequestError, RubyRequest, Source},
 };
 
 mod ruby_cache;
+mod ruby_fetcher;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
-    #[error("No project was found in the parents of {}", current_dir)]
-    NoProjectDir { current_dir: Utf8PathBuf },
     #[error("Ruby cache miss or invalid cache for {}", ruby_path)]
     RubyCacheMiss { ruby_path: Utf8PathBuf },
     #[error(transparent)]
@@ -33,13 +33,12 @@ type Result<T> = miette::Result<T, Error>;
 
 #[derive(Debug)]
 pub struct Config {
-    pub ruby_dirs: Vec<Utf8PathBuf>,
-    pub gemfile: Option<Utf8PathBuf>,
+    pub ruby_dirs: IndexSet<Utf8PathBuf>,
     pub root: Utf8PathBuf,
     pub current_dir: Utf8PathBuf,
-    pub project_dir: Option<Utf8PathBuf>,
     pub cache: rv_cache::Cache,
     pub current_exe: Utf8PathBuf,
+    pub requested_ruby: Option<(RubyRequest, Source)>,
 }
 
 impl Config {
@@ -48,39 +47,33 @@ impl Config {
         self.discover_rubies()
     }
 
+    pub async fn remote_rubies(&self) -> Vec<Ruby> {
+        self.discover_remote_rubies().await
+    }
+
     pub fn matching_ruby(&self, request: &RubyRequest) -> Option<Ruby> {
         let rubies = self.rubies();
-        rubies
-            .into_iter()
-            .rev()
-            .find(|ruby| request.satisfied_by(ruby))
+        request.find_match_in(rubies)
     }
 
-    pub fn project_ruby(&self) -> Option<Ruby> {
-        if let Ok(request) = self.ruby_request() {
-            self.matching_ruby(&request)
-        } else {
-            None
-        }
+    pub fn current_ruby(&self) -> Option<Ruby> {
+        self.matching_ruby(&self.ruby_request())
     }
 
-    pub fn ruby_request(&self) -> Result<RubyRequest> {
-        if let Some(project_dir) = &self.project_dir {
-            let rv_file = project_dir.join(".ruby-version");
-
-            std::fs::read_to_string(&rv_file)
-                .map_err(Error::from)
-                .and_then(|s| Ok(s.parse::<RubyRequest>()?))
+    pub fn ruby_request(&self) -> RubyRequest {
+        if let Some(request) = &self.requested_ruby {
+            request.0.clone()
         } else {
-            Ok(RubyRequest::default())
+            RubyRequest::default()
         }
     }
 }
 
-fn xdg_env_var_path() -> Option<String> {
-    let xdg_data_home = env::var("XDG_DATA_HOME").ok()?;
+fn xdg_data_path() -> String {
+    let xdg_data_home =
+        env::var("XDG_DATA_HOME").unwrap_or(shellexpand::tilde("~/.local/share").into());
     let path_buf = Path::new(&xdg_data_home).join("rv/rubies");
-    Some(path_buf.to_str()?.to_owned())
+    path_buf.to_str().unwrap().to_owned()
 }
 
 struct PathInfo<'a> {
@@ -99,49 +92,74 @@ impl<'a> PathInfo<'a> {
 }
 
 /// Default Ruby installation directories
-pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
+pub fn default_ruby_dirs() -> Vec<Utf8PathBuf> {
     let mut paths: Vec<PathInfo> = vec![];
-    let xdg_path = xdg_env_var_path();
-    if let Some(xdg_path) = &xdg_path {
-        paths.push(PathInfo::new(xdg_path, true));
-    }
-    let default_path = shellexpand::tilde("~/.data/rv/rubies");
-    paths.push(PathInfo::new(default_path.as_ref(), true));
+    let xdg_path = xdg_data_path();
+    paths.push(PathInfo::new(&xdg_path, true));
 
-    // TODO: The paths below are never used, even if they exist (and the ones above don't).
+    let legacy_default_data_path = shellexpand::tilde("~/.data/rv/rubies");
     let legacy_default_path = shellexpand::tilde("~/.rubies");
+
+    paths.push(PathInfo::new(legacy_default_data_path.as_ref(), false));
     paths.push(PathInfo::new(legacy_default_path.as_ref(), false));
     paths.push(PathInfo::new("/opt/rubies", false));
     paths.push(PathInfo::new("/usr/local/rubies", false));
+    paths.push(PathInfo::new("/opt/homebrew/Cellar/ruby", false));
 
     paths
         .into_iter()
         .filter_map(|path_info| {
-            let joinable_path = path_info.path.strip_prefix("/").unwrap();
-            let joined_path = root.join(joinable_path);
+            let path = Utf8PathBuf::from(path_info.path);
+            let canonical_path = path.canonicalize_utf8();
             if path_info.always_include {
-                Some(joined_path)
+                Some(canonical_path.unwrap_or(path))
             } else {
-                joined_path.canonicalize_utf8().ok()
+                canonical_path.ok()
             }
         })
         .collect()
 }
 
-pub fn find_project_dir(current_dir: Utf8PathBuf, root: Utf8PathBuf) -> Option<Utf8PathBuf> {
+pub fn find_requested_ruby(
+    current_dir: Utf8PathBuf,
+    root: Utf8PathBuf,
+) -> Result<Option<(RubyRequest, Source)>> {
     debug!("Searching for project directory in {}", current_dir);
-    let mut project_dir = current_dir.clone();
+    let mut project_dir = current_dir;
 
     loop {
         let ruby_version = project_dir.join(".ruby-version");
         if ruby_version.exists() {
             debug!("Found project directory {}", project_dir);
-            return Some(project_dir);
+            let ruby_version_string = std::fs::read_to_string(&ruby_version)?;
+            return Ok(Some((
+                ruby_version_string.parse()?,
+                Source::DotRubyVersion(ruby_version),
+            )));
+        }
+
+        let tools_versions = project_dir.join(".tool-versions");
+        if tools_versions.exists() {
+            let tools_versions_string = std::fs::read_to_string(&tools_versions)?;
+            let mut tools_version = None;
+
+            for line in tools_versions_string.lines() {
+                if line.trim_start().starts_with("ruby ") {
+                    tools_version = line.trim_start().strip_prefix("ruby ")
+                }
+            }
+
+            if let Some(version) = tools_version {
+                return Ok(Some((
+                    version.parse()?,
+                    Source::DotToolVersions(tools_versions),
+                )));
+            }
         }
 
         if project_dir == root {
             debug!("Reached root {} without finding a project directory", root);
-            return None;
+            return Ok(None);
         }
 
         if let Some(parent_dir) = project_dir.parent() {
@@ -151,12 +169,12 @@ pub fn find_project_dir(current_dir: Utf8PathBuf, root: Utf8PathBuf) -> Option<U
                 "Ran out of parents of {} without finding a project directory",
                 project_dir
             );
-            return None;
+            return Ok(None);
         }
     }
 }
 
-const ENV_VARS: [&str; 7] = [
+const ENV_VARS: [&str; 8] = [
     "RUBY_ROOT",
     "RUBY_ENGINE",
     "RUBY_VERSION",
@@ -164,6 +182,7 @@ const ENV_VARS: [&str; 7] = [
     "GEM_ROOT",
     "GEM_HOME",
     "GEM_PATH",
+    "MANPATH",
 ];
 
 #[allow(clippy::type_complexity)]
@@ -215,6 +234,13 @@ pub fn env_for(ruby: Option<&Ruby>) -> Result<(Vec<&'static str>, Vec<(&'static 
         if let Some(gem_path) = gem_path.to_str() {
             insert("GEM_PATH", gem_path.into());
         }
+
+        // Set MANPATH so `man ruby`, `man irb`, etc. work correctly.
+        // A trailing colon means "also search system man directories".
+        if let Some(man_path) = ruby.man_path() {
+            let existing = std::env::var("MANPATH").unwrap_or_default();
+            insert("MANPATH", format!("{}:{}", man_path, existing));
+        }
     }
 
     let path = join_paths(paths)?;
@@ -223,4 +249,41 @@ pub fn env_for(ruby: Option<&Ruby>) -> Result<(Vec<&'static str>, Vec<(&'static 
     }
 
     Ok((unset, set))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use assert_fs::TempDir;
+    use camino::Utf8PathBuf;
+    use indexmap::indexset;
+
+    #[test]
+    fn test_config() {
+        let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
+        let ruby_dir = root.join("opt/rubies");
+        std::fs::create_dir_all(&ruby_dir).unwrap();
+        let current_dir = root.join("project");
+        std::fs::create_dir_all(&current_dir).unwrap();
+
+        Config {
+            ruby_dirs: indexset![ruby_dir],
+            current_exe: root.join("bin").join("rv"),
+            requested_ruby: Some(("3.5.0".parse().unwrap(), Source::Other)),
+            current_dir,
+            cache: rv_cache::Cache::temp().unwrap(),
+            root,
+        };
+    }
+
+    #[test]
+    fn test_default_ruby_dirs() {
+        default_ruby_dirs();
+    }
+
+    #[test]
+    fn test_find_requested_ruby() {
+        let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
+        find_requested_ruby(root.clone(), root).unwrap();
+    }
 }

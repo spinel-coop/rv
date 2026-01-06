@@ -21,3 +21,6 @@ tempfile = { workspace = true }
 [features]
 default = []
 clap = ["dep:clap"]
+
+[lints]
+workspace = true

@@ -1,0 +1,3 @@
+source "https://gem.coop"
+gem "indirect", github: "indirect/indirect"
+gem "rails", github: "rails/rails"

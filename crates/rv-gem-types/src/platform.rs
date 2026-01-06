@@ -78,7 +78,12 @@ impl Platform {
     fn parse_platform_string(platform: &str) -> Result<Platform, PlatformError> {
         let platform = platform.trim_end_matches('-');
         let parts: Vec<&str> = platform.splitn(2, '-').collect();
-        let cpu = parts[0];
+        let Some(cpu) = parts.first() else {
+            return Err(PlatformError::InvalidPlatform {
+                platform: platform.to_owned(),
+            });
+        };
+        let cpu = *cpu;
         let mut os = parts.get(1).map(|os| Cow::from(*os));
 
         let cpu = if I386_REGEX.is_match(cpu) {

@@ -1,0 +1,2 @@
+source "http://gems.example.com/"
+gem "test-gem", "1.0.0"

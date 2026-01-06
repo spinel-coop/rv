@@ -9,7 +9,6 @@ use etcetera::BaseStrategy;
 ///
 /// - `$OVERRIDE_VARIABLE` (if provided)
 /// - `$XDG_BIN_HOME`
-/// - `$XDG_DATA_HOME/../bin`
 /// - `$HOME/.local/bin`
 ///
 /// On all platforms.
@@ -21,11 +20,6 @@ pub fn user_executable_directory(override_variable: Option<&'static str>) -> Opt
         .and_then(std::env::var_os)
         .and_then(parse_path)
         .or_else(|| std::env::var_os("XDG_BIN_HOME").and_then(parse_path))
-        .or_else(|| {
-            std::env::var_os("XDG_DATA_HOME")
-                .and_then(parse_path)
-                .map(|path| path.join("../bin"))
-        })
         .or_else(|| {
             etcetera::home_dir()
                 .unwrap()

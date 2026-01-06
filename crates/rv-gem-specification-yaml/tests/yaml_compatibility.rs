@@ -1,4 +1,5 @@
 use rv_gem_specification_yaml::parse;
+use rv_gem_types::DependencyType;
 use std::fs;
 
 fn load_fixture(name: &str) -> String {
@@ -433,5 +434,78 @@ fn test_yaml_anchors_and_prerelease_field() {
         Err(e) => {
             panic!("YAML anchors and prerelease field should now parse successfully: {e}");
         }
+    }
+}
+
+#[test]
+fn test_yaml_with_aliased_dependencies() {
+    let yaml_content = load_fixture("lz4-0.3.3.gemspec");
+    let result = parse(&yaml_content);
+
+    match result {
+        Ok(spec) => {
+            assert_eq!(spec.name, "lz4-ruby");
+            assert_eq!(spec.version.to_string(), "0.3.3");
+            assert_eq!(spec.authors, vec![Some("KOMIYA Atsushi".to_string())]);
+            assert_eq!(spec.dependencies.len(), 5);
+
+            // rspec has &id003 anchor defined as ">= 0"
+            let rspec = &spec.dependencies[0];
+            assert_eq!(rspec.name, "rspec");
+            assert_eq!(rspec.dep_type, DependencyType::Development);
+            assert_eq!(rspec.requirement.to_string(), ">= 0");
+
+            // bundler uses *id003 alias, should resolve to ">= 0"
+            let bundler = &spec.dependencies[2];
+            assert_eq!(bundler.name, "bundler");
+            assert_eq!(bundler.dep_type, DependencyType::Development);
+            assert_eq!(
+                bundler.requirement.to_string(),
+                ">= 0",
+                "bundler should resolve *id003 alias to '>= 0'"
+            );
+
+            // rake-compiler uses *id003 alias, should resolve to ">= 0"
+            let rake_compiler = &spec.dependencies[4];
+            assert_eq!(rake_compiler.name, "rake-compiler");
+            assert_eq!(rake_compiler.dep_type, DependencyType::Development);
+            assert_eq!(
+                rake_compiler.requirement.to_string(),
+                ">= 0",
+                "rake-compiler should resolve *id003 alias to '>= 0'"
+            );
+
+            // Verify required_rubygems_version uses *id003 alias, should resolve to ">= 0"
+            assert_eq!(
+                spec.required_rubygems_version.to_string(),
+                ">= 0",
+                "required_rubygems_version should resolve *id003 alias to '>= 0'"
+            );
+        }
+        Err(e) => {
+            panic!("YAML anchors and prerelease field should now parse successfully: {e}");
+        }
+    }
+}
+
+#[test]
+fn test_version_requirement_class() {
+    let yaml_content = load_fixture("version_requirement_class");
+    let result = parse(&yaml_content);
+    assert!(result.is_ok());
+    if let Ok(spec) = result {
+        assert_eq!(spec.name, "rubypants");
+    }
+}
+
+#[test]
+fn test_terminal_table_1_4_5_version_requirement_class() {
+    // terminal-table-1.4.5.gem uses Gem::Version::Requirement instead of Gem::Requirement
+    let yaml_content = std::fs::read_to_string("tests/fixtures/terminal-table-1.4.5.gemspec.yaml")
+        .expect("terminal-table-1.4.5 fixture should exist");
+    let result = parse(&yaml_content);
+    assert!(result.is_ok());
+    if let Ok(spec) = result {
+        assert_eq!(spec.name, "terminal-table");
     }
 }

@@ -3,12 +3,7 @@ use insta::assert_snapshot;
 
 impl RvTest {
     pub fn ruby_list(&self, args: &[&str]) -> RvOutput {
-        let mut cmd = self.rv_command();
-        cmd.args(["ruby", "list"]);
-        cmd.args(args);
-
-        let output = cmd.output().expect("Failed to execute rv command");
-        RvOutput::new(self.temp_dir.path().as_str(), output)
+        self.rv(&[&["ruby", "list"], args].concat())
     }
 }
 
@@ -73,7 +68,7 @@ fn test_ruby_list_json_output_with_rubies() {
 fn test_ruby_list_multiple_matching_rubies() {
     let mut test = RvTest::new();
 
-    let project_dir = test.temp_dir.path().join("project");
+    let project_dir = test.temp_root().join("project");
     std::fs::create_dir_all(project_dir.as_path()).unwrap();
     std::fs::write(project_dir.join(".ruby-version"), b"3").unwrap();
     test.cwd = project_dir;
@@ -86,31 +81,33 @@ fn test_ruby_list_multiple_matching_rubies() {
     let output = test.ruby_list(&[]);
     output.assert_success();
     assert_snapshot!(output.normalized_stdout(), @r"
-      ruby-3.1.4 [installed] /opt/rubies/3.1.4/bin/ruby
-      ruby-3.1.4 [installed] /opt/rubies/ruby-3.1.4/bin/ruby
-    * ruby-3.2.0 [installed] /opt/rubies/ruby-3.2.0/bin/ruby
+      ruby-3.1.4 [installed] /tmp/home/.local/share/rv/rubies/3.1.4/bin/ruby
+      ruby-3.1.4 [installed] /tmp/home/.local/share/rv/rubies/ruby-3.1.4/bin/ruby
+    * ruby-3.2.0 [installed] /tmp/home/.local/share/rv/rubies/ruby-3.2.0/bin/ruby
     ");
 
     test.create_ruby_dir("3.2.0");
     let output = test.ruby_list(&[]);
     output.assert_success();
     assert_snapshot!(output.normalized_stdout(), @r"
-      ruby-3.1.4 [installed] /opt/rubies/3.1.4/bin/ruby
-      ruby-3.1.4 [installed] /opt/rubies/ruby-3.1.4/bin/ruby
-      ruby-3.2.0 [installed] /opt/rubies/3.2.0/bin/ruby
-    * ruby-3.2.0 [installed] /opt/rubies/ruby-3.2.0/bin/ruby
+      ruby-3.1.4 [installed] /tmp/home/.local/share/rv/rubies/3.1.4/bin/ruby
+      ruby-3.1.4 [installed] /tmp/home/.local/share/rv/rubies/ruby-3.1.4/bin/ruby
+      ruby-3.2.0 [installed] /tmp/home/.local/share/rv/rubies/3.2.0/bin/ruby
+    * ruby-3.2.0 [installed] /tmp/home/.local/share/rv/rubies/ruby-3.2.0/bin/ruby
     ");
 
-    test.env
-        .insert("PATH".into(), "/opt/rubies/3.1.4/bin".into());
+    test.env.insert(
+        "PATH".into(),
+        "/tmp/home/.local/share/rv/rubies/3.1.4/bin".into(),
+    );
 
     let output = test.ruby_list(&[]);
     output.assert_success();
     assert_snapshot!(output.normalized_stdout(), @r"
-      ruby-3.1.4 [installed] /opt/rubies/3.1.4/bin/ruby
-      ruby-3.1.4 [installed] /opt/rubies/ruby-3.1.4/bin/ruby
-      ruby-3.2.0 [installed] /opt/rubies/3.2.0/bin/ruby
-    * ruby-3.2.0 [installed] /opt/rubies/ruby-3.2.0/bin/ruby
+      ruby-3.1.4 [installed] /tmp/home/.local/share/rv/rubies/3.1.4/bin/ruby
+      ruby-3.1.4 [installed] /tmp/home/.local/share/rv/rubies/ruby-3.1.4/bin/ruby
+      ruby-3.2.0 [installed] /tmp/home/.local/share/rv/rubies/3.2.0/bin/ruby
+    * ruby-3.2.0 [installed] /tmp/home/.local/share/rv/rubies/ruby-3.2.0/bin/ruby
     ");
 }
 
@@ -119,13 +116,7 @@ fn test_ruby_list_with_available_and_installed() {
     let mut test = RvTest::new();
     test.create_ruby_dir("ruby-3.1.4");
 
-    let releases_body = r#"{
-    "name": "3.4.5",
-    "assets": [{
-        "name": "ruby-3.4.5.arm64_sonoma.tar.gz",
-        "browser_download_url": "http://..."}
-    ]}"#;
-    let mock = test.mock_releases(releases_body);
+    let mock = test.mock_releases("3.4.5");
     let output = test.rv(&["ruby", "list"]);
 
     mock.assert();
@@ -146,5 +137,14 @@ fn test_ruby_list_with_no_installed_rubies_is_empty() {
 
     // The output will be completely empty because no rubies are installed
     // and the API is disabled.
+    assert_eq!(output.normalized_stdout(), "");
+}
+
+#[test]
+fn test_ruby_list_without_updating_versions() {
+    let mut test = RvTest::new();
+    test.env.insert("RV_LIST_URL".into(), "-".into());
+    let output = test.rv(&["ruby", "list"]);
+    output.assert_success();
     assert_eq!(output.normalized_stdout(), "");
 }

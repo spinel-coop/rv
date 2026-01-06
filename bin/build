@@ -1,5 +1,9 @@
-#!/bin/bash
-set -euo pipefail
-set -x
+#!/bin/sh
+set -eu
 
-cargo build --release --all-features
+# Build rv in release mode with all features
+
+DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+cd "$DIR"
+exec cargo build --release --locked --all-features --bin rv
