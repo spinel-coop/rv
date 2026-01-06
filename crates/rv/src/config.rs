@@ -10,6 +10,7 @@ use tracing::{debug, instrument};
 use rv_ruby::{
     Ruby,
     request::{RequestError, RubyRequest, Source},
+    version::{ParseVersionError, RubyVersion},
 };
 
 mod ruby_cache;
@@ -29,6 +30,8 @@ pub enum Error {
     JoinPathsError(#[from] JoinPathsError),
     #[error("Tried to parse ruby version from Gemfile.lock, but that file was invalid: {0}")]
     CouldNotParseGemfileLock(#[from] rv_lockfile::ParseErrors),
+    #[error("Could not parse ruby version from Gemfile.lock: {0}")]
+    CouldNotParseGemfileLockVersion(#[from] ParseVersionError),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -167,7 +170,11 @@ pub fn find_requested_ruby(
                 .ruby_version;
             if let Some(lockfile_ruby) = lockfile_ruby {
                 tracing::debug!("Found ruby {lockfile_ruby} in Gemfile.lock");
-                // TODO: Parse the Ruby version
+                let version = RubyVersion::from_gemfile_lock(lockfile_ruby)?;
+                return Ok(Some((
+                    version.into(),
+                    Source::GemfileLock(lockfile),
+                )));
             }
         }
 
