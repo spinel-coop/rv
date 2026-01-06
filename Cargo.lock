@@ -2227,6 +2227,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "rv-gemfile"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "insta",
+ "miette",
+ "rv-version",
+ "serde",
+ "thiserror",
+ "winnow",
+]
+
+[[package]]
 name = "rv-lockfile"
 version = "0.1.0"
 dependencies = [
