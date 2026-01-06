@@ -24,7 +24,7 @@ fn test_ruby_uninstall_no_request() {
     uninstall.assert_failure();
     assert_eq!(
         uninstall.normalized_stderr(),
-        "error: the following required arguments were not provided:\n  <VERSION>\n\nUsage: rv ruby uninstall --no-cache <VERSION>\n\nFor more information, try '--help'.\n"
+        "error: the following required arguments were not provided:\n  <VERSION>\n\nUsage: rv ruby uninstall <VERSION>\n\nFor more information, try '--help'.\n"
     );
 }
 

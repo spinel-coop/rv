@@ -55,21 +55,21 @@ pub struct CleanInstallArgs {
     gemfile: Option<Utf8PathBuf>,
 
     /// Maximum number of downloads that can be in flight at once.
-    #[arg(short, long, default_value = "10")]
+    #[arg(long, hide = true, default_value = "10")]
     pub max_concurrent_requests: usize,
 
     /// Maximum number of gem installations that can be in flight at once.
     /// This reduces concurrently-open files on your filesystem,
     /// and concurrent disk operations.
-    #[arg(long, default_value = "20")]
+    #[arg(long, hide = true, default_value = "20")]
     pub max_concurrent_installs: usize,
 
     /// Validate the checksums from the gem server and gem itself.
-    #[arg(long, default_value = "true")]
+    #[arg(long, hide = true, default_value = "true")]
     pub validate_checksums: bool,
 
     /// Don't compile the extensions in native gems.
-    #[arg(long, default_value = "false")]
+    #[arg(long, hide = true, default_value = "false")]
     pub skip_compile_extensions: bool,
 }
 
@@ -149,8 +149,8 @@ pub enum Error {
 type Result<T> = std::result::Result<T, Error>;
 
 pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
-    // We need some Ruby installed, because we might need to run Ruby code when installing
-    // various gems. So, ensure Ruby is installed, so we can use it later.
+    // We need some Ruby installed, because we need to run Ruby code when installing
+    // gems. Ensure Ruby is installed here so we can use it later.
     let ruby_request = config.ruby_request();
     if config.matching_ruby(&ruby_request).is_none() {
         crate::ruby_install(config, None, Some(ruby_request.clone()), None).await?;

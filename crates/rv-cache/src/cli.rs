@@ -11,6 +11,7 @@ pub struct CacheArgs {
     /// duration of the operation.
     #[arg(
         global = true,
+        hide = true,
         long,
         short,
         value_parser = clap::builder::BoolishValueParser::new(),
@@ -20,8 +21,8 @@ pub struct CacheArgs {
 
     /// Path to the cache directory.
     ///
-    /// Defaults to platform-specific cache directory or `~/.cache/rv` on Unix systems.
-    #[arg(global = true, long, env = "RV_CACHE_DIR")]
+    /// Defaults to $XDG_CACHE_HOME/rv or ~/.cache/rv
+    #[arg(global = true, hide = true, long, env = "RV_CACHE_DIR")]
     pub cache_dir: Option<Utf8PathBuf>,
 }
 

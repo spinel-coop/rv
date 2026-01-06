@@ -2083,7 +2083,7 @@ checksum = "8a0d197bd2c9dc6e53b84da9556a69ba4cdfab8619eb41a8bd1cc2027a0f6b1d"
 
 [[package]]
 name = "rv"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "anstream",
  "assert_fs",
