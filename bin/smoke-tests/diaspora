@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Smoke test for Diaspora
+# https://github.com/diaspora/diaspora
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+IMAGE_NAME="rv-smoke-diaspora"
+
+# Build rv for Linux (matches host architecture)
+echo "Building rv..."
+"$ROOT_DIR/bin/build-ci"
+
+# Get binary from correct location based on architecture
+if [[ "$(uname -m)" == "arm64" ]]; then
+    TARGET="aarch64-unknown-linux-gnu"
+else
+    TARGET="x86_64-unknown-linux-gnu"
+fi
+
+if [ -f "$ROOT_DIR/target/$TARGET/release/rv" ]; then
+    cp "$ROOT_DIR/target/$TARGET/release/rv" "$SCRIPT_DIR/rv"
+else
+    cp "$ROOT_DIR/target/release/rv" "$SCRIPT_DIR/rv"
+fi
+
+# Clean up on exit
+trap 'rm -f "$SCRIPT_DIR/rv"' EXIT
+
+echo "Building Docker image and running smoke test..."
+docker build --no-cache --progress=plain -f "$SCRIPT_DIR/diaspora.Dockerfile" -t "$IMAGE_NAME" "$SCRIPT_DIR"
+
+echo ""
+echo "Smoke test for diaspora passed!"
