@@ -35,10 +35,22 @@ jobs:
           name: rv-linux
           path: target/release/rv
 
-  discourse:
-    name: Discourse
+  smoke-test:
+    name: ${{ matrix.project }}
     needs: build
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - diaspora
+          - discourse
+          - fastlane
+          - gitlab
+          - homebrew
+          - huginn
+          - lobsters
+          - mastodon
     steps:
       - name: Check out repo
         uses: actions/checkout@v6
@@ -49,121 +61,7 @@ jobs:
           name: rv-linux
           path: bin/smoke-tests
 
-      - name: Install
+      - name: Run smoke test
         run: |
           chmod +x bin/smoke-tests/rv
-          docker build -f bin/smoke-tests/discourse.Dockerfile -t rv-smoke-discourse bin/smoke-tests
-
-  fastlane:
-    name: Fastlane
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repo
-        uses: actions/checkout@v6
-
-      - name: Download rv binary
-        uses: actions/download-artifact@v7
-        with:
-          name: rv-linux
-          path: bin/smoke-tests
-
-      - name: Install
-        run: |
-          chmod +x bin/smoke-tests/rv
-          docker build -f bin/smoke-tests/fastlane.Dockerfile -t rv-smoke-fastlane bin/smoke-tests
-
-  huginn:
-    name: Huginn
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repo
-        uses: actions/checkout@v6
-
-      - name: Download rv binary
-        uses: actions/download-artifact@v7
-        with:
-          name: rv-linux
-          path: bin/smoke-tests
-
-      - name: Install
-        run: |
-          chmod +x bin/smoke-tests/rv
-          docker build -f bin/smoke-tests/huginn.Dockerfile -t rv-smoke-huginn bin/smoke-tests
-
-  mastodon:
-    name: Mastodon
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repo
-        uses: actions/checkout@v6
-
-      - name: Download rv binary
-        uses: actions/download-artifact@v7
-        with:
-          name: rv-linux
-          path: bin/smoke-tests
-
-      - name: Install
-        run: |
-          chmod +x bin/smoke-tests/rv
-          docker build -f bin/smoke-tests/mastodon.Dockerfile -t rv-smoke-mastodon bin/smoke-tests
-
-  gitlab:
-    name: GitLab
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repo
-        uses: actions/checkout@v6
-
-      - name: Download rv binary
-        uses: actions/download-artifact@v7
-        with:
-          name: rv-linux
-          path: bin/smoke-tests
-
-      - name: Install
-        run: |
-          chmod +x bin/smoke-tests/rv
-          docker build -f bin/smoke-tests/gitlab.Dockerfile -t rv-smoke-gitlab bin/smoke-tests
-
-  homebrew:
-    name: Homebrew
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repo
-        uses: actions/checkout@v6
-
-      - name: Download rv binary
-        uses: actions/download-artifact@v7
-        with:
-          name: rv-linux
-          path: bin/smoke-tests
-
-      - name: Install
-        run: |
-          chmod +x bin/smoke-tests/rv
-          docker build -f bin/smoke-tests/homebrew.Dockerfile -t rv-smoke-homebrew bin/smoke-tests
-
-  diaspora:
-    name: Diaspora
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repo
-        uses: actions/checkout@v6
-
-      - name: Download rv binary
-        uses: actions/download-artifact@v7
-        with:
-          name: rv-linux
-          path: bin/smoke-tests
-
-      - name: Install
-        run: |
-          chmod +x bin/smoke-tests/rv
-          docker build -f bin/smoke-tests/diaspora.Dockerfile -t rv-smoke-diaspora bin/smoke-tests
+          docker build -f bin/smoke-tests/${{ matrix.project }}.Dockerfile -t rv-smoke-${{ matrix.project }} bin/smoke-tests
