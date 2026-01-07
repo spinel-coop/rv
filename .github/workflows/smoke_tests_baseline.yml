@@ -1,0 +1,23 @@
+name: Smoke Tests (Baseline)
+
+on:
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  baseline:
+    name: baseline-${{ matrix.project }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - lobsters
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Run baseline smoke test
+        run: |
+          docker build --no-cache --progress=plain -f bin/smoke-tests/baseline/${{ matrix.project }}.Dockerfile -t baseline-${{ matrix.project }} bin/smoke-tests/baseline

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Baseline smoke test for Lobsters (traditional ruby-build approach)
+# https://github.com/lobsters/lobsters
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+IMAGE_NAME="baseline-lobsters"
+
+echo "Building baseline Docker image (ruby-build from source)..."
+docker build --no-cache --progress=plain -f "$SCRIPT_DIR/lobsters.Dockerfile" -t "$IMAGE_NAME" "$SCRIPT_DIR"
+
+echo ""
+echo "Baseline smoke test for lobsters passed!"
