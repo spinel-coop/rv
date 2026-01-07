@@ -41,6 +41,24 @@ struct JsonRubyEntry {
     active: bool,
 }
 
+impl JsonRubyEntry {
+    fn installed(details: Ruby, active_ruby: &Option<Ruby>) -> Self {
+        Self::new(details, true, active_ruby)
+    }
+
+    fn available(details: Ruby, active_ruby: &Option<Ruby>) -> Self {
+        Self::new(details, false, active_ruby)
+    }
+
+    fn new(details: Ruby, installed: bool, active_ruby: &Option<Ruby>) -> Self {
+        JsonRubyEntry {
+            active: active_ruby.as_ref().is_some_and(|a| a == &details),
+            installed,
+            details,
+        }
+    }
+}
+
 /// Lists the available and installed rubies.
 pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -> Result<()> {
     let installed_rubies = config.rubies();
@@ -55,14 +73,7 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
 
         let entries: Vec<JsonRubyEntry> = installed_rubies
             .into_iter()
-            .map(|ruby| {
-                let active = active_ruby.as_ref().is_some_and(|a| a == &ruby);
-                JsonRubyEntry {
-                    installed: true,
-                    active,
-                    details: ruby,
-                }
-            })
+            .map(|ruby| JsonRubyEntry::installed(ruby, &active_ruby))
             .collect();
 
         return print_entries(&entries, format);
@@ -88,34 +99,23 @@ fn rubies_to_show(
     active_ruby: Option<Ruby>,
 ) -> Vec<JsonRubyEntry> {
     // Might have multiple installed rubies with the same version (e.g., "ruby-3.2.0" and "mruby-3.2.0").
-    let mut rubies_map: BTreeMap<String, Vec<Ruby>> = BTreeMap::new();
+    let mut rubies_map: BTreeMap<String, Vec<JsonRubyEntry>> = BTreeMap::new();
     for ruby in installed_rubies {
         rubies_map
             .entry(ruby.display_name())
             .or_default()
-            .push(ruby);
+            .push(JsonRubyEntry::installed(ruby, &active_ruby));
     }
 
     // Add selected remote rubies that are not already installed to the list
     for ruby in latest_patch_version(rubies_for_this_platform) {
-        rubies_map.entry(ruby.display_name()).or_insert(vec![ruby]);
+        rubies_map
+            .entry(ruby.display_name())
+            .or_insert(vec![JsonRubyEntry::available(ruby, &active_ruby)]);
     }
 
     // Create entries for output
-    let entries: Vec<JsonRubyEntry> = rubies_map
-        .into_values()
-        .flatten()
-        .map(|ruby| {
-            let installed = !ruby.path.as_str().starts_with("http");
-            let active = active_ruby.as_ref().is_some_and(|a| a == &ruby);
-            JsonRubyEntry {
-                installed,
-                active,
-                details: ruby,
-            }
-        })
-        .collect();
-    entries
+    rubies_map.into_values().flatten().collect()
 }
 
 fn latest_patch_version(rubies_for_this_platform: Vec<Ruby>) -> Vec<Ruby> {
@@ -289,7 +289,7 @@ mod tests {
                 active_ruby: None,
                 expected: vec![JsonRubyEntry {
                     details: ruby("ruby-3.3.0"),
-                    installed: false,
+                    installed: true,
                     active: false,
                 }],
             },
@@ -302,7 +302,7 @@ mod tests {
                 expected: vec![
                     JsonRubyEntry {
                         details: ruby("ruby-3.3.0"),
-                        installed: false,
+                        installed: true,
                         active: false,
                     },
                     JsonRubyEntry {
@@ -328,21 +328,21 @@ mod tests {
                     },
                     JsonRubyEntry {
                         details: ruby("ruby-3.4.1"),
-                        installed: false,
+                        installed: true,
                         active: false,
                     },
                 ],
             },
             // Only the remote with the latest version should be shown.
             Test {
-                test_name: "both local and remote, different patch versions",
+                test_name: "both local and remote, different patch versions, filters remote patches",
                 rubies_for_this_platform: vec![ruby("ruby-3.4.0"), ruby("ruby-3.4.1")],
                 installed_rubies: vec![ruby("ruby-3.3.1")],
                 active_ruby: None,
                 expected: vec![
                     JsonRubyEntry {
                         details: ruby("ruby-3.3.1"),
-                        installed: false,
+                        installed: true,
                         active: false,
                     },
                     JsonRubyEntry {
