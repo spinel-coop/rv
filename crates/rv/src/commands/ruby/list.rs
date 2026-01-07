@@ -96,14 +96,8 @@ fn rubies_to_show(
             .push(ruby);
     }
 
-    let mut available_rubies: Vec<Ruby> = vec![];
-
+    // Add selected remote rubies that are not already installed to the list
     for ruby in latest_patch_version(rubies_for_this_platform) {
-        available_rubies.push(ruby)
-    }
-
-    // Merge in installed rubies, replacing any available ones with the installed versions
-    for ruby in available_rubies {
         if !rubies_map.contains_key(&ruby.display_name()) {
             rubies_map
                 .entry(ruby.display_name())
