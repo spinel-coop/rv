@@ -75,8 +75,7 @@ impl Config {
     fn ruby_path_cache_key(&self, path: &Utf8Path) -> Result<String, Error> {
         let bin = path.join("bin").join("ruby");
 
-        bin
-            .try_exists()
+        bin.try_exists()
             .and_then(|_| rv_cache::Timestamp::from_path(bin.as_std_path()))
             .map(|timestamp| rv_cache::cache_digest((path, timestamp)))
             .map_err(|_| Error::RubyCacheMiss {
