@@ -48,10 +48,11 @@ fn test_clean_install_respects_ruby() {
 
     let output = test.ci(&["--verbose"]);
     output.assert_success();
+    let stdout = output.normalized_stdout();
     assert!(
-        output
-            .normalized_stdout()
-            .contains("Installed Ruby version ruby-3.4.8 to /tmp/home/.local/share/rv/rubies")
+        stdout.contains("Installed Ruby version ruby-3.4.8 to /tmp/home/.local/share/rv/rubies"),
+        "{}",
+        stdout,
     );
 }
 

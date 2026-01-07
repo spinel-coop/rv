@@ -107,6 +107,8 @@ impl Config {
             })
             .collect();
 
+        let managed_dir = self.ruby_dirs.first();
+
         // Process Ruby paths in parallel for better performance
         let mut rubies: Vec<Ruby> = ruby_paths
             .into_par_iter()
@@ -116,8 +118,10 @@ impl Config {
                 match self.get_cached_ruby(&ruby_path) {
                     Ok(cached_ruby) => Some(cached_ruby),
                     Err(_) => {
+                        let managed = ruby_path.parent()? == managed_dir?;
+
                         // Cache miss or invalid, create Ruby and cache it
-                        match Ruby::from_dir(ruby_path.to_path_buf()) {
+                        match Ruby::from_dir(ruby_path.clone(), managed) {
                             Ok(ruby) if ruby.is_valid() => {
                                 // Cache the Ruby (ignore errors during caching to not fail discovery)
                                 if let Err(err) = self.cache_ruby(&ruby) {

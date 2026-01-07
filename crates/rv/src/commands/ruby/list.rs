@@ -242,6 +242,7 @@ mod tests {
             path: Utf8PathBuf::from(format!(
                 "https://github.com/spinel-coop/rv-ruby/releases/download/latest/{version_str}.arm64_linux.tar.gz"
             )),
+            managed: false,
             symlink: None,
             arch: "aarch64".into(),
             os: "macos".into(),

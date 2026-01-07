@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexSet;
 use tracing::{debug, instrument};
 
@@ -97,7 +97,7 @@ impl<'a> PathInfo<'a> {
 }
 
 /// Default Ruby installation directories
-pub fn default_ruby_dirs() -> Vec<Utf8PathBuf> {
+pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
     let mut paths: Vec<PathInfo> = vec![];
     let xdg_path = xdg_data_path();
     paths.push(PathInfo::new(&xdg_path, true));
@@ -114,10 +114,11 @@ pub fn default_ruby_dirs() -> Vec<Utf8PathBuf> {
     paths
         .into_iter()
         .filter_map(|path_info| {
-            let path = Utf8PathBuf::from(path_info.path);
-            let canonical_path = path.canonicalize_utf8();
+            let path = path_info.path;
+            let joinable_path = path.strip_prefix("/").unwrap_or(path);
+            let canonical_path = root.join(joinable_path).canonicalize_utf8();
             if path_info.always_include {
-                Some(canonical_path.unwrap_or(path))
+                Some(canonical_path.unwrap_or(Utf8PathBuf::from(path)))
             } else {
                 canonical_path.ok()
             }
@@ -297,7 +298,8 @@ mod tests {
 
     #[test]
     fn test_default_ruby_dirs() {
-        default_ruby_dirs();
+        let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
+        default_ruby_dirs(&root);
     }
 
     #[test]
