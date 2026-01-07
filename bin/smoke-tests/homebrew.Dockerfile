@@ -1,13 +1,14 @@
 # Test rv ci with Homebrew
 # https://github.com/Homebrew/brew
 
-FROM ruby:3.4-slim
+FROM debian:bookworm-slim
 
-# Install build dependencies for native gems
+# Install dependencies for native gems (precompiled Ruby needs only glibc)
 # Homebrew's gems include profilers (ruby-prof, stackprof) and pycall
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
+    ca-certificates \
     libffi-dev \
     libyaml-dev \
     python3-dev \
@@ -24,8 +25,7 @@ RUN git clone --depth 1 https://github.com/Homebrew/brew.git .
 # Homebrew's Gemfile is in Library/Homebrew/
 WORKDIR /app/Library/Homebrew
 
-# Use the Ruby version from the image
-RUN ruby -e 'puts RUBY_VERSION' > .ruby-version
-
-# Run rv ci
-RUN rv ci
+# Install Ruby (version detected from Gemfile.lock), add to PATH, then run rv ci
+RUN rv ruby install && \
+    export PATH="$(dirname $(rv ruby find)):$PATH" && \
+    rv ci

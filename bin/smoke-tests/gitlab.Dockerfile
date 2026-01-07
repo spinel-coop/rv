@@ -1,22 +1,18 @@
 # Test rv ci with GitLab
 # https://gitlab.com/gitlab-org/gitlab
 
-FROM ruby:3.2-slim
+FROM debian:bookworm-slim
 
-# Install build dependencies for native gems
+# Install dependencies for native gems (precompiled Ruby needs only glibc)
 # Based on GitLab's source installation docs
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
+    ca-certificates \
     pkg-config \
     cmake \
-    libssl-dev \
-    zlib1g-dev \
     libyaml-dev \
-    libgdbm-dev \
     libre2-dev \
-    libreadline-dev \
-    libncurses-dev \
     libffi-dev \
     libxml2-dev \
     libxslt-dev \
@@ -26,6 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     libpcre2-dev \
     libgpgme-dev \
+    zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy rv binary
@@ -36,8 +33,7 @@ WORKDIR /app
 # Clone GitLab (shallow clone, it's huge)
 RUN git clone --depth 1 https://gitlab.com/gitlab-org/gitlab.git .
 
-# Use the Ruby version from the image
-RUN ruby -e 'puts RUBY_VERSION' > .ruby-version
-
-# Run rv ci
-RUN rv ci
+# Install Ruby (version detected from Gemfile.lock), add to PATH, then run rv ci
+RUN rv ruby install && \
+    export PATH="$(dirname $(rv ruby find)):$PATH" && \
+    rv ci

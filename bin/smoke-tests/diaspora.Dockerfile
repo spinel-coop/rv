@@ -1,17 +1,16 @@
 # Test rv ci with Diaspora
 # https://github.com/diaspora/diaspora
 
-FROM ruby:3.3-slim
+FROM debian:bookworm-slim
 
-# Install build dependencies for native gems
+# Install dependencies for native gems (precompiled Ruby needs only glibc)
 # Diaspora uses: mysql2, pg, nokogiri, typhoeus (curl), mini_magick, yajl-ruby, rugged, idn-ruby
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
+    ca-certificates \
     cmake \
     pkg-config \
-    libssl-dev \
-    zlib1g-dev \
     libyaml-dev \
     libffi-dev \
     libxml2-dev \
@@ -34,8 +33,7 @@ WORKDIR /app
 # Clone Diaspora
 RUN git clone --depth 1 https://github.com/diaspora/diaspora.git .
 
-# Use the Ruby version from the image
-RUN ruby -e 'puts RUBY_VERSION' > .ruby-version
-
-# Run rv ci
-RUN rv ci
+# Install Ruby (version detected from Gemfile.lock), add to PATH, then run rv ci
+RUN rv ruby install && \
+    export PATH="$(dirname $(rv ruby find)):$PATH" && \
+    rv ci

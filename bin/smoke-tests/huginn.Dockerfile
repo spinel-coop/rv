@@ -1,20 +1,33 @@
 # Test rv ci with Huginn
-# Uses Huginn's own prepare script for dependencies
+# https://github.com/huginn/huginn
 
-FROM rubylang/ruby:3.2-jammy
+FROM debian:bookworm-slim
 
-# Clone Huginn and run their prepare script for dependencies
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
-WORKDIR /app
-RUN git clone --depth 1 https://github.com/huginn/huginn.git .
-RUN cp -r docker/scripts /scripts && chmod +x /scripts/*
-RUN /scripts/prepare
+# Install dependencies for native gems (precompiled Ruby needs only glibc)
+# Huginn uses: mysql2, pg, nokogiri, typhoeus (curl), and various others
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    ca-certificates \
+    libyaml-dev \
+    libffi-dev \
+    libxml2-dev \
+    libxslt-dev \
+    libpq-dev \
+    default-libmysqlclient-dev \
+    libcurl4-openssl-dev \
+    libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy rv binary
 COPY rv /usr/local/bin/rv
 
-# Use the Ruby version from the image
-RUN ruby -e 'puts RUBY_VERSION' > .ruby-version
+WORKDIR /app
 
-# Run rv ci
-RUN rv ci
+# Clone Huginn
+RUN git clone --depth 1 https://github.com/huginn/huginn.git .
+
+# Install Ruby (version detected from Gemfile.lock), add to PATH, then run rv ci
+RUN rv ruby install && \
+    export PATH="$(dirname $(rv ruby find)):$PATH" && \
+    rv ci

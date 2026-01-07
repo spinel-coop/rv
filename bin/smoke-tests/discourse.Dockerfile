@@ -1,9 +1,10 @@
 # Test rv ci with Discourse
-# Expects rv binary to be passed as build argument
+# https://github.com/discourse/discourse
+# Uses Discourse's production base image which has Ruby pre-installed
 
 FROM discourse/base:release
 
-# Copy rv binary (passed via build context)
+# Copy rv binary
 COPY rv /usr/local/bin/rv
 
 WORKDIR /var/www/discourse
@@ -11,8 +12,5 @@ WORKDIR /var/www/discourse
 # Clear pre-installed gems to test rv ci from scratch
 RUN rm -rf vendor/bundle .bundle
 
-# Use the Ruby version from the image
-RUN ruby -e 'puts RUBY_VERSION' > .ruby-version
-
-# Run rv ci
+# Run rv ci (Ruby already in PATH from base image)
 RUN rv ci

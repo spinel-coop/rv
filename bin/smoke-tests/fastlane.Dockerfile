@@ -1,35 +1,30 @@
 # Test rv ci with Fastlane
-# Expects rv binary in build context
+# https://github.com/fastlane/fastlane
 
 FROM debian:bookworm-slim
 
-# Install dependencies for rv and native extensions
+# Install dependencies for native gems (precompiled Ruby needs only glibc)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    curl \
-    ca-certificates \
     git \
-    libssl-dev \
-    libreadline-dev \
-    zlib1g-dev \
+    ca-certificates \
     libyaml-dev \
     libffi-dev \
+    libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy rv binary (passed via build context)
+# Copy rv binary
 COPY rv /usr/local/bin/rv
 
-WORKDIR /root
+WORKDIR /app
 
 # Clone fastlane
-RUN git clone --depth 1 https://github.com/fastlane/fastlane.git
+RUN git clone --depth 1 https://github.com/fastlane/fastlane.git .
 
-WORKDIR /root/fastlane
-
-# Fastlane requires Ruby >= 2.6 but has no .ruby-version file
+# Fastlane requires Ruby >= 2.6 but has no .ruby-version file or Ruby version in Gemfile.lock
 RUN echo "3.3" > .ruby-version
 
-# Install Ruby and run rv ci
+# Install Ruby, add to PATH, then run rv ci
 RUN rv ruby install && \
-    eval "$(rv shell env bash)" && \
+    export PATH="$(dirname $(rv ruby find)):$PATH" && \
     rv ci
