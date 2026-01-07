@@ -72,23 +72,15 @@ impl Config {
     }
 
     /// Generate a cache key for a specific Ruby installation path (used for cache lookup)
-    fn ruby_path_cache_key(&self, ruby_path: &Utf8Path) -> Result<String, Error> {
-        let ruby_bin = ruby_path.join("bin").join("ruby");
-        if !ruby_bin.exists() {
-            return Err(Error::RubyCacheMiss {
-                ruby_path: ruby_path.to_path_buf(),
-            });
-        }
+    fn ruby_path_cache_key(&self, path: &Utf8Path) -> Result<String, Error> {
+        let bin = path.join("bin").join("ruby");
 
-        let ruby_timestamp = match rv_cache::Timestamp::from_path(ruby_bin.as_std_path()) {
-            Ok(timestamp) => timestamp,
-            Err(_) => {
-                return Err(Error::RubyCacheMiss {
-                    ruby_path: ruby_path.to_path_buf(),
-                });
-            }
-        };
-        Ok(rv_cache::cache_digest((ruby_path, ruby_timestamp)))
+        bin.try_exists()
+            .and_then(|_| rv_cache::Timestamp::from_path(bin.as_std_path()))
+            .map(|timestamp| rv_cache::cache_digest((path, timestamp)))
+            .map_err(|_| Error::RubyCacheMiss {
+                ruby_path: path.into(),
+            })
     }
 
     /// Discover all Ruby installations from configured directories with caching
