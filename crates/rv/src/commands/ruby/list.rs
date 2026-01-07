@@ -98,12 +98,7 @@ fn rubies_to_show(
 
     // Add selected remote rubies that are not already installed to the list
     for ruby in latest_patch_version(rubies_for_this_platform) {
-        if !rubies_map.contains_key(&ruby.display_name()) {
-            rubies_map
-                .entry(ruby.display_name())
-                .or_default()
-                .push(ruby);
-        }
+        rubies_map.entry(ruby.display_name()).or_insert(vec![ruby]);
     }
 
     // Create entries for output
