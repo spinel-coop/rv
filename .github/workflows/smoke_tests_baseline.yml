@@ -1,6 +1,8 @@
 name: Smoke Tests (Baseline)
 
 on:
+  schedule:
+    - cron: "0 10 * * *" # Nightly, 10:00 UTC / 02:00 Pacific
   workflow_dispatch:
 
 permissions: read-all
