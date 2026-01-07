@@ -72,6 +72,10 @@ impl RvTest {
         self.temp_root().join("home")
     }
 
+    pub fn legacy_gem_path(&self, version: &str) -> Utf8PathBuf {
+        self.temp_home().join(".gem").join("ruby").join(version)
+    }
+
     pub fn rv(&self, args: &[&str]) -> RvOutput {
         let mut cmd = self.rv_command();
         cmd.args(args);

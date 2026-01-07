@@ -86,7 +86,7 @@ fn test_shell_env_with_ruby_and_xdg_compatible_gem_path() {
     test.create_ruby_dir("ruby-3.3.5");
 
     // Ensure the legacy path is not present.
-    rm_rf(test.temp_home().join(".gem").join("ruby").join("3.3.5")).unwrap();
+    rm_rf(test.legacy_gem_path("3.3.5")).unwrap();
 
     test.env.insert("PATH".into(), "/tmp/bin".into());
     test.env.insert("RUBY_ROOT".into(), "/tmp/ruby".into());
@@ -112,7 +112,7 @@ fn test_shell_env_with_ruby_and_legacy_gem_path() {
     test.create_ruby_dir("ruby-3.3.5");
 
     // Ensure the legacy path is present.
-    create_dir_all(test.temp_home().join(".gem").join("ruby").join("3.3.5")).unwrap();
+    create_dir_all(test.legacy_gem_path("3.3.5")).unwrap();
 
     test.env.insert("PATH".into(), "/tmp/bin".into());
     test.env.insert("RUBY_ROOT".into(), "/tmp/ruby".into());
@@ -144,7 +144,7 @@ fn test_shell_env_with_existing_manpath() {
     );
 
     // Ensure the legacy path is present.
-    create_dir_all(test.temp_home().join(".gem").join("ruby").join("3.3.5")).unwrap();
+    create_dir_all(test.legacy_gem_path("3.3.5")).unwrap();
 
     test.env.insert("PATH".into(), "/tmp/bin".into());
 
