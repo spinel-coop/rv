@@ -19,12 +19,16 @@ pub enum VersionSegment {
 }
 
 impl VersionSegment {
+    pub fn is_zero(&self) -> bool {
+        matches!(self, Self::Number(0))
+    }
+
     pub fn is_string(&self) -> bool {
-        matches!(self, VersionSegment::String(_))
+        matches!(self, Self::String(_))
     }
 
     pub fn is_number(&self) -> bool {
-        matches!(self, VersionSegment::Number(_))
+        matches!(self, Self::Number(_))
     }
 }
 
@@ -152,44 +156,25 @@ impl Version {
     }
 
     pub fn canonical_segments(&self) -> Vec<VersionSegment> {
-        // Step 1: Remove leading zeros that come before the first string segment
-        let mut canonical = Vec::new();
-        let mut first_string_index = None;
+        // Step 1: Split on the first string segment
+        let index = self
+            .segments
+            .iter()
+            .position(|s| s.is_string())
+            .unwrap_or(self.segments.len());
 
-        // Find first string segment
-        for (i, segment) in self.segments.iter().enumerate() {
-            if segment.is_string() {
-                first_string_index = Some(i);
-                break;
-            }
-        }
+        let parts: [_; 2] = self.segments.split_at(index).into();
 
-        // Copy segments, skipping zeros before first string
-        for (i, segment) in self.segments.iter().enumerate() {
-            if let Some(string_idx) = first_string_index {
-                // Skip zeros between first segment and string segment
-                if i > 0 && i < string_idx && matches!(segment, VersionSegment::Number(0)) {
-                    continue;
-                }
-            }
-            canonical.push(segment.clone());
-        }
-
-        // Step 2: Remove trailing zeros, but keep at least one segment
-        while canonical.len() > 1 {
-            if let Some(VersionSegment::Number(0)) = canonical.last() {
-                canonical.pop();
-            } else {
-                break;
-            }
-        }
-
-        // Ensure we have at least one segment
-        if canonical.is_empty() {
-            canonical.push(VersionSegment::Number(0));
-        }
-
-        canonical
+        // Step 2: seek behind from each tail and remove contigous zero chains.
+        parts
+            .iter()
+            .flat_map(|part| {
+                let mut part = part.to_vec();
+                let last_nonzero_index = part.iter().rposition(|s| !s.is_zero()).unwrap_or(0);
+                part.truncate(1 + last_nonzero_index); // `1 +` to keep at least one element.
+                part
+            })
+            .collect::<Vec<_>>()
     }
 
     pub fn release(&self) -> Self {
@@ -475,9 +460,26 @@ mod tests {
 
     #[test]
     fn test_canonical_segments() {
+        assert_eq!(v("0").canonical_segments(), vec![VersionSegment::Number(0)]);
+        assert_eq!(
+            v("0-rc").canonical_segments(),
+            vec![
+                VersionSegment::Number(0),
+                VersionSegment::String("pre".to_string()),
+                VersionSegment::String("rc".to_string())
+            ]
+        );
         assert_eq!(
             v("1.0.0").canonical_segments(),
             vec![VersionSegment::Number(1)]
+        );
+        assert_eq!(
+            v("1.0.1").canonical_segments(),
+            vec![
+                VersionSegment::Number(1),
+                VersionSegment::Number(0),
+                VersionSegment::Number(1)
+            ]
         );
         assert_eq!(
             v("1.0.0.a.1.0").canonical_segments(),
@@ -485,6 +487,24 @@ mod tests {
                 VersionSegment::Number(1),
                 VersionSegment::String("a".to_string()),
                 VersionSegment::Number(1)
+            ]
+        );
+        assert_eq!(
+            v("1.0.1-rc1").canonical_segments(),
+            vec![
+                VersionSegment::Number(1),
+                VersionSegment::Number(0),
+                VersionSegment::Number(1),
+                VersionSegment::String("pre".to_string()),
+                VersionSegment::String("rc1".to_string()),
+            ]
+        );
+        assert_eq!(
+            v("0.0.beta.1").canonical_segments(),
+            vec![
+                VersionSegment::Number(0),
+                VersionSegment::String("beta".to_string()),
+                VersionSegment::Number(1),
             ]
         );
         assert_eq!(
