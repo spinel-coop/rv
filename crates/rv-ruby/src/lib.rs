@@ -41,7 +41,7 @@ pub struct Ruby {
     /// Path to the Ruby installation directory
     pub path: Utf8PathBuf,
 
-    /// Wheter this is a rv-managed version
+    /// Whether this is a rv-managed version
     pub managed: bool,
 
     /// Symlink target if this Ruby is a symlink
