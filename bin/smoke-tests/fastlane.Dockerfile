@@ -21,7 +21,8 @@ WORKDIR /app
 # Clone fastlane
 RUN git clone --depth 1 https://github.com/fastlane/fastlane.git .
 
-# Fastlane requires Ruby >= 2.6 but has no .ruby-version file or Ruby version in Gemfile.lock
+# Fastlane has no .ruby-version file or Ruby version in Gemfile.lock
+# …according to https://docs.fastlane.tools/ - "fastlane supports Ruby versions 2.5 or newer"
 RUN echo "3.3" > .ruby-version
 
 # Install Ruby, add to PATH, then run rv ci
