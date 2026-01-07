@@ -41,6 +41,9 @@ pub struct Ruby {
     /// Path to the Ruby installation directory
     pub path: Utf8PathBuf,
 
+    /// Wheter this is a rv-managed version
+    pub managed: bool,
+
     /// Symlink target if this Ruby is a symlink
     #[serde(skip_serializing_if = "Option::is_none")]
     pub symlink: Option<Utf8PathBuf>,
@@ -57,7 +60,7 @@ pub struct Ruby {
 impl Ruby {
     /// Create a new Ruby instance from a directory path
     #[instrument(skip(dir), fields(dir = %dir.as_str()))]
-    pub fn from_dir(dir: Utf8PathBuf) -> Result<Self, RubyError> {
+    pub fn from_dir(dir: Utf8PathBuf, managed: bool) -> Result<Self, RubyError> {
         let dir_name = dir.file_name().unwrap_or("");
 
         if dir_name.is_empty() {
@@ -77,6 +80,7 @@ impl Ruby {
         // Extract all information from the Ruby executable itself
         let mut ruby = extract_ruby_info(&ruby_bin)?;
 
+        ruby.managed = managed;
         ruby.path = dir;
         ruby.symlink = symlink;
 
@@ -149,7 +153,11 @@ impl PartialOrd for Ruby {
 
 impl Ord for Ruby {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        (&self.version, &self.path).cmp(&(&other.version, &other.path))
+        (&self.version, &self.managed, &self.path).cmp(&(
+            &other.version,
+            &other.managed,
+            &other.path,
+        ))
     }
 }
 
@@ -255,6 +263,7 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
         arch,
         os,
         gem_root,
+        managed: false,
         // path and symlink are replaced in the caller
         path: Default::default(),
         symlink: Default::default(),
@@ -333,6 +342,7 @@ fn ruby_049_version() -> Result<Ruby, RubyError> {
         arch,
         os,
         gem_root: None,
+        managed: false,
         // path and symlink are replaced in the caller
         path: Default::default(),
         symlink: Default::default(),
@@ -373,6 +383,7 @@ mod tests {
             key: "ruby-3.1.4-macos-aarch64".to_string(),
             version: RubyVersion::from_str("3.1.4").unwrap(),
             path: dummy_path.clone(),
+            managed: false,
             symlink: None,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
@@ -383,6 +394,18 @@ mod tests {
             key: "ruby-3.2.0-macos-aarch64".to_string(),
             version: RubyVersion::from_str("ruby-3.2.0").unwrap(),
             path: dummy_path.clone(),
+            managed: false,
+            symlink: None,
+            arch: "aarch64".to_string(),
+            os: "macos".to_string(),
+            gem_root: None,
+        };
+
+        let ruby2_managed = Ruby {
+            key: "ruby-3.2.0-macos-aarch64".to_string(),
+            version: RubyVersion::from_str("ruby-3.2.0").unwrap(),
+            path: dummy_path.clone(),
+            managed: true,
             symlink: None,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
@@ -393,6 +416,7 @@ mod tests {
             key: "jruby-9.4.0.0-macos-aarch64".to_string(),
             version: RubyVersion::from_str("jruby-9.4.0.0").unwrap(),
             path: dummy_path,
+            managed: false,
             symlink: None,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
@@ -402,9 +426,13 @@ mod tests {
         // Test version ordering within same implementation (higher versions last)
         assert!(ruby1 < ruby2); // 3.1.4 comes before 3.2.0
 
+        // Test version ordering within same version & implementation
+        assert!(ruby2 < ruby2_managed); // Non managed versions come before managed versions
+
         // Test implementation priority: ruby comes before jruby
         assert!(ruby1 < jruby);
         assert!(ruby2 < jruby);
+        assert!(ruby2_managed < jruby);
     }
 
     #[test]
