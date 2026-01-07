@@ -1,35 +1,33 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
 
-# Smoke test for Diaspora
-# https://github.com/diaspora/diaspora
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-IMAGE_NAME="rv-smoke-diaspora"
+# Smoke test for Diaspora (https://github.com/diaspora/diaspora)
+# on macOS, you can run this script via Docker:
+# docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/diaspora
 
-# Build rv for Linux (matches host architecture)
-echo "Building rv..."
-"$ROOT_DIR/bin/build-ci-linux"
+apt-get update
+apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    ca-certificates \
+    cmake \
+    pkg-config \
+    libyaml-dev \
+    libffi-dev \
+    libxml2-dev \
+    libxslt-dev \
+    libpq-dev \
+    default-libmysqlclient-dev \
+    libcurl4-openssl-dev \
+    libyajl-dev \
+    libmagickwand-dev \
+    libgit2-dev \
+    libssh2-1-dev \
+    libidn-dev
 
-# Get binary from correct location based on architecture
-if [[ "$(uname -m)" == "arm64" ]]; then
-    TARGET="aarch64-unknown-linux-gnu"
-else
-    TARGET="x86_64-unknown-linux-gnu"
-fi
+[[ -d diaspora ]] || git clone --depth 1 https://github.com/diaspora/diaspora.git
+cd diaspora
 
-if [ -f "$ROOT_DIR/target/$TARGET/release/rv" ]; then
-    cp "$ROOT_DIR/target/$TARGET/release/rv" "$SCRIPT_DIR/rv"
-else
-    cp "$ROOT_DIR/target/release/rv" "$SCRIPT_DIR/rv"
-fi
-
-# Clean up on exit
-trap 'rm -f "$SCRIPT_DIR/rv"' EXIT
-
-echo "Building Docker image and running smoke test..."
-docker build --no-cache --progress=plain -f "$SCRIPT_DIR/diaspora.Dockerfile" -t "$IMAGE_NAME" "$SCRIPT_DIR"
-
-echo ""
-echo "Smoke test for diaspora passed!"
+"$DIR"/../rv ci

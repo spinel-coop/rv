@@ -9,29 +9,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-    name: Build rv
-    runs-on: ubuntu-latest
-    container: rust:slim-bookworm
-    steps:
-      - name: Check out repo
-        uses: actions/checkout@v6
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build rv
-        run: ./bin/build
-
-      - name: Upload rv binary
-        uses: actions/upload-artifact@v6
-        with:
-          name: rv-linux
-          path: target/release/rv
-
   smoke-test:
     name: ${{ matrix.project }}
-    needs: build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -48,14 +27,5 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@v6
-
-      - name: Download rv binary
-        uses: actions/download-artifact@v7
-        with:
-          name: rv-linux
-          path: bin/smoke-tests
-
-      - name: Run smoke test
-        run: |
-          chmod +x bin/smoke-tests/rv
-          docker build -f bin/smoke-tests/${{ matrix.project }}.Dockerfile -t rv-smoke-${{ matrix.project }} bin/smoke-tests
+      - name: rv clean-install for $${ matrix.project }}
+        run: bin/smoke-tests/${{ matrix.project }}
