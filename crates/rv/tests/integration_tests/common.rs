@@ -135,7 +135,7 @@ impl RvTest {
         let body = formatdoc!(
             r#"
             {{
-                "name": "{version}",
+                "name": "latest",
                 "assets": [{{
                     "name": "ruby-{version}.arm64_sonoma.tar.gz",
                     "browser_download_url": "http://..."
