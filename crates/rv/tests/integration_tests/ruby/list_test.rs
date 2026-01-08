@@ -112,20 +112,47 @@ fn test_ruby_list_multiple_matching_rubies() {
 }
 
 #[test]
-fn test_ruby_list_with_available_and_installed() {
+fn test_ruby_list_with_available_and_installed_merges_both_lists() {
     let mut test = RvTest::new();
     test.create_ruby_dir("ruby-3.1.4");
 
-    let mock = test.mock_releases("3.4.5");
+    let mock = test.mock_releases(["3.4.5"].to_vec());
     let output = test.rv(&["ruby", "list"]);
 
     mock.assert();
     output.assert_success();
 
-    println!("out: {}", String::from_utf8_lossy(&output.output.stdout));
-    println!("err: {}", String::from_utf8_lossy(&output.output.stderr));
-
     // 3.1.4 and 3.4.5 should be listed, with 3.1.4 marked as installed
+    insta::assert_snapshot!(output.normalized_stdout());
+}
+
+#[test]
+fn test_ruby_list_with_available_and_installed_with_same_minor_lists_all_versions() {
+    let mut test = RvTest::new();
+    test.create_ruby_dir("ruby-3.4.0");
+
+    let mock = test.mock_releases(["3.4.1"].to_vec());
+    let output = test.rv(&["ruby", "list"]);
+
+    mock.assert();
+    output.assert_success();
+
+    // 3.4.0 and 3.4.1 should be listed, with 3.4.0 marked as installed
+    insta::assert_snapshot!(output.normalized_stdout());
+}
+
+#[test]
+fn test_ruby_list_with_available_and_installed_remotes_keep_only_latest_patch() {
+    let mut test = RvTest::new();
+    test.create_ruby_dir("ruby-3.3.1");
+
+    let mock = test.mock_releases(["3.4.0", "3.4.1"].to_vec());
+    let output = test.rv(&["ruby", "list"]);
+
+    mock.assert();
+    output.assert_success();
+
+    // Only 3.3.1 and 3.4.1 should be listed, with 3.3.1 marked as installed
     insta::assert_snapshot!(output.normalized_stdout());
 }
 
@@ -138,6 +165,51 @@ fn test_ruby_list_with_no_installed_rubies_is_empty() {
     // The output will be completely empty because no rubies are installed
     // and the API is disabled.
     assert_eq!(output.normalized_stdout(), "");
+}
+
+#[test]
+fn test_ruby_list_no_local_installs_still_lists_remote_rubies() {
+    let mut test = RvTest::new();
+
+    let mock = test.mock_releases(["3.0.0", "4.0.0"].to_vec());
+    let output = test.rv(&["ruby", "list"]);
+
+    mock.assert();
+    output.assert_success();
+
+    insta::assert_snapshot!(output.normalized_stdout());
+}
+
+#[test]
+fn test_ruby_list_ruby_3_5_is_skipped() {
+    let mut test = RvTest::new();
+
+    let mock = test.mock_releases(["3.5.0-preview1", "4.0.0"].to_vec());
+    let output = test.rv(&["ruby", "list"]);
+
+    mock.assert();
+    output.assert_success();
+
+    insta::assert_snapshot!(output.normalized_stdout());
+}
+
+#[test]
+fn test_ruby_list_shows_requested_ruby_even_if_not_installed_and_not_a_latest_patch() {
+    let mut test = RvTest::new();
+
+    let project_dir = test.temp_root().join("project");
+    std::fs::create_dir_all(project_dir.as_path()).unwrap();
+    std::fs::write(project_dir.join(".ruby-version"), b"3.4.7").unwrap();
+    test.cwd = project_dir;
+
+    let mock = test.mock_releases(["3.4.7", "3.4.8"].to_vec());
+    let output = test.rv(&["ruby", "list"]);
+
+    mock.assert();
+    output.assert_success();
+
+    // Both 3.4.7 and 3.4.8 should be listed, with 3.4.7 marked as active
+    insta::assert_snapshot!(output.normalized_stdout());
 }
 
 #[test]

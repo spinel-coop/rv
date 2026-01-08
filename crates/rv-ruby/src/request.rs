@@ -99,11 +99,12 @@ impl RubyRequest {
 
     /// Resolve the Ruby request to a specific version of ruby, chosen from
     /// the given list.
-    pub fn find_match_in(&self, rubies: Vec<Ruby>) -> Option<Ruby> {
+    pub fn find_match_in(&self, rubies: &[Ruby]) -> Option<Ruby> {
         rubies
-            .into_iter()
+            .iter()
             .rev()
             .find(|r| self.is_satisfied_by(&r.version))
+            .cloned()
     }
 
     /// Does the given Ruby version satisfy this requested range?

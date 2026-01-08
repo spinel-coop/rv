@@ -57,8 +57,7 @@ impl Config {
     }
 
     pub fn matching_ruby(&self, request: &RubyRequest) -> Option<Ruby> {
-        let rubies = self.rubies();
-        request.find_match_in(rubies)
+        request.find_match_in(&self.rubies())
     }
 
     pub fn current_ruby(&self) -> Option<Ruby> {

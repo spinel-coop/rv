@@ -56,9 +56,9 @@ pub async fn install(
         version
     } else {
         debug!("Fetching available rubies, because user gave an underspecified Ruby range");
-        let rubies_for_this_platform = config.remote_rubies().await;
+        let remote_rubies = config.remote_rubies().await;
         requested_range
-            .find_match_in(rubies_for_this_platform)
+            .find_match_in(&remote_rubies)
             .ok_or(Error::NoMatchingRuby)?
             .version
     };
