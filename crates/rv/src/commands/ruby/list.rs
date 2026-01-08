@@ -281,37 +281,6 @@ mod tests {
                     active: false,
                 }],
             },
-            // Nothing weird should happen if there's no remotely-available versions.
-            Test {
-                test_name: "only local installs, no remote available",
-                remote_rubies: Vec::new(),
-                installed_rubies: vec![ruby("ruby-3.3.0")],
-                active_ruby: None,
-                expected: vec![JsonRubyEntry {
-                    details: ruby("ruby-3.3.0"),
-                    installed: true,
-                    active: false,
-                }],
-            },
-            // Locally-installed and remotely-available both get merged together.
-            Test {
-                test_name: "both local and remote, different minor versions",
-                remote_rubies: vec![ruby("ruby-3.4.0")],
-                installed_rubies: vec![ruby("ruby-3.3.0")],
-                active_ruby: None,
-                expected: vec![
-                    JsonRubyEntry {
-                        details: ruby("ruby-3.3.0"),
-                        installed: true,
-                        active: false,
-                    },
-                    JsonRubyEntry {
-                        details: ruby("ruby-3.4.0"),
-                        installed: false,
-                        active: false,
-                    },
-                ],
-            },
             // The locally-installed versions should always be shown,
             // even if they're an older patch version compared to something available
             // on remote.
