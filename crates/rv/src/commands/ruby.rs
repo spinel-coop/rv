@@ -20,7 +20,7 @@ pub struct RubyArgs {
 
 #[derive(Subcommand)]
 pub enum RubyCommand {
-    #[command(about = "List the available Ruby installations")]
+    #[command(about = "List all installed Ruby versions")]
     List {
         /// Output format for the Ruby list
         #[arg(long, value_enum, default_value = "text")]
@@ -37,16 +37,18 @@ pub enum RubyCommand {
         version: Option<String>,
     },
 
-    #[command(about = "Show the Ruby installation directory")]
+    #[command(about = "Show the directory where all Ruby versions are installed")]
     Dir,
 
-    #[command(about = "Search for a Ruby installation")]
+    #[command(
+        about = "Show the path to the Ruby executable for the pinned version or a specific version"
+    )]
     Find {
         /// Ruby version to find
         version: Option<RubyRequest>,
     },
 
-    #[command(about = "Install a Ruby version")]
+    #[command(about = "Install the pinned Ruby version or a specific version")]
     Install {
         /// Directory to install into
         #[arg(short, long, value_name = "DIR")]
@@ -60,14 +62,17 @@ pub enum RubyCommand {
         tarball_path: Option<String>,
     },
 
-    #[command(about = "Uninstall a Ruby version")]
+    #[command(about = "Uninstall a specific Ruby version")]
     Uninstall {
         /// Ruby version to uninstall
         version: RubyRequest,
     },
 
     #[cfg(unix)]
-    #[command(about = "Run a specific Ruby", dont_delimit_trailing_values = true)]
+    #[command(
+        about = "Run Ruby with arguments, using the pinned version or a specific version",
+        dont_delimit_trailing_values = true
+    )]
     Run {
         /// By default, if your requested Ruby version isn't installed,
         /// it will be installed with `rv ruby install`'s default options.
