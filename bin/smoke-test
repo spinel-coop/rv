@@ -11,8 +11,16 @@ if [[ -z "$name" ]]; then
   exit 1
 fi
 
+shift
 if [[ "$(uname)" == "Darwin" ]]; then
-  exec docker run -it -v .:/src --name "rv-smoke-test-$name" rust:latest "/src/bin/smoke-tests/$name" "$@"
+  if ! docker container inspect rv-smoke-test-diaspora >/dev/null 2>&1; then
+    set -x
+    docker run -it -v .:/src --name "rv-smoke-test-$name" rust:latest "/src/bin/smoke-tests/$name" "$@"
+  else
+    set -x
+    docker start -ia "rv-smoke-test-$name"
+  fi
 else
+  set -x
   exec "$DIR/smoke-tests/$name" "$@"
 fi
