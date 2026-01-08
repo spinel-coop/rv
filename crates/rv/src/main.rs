@@ -127,11 +127,7 @@ enum Commands {
     #[command(about = "Configure your shell to use rv")]
     Shell(ShellArgs),
     #[cfg(unix)]
-    #[command(
-        about = "Clean install from a Gemfile.lock",
-        visible_alias = "ci",
-        hide = true
-    )]
+    #[command(about = "Clean install from a Gemfile.lock", visible_alias = "ci")]
     CleanInstall(CleanInstallArgs),
 }
 
