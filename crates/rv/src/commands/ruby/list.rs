@@ -62,42 +62,15 @@ impl JsonRubyEntry {
 /// Lists the available and installed rubies.
 pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -> Result<()> {
     let installed_rubies = config.rubies();
-    let active_ruby = config.current_ruby();
 
-    if installed_only {
-        if installed_rubies.is_empty() && format == OutputFormat::Text {
-            warn!("No Ruby installations found.");
-            info!("Try installing Ruby with 'rv ruby install <version>'");
-            return Ok(());
-        }
-
-        let entries: Vec<JsonRubyEntry> = installed_rubies
-            .into_iter()
-            .map(|ruby| JsonRubyEntry::installed(ruby, &active_ruby))
-            .collect();
-
-        return print_entries(&entries, format);
-    }
-
-    let remote_rubies = config.remote_rubies().await;
-
-    let entries = rubies_to_show(remote_rubies, installed_rubies, active_ruby);
-    if entries.is_empty() && format == OutputFormat::Text {
-        warn!("No rubies found for your platform.");
+    if installed_only && installed_rubies.is_empty() && format == OutputFormat::Text {
+        warn!("No Ruby installations found.");
+        info!("Try installing Ruby with 'rv ruby install <version>'");
         return Ok(());
     }
 
-    print_entries(&entries, format)
-}
+    let active_ruby = config.current_ruby();
 
-/// Merge ruby lists from various sources, choose which ones to show to the user.
-/// E.g. don't show rv-ruby installable 3.3.2 if a later patch 3.3.9 is available.
-/// Don't show duplicates, etc.
-fn rubies_to_show(
-    remote_rubies: Vec<Ruby>,
-    installed_rubies: Vec<Ruby>,
-    active_ruby: Option<Ruby>,
-) -> Vec<JsonRubyEntry> {
     // Might have multiple installed rubies with the same version (e.g., "ruby-3.2.0" and "mruby-3.2.0").
     let mut rubies_map: BTreeMap<String, Vec<JsonRubyEntry>> = BTreeMap::new();
     for ruby in installed_rubies {
@@ -107,15 +80,26 @@ fn rubies_to_show(
             .push(JsonRubyEntry::installed(ruby, &active_ruby));
     }
 
-    // Add selected remote rubies that are not already installed to the list
-    for ruby in latest_patch_version(remote_rubies) {
-        rubies_map
-            .entry(ruby.display_name())
-            .or_insert(vec![JsonRubyEntry::available(ruby, &active_ruby)]);
+    if !installed_only {
+        let remote_rubies = config.remote_rubies().await;
+
+        // Add selected remote rubies that are not already installed to the list
+        for ruby in latest_patch_version(remote_rubies) {
+            rubies_map
+                .entry(ruby.display_name())
+                .or_insert(vec![JsonRubyEntry::available(ruby, &active_ruby)]);
+        }
+
+        if rubies_map.is_empty() && format == OutputFormat::Text {
+            warn!("No rubies found for your platform.");
+            return Ok(());
+        }
     }
 
     // Create entries for output
-    rubies_map.into_values().flatten().collect()
+    let entries: Vec<JsonRubyEntry> = rubies_map.into_values().flatten().collect();
+
+    print_entries(&entries, format)
 }
 
 fn latest_patch_version(remote_rubies: Vec<Ruby>) -> Vec<Ruby> {
