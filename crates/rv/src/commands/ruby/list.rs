@@ -69,7 +69,8 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
         return Ok(());
     }
 
-    let active_ruby = config.current_ruby();
+    let requested = config.ruby_request();
+    let mut active_ruby = requested.find_match_in(&installed_rubies);
 
     // Might have multiple installed rubies with the same version (e.g., "ruby-3.2.0" and "mruby-3.2.0").
     let mut rubies_map: BTreeMap<String, Vec<JsonRubyEntry>> = BTreeMap::new();
@@ -83,8 +84,12 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
     if !installed_only {
         let remote_rubies = config.remote_rubies().await;
 
+        let selected_remote_rubies = latest_patch_version(&remote_rubies);
+
+        active_ruby = active_ruby.or_else(|| requested.find_match_in(&selected_remote_rubies));
+
         // Add selected remote rubies that are not already installed to the list
-        for ruby in latest_patch_version(remote_rubies) {
+        for ruby in selected_remote_rubies {
             rubies_map
                 .entry(ruby.display_name())
                 .or_insert(vec![JsonRubyEntry::available(ruby, &active_ruby)]);
@@ -102,7 +107,7 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
     print_entries(&entries, format)
 }
 
-fn latest_patch_version(remote_rubies: Vec<Ruby>) -> Vec<Ruby> {
+fn latest_patch_version(remote_rubies: &Vec<Ruby>) -> Vec<Ruby> {
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
     struct NonPatchRelease {
         engine: rv_ruby::engine::RubyEngine,
@@ -132,7 +137,7 @@ fn latest_patch_version(remote_rubies: Vec<Ruby>) -> Vec<Ruby> {
             .map(|other| other.version > ruby.version)
             .unwrap_or_default();
         if !skip {
-            available_rubies.insert(key, ruby);
+            available_rubies.insert(key, ruby.clone());
         }
     }
     available_rubies.into_values().collect()
@@ -279,7 +284,7 @@ mod tests {
             expected,
         } in tests
         {
-            let actual = latest_patch_version(input);
+            let actual = latest_patch_version(&input);
             assert_eq!(
                 actual, expected,
                 "Failed test {name}, got {actual:?} but expected {expected:?}"
