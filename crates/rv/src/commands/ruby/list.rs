@@ -95,6 +95,26 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
                 .or_insert(vec![JsonRubyEntry::available(ruby, &active_ruby)]);
         }
 
+        let insert_requested_if_available = || {
+            let ruby = requested.find_match_in(&remote_rubies);
+
+            if ruby.is_some() {
+                let details = ruby.clone().unwrap();
+
+                rubies_map
+                    .entry(details.display_name())
+                    .or_insert(vec![JsonRubyEntry {
+                        details,
+                        installed: false,
+                        active: true,
+                    }]);
+            };
+
+            ruby
+        };
+
+        active_ruby.or_else(insert_requested_if_available);
+
         if rubies_map.is_empty() && format == OutputFormat::Text {
             warn!("No rubies found for your platform.");
             return Ok(());

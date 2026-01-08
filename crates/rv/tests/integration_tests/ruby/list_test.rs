@@ -194,6 +194,25 @@ fn test_ruby_list_ruby_3_5_is_skipped() {
 }
 
 #[test]
+fn test_ruby_list_shows_requested_ruby_even_if_not_installed_and_not_a_latest_patch() {
+    let mut test = RvTest::new();
+
+    let project_dir = test.temp_root().join("project");
+    std::fs::create_dir_all(project_dir.as_path()).unwrap();
+    std::fs::write(project_dir.join(".ruby-version"), b"3.4.7").unwrap();
+    test.cwd = project_dir;
+
+    let mock = test.mock_releases(["3.4.7", "3.4.8"].to_vec());
+    let output = test.rv(&["ruby", "list"]);
+
+    mock.assert();
+    output.assert_success();
+
+    // Both 3.4.7 and 3.4.8 should be listed, with 3.4.7 marked as active
+    insta::assert_snapshot!(output.normalized_stdout());
+}
+
+#[test]
 fn test_ruby_list_without_updating_versions() {
     let mut test = RvTest::new();
     test.env.insert("RV_LIST_URL".into(), "-".into());
