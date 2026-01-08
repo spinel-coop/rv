@@ -14,6 +14,7 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberI
 
 pub mod commands;
 pub mod config;
+pub mod http_client;
 
 use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir, cache_prune};
 #[cfg(unix)]
@@ -32,6 +33,8 @@ use crate::commands::shell::env::env as shell_env;
 use crate::commands::shell::init::init as shell_init;
 use crate::commands::shell::setup as shell_setup;
 use crate::commands::shell::{ShellArgs, ShellCommand};
+use crate::commands::tool::ToolArgs;
+use crate::commands::tool::install::install as tool_install;
 
 const STYLES: Styles = Styles::styled()
     .header(AnsiColor::Green.on_default().bold())
@@ -129,6 +132,8 @@ enum Commands {
     #[cfg(unix)]
     #[command(about = "Clean install from a Gemfile.lock", visible_alias = "ci")]
     CleanInstall(CleanInstallArgs),
+    #[command(about = "Manage Ruby tools", hide = true)]
+    Tool(ToolArgs),
 }
 
 #[derive(Debug, Copy, Clone, clap::ValueEnum)]
@@ -205,6 +210,8 @@ pub enum Error {
     ShellError(#[from] commands::shell::Error),
     #[error(transparent)]
     EnvError(#[from] commands::shell::env::Error),
+    #[error(transparent)]
+    ToolInstallError(#[from] commands::tool::install::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -330,6 +337,9 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
                 shell_completions(&mut Cli::command(), shell)
             }
             Some(ShellCommand::Env { shell }) => shell_env(config, shell)?,
+        },
+        Commands::Tool(tool) => match tool.command {
+            commands::tool::ToolCommand::Install { gem } => tool_install(config, gem).await?,
         },
     };
 
