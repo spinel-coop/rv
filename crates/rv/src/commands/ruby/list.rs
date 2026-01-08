@@ -79,9 +79,9 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
         return print_entries(&entries, format);
     }
 
-    let rubies_for_this_platform = config.remote_rubies().await;
+    let remote_rubies = config.remote_rubies().await;
 
-    let entries = rubies_to_show(rubies_for_this_platform, installed_rubies, active_ruby);
+    let entries = rubies_to_show(remote_rubies, installed_rubies, active_ruby);
     if entries.is_empty() && format == OutputFormat::Text {
         warn!("No rubies found for your platform.");
         return Ok(());
@@ -94,7 +94,7 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
 /// E.g. don't show rv-ruby installable 3.3.2 if a later patch 3.3.9 is available.
 /// Don't show duplicates, etc.
 fn rubies_to_show(
-    rubies_for_this_platform: Vec<Ruby>,
+    remote_rubies: Vec<Ruby>,
     installed_rubies: Vec<Ruby>,
     active_ruby: Option<Ruby>,
 ) -> Vec<JsonRubyEntry> {
@@ -108,7 +108,7 @@ fn rubies_to_show(
     }
 
     // Add selected remote rubies that are not already installed to the list
-    for ruby in latest_patch_version(rubies_for_this_platform) {
+    for ruby in latest_patch_version(remote_rubies) {
         rubies_map
             .entry(ruby.display_name())
             .or_insert(vec![JsonRubyEntry::available(ruby, &active_ruby)]);
@@ -118,7 +118,7 @@ fn rubies_to_show(
     rubies_map.into_values().flatten().collect()
 }
 
-fn latest_patch_version(rubies_for_this_platform: Vec<Ruby>) -> Vec<Ruby> {
+fn latest_patch_version(remote_rubies: Vec<Ruby>) -> Vec<Ruby> {
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
     struct NonPatchRelease {
         engine: rv_ruby::engine::RubyEngine,
@@ -136,7 +136,7 @@ fn latest_patch_version(rubies_for_this_platform: Vec<Ruby>) -> Vec<Ruby> {
         }
     }
     let mut available_rubies: BTreeMap<NonPatchRelease, Ruby> = BTreeMap::new();
-    for ruby in rubies_for_this_platform {
+    for ruby in remote_rubies {
         // Skip 3.5 series since they only include pre-releases
         if ruby.version.major == 3 && ruby.version.minor == 5 {
             continue;
@@ -243,7 +243,7 @@ mod tests {
     fn test_rubies_to_show() {
         struct Test {
             test_name: &'static str,
-            rubies_for_this_platform: Vec<Ruby>,
+            remote_rubies: Vec<Ruby>,
             installed_rubies: Vec<Ruby>,
             active_ruby: Option<Ruby>,
             expected: Vec<JsonRubyEntry>,
@@ -253,7 +253,7 @@ mod tests {
             // Nothing weird should happen if there's no locally-installed versions.
             Test {
                 test_name: "no local installs",
-                rubies_for_this_platform: vec![ruby("ruby-3.3.0"), ruby("ruby-4.0.0")],
+                remote_rubies: vec![ruby("ruby-3.3.0"), ruby("ruby-4.0.0")],
                 installed_rubies: Vec::new(),
                 active_ruby: None,
                 expected: vec![
@@ -272,7 +272,7 @@ mod tests {
             // Ruby 3.5 is skipped
             Test {
                 test_name: "Ruby 3.5 is skipped",
-                rubies_for_this_platform: vec![ruby("ruby-3.5.0-preview1"), ruby("ruby-4.0.0")],
+                remote_rubies: vec![ruby("ruby-3.5.0-preview1"), ruby("ruby-4.0.0")],
                 installed_rubies: Vec::new(),
                 active_ruby: None,
                 expected: vec![JsonRubyEntry {
@@ -284,7 +284,7 @@ mod tests {
             // Nothing weird should happen if there's no remotely-available versions.
             Test {
                 test_name: "only local installs, no remote available",
-                rubies_for_this_platform: Vec::new(),
+                remote_rubies: Vec::new(),
                 installed_rubies: vec![ruby("ruby-3.3.0")],
                 active_ruby: None,
                 expected: vec![JsonRubyEntry {
@@ -296,7 +296,7 @@ mod tests {
             // Locally-installed and remotely-available both get merged together.
             Test {
                 test_name: "both local and remote, different minor versions",
-                rubies_for_this_platform: vec![ruby("ruby-3.4.0")],
+                remote_rubies: vec![ruby("ruby-3.4.0")],
                 installed_rubies: vec![ruby("ruby-3.3.0")],
                 active_ruby: None,
                 expected: vec![
@@ -317,7 +317,7 @@ mod tests {
             // on remote.
             Test {
                 test_name: "both local and remote, different patch versions",
-                rubies_for_this_platform: vec![ruby("ruby-3.4.0")],
+                remote_rubies: vec![ruby("ruby-3.4.0")],
                 installed_rubies: vec![ruby("ruby-3.4.1")],
                 active_ruby: None,
                 expected: vec![
@@ -336,7 +336,7 @@ mod tests {
             // Only the remote with the latest version should be shown.
             Test {
                 test_name: "both local and remote, different patch versions, filters remote patches",
-                rubies_for_this_platform: vec![ruby("ruby-3.4.0"), ruby("ruby-3.4.1")],
+                remote_rubies: vec![ruby("ruby-3.4.0"), ruby("ruby-3.4.1")],
                 installed_rubies: vec![ruby("ruby-3.3.1")],
                 active_ruby: None,
                 expected: vec![
@@ -356,13 +356,13 @@ mod tests {
 
         for Test {
             test_name,
-            rubies_for_this_platform,
+            remote_rubies,
             installed_rubies,
             active_ruby,
             expected,
         } in tests
         {
-            let actual = rubies_to_show(rubies_for_this_platform, installed_rubies, active_ruby);
+            let actual = rubies_to_show(remote_rubies, installed_rubies, active_ruby);
             pretty_assertions::assert_eq!(actual, expected, "failed test case '{test_name}'");
         }
     }
