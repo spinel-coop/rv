@@ -286,18 +286,18 @@ mod tests {
             // on remote.
             Test {
                 test_name: "both local and remote, different patch versions",
-                remote_rubies: vec![ruby("ruby-3.4.0")],
-                installed_rubies: vec![ruby("ruby-3.4.1")],
+                remote_rubies: vec![ruby("ruby-3.4.1")],
+                installed_rubies: vec![ruby("ruby-3.4.0")],
                 active_ruby: None,
                 expected: vec![
                     JsonRubyEntry {
                         details: ruby("ruby-3.4.0"),
-                        installed: false,
+                        installed: true,
                         active: false,
                     },
                     JsonRubyEntry {
                         details: ruby("ruby-3.4.1"),
-                        installed: true,
+                        installed: false,
                         active: false,
                     },
                 ],
