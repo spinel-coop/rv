@@ -29,7 +29,7 @@ fn test_ruby_install_no_specific_version() {
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
-    let mock = test.mock_releases("3.4.5");
+    let mock = test.mock_releases(["3.4.5"].to_vec());
 
     let output = test.rv(&["ruby", "install"]);
 
@@ -65,7 +65,7 @@ fn test_ruby_install_incomplete_request() {
     test.env
         .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
-    let mock = test.mock_releases("4.0.0");
+    let mock = test.mock_releases(["4.0.0"].to_vec());
 
     let output = test.rv(&["ruby", "install", "4"]);
 

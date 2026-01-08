@@ -11,7 +11,7 @@ impl RvTest {
 fn test_clean_install_download_test_gem() {
     let mut test = RvTest::new();
 
-    let releases_mock = test.mock_releases("4.0.0");
+    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
 
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testsource");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testsource.lock");
@@ -60,7 +60,7 @@ fn test_clean_install_respects_ruby() {
 #[test]
 fn test_clean_install_native_macos_aarch64() {
     let mut test = RvTest::new();
-    let mock = test.mock_releases("4.0.0");
+    let mock = test.mock_releases(["4.0.0"].to_vec());
 
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative.lock");
@@ -79,7 +79,7 @@ fn test_clean_install_native_macos_aarch64() {
 #[test]
 fn test_clean_install_native_linux_x86_64() {
     let mut test = RvTest::new();
-    let mock = test.mock_releases("4.0.0");
+    let mock = test.mock_releases(["4.0.0"].to_vec());
 
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative.lock");
@@ -97,7 +97,7 @@ fn test_clean_install_native_linux_x86_64() {
 #[test]
 fn test_clean_install_download_faker() {
     let mut test = RvTest::new();
-    let mock = test.mock_releases("4.0.0");
+    let mock = test.mock_releases(["4.0.0"].to_vec());
 
     // https://github.com/faker-ruby/faker/blob/2f8b18b112fb3b7d2750321a8e574518cfac0d53/Gemfile
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.faker");

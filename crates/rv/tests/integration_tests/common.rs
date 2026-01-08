@@ -129,17 +129,28 @@ impl RvTest {
 
     /// Mocks the /releases API endpoint. Returns the mock handle
     /// so that tests can optionally assert it was called.
-    pub fn mock_releases(&mut self, version: &str) -> Mock {
+    pub fn mock_releases(&mut self, versions: Vec<&str>) -> Mock {
         use indoc::formatdoc;
+
+        let assets = versions
+            .into_iter()
+            .map(|v| {
+                formatdoc!(
+                    r#"
+            {{
+                "name": "ruby-{v}.arm64_sonoma.tar.gz",
+                "browser_download_url": "http://..."
+            }}"#
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",\n    ");
 
         let body = formatdoc!(
             r#"
             {{
                 "name": "latest",
-                "assets": [{{
-                    "name": "ruby-{version}.arm64_sonoma.tar.gz",
-                    "browser_download_url": "http://..."
-                }}]
+                "assets": [{assets}]
             }}"#
         );
 
