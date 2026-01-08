@@ -3,9 +3,9 @@ set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Smoke test for Diaspora (https://github.com/diaspora/diaspora)
-# on macOS, you can run this script via Docker:
-# docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/diaspora
+# Smoke test for Diaspora - https://github.com/diaspora/diaspora
+# On macOS, you can run this script via Docker:
+# $ docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/diaspora
 
 apt-get update
 apt-get install -y --no-install-recommends \

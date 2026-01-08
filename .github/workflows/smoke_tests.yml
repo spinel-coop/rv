@@ -27,5 +27,6 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@v6
-      - name: rv clean-install for $${ matrix.project }}
+
+      - name: rv clean-install for ${{ matrix.project }}
         run: bin/smoke-tests/${{ matrix.project }}

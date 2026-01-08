@@ -1,35 +1,27 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
 
-# Smoke test for Mastodon
-# https://github.com/mastodon/mastodon
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-IMAGE_NAME="rv-smoke-mastodon"
+# Smoke test for Mastodon - https://github.com/mastodon/mastodon
+# On macOS, you can run this script via Docker:
+# $ docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/mastodon
 
-# Build rv for Linux (matches host architecture)
-echo "Building rv..."
-"$ROOT_DIR/bin/build-ci-linux"
+apt-get update
+apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    ca-certificates \
+    libyaml-dev \
+    libpq-dev \
+    libicu-dev \
+    libidn-dev \
+    libxml2-dev \
+    libxslt1-dev \
+    zlib1g-dev \
+    libpam0g-dev
 
-# Get binary from correct location based on architecture
-if [[ "$(uname -m)" == "arm64" ]]; then
-    TARGET="aarch64-unknown-linux-gnu"
-else
-    TARGET="x86_64-unknown-linux-gnu"
-fi
+[[ -d mastodon ]] || git clone --depth 1 https://github.com/mastodon/mastodon.git
+cd mastodon
 
-if [ -f "$ROOT_DIR/target/$TARGET/release/rv" ]; then
-    cp "$ROOT_DIR/target/$TARGET/release/rv" "$SCRIPT_DIR/rv"
-else
-    cp "$ROOT_DIR/target/release/rv" "$SCRIPT_DIR/rv"
-fi
-
-# Clean up on exit
-trap 'rm -f "$SCRIPT_DIR/rv"' EXIT
-
-echo "Building Docker image and running smoke test..."
-docker build --no-cache --progress=plain -f "$SCRIPT_DIR/mastodon.Dockerfile" -t "$IMAGE_NAME" "$SCRIPT_DIR"
-
-echo ""
-echo "Smoke test for mastodon passed!"
+"$DIR"/../rv ci
