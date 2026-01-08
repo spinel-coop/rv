@@ -1,0 +1,33 @@
+#!/bin/bash
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Smoke test for GitLab - https://gitlab.com/gitlab-org/gitlab
+# On macOS, you can run this script via Docker:
+# $ docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/gitlab
+
+apt-get update
+apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    ca-certificates \
+    pkg-config \
+    cmake \
+    libyaml-dev \
+    libre2-dev \
+    libffi-dev \
+    libxml2-dev \
+    libxslt-dev \
+    libcurl4-openssl-dev \
+    libicu-dev \
+    libkrb5-dev \
+    libpq-dev \
+    libpcre2-dev \
+    libgpgme-dev \
+    zlib1g-dev
+
+[[ -d gitlab ]] || git clone --depth 1 https://gitlab.com/gitlab-org/gitlab.git
+cd gitlab
+
+"$DIR"/../rv ci

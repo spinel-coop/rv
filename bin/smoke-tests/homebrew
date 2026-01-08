@@ -1,0 +1,22 @@
+#!/bin/bash
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Smoke test for Homebrew - https://github.com/Homebrew/brew
+# On macOS, you can run this script via Docker:
+# $ docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/homebrew
+
+apt-get update
+apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    ca-certificates \
+    libffi-dev \
+    libyaml-dev \
+    python3-dev
+
+[[ -d brew ]] || git clone --depth 1 https://github.com/Homebrew/brew.git
+cd brew/Library/Homebrew
+
+"$DIR"/../../rv ci

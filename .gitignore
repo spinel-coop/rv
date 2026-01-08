@@ -27,5 +27,5 @@ lcov.info
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# Misc
+# Temporary files (smoke tests, etc.)
 temp/

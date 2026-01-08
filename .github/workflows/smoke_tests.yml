@@ -1,0 +1,34 @@
+name: Smoke Tests
+
+on:
+  schedule:
+    - cron: "0 10 * * *" # Nightly, 10:00 UTC / 02:00 Pacific
+  workflow_dispatch:
+
+permissions: read-all
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  smoke-test:
+    name: ${{ matrix.project }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - diaspora
+          - discourse
+          - fastlane
+          - gitlab
+          - homebrew
+          - huginn
+          - lobsters
+          - mastodon
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: rv clean-install for ${{ matrix.project }}
+        run: bin/smoke-tests/${{ matrix.project }}

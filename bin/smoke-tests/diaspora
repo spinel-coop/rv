@@ -1,0 +1,33 @@
+#!/bin/bash
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Smoke test for Diaspora - https://github.com/diaspora/diaspora
+# On macOS, you can run this script via Docker:
+# $ docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/diaspora
+
+apt-get update
+apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    ca-certificates \
+    cmake \
+    pkg-config \
+    libyaml-dev \
+    libffi-dev \
+    libxml2-dev \
+    libxslt-dev \
+    libpq-dev \
+    default-libmysqlclient-dev \
+    libcurl4-openssl-dev \
+    libyajl-dev \
+    libmagickwand-dev \
+    libgit2-dev \
+    libssh2-1-dev \
+    libidn-dev
+
+[[ -d diaspora ]] || git clone --depth 1 https://github.com/diaspora/diaspora.git
+cd diaspora
+
+"$DIR"/../rv ci

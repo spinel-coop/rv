@@ -1,0 +1,22 @@
+#!/bin/bash
+set -euo pipefail
+
+# Smoke test for Lobsters - https://github.com/lobsters/lobsters
+# On macOS, you can run this script via Docker:
+# $ docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/lobsters
+
+apt-get update
+apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    ca-certificates \
+    libyaml-dev \
+    libmariadb-dev \
+    libsqlite3-dev \
+    ruby
+
+[[ -d lobsters ]] || git clone --depth 1 https://github.com/lobsters/lobsters.git
+cd lobsters
+
+gem install bundler
+bundle install

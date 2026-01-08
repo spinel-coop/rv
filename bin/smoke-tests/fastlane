@@ -1,0 +1,26 @@
+#!/bin/bash
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Smoke test for Fastlane - https://github.com/fastlane/fastlane
+# On macOS, you can run this script via Docker:
+# $ docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/fastlane
+
+apt-get update
+apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    ca-certificates \
+    libyaml-dev \
+    libffi-dev \
+    libssl-dev
+
+[[ -d fastlane ]] || git clone --depth 1 https://github.com/fastlane/fastlane.git
+cd fastlane
+
+# Fastlane has no .ruby-version file or Ruby version in Gemfile.lock
+# https://docs.fastlane.tools/ says "fastlane supports Ruby versions 2.5 or newer"
+echo "3.3" > .ruby-version
+
+"$DIR"/../rv ci

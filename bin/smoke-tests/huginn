@@ -1,0 +1,27 @@
+#!/bin/bash
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Smoke test for Huginn - https://github.com/huginn/huginn
+# On macOS, you can run this script via Docker:
+# $ docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/huginn
+
+apt-get update
+apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    ca-certificates \
+    libyaml-dev \
+    libffi-dev \
+    libxml2-dev \
+    libxslt-dev \
+    libpq-dev \
+    default-libmysqlclient-dev \
+    libcurl4-openssl-dev \
+    libsqlite3-dev
+
+[[ -d huginn ]] || git clone --depth 1 https://github.com/huginn/huginn.git
+cd huginn
+
+"$DIR"/../rv ci

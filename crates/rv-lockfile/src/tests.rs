@@ -120,6 +120,15 @@ fn test_parse_lobsters() {
     insta::assert_yaml_snapshot!(output);
 }
 
+#[test]
+fn test_parse_mastodon() {
+    // Test parsing Mastodon's Gemfile.lock (has `ref:` field in GIT section)
+    // https://github.com/mastodon/mastodon
+    let input = include_str!("../tests/inputs/Gemfile.mastodon.lock");
+    let output = must_parse(input);
+    insta::assert_yaml_snapshot!(output);
+}
+
 fn must_parse(input: &str) -> crate::datatypes::GemfileDotLock<'_> {
     match crate::parse(input) {
         Ok(o) => o,

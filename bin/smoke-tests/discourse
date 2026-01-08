@@ -1,0 +1,26 @@
+#!/bin/bash
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Smoke test for Discourse - https://github.com/discourse/discourse
+# On macOS, you can run this script via Docker:
+# $ docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/discourse
+
+apt-get update
+apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    ca-certificates \
+    pkg-config \
+    libyaml-dev \
+    libpq-dev \
+    libxml2-dev \
+    libxslt-dev \
+    zlib1g-dev \
+    libsqlite3-dev
+
+[[ -d discourse ]] || git clone --depth 1 https://github.com/discourse/discourse.git
+cd discourse
+
+"$DIR"/../rv ci

@@ -1,0 +1,27 @@
+#!/bin/bash
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Smoke test for Mastodon - https://github.com/mastodon/mastodon
+# On macOS, you can run this script via Docker:
+# $ docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/mastodon
+
+apt-get update
+apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    ca-certificates \
+    libyaml-dev \
+    libpq-dev \
+    libicu-dev \
+    libidn-dev \
+    libxml2-dev \
+    libxslt1-dev \
+    zlib1g-dev \
+    libpam0g-dev
+
+[[ -d mastodon ]] || git clone --depth 1 https://github.com/mastodon/mastodon.git
+cd mastodon
+
+"$DIR"/../rv ci

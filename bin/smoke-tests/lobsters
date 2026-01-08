@@ -1,0 +1,22 @@
+#!/bin/bash
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Smoke test for Lobsters - https://github.com/lobsters/lobsters
+# On macOS, you can run this script via Docker:
+# $ docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/lobsters
+
+apt-get update
+apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    ca-certificates \
+    libyaml-dev \
+    libmariadb-dev \
+    libsqlite3-dev
+
+[[ -d lobsters ]] || git clone --depth 1 https://github.com/lobsters/lobsters.git
+cd lobsters
+
+"$DIR"/../rv ci
