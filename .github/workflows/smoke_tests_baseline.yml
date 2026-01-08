@@ -8,18 +8,28 @@ on:
 permissions: read-all
 
 jobs:
-  baseline:
-    name: baseline-${{ matrix.project }}
+  lobsters:
+    name: baseline-lobsters
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        project:
-          - lobsters
     steps:
       - name: Check out repo
         uses: actions/checkout@v6
 
-      - name: Run baseline smoke test
+      - name: Clone lobsters
+        run: git clone --depth 1 https://github.com/lobsters/lobsters.git
+
+      - name: Install native dependencies
         run: |
-          docker build --no-cache --progress=plain -f bin/smoke-tests/baseline/${{ matrix.project }}.Dockerfile -t baseline-${{ matrix.project }} bin/smoke-tests/baseline
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+              build-essential git curl ca-certificates pkg-config \
+              libyaml-dev libmariadb-dev libsqlite3-dev libclang-dev
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          working-directory: lobsters
+
+      - name: Run bundle install
+        working-directory: lobsters
+        run: bundle install
