@@ -122,9 +122,6 @@ fn test_ruby_list_with_available_and_installed() {
     mock.assert();
     output.assert_success();
 
-    println!("out: {}", String::from_utf8_lossy(&output.output.stdout));
-    println!("err: {}", String::from_utf8_lossy(&output.output.stderr));
-
     // 3.1.4 and 3.4.5 should be listed, with 3.1.4 marked as installed
     insta::assert_snapshot!(output.normalized_stdout());
 }
