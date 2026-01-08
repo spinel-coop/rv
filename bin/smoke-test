@@ -1,0 +1,18 @@
+#!/bin/bash
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+name="${1:-}"
+
+if [[ -z "$name" ]]; then
+  # shellcheck disable=SC2012
+  tests="$(ls "$DIR/smoke-tests" | tr '\n' '|')"
+  echo "USAGE: smoke-test [$tests]"
+  exit 1
+fi
+
+if [[ "$(uname)" == "Darwin" ]]; then
+  exec docker run -it -v .:/src --name "rv-smoke-test-$name" rust:latest "/src/bin/smoke-tests/$name" "$@"
+else
+  exec "$DIR/smoke-tests/$name" "$@"
+fi
