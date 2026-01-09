@@ -1796,13 +1796,19 @@ SHA512:
             .parent()
             .unwrap()
             .join("rv-gem-specification-yaml/tests/fixtures/bacon-1.2.0.gemspec.yaml");
-        let yaml_contents = std::fs::read_to_string(&fixture_path)
-            .expect("Failed to read fixture file");
+        let yaml_contents =
+            std::fs::read_to_string(&fixture_path).expect("Failed to read fixture file");
 
         let result = convert_gemspec_yaml_to_ruby(yaml_contents, &ruby_executable);
 
         // The result should contain the gem name and version in Ruby format
-        assert!(result.contains("bacon"), "Expected 'bacon' in output: {result}");
-        assert!(result.contains("1.2.0"), "Expected '1.2.0' in output: {result}");
+        assert!(
+            result.contains("bacon"),
+            "Expected 'bacon' in output: {result}"
+        );
+        assert!(
+            result.contains("1.2.0"),
+            "Expected '1.2.0' in output: {result}"
+        );
     }
 }
