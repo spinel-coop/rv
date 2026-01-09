@@ -509,3 +509,28 @@ fn test_terminal_table_1_4_5_version_requirement_class() {
         assert_eq!(spec.name, "terminal-table");
     }
 }
+
+#[test]
+fn test_code_ownership_cargo_extension() {
+    // code_ownership-2.1.0.gem uses Cargo.toml as its extension (Rust native extension)
+    let yaml_content =
+        std::fs::read_to_string("tests/fixtures/code_ownership-2.1.0.gemspec.yaml")
+            .expect("code_ownership-2.1.0 fixture should exist");
+    let result = parse(&yaml_content);
+    assert!(result.is_ok());
+    if let Ok(spec) = result {
+        assert_eq!(spec.name, "code_ownership");
+        assert_eq!(spec.version.to_string(), "2.1.0");
+        // Verify the Cargo.toml extension is parsed correctly
+        assert_eq!(spec.extensions.len(), 1);
+        assert_eq!(
+            spec.extensions[0],
+            "ext/code_ownership/Cargo.toml"
+        );
+        // Verify the cargo_crate_name metadata is parsed
+        assert_eq!(
+            spec.metadata.get("cargo_crate_name"),
+            Some(&"code_ownership".to_string())
+        );
+    }
+}

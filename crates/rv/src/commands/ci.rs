@@ -980,6 +980,7 @@ fn find_exts_dir(config: &Config, version: &RubyRequest) -> Result<Utf8PathBuf> 
 
 static EXTCONF_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)extconf").unwrap());
 static RAKE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)rakefile|mkrf_conf").unwrap());
+static CARGO_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)Cargo\.toml$").unwrap());
 
 fn compile_gem(config: &Config, args: &CiInnerArgs, spec: &GemSpecification) -> Result<bool> {
     let mut compile_results = Vec::with_capacity(spec.extensions.len());
@@ -1023,6 +1024,15 @@ fn compile_gem(config: &Config, args: &CiInnerArgs, spec: &GemSpecification) -> 
             }
             // Ensure that we only run the Rake builder once, even if we have both a `Rakefile` and `mkrf_conf` file
             ran_rake = true;
+        } else if CARGO_REGEX.is_match(extension) {
+            if let Ok(outputs) =
+                build_cargo(config, extension, &gem_path, &ext_dest, &lib_dest, spec)
+            {
+                compile_results.push(CompileNativeExtResult {
+                    extension: extension.to_string(),
+                    outputs,
+                });
+            }
         } else {
             return Err(Error::UnknownExtension {
                 filename: extension.to_string(),
@@ -1186,6 +1196,128 @@ fn build_extconf(
     fs_err::write(ext_dest.join("gem.build_complete"), "")?;
 
     Ok(outputs)
+}
+
+fn build_cargo(
+    _config: &Config,
+    extension: &str,
+    gem_path: &Utf8PathBuf,
+    ext_dest: &Utf8PathBuf,
+    lib_dest: &Utf8PathBuf,
+    spec: &GemSpecification,
+) -> Result<Vec<std::process::Output>> {
+    let ext_path = Utf8PathBuf::from_str(extension)?;
+    let cargo_dir = gem_path.join(ext_path.parent().expect("Cargo.toml has no parent"));
+    let cargo_toml = gem_path.join(&ext_path);
+
+    // Get the crate name from gemspec metadata or derive from gem name
+    let crate_name = spec
+        .metadata
+        .get("cargo_crate_name")
+        .cloned()
+        .unwrap_or_else(|| spec.name.replace('-', "_"));
+
+    debug!(
+        "Building Cargo extension for {} (crate: {})",
+        spec.full_name(),
+        crate_name
+    );
+
+    // Create temp directory for cargo build output
+    let tmp_dir = camino_tempfile::tempdir_in(gem_path)?;
+    let target_dir = tmp_dir.path();
+
+    // Build the Rust extension with cargo
+    let output = Command::new("cargo")
+        .args([
+            "rustc",
+            "--crate-type",
+            "cdylib",
+            "--target-dir",
+            target_dir.as_str(),
+            "--manifest-path",
+            cargo_toml.as_str(),
+            "--lib",
+            "--profile",
+            "release",
+        ])
+        .current_dir(&cargo_dir)
+        .output()?;
+
+    let outputs = vec![output.clone()];
+
+    if !output.status.success() {
+        return Ok(outputs);
+    }
+
+    // Find the compiled library - platform-specific naming
+    let (lib_prefix, so_ext) = if cfg!(target_os = "windows") {
+        ("", "dll")
+    } else if cfg!(target_os = "macos") {
+        ("lib", "dylib")
+    } else {
+        ("lib", "so")
+    };
+
+    let dylib_path = target_dir
+        .join("release")
+        .join(format!("{}{}.{}", lib_prefix, crate_name, so_ext));
+
+    if !dylib_path.exists() {
+        debug!("Compiled library not found at {}", dylib_path);
+        return Ok(outputs);
+    }
+
+    // Determine Ruby's expected extension name (DLEXT)
+    // Ruby uses .bundle on macOS, .so on Linux, .dll on Windows
+    let dlext = if cfg!(target_os = "macos") {
+        "bundle"
+    } else if cfg!(target_os = "windows") {
+        "dll"
+    } else {
+        "so"
+    };
+
+    let final_name = format!("{}.{}", crate_name, dlext);
+
+    // Calculate extension nesting (e.g., "ext/foo/bar/Cargo.toml" -> "foo/bar")
+    let nesting = extension_nesting(extension);
+
+    // Copy to lib directory
+    let nested_lib_dir = if nesting.is_empty() {
+        lib_dest.clone()
+    } else {
+        lib_dest.join(&nesting)
+    };
+    fs_err::create_dir_all(&nested_lib_dir)?;
+    fs_err::copy(&dylib_path, nested_lib_dir.join(&final_name))?;
+
+    // Copy to ext directory
+    let nested_ext_dir = if nesting.is_empty() {
+        ext_dest.clone()
+    } else {
+        ext_dest.join(&nesting)
+    };
+    fs_err::create_dir_all(&nested_ext_dir)?;
+    fs_err::copy(&dylib_path, nested_ext_dir.join(&final_name))?;
+
+    // Mark the gem as built
+    fs_err::write(ext_dest.join("gem.build_complete"), "")?;
+
+    Ok(outputs)
+}
+
+/// Calculate the extension nesting from an extension path.
+/// For example, "ext/foo/bar/Cargo.toml" returns "foo/bar".
+fn extension_nesting(extension: &str) -> String {
+    let parts: Vec<&str> = extension.split(['/', '\\']).collect();
+    if parts.len() <= 2 {
+        // No nesting (e.g., "Cargo.toml" or "ext/Cargo.toml")
+        String::new()
+    } else {
+        // Skip the first part (usually "ext") and the last part (filename)
+        parts[1..parts.len() - 1].join("/")
+    }
 }
 
 /// Result of unpacking a gem's `data.tar.gz` archive.
@@ -1750,5 +1882,61 @@ SHA512:
             "c7271aa96826b53e9ae015b4163fbe4f6256cc9101cae95bdde1ee8801cf9a156eaf9c1a678c87cb1d49b2c7b09e2b29f02487394bee0092e4d57fc1952c4c62",
             &hex::encode(sha512.data_tar_gz)
         );
+    }
+
+    #[test]
+    fn test_extension_nesting() {
+        // Standard nested extension
+        assert_eq!(
+            extension_nesting("ext/foo/bar/Cargo.toml"),
+            "foo/bar"
+        );
+        // Single level nesting
+        assert_eq!(
+            extension_nesting("ext/foo/Cargo.toml"),
+            "foo"
+        );
+        // No nesting (file in ext dir)
+        assert_eq!(extension_nesting("ext/Cargo.toml"), "");
+        // No nesting (file at root)
+        assert_eq!(extension_nesting("Cargo.toml"), "");
+        // Deeply nested
+        assert_eq!(
+            extension_nesting("ext/a/b/c/Cargo.toml"),
+            "a/b/c"
+        );
+    }
+
+    #[test]
+    fn test_cargo_regex() {
+        // Should match Cargo.toml at the end of a path
+        assert!(CARGO_REGEX.is_match("Cargo.toml"));
+        assert!(CARGO_REGEX.is_match("ext/Cargo.toml"));
+        assert!(CARGO_REGEX.is_match("ext/foo/Cargo.toml"));
+        assert!(CARGO_REGEX.is_match("ext/foo/bar/Cargo.toml"));
+        // Case insensitive
+        assert!(CARGO_REGEX.is_match("cargo.toml"));
+        assert!(CARGO_REGEX.is_match("CARGO.TOML"));
+        // Should not match when Cargo.toml is not at end
+        assert!(!CARGO_REGEX.is_match("Cargo.toml.bak"));
+        assert!(!CARGO_REGEX.is_match("Cargo.toml/foo"));
+        // Should not match other files
+        assert!(!CARGO_REGEX.is_match("extconf.rb"));
+        assert!(!CARGO_REGEX.is_match("Rakefile"));
+    }
+
+    #[test]
+    fn test_extconf_regex() {
+        assert!(EXTCONF_REGEX.is_match("extconf.rb"));
+        assert!(EXTCONF_REGEX.is_match("ext/extconf.rb"));
+        assert!(EXTCONF_REGEX.is_match("ext/foo/extconf.rb"));
+    }
+
+    #[test]
+    fn test_rake_regex() {
+        assert!(RAKE_REGEX.is_match("Rakefile"));
+        assert!(RAKE_REGEX.is_match("rakefile"));
+        assert!(RAKE_REGEX.is_match("mkrf_conf.rb"));
+        assert!(RAKE_REGEX.is_match("ext/mkrf_conf.rb"));
     }
 }
