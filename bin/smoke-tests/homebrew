@@ -19,4 +19,4 @@ sudo apt-get install -y --no-install-recommends \
 [[ -d brew ]] || git clone --depth 1 https://github.com/Homebrew/brew.git
 cd brew/Library/Homebrew
 
-"$DIR"/../../rv ci
+"$DIR"/../rv ci
