@@ -39,7 +39,6 @@ use std::ops::Not;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Command;
-use std::process::Stdio;
 use std::str::FromStr;
 use std::vec;
 
@@ -144,8 +143,6 @@ pub enum Error {
         "The lockfile path must be inside a directory with a parent, but it wasn't. Path was {0}"
     )]
     InvalidLockfilePath(String),
-    #[error("No matching Ruby version found")]
-    NoMatchingRuby,
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -1267,39 +1264,26 @@ where
 
 // TODO: Remove this. We should not need to shell out to Ruby to convert a YAML file to Ruby.
 fn convert_gemspec_yaml_to_ruby(config: &Config, contents: String) -> Result<String> {
-    use crate::config;
+    use std::io::Write;
 
-    let request = config.ruby_request();
-    let ruby = config
-        .matching_ruby(&request)
-        .ok_or(Error::NoMatchingRuby)?;
-    let (unset, set) = config::env_for(Some(&ruby))?;
+    let temp_dir = camino_tempfile::tempdir()?;
+    let temp_path = temp_dir.path().join("gemspec.yaml");
+    let mut temp_file = fs_err::File::create(&temp_path)?;
+    temp_file.write_all(contents.as_bytes())?;
 
-    let mut cmd = Command::new(ruby.executable_path());
-    cmd.args([
-        "-e",
-        "Gem.load_yaml; print Gem::SafeYAML.safe_load(ARGF.read).to_ruby",
-    ]);
-    cmd.stdin(Stdio::piped());
-    cmd.stdout(Stdio::piped());
+    let output = crate::commands::ruby::run::run_no_install(
+        config,
+        &config.ruby_request(),
+        &[
+            "-e",
+            "Gem.load_yaml; print Gem::SafeYAML.safe_load(ARGF.read).to_ruby",
+            temp_path.as_str(),
+        ],
+        CaptureOutput::Both,
+        None,
+        vec![],
+    )?;
 
-    for var in unset {
-        cmd.env_remove(var);
-    }
-    for (key, val) in set {
-        cmd.env(key, val);
-    }
-
-    let mut child = cmd.spawn()?;
-
-    let mut stdin = child.stdin.take().expect("Failed to open stdin");
-    std::thread::spawn(move || {
-        stdin
-            .write_all(contents.as_bytes())
-            .expect("Failed to write to stdin");
-    });
-
-    let output = child.wait_with_output()?;
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
