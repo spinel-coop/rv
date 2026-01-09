@@ -20,3 +20,6 @@ cd lobsters
 
 gem install bundler
 bundle install
+
+echo ""
+echo "Success: lobsters-bundler smoke test passed"

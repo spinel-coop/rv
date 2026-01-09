@@ -25,3 +25,6 @@ sudo apt-get install -y --no-install-recommends \
 cd huginn
 
 "$DIR"/../rv ci
+
+echo ""
+echo "Success: huginn smoke test passed"

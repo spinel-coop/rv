@@ -24,3 +24,6 @@ cd fastlane
 echo "3.3" > .ruby-version
 
 "$DIR"/../rv ci
+
+echo ""
+echo "Success: fastlane smoke test passed"

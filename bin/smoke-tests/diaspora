@@ -31,3 +31,6 @@ sudo apt-get install -y --no-install-recommends \
 cd diaspora
 
 "$DIR"/../rv ci
+
+echo ""
+echo "Success: diaspora smoke test passed"

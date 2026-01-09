@@ -24,3 +24,6 @@ sudo apt-get install -y --no-install-recommends \
 cd discourse
 
 "$DIR"/../rv ci
+
+echo ""
+echo "Success: discourse smoke test passed"
