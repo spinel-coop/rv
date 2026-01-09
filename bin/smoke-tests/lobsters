@@ -7,8 +7,14 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # On macOS, you can run this script via Docker:
 # $ docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/lobsters
 
-sudo apt-get update
-sudo apt-get install -y --no-install-recommends \
+# Use sudo if available (needed in GHA), skip if not (Docker runs as root)
+SUDO=""
+if command -v sudo &> /dev/null; then
+    SUDO="sudo"
+fi
+
+$SUDO apt-get update
+$SUDO apt-get install -y --no-install-recommends \
     build-essential \
     git \
     ca-certificates \
@@ -20,3 +26,6 @@ sudo apt-get install -y --no-install-recommends \
 cd lobsters
 
 "$DIR"/../rv ci
+
+echo ""
+echo "Success: lobsters smoke test passed"
