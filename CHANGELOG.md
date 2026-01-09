@@ -1,5 +1,15 @@
 # `rv` changelog
 
+## rv 0.4.1 (9 January, 2025)
+
+This is a small release to fix a few bugs in the 0.4.0 release.
+
+ - `rv ruby` commands should act on `rv` rubies before rubies from other sources (#333, @deivid-rodriguez)
+ - `rv ci` command should not be hidden (#337, @adamchalmers)
+ - Improvements to how `rv ruby list` displays active ruby (#339, @deivid-rodriguez)
+ - Clearer descriptions for `rv ruby` subcommands (#338, @sstephenson)
+ - Tests: Add smoke tests for `rv ci` with popular projects (#331, @case)
+
 ## rv 0.4.0 (6 January, 2025)
 
 Major new command: `rv clean-install`. Similar to `bundle install --frozen`, you can use `rv ci` to install gems that have already been resolved and recorded in your `Gemfile.lock`. If you notice anything wrong when installing your gems, please [let us know](https://github.com/spinel-coop/rv/issues/new)!
