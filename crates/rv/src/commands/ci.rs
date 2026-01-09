@@ -83,6 +83,7 @@ struct CiInnerArgs {
     pub lockfile_dir: Utf8PathBuf,
     pub install_path: Utf8PathBuf,
     pub extensions_dir: Utf8PathBuf,
+    pub ruby_executable: Utf8PathBuf,
 }
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -158,6 +159,10 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
 
     // Now that it's installed, we can use Ruby to query various directories
     // we'll need to know later.
+    let ruby = config
+        .matching_ruby(&ruby_request)
+        .expect("Ruby should be installed at this point");
+    let ruby_executable = ruby.executable_path().to_path_buf();
     let extensions_dir = find_exts_dir(config, &ruby_request)?;
     let lockfile_path = find_lockfile_path(args.gemfile)?;
     let lockfile_dir = lockfile_path
@@ -174,6 +179,7 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         lockfile_dir,
         install_path,
         extensions_dir,
+        ruby_executable,
     };
     ci_inner(config, &inner_args).await
 }
@@ -861,8 +867,12 @@ impl<'i> DownloadedRubygems<'i> {
                     if found_gemspec.is_some() {
                         return Err(Error::InvalidGemArchive("two metadata.gz found".to_owned()));
                     }
-                    let UnpackedMetdata { hashed, gemspec } =
-                        unpack_metadata(&bundle_path, &full_name, HashReader::new(entry))?;
+                    let UnpackedMetdata { hashed, gemspec } = unpack_metadata(
+                        &bundle_path,
+                        &full_name,
+                        HashReader::new(entry),
+                        &args.ruby_executable,
+                    )?;
                     found_gemspec = Some(gemspec);
                     metadata_hashed = Some(hashed);
                 }
@@ -1227,6 +1237,7 @@ fn unpack_metadata<R>(
     bundle_path: &Utf8Path,
     nameversion: &str,
     metadata_gz: HashReader<R>,
+    ruby_executable: &Utf8Path,
 ) -> Result<UnpackedMetdata>
 where
     R: Read,
@@ -1249,7 +1260,7 @@ where
             None
         }
     };
-    let ruby_contents = convert_gemspec_yaml_to_ruby(yaml_contents);
+    let ruby_contents = convert_gemspec_yaml_to_ruby(yaml_contents, ruby_executable);
     std::io::copy(&mut ruby_contents.as_bytes(), &mut dst)?;
 
     let h = unzipper.into_inner();
@@ -1260,8 +1271,8 @@ where
 }
 
 // TODO: Remove this. We should not need to shell out to Ruby to convert a YAML file to Ruby.
-fn convert_gemspec_yaml_to_ruby(contents: String) -> String {
-    let mut child = std::process::Command::new("ruby")
+fn convert_gemspec_yaml_to_ruby(contents: String, ruby_executable: &Utf8Path) -> String {
+    let mut child = std::process::Command::new(ruby_executable.as_str())
         .args([
             "-e",
             "Gem.load_yaml; print Gem::SafeYAML.safe_load(ARGF.read).to_ruby",
@@ -1750,5 +1761,48 @@ SHA512:
             "c7271aa96826b53e9ae015b4163fbe4f6256cc9101cae95bdde1ee8801cf9a156eaf9c1a678c87cb1d49b2c7b09e2b29f02487394bee0092e4d57fc1952c4c62",
             &hex::encode(sha512.data_tar_gz)
         );
+    }
+
+    #[test]
+    fn test_convert_gemspec_yaml_to_ruby_uses_explicit_path() {
+        // This test verifies that convert_gemspec_yaml_to_ruby uses an explicit ruby path
+        // rather than relying on "ruby" being in PATH.
+        //
+        // The bug: When rv installs Ruby to a custom location (e.g., ~/.local/share/rv/rubies),
+        // it's not automatically added to PATH. The old implementation called `Command::new("ruby")`
+        // which fails with "No such file or directory" because ruby isn't in PATH.
+        //
+        // The fix: convert_gemspec_yaml_to_ruby should accept an explicit ruby_executable path.
+
+        // Use `which ruby` to find the system ruby for this test
+        let which_output = std::process::Command::new("which")
+            .arg("ruby")
+            .output()
+            .expect("failed to run 'which ruby'");
+
+        if !which_output.status.success() {
+            // Skip test if ruby isn't installed
+            eprintln!("Skipping test: ruby not found in PATH");
+            return;
+        }
+
+        let ruby_path = String::from_utf8_lossy(&which_output.stdout)
+            .trim()
+            .to_string();
+        let ruby_executable = Utf8PathBuf::from(&ruby_path);
+
+        // Use an existing fixture from rv-gem-specification-yaml
+        let fixture_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .join("rv-gem-specification-yaml/tests/fixtures/bacon-1.2.0.gemspec.yaml");
+        let yaml_contents = std::fs::read_to_string(&fixture_path)
+            .expect("Failed to read fixture file");
+
+        let result = convert_gemspec_yaml_to_ruby(yaml_contents, &ruby_executable);
+
+        // The result should contain the gem name and version in Ruby format
+        assert!(result.contains("bacon"), "Expected 'bacon' in output: {result}");
+        assert!(result.contains("1.2.0"), "Expected '1.2.0' in output: {result}");
     }
 }
