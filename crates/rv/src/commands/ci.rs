@@ -1211,11 +1211,7 @@ fn build_cargo(
     let cargo_toml = gem_path.join(&ext_path);
 
     // Get the crate name from gemspec metadata or derive from gem name
-    let crate_name = spec
-        .metadata
-        .get("cargo_crate_name")
-        .cloned()
-        .unwrap_or_else(|| spec.name.replace('-', "_"));
+    let crate_name = cargo_crate_name(spec);
 
     debug!(
         "Building Cargo extension for {} (crate: {})",
@@ -1251,13 +1247,7 @@ fn build_cargo(
     }
 
     // Find the compiled library - platform-specific naming
-    let (lib_prefix, so_ext) = if cfg!(target_os = "windows") {
-        ("", "dll")
-    } else if cfg!(target_os = "macos") {
-        ("lib", "dylib")
-    } else {
-        ("lib", "so")
-    };
+    let (lib_prefix, so_ext, ruby_ext) = platform_dylib_config();
 
     let dylib_path = target_dir
         .join("release")
@@ -1268,17 +1258,7 @@ fn build_cargo(
         return Ok(outputs);
     }
 
-    // Determine Ruby's expected extension name (DLEXT)
-    // Ruby uses .bundle on macOS, .so on Linux, .dll on Windows
-    let dlext = if cfg!(target_os = "macos") {
-        "bundle"
-    } else if cfg!(target_os = "windows") {
-        "dll"
-    } else {
-        "so"
-    };
-
-    let final_name = format!("{}.{}", crate_name, dlext);
+    let final_name = format!("{}.{}", crate_name, ruby_ext);
 
     // Calculate extension nesting (e.g., "ext/foo/bar/Cargo.toml" -> "foo/bar")
     let nesting = extension_nesting(extension);
@@ -1317,6 +1297,29 @@ fn extension_nesting(extension: &str) -> String {
     } else {
         // Skip the first part (usually "ext") and the last part (filename)
         parts[1..parts.len() - 1].join("/")
+    }
+}
+
+/// Get the crate name for a Cargo extension from gemspec metadata or derive from gem name.
+fn cargo_crate_name(spec: &GemSpecification) -> String {
+    spec.metadata
+        .get("cargo_crate_name")
+        .cloned()
+        .unwrap_or_else(|| spec.name.replace('-', "_"))
+}
+
+/// Get platform-specific dynamic library naming conventions.
+/// Returns (prefix, source_extension, ruby_extension).
+/// - prefix: "lib" on Unix, "" on Windows
+/// - source_extension: what Cargo produces ("so", "dylib", "dll")
+/// - ruby_extension: what Ruby expects ("so", "bundle", "dll")
+fn platform_dylib_config() -> (&'static str, &'static str, &'static str) {
+    if cfg!(target_os = "windows") {
+        ("", "dll", "dll")
+    } else if cfg!(target_os = "macos") {
+        ("lib", "dylib", "bundle")
+    } else {
+        ("lib", "so", "so")
     }
 }
 
@@ -1929,5 +1932,41 @@ SHA512:
         assert!(RAKE_REGEX.is_match("rakefile"));
         assert!(RAKE_REGEX.is_match("mkrf_conf.rb"));
         assert!(RAKE_REGEX.is_match("ext/mkrf_conf.rb"));
+    }
+
+    #[test]
+    fn test_cargo_crate_name_from_metadata() {
+        let mut spec =
+            GemSpecification::new("my-gem".to_string(), "1.0.0".parse().unwrap()).unwrap();
+        spec.metadata
+            .insert("cargo_crate_name".to_string(), "custom_crate".to_string());
+        assert_eq!(cargo_crate_name(&spec), "custom_crate");
+    }
+
+    #[test]
+    fn test_cargo_crate_name_derived() {
+        let spec =
+            GemSpecification::new("my-gem-name".to_string(), "1.0.0".parse().unwrap()).unwrap();
+        // No cargo_crate_name in metadata, should derive from gem name
+        assert_eq!(cargo_crate_name(&spec), "my_gem_name");
+    }
+
+    #[test]
+    fn test_cargo_crate_name_no_hyphens() {
+        let spec = GemSpecification::new("simple".to_string(), "1.0.0".parse().unwrap()).unwrap();
+        assert_eq!(cargo_crate_name(&spec), "simple");
+    }
+
+    #[test]
+    fn test_platform_dylib_config() {
+        let (prefix, cargo_ext, ruby_ext) = platform_dylib_config();
+        // Just verify we get valid values for the current platform
+        assert!(!cargo_ext.is_empty());
+        assert!(!ruby_ext.is_empty());
+        // On Unix, prefix should be "lib"; on Windows, empty
+        #[cfg(unix)]
+        assert_eq!(prefix, "lib");
+        #[cfg(windows)]
+        assert_eq!(prefix, "");
     }
 }
