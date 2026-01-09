@@ -1887,24 +1887,15 @@ SHA512:
     #[test]
     fn test_extension_nesting() {
         // Standard nested extension
-        assert_eq!(
-            extension_nesting("ext/foo/bar/Cargo.toml"),
-            "foo/bar"
-        );
+        assert_eq!(extension_nesting("ext/foo/bar/Cargo.toml"), "foo/bar");
         // Single level nesting
-        assert_eq!(
-            extension_nesting("ext/foo/Cargo.toml"),
-            "foo"
-        );
+        assert_eq!(extension_nesting("ext/foo/Cargo.toml"), "foo");
         // No nesting (file in ext dir)
         assert_eq!(extension_nesting("ext/Cargo.toml"), "");
         // No nesting (file at root)
         assert_eq!(extension_nesting("Cargo.toml"), "");
         // Deeply nested
-        assert_eq!(
-            extension_nesting("ext/a/b/c/Cargo.toml"),
-            "a/b/c"
-        );
+        assert_eq!(extension_nesting("ext/a/b/c/Cargo.toml"), "a/b/c");
     }
 
     #[test]
