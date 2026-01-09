@@ -7,8 +7,8 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # On macOS, you can run this script via Docker:
 # $ docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/diaspora
 
-apt-get update
-apt-get install -y --no-install-recommends \
+sudo apt-get update
+sudo apt-get install -y --no-install-recommends \
     build-essential \
     git \
     ca-certificates \

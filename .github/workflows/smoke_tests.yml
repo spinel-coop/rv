@@ -32,3 +32,35 @@ jobs:
 
       - name: rv clean-install for ${{ matrix.project }}
         run: bin/smoke-tests/${{ matrix.project }}
+
+  baseline:
+    name: baseline-${{ matrix.project }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: lobsters
+            repo: https://github.com/lobsters/lobsters.git
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Clone ${{ matrix.project }}
+        run: git clone --depth 1 ${{ matrix.repo }} ${{ matrix.project }}
+
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+              build-essential git ca-certificates \
+              libyaml-dev libmariadb-dev libsqlite3-dev
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          working-directory: ${{ matrix.project }}
+
+      - name: Run bundle install
+        working-directory: ${{ matrix.project }}
+        run: bundle install
