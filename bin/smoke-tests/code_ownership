@@ -1,0 +1,36 @@
+#!/bin/bash
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Smoke test for code_ownership - https://github.com/rubyatscale/code_ownership
+# This gem uses a Cargo.toml extension (Rust native extension).
+# On macOS, you can run this script via Docker:
+# $ docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/code_ownership
+
+# Use sudo if available (needed in GHA), skip if not (Docker runs as root)
+SUDO=""
+if command -v sudo &> /dev/null; then
+    SUDO="sudo"
+fi
+
+$SUDO apt-get update
+$SUDO apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    ca-certificates \
+    libyaml-dev \
+    libclang-dev \
+    ruby \
+    ruby-bundler
+
+[[ -d code_ownership ]] || git clone --depth 1 https://github.com/rubyatscale/code_ownership.git
+cd code_ownership
+
+# Generate Gemfile.lock if it doesn't exist
+[[ -f Gemfile.lock ]] || bundle lock
+
+"$DIR"/../rv ci
+
+echo ""
+echo "Success: code_ownership smoke test passed"
