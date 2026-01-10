@@ -39,7 +39,6 @@ use std::ops::Not;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Command;
-use std::process::Stdio;
 use std::str::FromStr;
 use std::vec;
 
@@ -196,7 +195,7 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     debug!("Downloading gems");
     let downloaded = download_gems(lockfile.clone(), &config.cache, args).await?;
     debug!("Installing gems");
-    let specs = install_gems(downloaded, args)?;
+    let specs = install_gems(config, downloaded, args)?;
     debug!("Compiling gems");
     compile_gems(config, specs, args)?;
 
@@ -639,6 +638,7 @@ pub fn create_rayon_pool(
 }
 
 fn install_gems<'i>(
+    config: &Config,
     downloaded: Vec<DownloadedRubygems<'i>>,
     args: &CiInnerArgs,
 ) -> Result<Vec<GemSpecification>> {
@@ -650,7 +650,7 @@ fn install_gems<'i>(
         downloaded
             .into_iter()
             .par_bridge()
-            .map(|download| install_single_gem(download, args, &binstub_dir))
+            .map(|download| install_single_gem(config, download, args, &binstub_dir))
             .collect::<Result<Vec<GemSpecification>>>()
     })?;
 
@@ -658,13 +658,14 @@ fn install_gems<'i>(
 }
 
 fn install_single_gem<'i>(
+    config: &Config,
     download: DownloadedRubygems<'i>,
     args: &CiInnerArgs,
     binstub_dir: &Utf8Path,
 ) -> Result<GemSpecification> {
     let gv = download.spec.gem_version;
     // Actually unpack the tarball here.
-    let dep_gemspec_res = download.unpack_tarball(args.install_path.clone(), args)?;
+    let dep_gemspec_res = download.unpack_tarball(config, args.install_path.clone(), args)?;
     debug!("Unpacked tarball {gv}");
     let dep_gemspec = dep_gemspec_res.ok_or(Error::MissingGemspec(gv.to_string()))?;
     debug!("Installing binstubs for {gv}");
@@ -816,6 +817,7 @@ struct DownloadedGitRepo<'i> {
 impl<'i> DownloadedRubygems<'i> {
     fn unpack_tarball(
         self,
+        config: &Config,
         bundle_path: Utf8PathBuf,
         args: &CiInnerArgs,
     ) -> Result<Option<GemSpecification>> {
@@ -862,7 +864,7 @@ impl<'i> DownloadedRubygems<'i> {
                         return Err(Error::InvalidGemArchive("two metadata.gz found".to_owned()));
                     }
                     let UnpackedMetdata { hashed, gemspec } =
-                        unpack_metadata(&bundle_path, &full_name, HashReader::new(entry))?;
+                        unpack_metadata(config, &bundle_path, &full_name, HashReader::new(entry))?;
                     found_gemspec = Some(gemspec);
                     metadata_hashed = Some(hashed);
                 }
@@ -1224,6 +1226,7 @@ struct UnpackedMetdata {
 /// Given the metadata.gz from a gem, write it to the filesystem under
 /// BUNDLEPATH/specifications/name-version.gemspec
 fn unpack_metadata<R>(
+    config: &Config,
     bundle_path: &Utf8Path,
     nameversion: &str,
     metadata_gz: HashReader<R>,
@@ -1249,7 +1252,7 @@ where
             None
         }
     };
-    let ruby_contents = convert_gemspec_yaml_to_ruby(yaml_contents);
+    let ruby_contents = convert_gemspec_yaml_to_ruby(config, yaml_contents)?;
     std::io::copy(&mut ruby_contents.as_bytes(), &mut dst)?;
 
     let h = unzipper.into_inner();
@@ -1260,26 +1263,28 @@ where
 }
 
 // TODO: Remove this. We should not need to shell out to Ruby to convert a YAML file to Ruby.
-fn convert_gemspec_yaml_to_ruby(contents: String) -> String {
-    let mut child = std::process::Command::new("ruby")
-        .args([
+fn convert_gemspec_yaml_to_ruby(config: &Config, contents: String) -> Result<String> {
+    use std::io::Write;
+
+    let temp_dir = camino_tempfile::tempdir()?;
+    let temp_path = temp_dir.path().join("gemspec.yaml");
+    let mut temp_file = fs_err::File::create(&temp_path)?;
+    temp_file.write_all(contents.as_bytes())?;
+
+    let output = crate::commands::ruby::run::run_no_install(
+        config,
+        &config.ruby_request(),
+        &[
             "-e",
             "Gem.load_yaml; print Gem::SafeYAML.safe_load(ARGF.read).to_ruby",
-        ])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn()
-        .expect("Failed to spawn child process");
+            temp_path.as_str(),
+        ],
+        CaptureOutput::Both,
+        None,
+        vec![],
+    )?;
 
-    let mut stdin = child.stdin.take().expect("Failed to open stdin");
-    std::thread::spawn(move || {
-        stdin
-            .write_all(contents.as_bytes())
-            .expect("Failed to write to stdin");
-    });
-
-    let output = child.wait_with_output().expect("Failed to read stdout");
-    String::from_utf8_lossy(&output.stdout).to_string()
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
 fn platform_for_gem(gem_version: &str) -> Platform {
