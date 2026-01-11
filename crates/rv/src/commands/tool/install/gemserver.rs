@@ -3,8 +3,8 @@ use std::str::FromStr;
 use reqwest::Client;
 use rv_lockfile::datatypes::SemverConstraint;
 use rv_ruby::{
-    request::RubyRequest,
-    version::{ParseVersionError, RubyVersion},
+    request::{RequestError, RubyRequest},
+    version::ParseVersionError,
 };
 use url::Url;
 
@@ -74,7 +74,7 @@ pub fn parse_version_from_body(
 #[derive(Debug)]
 pub struct VersionAvailable<'i> {
     // TODO: This should probably be its own type, GemVersion.
-    pub version: RubyVersion,
+    pub version: RubyRequest,
     pub deps: Vec<Dep<'i>>,
     pub metadata: Metadata,
 }
@@ -89,6 +89,8 @@ pub enum VersionAvailableParse {
     MissingColon,
     #[error(transparent)]
     ParseVersionError(#[from] ParseVersionError),
+    #[error(transparent)]
+    ParseRequestError(#[from] RequestError),
     #[error("Unknown semver constraint type {0}")]
     UnknownSemverType(String),
 }
@@ -105,23 +107,27 @@ impl<'i> VersionAvailable<'i> {
         let (deps, metadata) = rest
             .split_once('|')
             .ok_or(VersionAvailableParse::MissingPipe)?;
-        let deps: Vec<_> = deps
-            .split(',')
-            .map(|dep| {
-                let (gem_name, constraints) = dep
-                    .split_once(':')
-                    .ok_or(VersionAvailableParse::MissingColon)?;
 
-                let version_constraint = constraints
-                    .split('&')
-                    .map(VersionConstraint::from_str)
-                    .collect::<std::result::Result<Vec<_>, _>>()?;
-                Ok::<_, VersionAvailableParse>(Dep {
-                    gem_name,
-                    version_constraint,
+        let deps: Vec<_> = if deps.is_empty() {
+            Default::default()
+        } else {
+            deps.split(',')
+                .map(|dep| {
+                    let (gem_name, constraints) = dep
+                        .split_once(':')
+                        .ok_or(VersionAvailableParse::MissingColon)?;
+
+                    let version_constraint = constraints
+                        .split('&')
+                        .map(VersionConstraint::from_str)
+                        .collect::<std::result::Result<Vec<_>, _>>()?;
+                    Ok::<_, VersionAvailableParse>(Dep {
+                        gem_name,
+                        version_constraint,
+                    })
                 })
-            })
-            .collect::<std::result::Result<Vec<_>, _>>()?;
+                .collect::<std::result::Result<Vec<_>, _>>()?
+        };
         let metadata: Metadata =
             metadata
                 .split(',')
@@ -152,6 +158,7 @@ pub struct Dep<'i> {
     /// What gem this dependency uses.
     pub gem_name: &'i str,
     /// Constraints on what version of the gem can be used.
+    #[expect(dead_code, reason = "is not finished yet")]
     pub version_constraint: Vec<VersionConstraint>,
 }
 
@@ -186,5 +193,31 @@ impl FromStr for VersionConstraint {
                 .map_err(VersionAvailableParse::UnknownSemverType)?,
             version: v.parse().unwrap(),
         })
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parser() {
+        for (expected_version, input) in [
+            (
+                "0",
+                "0 activemodel-globalid:>= 0,activesupport:>= 4.1.0|checksum:76c450d211f74a575fd4d32d08e5578d829a419058126fbb3b89ad5bf3621c94,ruby:>= 1.9.3",
+            ),
+            (
+                "0.0.0",
+                "0.0.0 |checksum:505c6770a5ec896244d31d7eac08663696d22140493ddb820f66d12670b669d2",
+            ),
+            (
+                "8.1.2",
+                "8.1.2 activesupport:= 8.1.2,globalid:>= 0.3.6|checksum:908dab3713b101859536375819f4156b07bdf4c232cc645e7538adb9e302f825,ruby:>= 3.2.0",
+            ),
+        ] {
+            let expected: RubyRequest = expected_version.parse().unwrap();
+            let actual = VersionAvailable::parse(input).unwrap();
+            assert_eq!(expected, actual.version);
+        }
     }
 }

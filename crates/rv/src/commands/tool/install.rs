@@ -1,14 +1,7 @@
 use owo_colors::OwoColorize;
-use rv_lockfile::datatypes::SemverConstraint;
-use rv_ruby::{
-    request::RubyRequest,
-    version::{ParseVersionError, RubyVersion},
-};
 use url::Url;
 
-use crate::{
-    commands::tool::install::gemserver::Gemserver, config::Config, http_client::rv_http_client,
-};
+use crate::{commands::tool::install::gemserver::Gemserver, config::Config};
 
 mod gemserver;
 
@@ -65,6 +58,10 @@ pub async fn install(_config: &Config, gem: String) -> Result<()> {
         "Metadata: ruby={:?} rubyversions={:?}",
         most_recent_version.metadata.ruby, most_recent_version.metadata.rubygems
     );
-    eprintln!("Deps: {:#?}", most_recent_version.deps);
+    for dep in &most_recent_version.deps {
+        let dep_info_resp = gemserver.get_versions_for_gem(dep.gem_name).await?;
+        let dep_versions = gemserver::parse_version_from_body(&dep_info_resp)?;
+        eprintln!("Found {} versions for {}", dep_versions.len(), dep.gem_name);
+    }
     Ok(())
 }
