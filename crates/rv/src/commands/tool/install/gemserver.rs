@@ -2,10 +2,7 @@ use std::str::FromStr;
 
 use reqwest::Client;
 use rv_lockfile::datatypes::SemverConstraint;
-use rv_ruby::{
-    request::{RequestError, RubyRequest},
-    version::ParseVersionError,
-};
+use rv_ruby::{request::RequestError, version::ParseVersionError};
 use url::Url;
 
 use crate::http_client::rv_http_client;
@@ -71,10 +68,10 @@ pub fn parse_version_from_body(
 }
 
 /// All the information about a versiom of a gem available on some Gemserver.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VersionAvailable<'i> {
     // TODO: This should probably be its own type, GemVersion.
-    pub version: RubyRequest,
+    pub version: &'i str,
     pub deps: Vec<Dep<'i>>,
     pub metadata: Metadata,
 }
@@ -103,7 +100,7 @@ impl<'i> VersionAvailable<'i> {
         let (v, rest) = line
             .split_once(' ')
             .ok_or(VersionAvailableParse::MissingSpace)?;
-        let version = v.parse()?;
+        let version = v;
         let (deps, metadata) = rest
             .split_once('|')
             .ok_or(VersionAvailableParse::MissingPipe)?;
@@ -153,7 +150,7 @@ impl<'i> VersionAvailable<'i> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Dep<'i> {
     /// What gem this dependency uses.
     pub gem_name: &'i str,
@@ -162,16 +159,17 @@ pub struct Dep<'i> {
     pub version_constraint: Vec<VersionConstraint>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Metadata {
     pub checksum: Vec<u8>,
     pub ruby: Option<VersionConstraint>,
     pub rubygems: Option<VersionConstraint>,
 }
 
+#[derive(Clone)]
 pub struct VersionConstraint {
     pub constraint_type: SemverConstraint,
-    pub version: RubyRequest,
+    pub version: String, // TODO: No need to copy this.
 }
 
 impl std::fmt::Debug for VersionConstraint {
@@ -215,9 +213,8 @@ mod tests {
                 "8.1.2 activesupport:= 8.1.2,globalid:>= 0.3.6|checksum:908dab3713b101859536375819f4156b07bdf4c232cc645e7538adb9e302f825,ruby:>= 3.2.0",
             ),
         ] {
-            let expected: RubyRequest = expected_version.parse().unwrap();
             let actual = VersionAvailable::parse(input).unwrap();
-            assert_eq!(expected, actual.version);
+            assert_eq!(expected_version, actual.version);
         }
     }
 }
