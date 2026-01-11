@@ -3,12 +3,13 @@ use std::str::FromStr;
 use reqwest::Client;
 use rv_lockfile::datatypes::SemverConstraint;
 use rv_ruby::{request::RequestError, version::ParseVersionError};
+use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::http_client::rv_http_client;
 
 pub struct Gemserver {
-    url: Url,
+    pub url: Url,
     client: Client,
 }
 
@@ -68,7 +69,7 @@ pub fn parse_version_from_body(
 }
 
 /// All the information about a versiom of a gem available on some Gemserver.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VersionAvailable {
     // TODO: This should probably be its own type, GemVersion.
     pub version: String,
@@ -150,23 +151,22 @@ impl VersionAvailable {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Dep {
     /// What gem this dependency uses.
     pub gem_name: String,
     /// Constraints on what version of the gem can be used.
-    #[expect(dead_code, reason = "is not finished yet")]
     pub version_constraint: Vec<VersionConstraint>,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Metadata {
     pub checksum: Vec<u8>,
     pub ruby: Option<VersionConstraint>,
     pub rubygems: Option<VersionConstraint>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct VersionConstraint {
     pub constraint_type: SemverConstraint,
     pub version: String, // TODO: No need to copy this.
