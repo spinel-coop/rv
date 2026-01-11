@@ -12,8 +12,6 @@ mod gem_version;
 mod gemserver;
 mod transitive_dep_query;
 
-const GEM_COOP: &str = "https://gem.coop/";
-
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error("{0} is not a valid URL")]
@@ -41,19 +39,17 @@ struct InnerArgs {
 }
 
 impl InnerArgs {
-    fn new(gem: String) -> Result<Self> {
+    fn new(gem: String, gem_server: String) -> Result<Self> {
         let out = Self {
-            gem_server: GEM_COOP
-                .parse()
-                .map_err(|_| Error::BadUrl(GEM_COOP.to_owned()))?,
+            gem_server: gem_server.parse().map_err(|_| Error::BadUrl(gem_server))?,
             gem,
         };
         Ok(out)
     }
 }
 
-pub async fn install(config: &Config, gem: String) -> Result<()> {
-    let args = InnerArgs::new(gem)?;
+pub async fn install(config: &Config, gem: String, gem_server: String) -> Result<()> {
+    let args = InnerArgs::new(gem, gem_server)?;
     let gemserver = Gemserver::new(args.gem_server)?;
 
     // Maps gem names to their dependency lists.
@@ -65,6 +61,9 @@ pub async fn install(config: &Config, gem: String) -> Result<()> {
     debug!("Found {} versions for the gem {}", versions.len(), args.gem);
     gems_to_deps.insert(args.gem.clone(), versions.clone());
 
+    for v in versions.iter().map(|v| &v.version) {
+        eprintln!("{v}");
+    }
     let most_recent_version = versions
         .iter()
         .max_by_key(|x| &x.version)

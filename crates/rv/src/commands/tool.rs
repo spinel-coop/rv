@@ -14,5 +14,8 @@ pub enum ToolCommand {
     Install {
         /// What to install
         gem: String,
+        /// What gem server to use.
+        #[arg(long, default_value = "https://gem.coop/")]
+        gem_server: String,
     },
 }

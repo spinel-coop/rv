@@ -339,7 +339,9 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
             Some(ShellCommand::Env { shell }) => shell_env(config, shell)?,
         },
         Commands::Tool(tool) => match tool.command {
-            commands::tool::ToolCommand::Install { gem } => tool_install(config, gem).await?,
+            commands::tool::ToolCommand::Install { gem, gem_server } => {
+                tool_install(config, gem, gem_server).await?
+            }
         },
     };
 
