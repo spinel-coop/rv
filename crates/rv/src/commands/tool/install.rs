@@ -8,11 +8,15 @@ use tracing::debug;
 use url::Url;
 
 use crate::{
-    commands::tool::install::gemserver::{Gemserver, VersionAvailable},
+    commands::tool::install::{
+        gemserver::{Gemserver, VersionAvailable},
+        transitive_dep_query::query_all_gem_deps_from_server,
+    },
     config::Config,
 };
 
 mod gemserver;
+mod transitive_dep_query;
 
 const GEM_COOP: &str = "https://gem.coop/";
 
@@ -142,28 +146,7 @@ async fn query_all_gem_deps(
 
     // 3. If we couldn't use a cache
     // look up all versions of all transitive dependencies.
-    let mut gems_to_look_up: Vec<String> = root
-        .deps
-        .iter()
-        .map(|dep| dep.gem_name.to_owned())
-        .collect();
-    while let Some(next_gem) = gems_to_look_up.pop() {
-        if gems_to_deps.contains_key(&next_gem) {
-            continue;
-        }
-        let dep_info_resp = gemserver.get_versions_for_gem(&next_gem).await?;
-        let dep_versions = gemserver::parse_version_from_body(&dep_info_resp)?;
-        eprintln!("Found {} versions for {}", dep_versions.len(), next_gem);
-        for dep_version in &dep_versions {
-            for dep in &dep_version.deps {
-                if gems_to_deps.contains_key(&dep.gem_name) {
-                    continue;
-                }
-                gems_to_look_up.push(dep.gem_name.to_owned());
-            }
-        }
-        gems_to_deps.insert(next_gem.to_owned().to_owned(), dep_versions);
-    }
+    query_all_gem_deps_from_server(root, gemserver, gems_to_deps).await?;
 
     debug!("Fetched all transitive dependencies");
 
