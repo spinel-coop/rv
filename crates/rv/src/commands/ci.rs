@@ -181,7 +181,14 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
 async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     let lockfile_contents = tokio::fs::read_to_string(&args.lockfile_path).await?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
+    install_from_lockfile(config, args, lockfile).await
+}
 
+async fn install_from_lockfile<'i>(
+    config: &Config,
+    args: &CiInnerArgs,
+    lockfile: GemfileDotLock<'i>,
+) -> Result<()> {
     let binstub_dir = args.install_path.join("bin");
     tokio::fs::create_dir_all(&binstub_dir).await?;
 
