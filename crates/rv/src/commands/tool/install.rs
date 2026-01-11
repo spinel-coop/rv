@@ -8,6 +8,7 @@ use crate::{
     config::Config,
 };
 
+mod gem_version;
 mod gemserver;
 mod transitive_dep_query;
 

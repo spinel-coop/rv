@@ -6,7 +6,7 @@ use rv_ruby::{request::RequestError, version::ParseVersionError};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::http_client::rv_http_client;
+use crate::{commands::tool::install::gem_version::GemVersion, http_client::rv_http_client};
 
 pub struct Gemserver {
     pub url: Url,
@@ -71,8 +71,7 @@ pub fn parse_version_from_body(
 /// All the information about a versiom of a gem available on some Gemserver.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VersionAvailable {
-    // TODO: This should probably be its own type, GemVersion.
-    pub version: String,
+    pub version: GemVersion,
     pub deps: Vec<Dep>,
     pub metadata: Metadata,
 }
@@ -91,6 +90,8 @@ pub enum VersionAvailableParse {
     ParseRequestError(#[from] RequestError),
     #[error("Unknown semver constraint type {0}")]
     UnknownSemverType(String),
+    #[error(transparent)]
+    InvalidGemVersion(#[from] super::gem_version::InvalidGemVersion),
 }
 
 impl VersionAvailable {
@@ -134,9 +135,9 @@ impl VersionAvailable {
                     if k == "checksum" {
                         partial.checksum = hex::decode(v).unwrap();
                     } else if k == "ruby" {
-                        partial.ruby = Some(v.parse().unwrap());
+                        partial.ruby = v.split('&').map(|s| s.parse().unwrap()).collect();
                     } else if k == "rubygems" {
-                        partial.rubygems = Some(v.parse().unwrap());
+                        partial.rubygems = v.split('&').map(|s| s.parse().unwrap()).collect();
                     } else {
                         eprintln!("unexpected key {k}, {md_str}");
                         panic!();
@@ -144,7 +145,7 @@ impl VersionAvailable {
                     partial
                 });
         Ok(VersionAvailable {
-            version: version.to_owned(),
+            version: version.parse()?,
             deps,
             metadata,
         })
@@ -162,14 +163,14 @@ pub struct Dep {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Metadata {
     pub checksum: Vec<u8>,
-    pub ruby: Option<VersionConstraint>,
-    pub rubygems: Option<VersionConstraint>,
+    pub ruby: Vec<VersionConstraint>,
+    pub rubygems: Vec<VersionConstraint>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct VersionConstraint {
     pub constraint_type: SemverConstraint,
-    pub version: String, // TODO: No need to copy this.
+    pub version: GemVersion,
 }
 
 impl std::fmt::Debug for VersionConstraint {
@@ -201,15 +202,15 @@ mod tests {
     fn test_parser() {
         for (expected_version, input) in [
             (
-                "0",
+                "0".parse::<GemVersion>().unwrap(),
                 "0 activemodel-globalid:>= 0,activesupport:>= 4.1.0|checksum:76c450d211f74a575fd4d32d08e5578d829a419058126fbb3b89ad5bf3621c94,ruby:>= 1.9.3",
             ),
             (
-                "0.0.0",
+                "0.0.0".parse().unwrap(),
                 "0.0.0 |checksum:505c6770a5ec896244d31d7eac08663696d22140493ddb820f66d12670b669d2",
             ),
             (
-                "8.1.2",
+                "8.1.2".parse().unwrap(),
                 "8.1.2 activesupport:= 8.1.2,globalid:>= 0.3.6|checksum:908dab3713b101859536375819f4156b07bdf4c232cc645e7538adb9e302f825,ruby:>= 3.2.0",
             ),
         ] {
