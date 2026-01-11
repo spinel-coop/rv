@@ -207,7 +207,7 @@ async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Release> {
 }
 
 /// Parses the `max-age` value from a `Cache-Control` header.
-pub(crate) fn parse_max_age(header: &str) -> Option<Duration> {
+fn parse_max_age(header: &str) -> Option<Duration> {
     PARSE_MAX_AGE_REGEX
         .captures(header)
         .and_then(|caps| caps.get(1))
