@@ -71,7 +71,11 @@ pub async fn install(config: &Config, gem: String) -> Result<()> {
     debug!("Found {} versions for the gem {}", versions.len(), args.gem);
     gems_to_deps.insert(args.gem.clone(), versions.clone());
 
-    let most_recent_version = versions.iter().max_by_key(|x| &x.version).unwrap();
+    let most_recent_version = versions
+        .iter()
+        .max_by_key(|x| &x.version)
+        .unwrap()
+        .to_owned();
     debug!(
         "Installing gem {} from its most recent version {}",
         args.gem, most_recent_version.version
@@ -104,7 +108,7 @@ struct CachedGemDeps {
 async fn query_all_gem_deps(
     config: &Config,
     gems_to_deps: &mut HashMap<String, Vec<VersionAvailable>>,
-    root: &VersionAvailable,
+    root: VersionAvailable,
     root_gem_name: &str,
     gemserver: &Gemserver,
 ) -> Result<()> {
