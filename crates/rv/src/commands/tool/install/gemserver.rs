@@ -1,0 +1,190 @@
+use std::str::FromStr;
+
+use reqwest::Client;
+use rv_lockfile::datatypes::SemverConstraint;
+use rv_ruby::{
+    request::RubyRequest,
+    version::{ParseVersionError, RubyVersion},
+};
+use url::Url;
+
+use crate::http_client::rv_http_client;
+
+pub struct Gemserver {
+    url: Url,
+    client: Client,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error(transparent)]
+    Reqwest(#[from] reqwest::Error),
+    #[error("The requested gem {gem} was not found on the RubyGems server {gem_server}")]
+    GemNotFound { gem: String, gem_server: Url },
+}
+
+impl Gemserver {
+    pub fn new(url: Url) -> Result<Self, Error> {
+        let client = rv_http_client("install")?;
+        Ok(Self { url, client })
+    }
+
+    /// Returns the response body from the server SERVER/info/GEM_NAME.
+    /// You probably want to call [`parse_version_from_body`] on that string.
+    /// This function doesn't parse the response, so that the parser doesn't have to copy any strings.
+    /// Whoever calls this should own the response, and then the parser will borrow &strs from the response.
+    pub async fn get_versions_for_gem(&self, gem: &str) -> Result<String, Error> {
+        let mut url = self.url.clone();
+        url.set_path(&format!("info/{}", gem));
+        let index_body = self
+            .client
+            .get(url)
+            .send()
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+        if index_body.is_empty() {
+            return Err(Error::GemNotFound {
+                gem: gem.to_owned(),
+                gem_server: self.url.to_owned(),
+            });
+        }
+        Ok(index_body)
+    }
+}
+
+/// Given a response body from the server SERVER/info/GEM_NAME,
+/// parse it into a list of versions.
+pub fn parse_version_from_body(
+    index_body: &str,
+) -> Result<Vec<VersionAvailable<'_>>, VersionAvailableParse> {
+    index_body
+        .lines()
+        .filter_map(|line| {
+            if line == "---" {
+                return None;
+            }
+            Some(VersionAvailable::parse(line))
+        })
+        .collect()
+}
+
+/// All the information about a versiom of a gem available on some Gemserver.
+#[derive(Debug)]
+pub struct VersionAvailable<'i> {
+    // TODO: This should probably be its own type, GemVersion.
+    pub version: RubyVersion,
+    pub deps: Vec<Dep<'i>>,
+    pub metadata: Metadata,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum VersionAvailableParse {
+    #[error("Missing a space")]
+    MissingSpace,
+    #[error("Missing a pipe")]
+    MissingPipe,
+    #[error("Missing a colon")]
+    MissingColon,
+    #[error(transparent)]
+    ParseVersionError(#[from] ParseVersionError),
+    #[error("Unknown semver constraint type {0}")]
+    UnknownSemverType(String),
+}
+
+impl<'i> VersionAvailable<'i> {
+    /// Parses from a string like this:
+    /// 2.2.2 actionmailer:= 2.2.2,actionpack:= 2.2.2,activerecord:= 2.2.2,activeresource:= 2.2.2,activesupport:=
+    /// 2.2.2,rake:>= 0.8.3|checksum:84fd0ee92f92088cff81d1a4bcb61306bd4b7440b8634d7ac3d1396571a2133f
+    fn parse(line: &'i str) -> std::result::Result<Self, VersionAvailableParse> {
+        let (v, rest) = line
+            .split_once(' ')
+            .ok_or(VersionAvailableParse::MissingSpace)?;
+        let version = v.parse()?;
+        let (deps, metadata) = rest
+            .split_once('|')
+            .ok_or(VersionAvailableParse::MissingPipe)?;
+        let deps: Vec<_> = deps
+            .split(',')
+            .map(|dep| {
+                let (gem_name, constraints) = dep
+                    .split_once(':')
+                    .ok_or(VersionAvailableParse::MissingColon)?;
+
+                let version_constraint = constraints
+                    .split('&')
+                    .map(VersionConstraint::from_str)
+                    .collect::<std::result::Result<Vec<_>, _>>()?;
+                Ok::<_, VersionAvailableParse>(Dep {
+                    gem_name,
+                    version_constraint,
+                })
+            })
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        let metadata: Metadata =
+            metadata
+                .split(',')
+                .fold(Metadata::default(), |mut partial, md_str| {
+                    let (k, v) = md_str.split_once(':').unwrap();
+                    if k == "checksum" {
+                        partial.checksum = hex::decode(v).unwrap();
+                    } else if k == "ruby" {
+                        partial.ruby = Some(v.parse().unwrap());
+                    } else if k == "rubygems" {
+                        partial.rubygems = Some(v.parse().unwrap());
+                    } else {
+                        eprintln!("unexpected key {k}, {md_str}");
+                        panic!();
+                    }
+                    partial
+                });
+        Ok(VersionAvailable {
+            version,
+            deps,
+            metadata,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct Dep<'i> {
+    /// What gem this dependency uses.
+    pub gem_name: &'i str,
+    /// Constraints on what version of the gem can be used.
+    pub version_constraint: Vec<VersionConstraint>,
+}
+
+#[derive(Debug, Default)]
+pub struct Metadata {
+    pub checksum: Vec<u8>,
+    pub ruby: Option<VersionConstraint>,
+    pub rubygems: Option<VersionConstraint>,
+}
+
+pub struct VersionConstraint {
+    pub constraint_type: SemverConstraint,
+    pub version: RubyRequest,
+}
+
+impl std::fmt::Debug for VersionConstraint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {}", self.constraint_type, self.version)
+    }
+}
+
+impl FromStr for VersionConstraint {
+    type Err = VersionAvailableParse;
+
+    fn from_str(constr: &str) -> Result<Self, Self::Err> {
+        let (semver_constr, v) = constr
+            .split_once(' ')
+            .ok_or(VersionAvailableParse::MissingSpace)?;
+        Ok::<_, VersionAvailableParse>(VersionConstraint {
+            constraint_type: semver_constr
+                .parse()
+                .map_err(VersionAvailableParse::UnknownSemverType)?,
+            version: v.parse().unwrap(),
+        })
+    }
+}
