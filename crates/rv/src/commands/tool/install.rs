@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use owo_colors::OwoColorize;
 use url::Url;
 
-use crate::{commands::tool::install::gemserver::Gemserver, config::Config};
+use crate::{
+    commands::tool::install::gemserver::{Gemserver, VersionAvailable},
+    config::Config,
+};
 
 mod gemserver;
 
@@ -48,14 +51,14 @@ pub async fn install(_config: &Config, gem: String) -> Result<()> {
     let gemserver = Gemserver::new(args.gem_server)?;
 
     // Maps gem names to their /info response on the gemserver.
-    let mut gems_to_info: HashMap<String, String> = HashMap::new();
+    let mut gems_to_info: HashMap<String, Vec<VersionAvailable>> = HashMap::new();
 
     // Look up the first gem.
     let versions_resp = gemserver.get_versions_for_gem(&args.gem).await?;
-    gems_to_info.insert(args.gem.clone(), versions_resp.clone());
     let versions = gemserver::parse_version_from_body(&versions_resp)?;
-
     tracing::info!("Found {} versions for the gem", versions.len());
+    gems_to_info.insert(args.gem.clone(), versions.clone());
+
     let most_recent_version = versions.iter().max_by_key(|x| &x.version).unwrap();
     eprintln!(
         "{}: Install version {}",
@@ -80,15 +83,15 @@ pub async fn install(_config: &Config, gem: String) -> Result<()> {
         let dep_info_resp = gemserver.get_versions_for_gem(&next_gem).await?;
         let dep_versions = gemserver::parse_version_from_body(&dep_info_resp)?;
         eprintln!("Found {} versions for {}", dep_versions.len(), next_gem);
-        for dep_version in dep_versions {
-            for dep in dep_version.deps {
-                if gems_to_info.contains_key(dep.gem_name) {
+        for dep_version in &dep_versions {
+            for dep in &dep_version.deps {
+                if gems_to_info.contains_key(&dep.gem_name) {
                     continue;
                 }
                 gems_to_look_up.push(dep.gem_name.to_owned());
             }
         }
-        gems_to_info.insert(next_gem.to_owned().to_owned(), dep_info_resp);
+        gems_to_info.insert(next_gem.to_owned().to_owned(), dep_versions);
     }
     Ok(())
 }

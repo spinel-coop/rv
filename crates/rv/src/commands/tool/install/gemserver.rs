@@ -55,7 +55,7 @@ impl Gemserver {
 /// parse it into a list of versions.
 pub fn parse_version_from_body(
     index_body: &str,
-) -> Result<Vec<VersionAvailable<'_>>, VersionAvailableParse> {
+) -> Result<Vec<VersionAvailable>, VersionAvailableParse> {
     index_body
         .lines()
         .filter_map(|line| {
@@ -69,10 +69,10 @@ pub fn parse_version_from_body(
 
 /// All the information about a versiom of a gem available on some Gemserver.
 #[derive(Debug, Clone)]
-pub struct VersionAvailable<'i> {
+pub struct VersionAvailable {
     // TODO: This should probably be its own type, GemVersion.
-    pub version: &'i str,
-    pub deps: Vec<Dep<'i>>,
+    pub version: String,
+    pub deps: Vec<Dep>,
     pub metadata: Metadata,
 }
 
@@ -92,11 +92,11 @@ pub enum VersionAvailableParse {
     UnknownSemverType(String),
 }
 
-impl<'i> VersionAvailable<'i> {
+impl VersionAvailable {
     /// Parses from a string like this:
     /// 2.2.2 actionmailer:= 2.2.2,actionpack:= 2.2.2,activerecord:= 2.2.2,activeresource:= 2.2.2,activesupport:=
     /// 2.2.2,rake:>= 0.8.3|checksum:84fd0ee92f92088cff81d1a4bcb61306bd4b7440b8634d7ac3d1396571a2133f
-    fn parse(line: &'i str) -> std::result::Result<Self, VersionAvailableParse> {
+    fn parse(line: &str) -> std::result::Result<Self, VersionAvailableParse> {
         let (v, rest) = line
             .split_once(' ')
             .ok_or(VersionAvailableParse::MissingSpace)?;
@@ -119,7 +119,7 @@ impl<'i> VersionAvailable<'i> {
                         .map(VersionConstraint::from_str)
                         .collect::<std::result::Result<Vec<_>, _>>()?;
                     Ok::<_, VersionAvailableParse>(Dep {
-                        gem_name,
+                        gem_name: gem_name.to_owned(),
                         version_constraint,
                     })
                 })
@@ -143,7 +143,7 @@ impl<'i> VersionAvailable<'i> {
                     partial
                 });
         Ok(VersionAvailable {
-            version,
+            version: version.to_owned(),
             deps,
             metadata,
         })
@@ -151,9 +151,9 @@ impl<'i> VersionAvailable<'i> {
 }
 
 #[derive(Debug, Clone)]
-pub struct Dep<'i> {
+pub struct Dep {
     /// What gem this dependency uses.
-    pub gem_name: &'i str,
+    pub gem_name: String,
     /// Constraints on what version of the gem can be used.
     #[expect(dead_code, reason = "is not finished yet")]
     pub version_constraint: Vec<VersionConstraint>,
@@ -173,7 +173,7 @@ pub struct VersionConstraint {
 }
 
 impl std::fmt::Debug for VersionConstraint {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{} {}", self.constraint_type, self.version)
     }
 }
