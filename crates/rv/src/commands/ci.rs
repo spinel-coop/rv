@@ -184,7 +184,7 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     install_from_lockfile(config, args, lockfile).await
 }
 
-async fn install_from_lockfile<'i>(
+pub async fn install_from_lockfile<'i>(
     config: &Config,
     args: &CiInnerArgs,
     lockfile: GemfileDotLock<'i>,

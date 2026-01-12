@@ -1,10 +1,14 @@
 use std::collections::HashMap;
 
+use rv_gem_types::Specification;
 use tracing::debug;
 use url::Url;
 
 use crate::{
-    commands::tool::install::gemserver::{Gemserver, VersionAvailable},
+    commands::tool::install::{
+        gem_version::GemVersion,
+        gemserver::{Gemserver, VersionAvailable},
+    },
     config::Config,
 };
 
@@ -29,6 +33,8 @@ pub enum Error {
     CouldNotCreateCacheDir(std::io::Error),
     #[error("Could not write to the cache: {0}")]
     CouldNotWriteToCache(std::io::Error),
+    #[error("Could not choose version: {0}")]
+    CouldNotChooseVersion(String),
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -64,33 +70,70 @@ pub async fn install(config: &Config, gem: GemName, gem_server: String) -> Resul
     debug!("Found {} versions for the gem {}", versions.len(), args.gem);
     gems_to_deps.insert(args.gem.clone(), versions.clone());
 
-    for v in versions.iter().map(|v| &v.version) {
-        eprintln!("{v}");
-    }
-    let most_recent_version = versions
+    // Let's install the most recent version.
+    // TODO: Allow users to choose a specific version via CLI args.
+    let version_to_install = versions
         .iter()
         .max_by_key(|x| &x.version)
         .unwrap()
         .to_owned();
     debug!(
-        "Installing gem {} from its most recent version {}",
-        args.gem, most_recent_version.version
+        "Selected version {} of gem {}",
+        version_to_install.version, args.gem,
     );
 
+    debug!("Querying all transitive dependencies",);
     transitive_dep_query::query_all_gem_deps(
         config,
         &mut gems_to_deps,
-        most_recent_version,
+        version_to_install.clone(),
         &args.gem,
         &gemserver,
     )
     .await?;
+    debug!("Retrieved all transitive deps.",);
 
     // OK, now we know all transitive dependencies, and have a dependency graph.
     // Now, translate the dependency constraint list into a PubGrub system, and resolve
     // (i.e. figure out which version of every gem will be used.)
+    debug!("Resolving all dependencies via PubGrub");
+    let versions_needed =
+        pubgrub_bridge::solve(args.gem.clone(), version_to_install.version, gems_to_deps)
+            .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
+    debug!("All dependencies resolved");
 
     // Now, for each gem, download and install the chosen version.
     // I suggest you basically build an in-memory Gemfile.lock and then call `ci::install_from_lockfile`.
+    let mut lockfile = rv_lockfile::datatypes::GemfileDotLock::default();
+    let remote = gemserver.url.to_string();
+    let mut gem_section = rv_lockfile::datatypes::GemSection {
+        remote: &remote,
+        specs: Vec::new(),
+    };
+    for (gem_name, version) in &versions_needed {
+        let spec = spec_for_gem_dep(gem_name, version);
+        gem_section.specs.push(spec);
+    }
+    lockfile.gem.push(gem_section);
+    // let ci_args = todo!("Instantiate the CI args");
+    // crate::commands::ci::install_from_lockfile(config, ci_args, lockfile);
     Ok(())
+}
+
+fn spec_for_gem_dep(
+    gem_name: &GemName,
+    _version: &GemVersion,
+) -> rv_lockfile::datatypes::Spec<'static> {
+    rv_lockfile::datatypes::Spec {
+        // We don't need to know the deps here, we've already resolved all depenendencies.
+        // A real Gemfile.lock would populate them, but for this command we don't need to.
+        deps: Vec::new(),
+        gem_version: rv_lockfile::datatypes::GemVersion {
+            name: &gem_name,
+            // TODO: The lockfile treats versions as strings,
+            // it has to be updated so it parses them into GemVersions too,
+            // then we can plug this gemversion into the lockfile.
+            version: todo!(),
+        },
+    }
 }
