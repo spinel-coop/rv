@@ -1,15 +1,19 @@
+use regex::Regex;
 use std::borrow::Cow;
 use std::str::FromStr;
 
 use anstream::println;
 use camino::Utf8PathBuf;
 use miette::Diagnostic;
+use once_cell::sync::Lazy;
 use owo_colors::OwoColorize;
 
 use rv_ruby::request::RubyRequest;
 use rv_ruby::request::Source;
 
 use crate::config::Config;
+
+static RUBY_TOOL_VERSIONS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^ *ruby ").unwrap());
 
 #[derive(Debug, thiserror::Error, Diagnostic)]
 pub enum Error {
@@ -38,9 +42,10 @@ fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
             let versions = fs_err::read_to_string(path)?;
             let mut new_versions = String::new();
             let mut wrote_ruby = false;
+
             for line in versions.lines() {
-                if line.starts_with("ruby ") {
-                    new_versions.push_str(&format!("ruby {version}"));
+                if let Some(found) = RUBY_TOOL_VERSIONS_REGEX.find(line) {
+                    new_versions.push_str(&format!("{}{version}", found.as_str()));
                     wrote_ruby = true;
                 } else {
                     new_versions.push_str(line);
@@ -220,6 +225,16 @@ mod tests {
         // Verify the file contains the second version
         let content = fs_err::read_to_string(&version_file).unwrap();
         assert_eq!(content, "ruby 3.4.0\n");
+
+        // try with leading whitespace
+        fs_err::write(&version_file, " ruby 3.0.0").unwrap();
+
+        // Pin version (should overwrite and keep leading whitespace)
+        pin(&config, Some("3.4.0".to_string())).unwrap();
+
+        // Verify the file contains the second version
+        let content = fs_err::read_to_string(&version_file).unwrap();
+        assert_eq!(content, " ruby 3.4.0\n");
     }
 
     #[test]
