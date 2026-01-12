@@ -111,34 +111,6 @@ impl RubyRequest {
     pub fn is_satisfied_by(&self, version: &RubyVersion) -> bool {
         version.satisfies(self)
     }
-
-    pub fn number(&self) -> String {
-        use std::fmt::Write;
-        let mut version = String::new();
-
-        if let Some(major) = self.major {
-            write!(&mut version, "{}", major).unwrap();
-        }
-        if let Some(minor) = self.minor {
-            version.push('.');
-            write!(&mut version, "{}", minor).unwrap();
-        }
-        if let Some(patch) = self.patch {
-            version.push('.');
-            write!(&mut version, "{}", patch).unwrap();
-        }
-        if let Some(tiny) = self.tiny {
-            version.push('.');
-            write!(&mut version, "{}", tiny).unwrap();
-        }
-        if let Some(ref prerelease) = self.prerelease {
-            if self.major.is_some() {
-                version.push('-');
-            }
-            version.push_str(prerelease);
-        }
-        version
-    }
 }
 
 impl FromStr for RubyRequest {
