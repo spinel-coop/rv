@@ -156,7 +156,7 @@ impl VersionAvailable {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Dep {
     /// What gem this dependency uses.
     pub gem_name: GemName,
@@ -164,9 +164,21 @@ pub struct Dep {
     pub version_constraints: VersionConstraints,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+impl std::fmt::Debug for Dep {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}@{:?}", self.gem_name, self.version_constraints)
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct VersionConstraints {
     pub inner: Vec<VersionConstraint>,
+}
+
+impl std::fmt::Debug for VersionConstraints {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.inner.fmt(f)
+    }
 }
 
 impl From<Vec<VersionConstraint>> for VersionConstraints {
@@ -181,11 +193,21 @@ impl From<VersionConstraints> for Vec<VersionConstraint> {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Metadata {
     pub checksum: Vec<u8>,
     pub ruby: Vec<VersionConstraint>,
     pub rubygems: Vec<VersionConstraint>,
+}
+
+impl std::fmt::Debug for Metadata {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Metadata")
+            .field("checksum", &hex::encode(&self.checksum))
+            .field("ruby", &self.ruby)
+            .field("rubygems", &self.rubygems)
+            .finish()
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]

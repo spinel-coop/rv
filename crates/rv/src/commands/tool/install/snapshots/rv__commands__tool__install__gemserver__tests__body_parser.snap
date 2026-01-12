@@ -16,90 +16,15 @@ expression: actual_parsed_response
             prerelease: None,
         },
         deps: [
-            Dep {
-                gem_name: "actionmailer",
-                version_constraints: VersionConstraints {
-                    inner: [
-                        = 2.2.2,
-                    ],
-                },
-            },
-            Dep {
-                gem_name: "actionpack",
-                version_constraints: VersionConstraints {
-                    inner: [
-                        = 2.2.2,
-                    ],
-                },
-            },
-            Dep {
-                gem_name: "activerecord",
-                version_constraints: VersionConstraints {
-                    inner: [
-                        = 2.2.2,
-                    ],
-                },
-            },
-            Dep {
-                gem_name: "activeresource",
-                version_constraints: VersionConstraints {
-                    inner: [
-                        = 2.2.2,
-                    ],
-                },
-            },
-            Dep {
-                gem_name: "activesupport",
-                version_constraints: VersionConstraints {
-                    inner: [
-                        = 2.2.2,
-                    ],
-                },
-            },
-            Dep {
-                gem_name: "rake",
-                version_constraints: VersionConstraints {
-                    inner: [
-                        >= 0.8.3,
-                    ],
-                },
-            },
+            actionmailer@[= 2.2.2],
+            actionpack@[= 2.2.2],
+            activerecord@[= 2.2.2],
+            activeresource@[= 2.2.2],
+            activesupport@[= 2.2.2],
+            rake@[>= 0.8.3],
         ],
         metadata: Metadata {
-            checksum: [
-                132,
-                253,
-                14,
-                233,
-                47,
-                146,
-                8,
-                140,
-                255,
-                129,
-                209,
-                164,
-                188,
-                182,
-                19,
-                6,
-                189,
-                75,
-                116,
-                64,
-                184,
-                99,
-                77,
-                122,
-                195,
-                209,
-                57,
-                101,
-                113,
-                162,
-                19,
-                63,
-            ],
+            checksum: "84fd0ee92f92088cff81d1a4bcb61306bd4b7440b8634d7ac3d1396571a2133f",
             ruby: [],
             rubygems: [],
         },
@@ -117,90 +42,15 @@ expression: actual_parsed_response
             prerelease: None,
         },
         deps: [
-            Dep {
-                gem_name: "actionmailer",
-                version_constraints: VersionConstraints {
-                    inner: [
-                        = 2.3.2,
-                    ],
-                },
-            },
-            Dep {
-                gem_name: "actionpack",
-                version_constraints: VersionConstraints {
-                    inner: [
-                        = 2.3.2,
-                    ],
-                },
-            },
-            Dep {
-                gem_name: "activerecord",
-                version_constraints: VersionConstraints {
-                    inner: [
-                        = 2.3.2,
-                    ],
-                },
-            },
-            Dep {
-                gem_name: "activeresource",
-                version_constraints: VersionConstraints {
-                    inner: [
-                        = 2.3.2,
-                    ],
-                },
-            },
-            Dep {
-                gem_name: "activesupport",
-                version_constraints: VersionConstraints {
-                    inner: [
-                        = 2.3.2,
-                    ],
-                },
-            },
-            Dep {
-                gem_name: "rake",
-                version_constraints: VersionConstraints {
-                    inner: [
-                        >= 0.8.3,
-                    ],
-                },
-            },
+            actionmailer@[= 2.3.2],
+            actionpack@[= 2.3.2],
+            activerecord@[= 2.3.2],
+            activeresource@[= 2.3.2],
+            activesupport@[= 2.3.2],
+            rake@[>= 0.8.3],
         ],
         metadata: Metadata {
-            checksum: [
-                172,
-                97,
-                224,
-                53,
-                105,
-                135,
-                223,
-                52,
-                219,
-                186,
-                251,
-                128,
-                59,
-                152,
-                241,
-                83,
-                166,
-                99,
-                211,
-                135,
-                138,
-                49,
-                241,
-                219,
-                115,
-                51,
-                183,
-                205,
-                152,
-                127,
-                208,
-                68,
-            ],
+            checksum: "ac61e0356987df34dbbafb803b98f153a663d3878a31f1db7333b7cd987fd044",
             ruby: [],
             rubygems: [],
         },
