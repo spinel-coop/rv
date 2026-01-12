@@ -147,10 +147,10 @@ mod tests {
             .into_iter()
             .collect();
         out.sort();
-        let mut snap = String::new();
+        let mut resolved_rails = String::new();
         for (k, v) in out {
-            snap.push_str(&format!("{k}: {v}\n"));
+            resolved_rails.push_str(&format!("{k}: {v}\n"));
         }
-        insta::assert_snapshot!(snap);
+        insta::assert_snapshot!(resolved_rails);
     }
 }

@@ -1,6 +1,6 @@
 ---
 source: crates/rv/src/commands/tool/install/pubgrub_bridge.rs
-expression: snap
+expression: resolved_rails
 ---
 action_text-trix: 2.1.16
 actioncable: 8.1.1
