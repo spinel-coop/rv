@@ -59,7 +59,7 @@ pub struct Ruby {
 
 impl Ruby {
     /// Create a new Ruby instance from a directory path
-    #[instrument(skip(dir), fields(dir = %dir.as_str()))]
+    #[instrument(skip(dir, managed), fields(dir = %dir.as_str()))]
     pub fn from_dir(dir: Utf8PathBuf, managed: bool) -> Result<Self, RubyError> {
         let dir_name = dir.file_name().unwrap_or("");
 
