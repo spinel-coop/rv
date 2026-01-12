@@ -43,6 +43,8 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Command;
 use std::str::FromStr;
+use std::time::Duration;
+use std::time::Instant;
 use std::vec;
 
 mod checksums;
@@ -196,20 +198,43 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     install_git_repos(config, repos, args)?;
 
     debug!("Downloading gems");
+    let download_start = Instant::now();
     let downloaded = download_gems(lockfile.clone(), &config.cache, args).await?;
     let downloaded_count = downloaded.len();
+    let download_elapsed = download_start.elapsed();
+
     debug!("Installing gems");
+    let install_start = Instant::now();
     let specs = install_gems(config, downloaded, args)?;
     let installed_count = specs.len();
+    let install_elapsed = install_start.elapsed();
+
     debug!("Compiling gems");
+    let compile_start = Instant::now();
     let compiled_count = compile_gems(config, specs, args)?;
+    let compile_elapsed = compile_start.elapsed();
+
+    let total_elapsed = download_elapsed + install_elapsed + compile_elapsed;
 
     println!("Summary:");
-    println!(" - {} gems downloaded", downloaded_count);
-    println!(" - {} gems installed", installed_count);
+    println!(
+        " - {} gems downloaded ({})",
+        downloaded_count,
+        format_duration(download_elapsed)
+    );
+    println!(
+        " - {} gems installed ({})",
+        installed_count,
+        format_duration(install_elapsed)
+    );
     if compiled_count > 0 {
-        println!(" - {} native extensions compiled", compiled_count);
+        println!(
+            " - {} native extensions compiled ({})",
+            compiled_count,
+            format_duration(compile_elapsed)
+        );
     }
+    println!(" - {} total elapsed time", format_duration(total_elapsed));
 
     Ok(())
 }
@@ -1617,6 +1642,18 @@ async fn download_gem<'i>(
     }
 
     Ok(DownloadedRubygems { contents, spec })
+}
+
+/// Format a duration in a human-readable way (e.g., "16s" or "1m16s").
+fn format_duration(duration: Duration) -> String {
+    let secs = duration.as_secs();
+    if secs >= 60 {
+        let mins = secs / 60;
+        let remaining_secs = secs % 60;
+        format!("{}m{}s", mins, remaining_secs)
+    } else {
+        format!("{:.1}s", duration.as_secs_f64())
+    }
 }
 
 #[cfg(test)]
