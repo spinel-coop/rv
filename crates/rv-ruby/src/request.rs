@@ -93,10 +93,6 @@ impl Ord for RubyRequest {
 }
 
 impl RubyRequest {
-    pub fn is_specific(&self) -> bool {
-        self.major.is_some() && self.minor.is_some() && self.patch.is_some()
-    }
-
     /// Resolve the Ruby request to a specific version of ruby, chosen from
     /// the given list.
     pub fn find_match_in(&self, rubies: &[Ruby]) -> Option<Ruby> {
