@@ -1,14 +1,10 @@
 use std::collections::HashMap;
 
-use rv_gem_types::Specification;
 use tracing::debug;
 use url::Url;
 
 use crate::{
-    commands::tool::install::{
-        gem_version::GemVersion,
-        gemserver::{Gemserver, VersionAvailable},
-    },
+    commands::tool::install::gemserver::{Gemserver, VersionAvailable},
     config::Config,
 };
 
@@ -81,6 +77,7 @@ pub async fn install(config: &Config, gem: GemName, gem_server: String) -> Resul
         "Selected version {} of gem {}",
         version_to_install.version, args.gem,
     );
+    let use_this_ruby_version_to_install = version_to_install.metadata.ruby.clone();
 
     debug!("Querying all transitive dependencies",);
     transitive_dep_query::query_all_gem_deps(
@@ -110,30 +107,32 @@ pub async fn install(config: &Config, gem: GemName, gem_server: String) -> Resul
         remote: &remote,
         specs: Vec::new(),
     };
+    let versions_needed: Vec<_> = versions_needed
+        .iter()
+        .map(|(gem_name, v)| (gem_name, v.to_string()))
+        .collect();
     for (gem_name, version) in &versions_needed {
-        let spec = spec_for_gem_dep(gem_name, version);
+        let spec = spec_for_gem_dep(gem_name, &version);
         gem_section.specs.push(spec);
     }
     lockfile.gem.push(gem_section);
-    // let ci_args = todo!("Instantiate the CI args");
+    // Now that we have a Gemfile.lock we can install it using code paths from `rv ci`.
+    // Something like:
     // crate::commands::ci::install_from_lockfile(config, ci_args, lockfile);
     Ok(())
 }
 
-fn spec_for_gem_dep(
-    gem_name: &GemName,
-    _version: &GemVersion,
-) -> rv_lockfile::datatypes::Spec<'static> {
+fn spec_for_gem_dep<'a>(
+    gem_name: &'a GemName,
+    version: &'a str,
+) -> rv_lockfile::datatypes::Spec<'a> {
     rv_lockfile::datatypes::Spec {
         // We don't need to know the deps here, we've already resolved all depenendencies.
         // A real Gemfile.lock would populate them, but for this command we don't need to.
         deps: Vec::new(),
         gem_version: rv_lockfile::datatypes::GemVersion {
             name: &gem_name,
-            // TODO: The lockfile treats versions as strings,
-            // it has to be updated so it parses them into GemVersions too,
-            // then we can plug this gemversion into the lockfile.
-            version: todo!(),
+            version,
         },
     }
 }
