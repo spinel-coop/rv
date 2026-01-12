@@ -34,7 +34,7 @@ pub enum RubyCommand {
     #[command(about = "Show or set the Ruby version for the current project")]
     Pin {
         /// The Ruby version to pin
-        version: Option<String>,
+        version: Option<RubyRequest>,
     },
 
     #[command(about = "Show the directory where all Ruby versions are installed")]
