@@ -11,6 +11,47 @@ pub struct GemVersion {
     pub prerelease: Option<String>,
 }
 
+impl GemVersion {
+    pub fn next_major(&self) -> Self {
+        GemVersion {
+            major: self.major + 1,
+            minor: Default::default(),
+            patch: Default::default(),
+            tiny: Default::default(),
+            prerelease: Default::default(),
+        }
+    }
+
+    pub fn next_minor(&self) -> Self {
+        GemVersion {
+            major: self.major,
+            minor: Some(self.minor.unwrap_or_default() + 1),
+            patch: Default::default(),
+            tiny: Default::default(),
+            prerelease: Default::default(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod next_version {
+    use super::*;
+
+    #[test]
+    fn example_next_major() {
+        // so ~>2.1.5 allows >=2.1.5, <3.0.0
+        let v: GemVersion = "2.1.5".parse().unwrap();
+        assert_eq!(v.next_major(), "3.0.0".parse().unwrap());
+    }
+
+    #[test]
+    fn example_next_minor() {
+        // ~> 0.4.3 allows >=0.4.3, <0.5
+        let v: GemVersion = "0.4.3".parse().unwrap();
+        assert_eq!(v.next_minor(), "0.5".parse().unwrap());
+    }
+}
+
 impl PartialEq for GemVersion {
     fn eq(&self, other: &Self) -> bool {
         self.major == other.major

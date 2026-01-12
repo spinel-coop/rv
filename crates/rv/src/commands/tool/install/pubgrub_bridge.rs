@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use pubgrub::{OfflineDependencyProvider, Ranges};
+use rv_lockfile::datatypes::SemverConstraint;
 
 use super::{
     GemName,
@@ -33,7 +34,48 @@ pub fn all_dependencies(
 }
 
 impl From<VersionConstraints> for Ranges<GemVersion> {
-    fn from(value: VersionConstraints) -> Self {
-        todo!("Translate GemVersions into PubGrub's data model")
+    fn from(constraints: VersionConstraints) -> Self {
+        // Convert the RubyGems constraints into PubGrub ranges.
+        let ranges = constraints.inner.into_iter().flat_map(|constraint| {
+            let v = constraint.version;
+            match constraint.constraint_type {
+                SemverConstraint::Exact => vec![
+                    // It's just one range, this range.
+                    Ranges::singleton(v),
+                ],
+                SemverConstraint::NotEqual => vec![
+                    // Everything EXCEPT this one range.
+                    Ranges::singleton(v).complement(),
+                ],
+
+                // These 4 are easy:
+                SemverConstraint::GreaterThan => vec![Ranges::strictly_higher_than(v)],
+                SemverConstraint::LessThan => vec![Ranges::strictly_lower_than(v)],
+                SemverConstraint::GreaterThanOrEqual => vec![Ranges::higher_than(v)],
+                SemverConstraint::LessThanOrEqual => vec![Ranges::lower_than(v)],
+                // if >1.0, use the given numbers as the floor and the next major as not allowed.
+                SemverConstraint::Pessimistic if v.major >= 1 => vec![
+                    // Given version as the floor
+                    Ranges::higher_than(v.clone()),
+                    // Next major as not allowed.
+                    Ranges::strictly_lower_than(v.next_major()),
+                ],
+                // if <1.0, use the given number as the floor and the next minor as not allowed.
+                SemverConstraint::Pessimistic => vec![
+                    // Given version as the floor
+                    Ranges::higher_than(v.clone()),
+                    // Next minor as not allowed.
+                    Ranges::strictly_lower_than(v.next_minor()),
+                ],
+            }
+        });
+
+        // Now, join all those ranges together using &, because that's what multiple RubyGems
+        // constraints are actually listed as.
+        let mut overall_range = Ranges::empty();
+        for r in ranges {
+            overall_range = overall_range.intersection(&r);
+        }
+        overall_range
     }
 }

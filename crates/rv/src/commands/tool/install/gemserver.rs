@@ -165,7 +165,7 @@ pub struct Dep {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VersionConstraints {
-    inner: Vec<VersionConstraint>,
+    pub inner: Vec<VersionConstraint>,
 }
 
 impl From<Vec<VersionConstraint>> for VersionConstraints {
