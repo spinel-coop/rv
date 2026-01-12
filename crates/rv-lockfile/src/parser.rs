@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::{ParseError, ParseErrors, datatypes::*};
 use miette::SourceSpan;
 use winnow::{
@@ -241,6 +243,23 @@ fn parse_semver_constraint<'i>(i: &mut Input<'i>) -> Res<SemverConstraint> {
         "=".map(|_| SemverConstraint::Exact),
     ))
     .parse_next(i)
+}
+
+impl FromStr for SemverConstraint {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "!=" => Ok(SemverConstraint::NotEqual),
+            ">=" => Ok(SemverConstraint::GreaterThanOrEqual),
+            "<=" => Ok(SemverConstraint::LessThanOrEqual),
+            ">" => Ok(SemverConstraint::GreaterThan),
+            "<" => Ok(SemverConstraint::LessThan),
+            "~>" => Ok(SemverConstraint::Pessimistic),
+            "=" => Ok(SemverConstraint::Exact),
+            other => Err(other.to_owned()),
+        }
+    }
 }
 
 fn parse_gem_name<'i>(i: &mut Input<'i>) -> Res<&'i str> {

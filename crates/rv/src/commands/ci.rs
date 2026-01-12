@@ -30,6 +30,7 @@ use crate::commands::ci::checksums::HashReader;
 use crate::commands::ci::checksums::Hashed;
 use crate::commands::ruby::run::CaptureOutput;
 use crate::config::Config;
+use crate::http_client::rv_http_client;
 use std::collections::HashMap;
 use std::env::current_dir;
 use std::io;
@@ -180,7 +181,14 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
 async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     let lockfile_contents = tokio::fs::read_to_string(&args.lockfile_path).await?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
+    install_from_lockfile(config, args, lockfile).await
+}
 
+async fn install_from_lockfile<'i>(
+    config: &Config,
+    args: &CiInnerArgs,
+    lockfile: GemfileDotLock<'i>,
+) -> Result<()> {
     let binstub_dir = args.install_path.join("bin");
     tokio::fs::create_dir_all(&binstub_dir).await?;
 
@@ -725,23 +733,6 @@ fn install_binstub(dep_name: &str, executables: &[String], binstub_dir: &Utf8Pat
         }
     }
     Ok(())
-}
-
-fn rv_http_client() -> Result<Client> {
-    use reqwest::header;
-    let mut headers = header::HeaderMap::new();
-    headers.insert(
-        "X-RV-PLATFORM",
-        header::HeaderValue::from_static(current_platform::CURRENT_PLATFORM),
-    );
-    headers.insert("X-RV-COMMAND", header::HeaderValue::from_static("ci"));
-
-    let client = reqwest::Client::builder()
-        .user_agent(format!("rv-{}", env!("CARGO_PKG_VERSION")))
-        .default_headers(headers)
-        .build()?;
-
-    Ok(client)
 }
 
 enum KnownChecksumAlgos {
@@ -1479,7 +1470,7 @@ async fn download_gem_source<'i>(
     max_concurrent_requests: usize,
 ) -> Result<Vec<DownloadedRubygems<'i>>> {
     // TODO: If the gem server needs user credentials, accept them and add them to this client.
-    let client = rv_http_client()?;
+    let client = rv_http_client("ci")?;
 
     // Download them all, concurrently.
 
