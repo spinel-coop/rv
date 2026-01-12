@@ -1,6 +1,5 @@
 use regex::Regex;
 use std::borrow::Cow;
-use std::str::FromStr;
 
 use anstream::println;
 use camino::Utf8PathBuf;
@@ -27,17 +26,15 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
-pub fn pin(config: &Config, version: Option<String>) -> Result<()> {
-    match version {
+pub fn pin(config: &Config, request: Option<RubyRequest>) -> Result<()> {
+    match request {
         None => show_pinned_ruby(config),
-        Some(version) => set_pinned_ruby(config, version),
+        Some(request) => set_pinned_ruby(config, request),
     }
 }
 
-fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
-    let requested_version = RubyRequest::from_str(&version)?;
-    let version = requested_version.normalized();
-
+fn set_pinned_ruby(config: &Config, request: RubyRequest) -> Result<()> {
+    let version = request.normalized();
     let project_dir: Cow<Utf8PathBuf> = match config.requested_ruby {
         Some((_, Source::DotToolVersions(ref path))) => {
             let versions = fs_err::read_to_string(path)?;
@@ -73,11 +70,7 @@ fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
         }
     };
 
-    println!(
-        "{0} pinned to {1}",
-        project_dir.cyan(),
-        requested_version.cyan()
-    );
+    println!("{0} pinned to {1}", project_dir.cyan(), request.cyan());
 
     Ok(())
 }
@@ -109,6 +102,11 @@ mod tests {
     use assert_fs::TempDir;
     use camino::Utf8PathBuf;
     use indexmap::indexset;
+    use std::str::FromStr;
+
+    fn r(version: &str) -> RubyRequest {
+        RubyRequest::from_str(version).unwrap()
+    }
 
     fn test_config() -> Result<Config> {
         let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
@@ -137,7 +135,7 @@ mod tests {
     }
 
     #[test]
-    fn test_pin_runs_with_ruby_version() {
+    fn test_pin_runs_with_ruby_version_request() {
         let mut config = test_config().unwrap();
 
         let ruby_version_file = config.current_dir.join(".ruby-version");
@@ -154,59 +152,41 @@ mod tests {
 
         pin(&config, None).unwrap();
         let version_file = config.current_dir.join(".tool-versions");
-        config.requested_ruby = Some((
-            "3.2.0".parse().unwrap(),
-            Source::DotToolVersions(version_file),
-        ));
+        config.requested_ruby = Some((r("3.2.0"), Source::DotToolVersions(version_file)));
         pin(&config, None).unwrap();
     }
 
     #[test]
     fn test_pin_ruby_creates_file_when_requested_version_is_valid() {
         let config = test_config().unwrap();
-        let version = "3.2.0".to_string();
+        let request = r("3.2.0");
 
         // Should not panic - basic smoke test
-        pin(&config, Some(version.clone())).unwrap();
+        pin(&config, Some(request)).unwrap();
 
         // Verify the file was created
         let ruby_version_path = config.current_dir.join(".ruby-version");
         assert!(ruby_version_path.exists());
         let content = fs_err::read_to_string(ruby_version_path).unwrap();
-        assert_eq!(content, format!("{version}\n"));
-    }
-
-    #[test]
-    fn test_pin_ruby_does_not_create_file_when_requested_version_is_invalid() {
-        let config = test_config().unwrap();
-        let version = "3.2.0.4.5".to_string();
-
-        // Should panic - basic smoke test
-        pin(&config, Some(version.clone())).expect_err(&format!(
-            "Expected invalid version {version} to be rejected, but was accepted"
-        ));
-
-        // Verify the file was not created
-        let ruby_version_path = config.current_dir.join(".ruby-version");
-        assert!(!ruby_version_path.exists());
+        assert_eq!(content, format!("3.2.0\n"));
     }
 
     #[test]
     fn test_pin_ruby_overwrites_existing_ruby_version_file() {
         let config = test_config().unwrap();
-        let first_version = "3.0.0".to_string();
-        let second_version = "3.2.0".to_string();
+        let first_request = r("3.0.0");
+        let second_request = r("3.2.0");
 
         // Pin first version
-        pin(&config, Some(first_version)).unwrap();
+        pin(&config, Some(first_request)).unwrap();
 
         // Pin second version (should overwrite)
-        pin(&config, Some(second_version.clone())).unwrap();
+        pin(&config, Some(second_request)).unwrap();
 
         // Verify the file contains the second version
         let ruby_version_path = config.current_dir.join(".ruby-version");
         let content = fs_err::read_to_string(ruby_version_path).unwrap();
-        assert_eq!(content, format!("{second_version}\n"));
+        assert_eq!(content, format!("3.2.0\n"));
     }
 
     #[test]
@@ -220,8 +200,10 @@ mod tests {
 
         fs_err::write(&version_file, "ruby 3.0.0").unwrap();
 
+        let request = r("3.4.0");
+
         // Pin version (should overwrite)
-        pin(&config, Some("3.4.0".to_string())).unwrap();
+        pin(&config, Some(request.clone())).unwrap();
 
         // Verify the file contains the second version
         let content = fs_err::read_to_string(&version_file).unwrap();
@@ -231,14 +213,14 @@ mod tests {
         fs_err::write(&version_file, " ruby 3.0.0").unwrap();
 
         // Pin version (should overwrite and keep leading whitespace)
-        pin(&config, Some("3.4.0".to_string())).unwrap();
+        pin(&config, Some(request)).unwrap();
 
         // Verify the file contains the second version
         let content = fs_err::read_to_string(&version_file).unwrap();
         assert_eq!(content, " ruby 3.4.0\n");
 
         // Pin a fully qualified CRuby version
-        pin(&config, Some("ruby-3.3.0".to_string())).unwrap();
+        pin(&config, Some(r("ruby-3.3.0"))).unwrap();
 
         // Verify the file contains the normalized version
         let content = fs_err::read_to_string(&version_file).unwrap();
@@ -248,24 +230,24 @@ mod tests {
     #[test]
     fn test_pin_ruby_with_prerelease_version() {
         let config = test_config().unwrap();
-        let version = "3.3.0-preview1".to_string();
+        let request = r("3.3.0-preview1");
 
-        pin(&config, Some(version.clone())).unwrap();
+        pin(&config, Some(request)).unwrap();
 
         let ruby_version_path = config.current_dir.join(".ruby-version");
         let content = fs_err::read_to_string(ruby_version_path).unwrap();
-        assert_eq!(content, format!("{version}\n"));
+        assert_eq!(content, format!("3.3.0-preview1\n"));
     }
 
     #[test]
     fn test_pin_ruby_with_patch_version() {
         let config = test_config().unwrap();
-        let version = "1.9.2-p0".to_string();
+        let request = r("1.9.2-p0");
 
-        pin(&config, Some(version.clone())).unwrap();
+        pin(&config, Some(request)).unwrap();
 
         let ruby_version_path = config.current_dir.join(".ruby-version");
         let content = fs_err::read_to_string(ruby_version_path).unwrap();
-        assert_eq!(content, format!("{version}\n"));
+        assert_eq!(content, format!("1.9.2-p0\n"));
     }
 }
