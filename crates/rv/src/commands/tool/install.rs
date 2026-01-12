@@ -10,7 +10,10 @@ use crate::{
 
 mod gem_version;
 mod gemserver;
+mod pubgrub_bridge;
 mod transitive_dep_query;
+
+type GemName = String;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {

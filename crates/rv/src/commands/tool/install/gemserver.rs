@@ -122,7 +122,7 @@ impl VersionAvailable {
                         .collect::<std::result::Result<Vec<_>, _>>()?;
                     Ok::<_, VersionAvailableParse>(Dep {
                         gem_name: gem_name.to_owned(),
-                        version_constraint,
+                        version_constraints: version_constraint.into(),
                     })
                 })
                 .collect::<std::result::Result<Vec<_>, _>>()?
@@ -157,7 +157,24 @@ pub struct Dep {
     /// What gem this dependency uses.
     pub gem_name: String,
     /// Constraints on what version of the gem can be used.
-    pub version_constraint: Vec<VersionConstraint>,
+    pub version_constraints: VersionConstraints,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VersionConstraints {
+    inner: Vec<VersionConstraint>,
+}
+
+impl From<Vec<VersionConstraint>> for VersionConstraints {
+    fn from(constraints: Vec<VersionConstraint>) -> Self {
+        Self { inner: constraints }
+    }
+}
+
+impl From<VersionConstraints> for Vec<VersionConstraint> {
+    fn from(constraints: VersionConstraints) -> Self {
+        constraints.inner
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
