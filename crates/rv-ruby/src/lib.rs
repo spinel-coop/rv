@@ -203,7 +203,7 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
     // try the full script with all features (works for most Ruby implementations)
     let full_script = r#"
         puts(Object.const_defined?(:RUBY_ENGINE) ? RUBY_ENGINE : 'ruby')
-        puts(RUBY_VERSION)
+        puts(Object.const_defined?(:RUBY_ENGINE_VERSION) ? RUBY_ENGINE_VERSION : RUBY_VERSION)
         puts(Object.const_defined?(:RUBY_PLATFORM) ? RUBY_PLATFORM : 'unknown')
         puts(Object.const_defined?(:RbConfig) && RbConfig::CONFIG['host_cpu'] ? RbConfig::CONFIG['host_cpu'] : 'unknown')
         puts(Object.const_defined?(:RbConfig) && RbConfig::CONFIG['host_os'] ? RbConfig::CONFIG['host_os'] : 'unknown')
