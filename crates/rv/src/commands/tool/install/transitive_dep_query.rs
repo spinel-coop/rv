@@ -18,7 +18,7 @@ use crate::{
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct CachedGemDeps {
     expires_at: SystemTime,
-    gems_to_deps: HashMap<String, Vec<VersionAvailable>>,
+    pub gems_to_deps: HashMap<String, Vec<VersionAvailable>>,
 }
 
 pub(crate) async fn query_all_gem_deps(

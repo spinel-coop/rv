@@ -349,7 +349,9 @@ mod tests {
         // Here's every version of Rails, I guess we should just make sure they all parse.
         let data = include_str!("../../../../testdata/all_rails_versions");
         for input in data.lines() {
-            let _v = GemVersion::from_str(input.trim()).unwrap();
+            let parsed = GemVersion::from_str(input.trim()).unwrap();
+            let stringified = parsed.to_string();
+            assert_eq!(input, stringified);
         }
     }
 }
