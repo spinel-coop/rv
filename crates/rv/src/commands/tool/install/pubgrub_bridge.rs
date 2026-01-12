@@ -33,7 +33,7 @@ pub fn all_dependencies(
 }
 
 impl From<VersionConstraints> for Ranges<GemVersion> {
-    fn from(_value: VersionConstraints) -> Self {
+    fn from(value: VersionConstraints) -> Self {
         todo!("Translate GemVersions into PubGrub's data model")
     }
 }

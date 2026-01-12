@@ -1,8 +1,8 @@
-use std::str::FromStr;
+use std::{cmp::Ordering, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Ord, PartialOrd, Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GemVersion {
     pub major: u64,
     pub minor: Option<u64>,
@@ -22,6 +22,35 @@ impl PartialEq for GemVersion {
 }
 
 impl Eq for GemVersion {}
+
+impl Ord for GemVersion {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        use std::cmp::Ordering;
+
+        if self.major != other.major {
+            self.major.cmp(&other.major)
+        } else if self.minor.unwrap_or_default() != other.minor.unwrap_or_default() {
+            self.minor.cmp(&other.minor)
+        } else if self.patch.unwrap_or_default() != other.patch.unwrap_or_default() {
+            self.patch.cmp(&other.patch)
+        } else if self.tiny.unwrap_or_default() != other.tiny.unwrap_or_default() {
+            self.tiny.cmp(&other.tiny)
+        } else {
+            match (&self.prerelease, &other.prerelease) {
+                (None, None) => Ordering::Equal,
+                (None, Some(_prerelease)) => Ordering::Greater,
+                (Some(_prerelease), None) => Ordering::Less,
+                (prerelease, other_prerelease) => prerelease.cmp(other_prerelease),
+            }
+        }
+    }
+}
+
+impl PartialOrd for GemVersion {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
 
 #[derive(Debug, Clone, Eq, PartialEq, thiserror::Error)]
 #[error("The string {input_string} is not a valid gem version because {why}")]
@@ -151,6 +180,59 @@ mod tests {
         assert_eq!(a, b);
         assert_eq!(a, c);
         assert_eq!(b, c);
+    }
+
+    #[test]
+    fn test_ord() {
+        // These should all be equal.
+        let a: GemVersion = "1".parse().unwrap();
+        let b: GemVersion = "1.0".parse().unwrap();
+        let c: GemVersion = "1.0.0".parse().unwrap();
+        assert_eq!(a.cmp(&b), std::cmp::Ordering::Equal);
+        assert_eq!(a.cmp(&c), std::cmp::Ordering::Equal);
+        assert_eq!(b.cmp(&c), std::cmp::Ordering::Equal);
+        assert!(GemVersion::from_str("1").unwrap() < (GemVersion::from_str("1.1").unwrap()));
+        assert!(GemVersion::from_str("1").unwrap() < (GemVersion::from_str("1.0.1").unwrap()));
+        // Prereleases are, by definition, below the real release.
+        assert!(GemVersion::from_str("1-a").unwrap() < (GemVersion::from_str("1").unwrap()));
+        assert!(GemVersion::from_str("1.0-a").unwrap() < (GemVersion::from_str("1.0").unwrap()));
+        assert!(GemVersion::from_str("1.0-a").unwrap() < (GemVersion::from_str("1.0-b").unwrap()));
+        // Liste xample
+        assert!(
+            GemVersion::from_str("1.0.0.pre").unwrap()
+                < (GemVersion::from_str("1.0.0.pre2").unwrap())
+        );
+        assert!(
+            GemVersion::from_str("1.0.0.pre2").unwrap()
+                < (GemVersion::from_str("1.0.0.rc").unwrap())
+        );
+        assert!(
+            GemVersion::from_str("1.0.0.rc").unwrap()
+                < (GemVersion::from_str("1.0.0.rc2").unwrap())
+        );
+        assert!(
+            GemVersion::from_str("1.0.0.rc2").unwrap() < (GemVersion::from_str("1.0.0").unwrap())
+        );
+        assert!(
+            GemVersion::from_str("1.0.0").unwrap() < (GemVersion::from_str("1.1.0.a").unwrap())
+        );
+        assert!(
+            GemVersion::from_str("1.1.0.a").unwrap() < (GemVersion::from_str("1.1.0").unwrap())
+        );
+
+        // This should already be sorted.
+        let list: Vec<GemVersion> = vec![
+            "1.0.0.pre".parse().unwrap(),
+            "1.0.0.pre2".parse().unwrap(),
+            "1.0.0.rc".parse().unwrap(),
+            "1.0.0.rc2".parse().unwrap(),
+            "1.0.0".parse().unwrap(),
+            "1.1.0.a".parse().unwrap(),
+            "1.1.0".parse().unwrap(),
+        ];
+        let mut list_sorted = list.clone();
+        list_sorted.sort();
+        assert_eq!(list, list_sorted);
     }
 
     #[test]
