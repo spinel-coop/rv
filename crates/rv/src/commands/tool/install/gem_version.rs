@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize, Clone, Debug)]
+#[derive(Ord, PartialOrd, Serialize, Deserialize, Clone, Debug)]
 pub struct GemVersion {
     pub major: u64,
     pub minor: Option<u64>,
@@ -10,6 +10,18 @@ pub struct GemVersion {
     pub tiny: Option<u64>,
     pub prerelease: Option<String>,
 }
+
+impl PartialEq for GemVersion {
+    fn eq(&self, other: &Self) -> bool {
+        self.major == other.major
+            && self.minor.unwrap_or_default() == other.minor.unwrap_or_default()
+            && self.patch.unwrap_or_default() == other.patch.unwrap_or_default()
+            && self.tiny.unwrap_or_default() == other.tiny.unwrap_or_default()
+            && self.prerelease == other.prerelease
+    }
+}
+
+impl Eq for GemVersion {}
 
 #[derive(Debug, Clone, Eq, PartialEq, thiserror::Error)]
 #[error("The string {input_string} is not a valid gem version because {why}")]
@@ -122,6 +134,60 @@ impl FromStr for GemVersion {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_equality() {
+        // These should all be equal.
+        let a: GemVersion = "1".parse().unwrap();
+        let b: GemVersion = "1.0".parse().unwrap();
+        let c: GemVersion = "1.0.0".parse().unwrap();
+        assert_eq!(a, b);
+        assert_eq!(a, c);
+        assert_eq!(b, c);
+        // So should these.
+        let a: GemVersion = "0".parse().unwrap();
+        let b: GemVersion = "0.0".parse().unwrap();
+        let c: GemVersion = "0.0.0".parse().unwrap();
+        assert_eq!(a, b);
+        assert_eq!(a, c);
+        assert_eq!(b, c);
+    }
+
+    #[test]
+    fn test_inequality() {
+        assert_ne!(
+            GemVersion::from_str("1").unwrap(),
+            GemVersion::from_str("2").unwrap()
+        );
+        assert_ne!(
+            GemVersion::from_str("1.1").unwrap(),
+            GemVersion::from_str("1.2").unwrap()
+        );
+        assert_ne!(
+            GemVersion::from_str("1.1.1").unwrap(),
+            GemVersion::from_str("1.1.2").unwrap()
+        );
+        assert_ne!(
+            GemVersion::from_str("1.1.1.1").unwrap(),
+            GemVersion::from_str("1.1.1.2").unwrap()
+        );
+        assert_ne!(
+            GemVersion::from_str("1-a").unwrap(),
+            GemVersion::from_str("2-a").unwrap()
+        );
+        assert_ne!(
+            GemVersion::from_str("1.1-a").unwrap(),
+            GemVersion::from_str("1.2-a").unwrap()
+        );
+        assert_ne!(
+            GemVersion::from_str("1.1.1-a").unwrap(),
+            GemVersion::from_str("1.1.2-a").unwrap()
+        );
+        assert_ne!(
+            GemVersion::from_str("1.1.1.1-a").unwrap(),
+            GemVersion::from_str("1.1.1.2-a").unwrap()
+        );
+    }
 
     #[test]
     fn test_parse_weird_versions_found_on_gemserver() {

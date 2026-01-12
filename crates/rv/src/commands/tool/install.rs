@@ -38,11 +38,11 @@ struct InnerArgs {
     /// Gemserver to install from.
     gem_server: Url,
     /// Gem to install as a tool.
-    gem: String,
+    gem: GemName,
 }
 
 impl InnerArgs {
-    fn new(gem: String, gem_server: String) -> Result<Self> {
+    fn new(gem: GemName, gem_server: String) -> Result<Self> {
         let out = Self {
             gem_server: gem_server.parse().map_err(|_| Error::BadUrl(gem_server))?,
             gem,
@@ -51,12 +51,12 @@ impl InnerArgs {
     }
 }
 
-pub async fn install(config: &Config, gem: String, gem_server: String) -> Result<()> {
+pub async fn install(config: &Config, gem: GemName, gem_server: String) -> Result<()> {
     let args = InnerArgs::new(gem, gem_server)?;
     let gemserver = Gemserver::new(args.gem_server)?;
 
     // Maps gem names to their dependency lists.
-    let mut gems_to_deps: HashMap<String, Vec<VersionAvailable>> = HashMap::new();
+    let mut gems_to_deps: HashMap<GemName, Vec<VersionAvailable>> = HashMap::new();
 
     // Look up the gem to install.
     let versions_resp = gemserver.get_versions_for_gem(&args.gem).await?;
