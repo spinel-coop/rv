@@ -36,6 +36,7 @@ pub fn pin(config: &Config, version: Option<String>) -> Result<()> {
 
 fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
     let requested_version = RubyRequest::from_str(&version)?;
+    let version = requested_version.normalized();
 
     let project_dir: Cow<Utf8PathBuf> = match config.requested_ruby {
         Some((_, Source::DotToolVersions(ref path))) => {
@@ -235,6 +236,13 @@ mod tests {
         // Verify the file contains the second version
         let content = fs_err::read_to_string(&version_file).unwrap();
         assert_eq!(content, " ruby 3.4.0\n");
+
+        // Pin a fully qualified CRuby version
+        pin(&config, Some("ruby-3.3.0".to_string())).unwrap();
+
+        // Verify the file contains the normalized version
+        let content = fs_err::read_to_string(&version_file).unwrap();
+        assert_eq!(content, " ruby 3.3.0\n");
     }
 
     #[test]

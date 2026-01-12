@@ -107,6 +107,16 @@ impl RubyRequest {
     pub fn is_satisfied_by(&self, version: &RubyVersion) -> bool {
         version.satisfies(self)
     }
+
+    /// Normalized representation of a ruby request
+    pub fn normalized(&self) -> String {
+        let formatted = self.to_string();
+
+        formatted
+            .strip_prefix("ruby-")
+            .unwrap_or(&formatted)
+            .to_string()
+    }
 }
 
 impl FromStr for RubyRequest {
