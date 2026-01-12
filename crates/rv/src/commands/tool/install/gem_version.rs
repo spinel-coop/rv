@@ -12,6 +12,7 @@ pub struct GemVersion {
 }
 
 impl GemVersion {
+    /// What's the next major version after this version?
     pub fn next_major(&self) -> Self {
         GemVersion {
             major: self.major + 1,
@@ -22,6 +23,7 @@ impl GemVersion {
         }
     }
 
+    /// What's the next minor version after this version?
     pub fn next_minor(&self) -> Self {
         GemVersion {
             major: self.major,
@@ -122,7 +124,7 @@ impl std::fmt::Display for GemVersion {
 impl FromStr for GemVersion {
     type Err = InvalidGemVersion;
 
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut parts = s.split('-');
         let mut numbers = parts
             .next()

@@ -60,6 +60,7 @@ impl Gemserver {
 pub fn parse_version_from_body(
     index_body: &str,
 ) -> Result<Vec<VersionAvailable>, VersionAvailableParse> {
+    println!("{index_body}");
     index_body
         .lines()
         .filter_map(|line| {
@@ -237,5 +238,15 @@ mod tests {
             let actual = VersionAvailable::parse(input).unwrap();
             assert_eq!(expected_version, actual.version);
         }
+    }
+
+    #[test]
+    fn test_body_parser() {
+        let resp = "---
+2.2.2 actionmailer:= 2.2.2,actionpack:= 2.2.2,activerecord:= 2.2.2,activeresource:= 2.2.2,activesupport:= 2.2.2,rake:>= 0.8.3|checksum:84fd0ee92f92088cff81d1a4bcb61306bd4b7440b8634d7ac3d1396571a2133f
+2.3.2 actionmailer:= 2.3.2,actionpack:= 2.3.2,activerecord:= 2.3.2,activeresource:= 2.3.2,activesupport:= 2.3.2,rake:>= 0.8.3|checksum:ac61e0356987df34dbbafb803b98f153a663d3878a31f1db7333b7cd987fd044";
+        let actual_parsed_response = parse_version_from_body(resp).unwrap();
+        assert_eq!(actual_parsed_response.len(), 2);
+        insta::assert_debug_snapshot!(actual_parsed_response);
     }
 }

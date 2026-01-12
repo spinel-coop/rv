@@ -1,0 +1,208 @@
+---
+source: crates/rv/src/commands/tool/install/gemserver.rs
+expression: actual_parsed_response
+---
+[
+    VersionAvailable {
+        version: GemVersion {
+            major: 2,
+            minor: Some(
+                2,
+            ),
+            patch: Some(
+                2,
+            ),
+            tiny: None,
+            prerelease: None,
+        },
+        deps: [
+            Dep {
+                gem_name: "actionmailer",
+                version_constraints: VersionConstraints {
+                    inner: [
+                        = 2.2.2,
+                    ],
+                },
+            },
+            Dep {
+                gem_name: "actionpack",
+                version_constraints: VersionConstraints {
+                    inner: [
+                        = 2.2.2,
+                    ],
+                },
+            },
+            Dep {
+                gem_name: "activerecord",
+                version_constraints: VersionConstraints {
+                    inner: [
+                        = 2.2.2,
+                    ],
+                },
+            },
+            Dep {
+                gem_name: "activeresource",
+                version_constraints: VersionConstraints {
+                    inner: [
+                        = 2.2.2,
+                    ],
+                },
+            },
+            Dep {
+                gem_name: "activesupport",
+                version_constraints: VersionConstraints {
+                    inner: [
+                        = 2.2.2,
+                    ],
+                },
+            },
+            Dep {
+                gem_name: "rake",
+                version_constraints: VersionConstraints {
+                    inner: [
+                        >= 0.8.3,
+                    ],
+                },
+            },
+        ],
+        metadata: Metadata {
+            checksum: [
+                132,
+                253,
+                14,
+                233,
+                47,
+                146,
+                8,
+                140,
+                255,
+                129,
+                209,
+                164,
+                188,
+                182,
+                19,
+                6,
+                189,
+                75,
+                116,
+                64,
+                184,
+                99,
+                77,
+                122,
+                195,
+                209,
+                57,
+                101,
+                113,
+                162,
+                19,
+                63,
+            ],
+            ruby: [],
+            rubygems: [],
+        },
+    },
+    VersionAvailable {
+        version: GemVersion {
+            major: 2,
+            minor: Some(
+                3,
+            ),
+            patch: Some(
+                2,
+            ),
+            tiny: None,
+            prerelease: None,
+        },
+        deps: [
+            Dep {
+                gem_name: "actionmailer",
+                version_constraints: VersionConstraints {
+                    inner: [
+                        = 2.3.2,
+                    ],
+                },
+            },
+            Dep {
+                gem_name: "actionpack",
+                version_constraints: VersionConstraints {
+                    inner: [
+                        = 2.3.2,
+                    ],
+                },
+            },
+            Dep {
+                gem_name: "activerecord",
+                version_constraints: VersionConstraints {
+                    inner: [
+                        = 2.3.2,
+                    ],
+                },
+            },
+            Dep {
+                gem_name: "activeresource",
+                version_constraints: VersionConstraints {
+                    inner: [
+                        = 2.3.2,
+                    ],
+                },
+            },
+            Dep {
+                gem_name: "activesupport",
+                version_constraints: VersionConstraints {
+                    inner: [
+                        = 2.3.2,
+                    ],
+                },
+            },
+            Dep {
+                gem_name: "rake",
+                version_constraints: VersionConstraints {
+                    inner: [
+                        >= 0.8.3,
+                    ],
+                },
+            },
+        ],
+        metadata: Metadata {
+            checksum: [
+                172,
+                97,
+                224,
+                53,
+                105,
+                135,
+                223,
+                52,
+                219,
+                186,
+                251,
+                128,
+                59,
+                152,
+                241,
+                83,
+                166,
+                99,
+                211,
+                135,
+                138,
+                49,
+                241,
+                219,
+                115,
+                51,
+                183,
+                205,
+                152,
+                127,
+                208,
+                68,
+            ],
+            ruby: [],
+            rubygems: [],
+        },
+    },
+]
