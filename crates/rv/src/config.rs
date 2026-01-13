@@ -47,7 +47,7 @@ pub struct Config {
 }
 
 impl Config {
-    #[instrument(skip_all)]
+    #[instrument(skip_all, level = "trace")]
     pub fn rubies(&self) -> Vec<Ruby> {
         self.discover_rubies()
     }
