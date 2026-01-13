@@ -70,7 +70,7 @@ fn set_pinned_ruby(config: &Config, request: RubyRequest) -> Result<()> {
         }
     };
 
-    println!("{0} pinned to {1}", project_dir.cyan(), request.cyan());
+    println!("{0} pinned to {1}", project_dir.cyan(), version.cyan());
 
     Ok(())
 }
@@ -92,7 +92,8 @@ fn show_pinned_ruby(config: &Config) -> Result<()> {
         }
     };
 
-    println!("{0} is pinned to {1}", dir.as_ref().cyan(), ruby.cyan());
+    let version = ruby.to_tool_consumable_version();
+    println!("{0} is pinned to {1}", dir.as_ref().cyan(), version.cyan());
     Ok(())
 }
 
