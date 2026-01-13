@@ -89,7 +89,7 @@ impl Config {
         let ruby_paths: Vec<_> = self
             .ruby_dirs
             .iter()
-            .filter(|ruby_dir| ruby_dir.exists())
+            .filter(|ruby_dir| ruby_dir.is_dir())
             .flat_map(|ruby_dir| {
                 ruby_dir
                     .read_dir_utf8()
