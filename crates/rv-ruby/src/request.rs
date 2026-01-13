@@ -108,8 +108,8 @@ impl RubyRequest {
         version.satisfies(self)
     }
 
-    /// Normalized representation of a ruby request
-    pub fn normalized(&self) -> String {
+    /// A version that toolfiles like .tool-version/.ruby-version/Gemfile/Gemfile.lock knows how to read.
+    pub fn to_tool_consumable_version(&self) -> String {
         self.to_string().replace("ruby-", "")
     }
 }

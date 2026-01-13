@@ -34,7 +34,7 @@ pub fn pin(config: &Config, request: Option<RubyRequest>) -> Result<()> {
 }
 
 fn set_pinned_ruby(config: &Config, request: RubyRequest) -> Result<()> {
-    let version = request.normalized();
+    let version = request.to_tool_consumable_version();
     let project_dir: Cow<Utf8PathBuf> = match config.requested_ruby {
         Some((_, Source::DotToolVersions(ref path))) => {
             let versions = fs_err::read_to_string(path)?;
