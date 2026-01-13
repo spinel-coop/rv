@@ -49,7 +49,7 @@ pub struct Config {
 impl Config {
     #[instrument(skip_all, level = "trace")]
     pub fn rubies(&self) -> Vec<Ruby> {
-        self.discover_rubies()
+        self.discover_all_rubies()
     }
 
     pub async fn remote_rubies(&self) -> Vec<Ruby> {
@@ -57,7 +57,7 @@ impl Config {
     }
 
     pub fn matching_ruby(&self, request: &RubyRequest) -> Option<Ruby> {
-        request.find_match_in(&self.rubies())
+        self.discover_rubies(request).last().cloned()
     }
 
     pub fn current_ruby(&self) -> Option<Ruby> {

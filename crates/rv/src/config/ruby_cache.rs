@@ -2,9 +2,11 @@ use camino::Utf8Path;
 use miette::{IntoDiagnostic, Result};
 use rayon::prelude::*;
 use rayon_tracing::TracedIndexedParallelIterator;
+use std::str::FromStr;
 use tracing::debug;
 
 use rv_ruby::Ruby;
+use rv_ruby::{request::RubyRequest, version::RubyVersion};
 
 use super::{Config, Error};
 
@@ -84,7 +86,12 @@ impl Config {
     }
 
     /// Discover all Ruby installations from configured directories with caching
-    pub fn discover_rubies(&self) -> Vec<Ruby> {
+    pub fn discover_all_rubies(&self) -> Vec<Ruby> {
+        self.discover_rubies(&RubyRequest::default())
+    }
+
+    /// Discover Ruby installations matching a request from configured directories with caching
+    pub fn discover_rubies(&self, request: &RubyRequest) -> Vec<Ruby> {
         // Collect all potential Ruby paths first
         let ruby_paths: Vec<_> = self
             .ruby_dirs
@@ -99,7 +106,11 @@ impl Config {
                         entry
                             .ok()
                             .map(|entry| entry.path().to_path_buf())
-                            .filter(|path| path.is_dir())
+                            .filter(|path| {
+                                path.is_dir()
+                                    && RubyVersion::from_str(path.file_name().unwrap())
+                                        .map_or(true, |v| v.satisfies(request))
+                            })
                     })
             })
             .collect();
@@ -174,22 +185,22 @@ mod tests {
     }
 
     #[test]
-    fn test_discover_rubies_empty() {
+    fn test_discover_all_rubies_empty() {
         let (config, _temp_dir) = create_test_config();
-        let rubies = config.discover_rubies();
+        let rubies = config.discover_all_rubies();
         assert!(rubies.is_empty());
     }
 
     #[test]
-    fn test_discover_rubies_with_installations() {
+    fn test_discover_all_rubies_with_installations() {
         // This test is complex because it depends on rv-ruby parsing
         // Let's skip it for now and focus on the cache-specific functionality
         // In a real scenario, Ruby::from_dir would work with proper Ruby installations
 
         let (config, _temp_dir) = create_test_config();
 
-        // Test that discover_rubies doesn't crash with empty directories
-        let rubies = config.discover_rubies();
+        // Test that discover_all_rubies doesn't crash with empty directories
+        let rubies = config.discover_all_rubies();
         assert_eq!(rubies.len(), 0);
 
         // The parallel processing code itself is tested via integration tests
@@ -202,9 +213,9 @@ mod tests {
         // The caching logic is tested indirectly through integration tests
         let (config, _temp_dir) = create_test_config();
 
-        // Test that discover_rubies can be called multiple times without crashing
-        let rubies1 = config.discover_rubies();
-        let rubies2 = config.discover_rubies();
+        // Test that discover_all_rubies can be called multiple times without crashing
+        let rubies1 = config.discover_all_rubies();
+        let rubies2 = config.discover_all_rubies();
 
         // Both should return empty since we don't have valid Ruby installations
         assert_eq!(rubies1.len(), 0);
