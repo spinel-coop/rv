@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use owo_colors::OwoColorize;
 use tracing::debug;
 use url::Url;
 
@@ -31,6 +32,8 @@ pub enum Error {
     CouldNotWriteToCache(std::io::Error),
     #[error("Could not choose version: {0}")]
     CouldNotChooseVersion(String),
+    #[error(transparent)]
+    InstallError(#[from] crate::commands::ci::Error),
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -117,8 +120,15 @@ pub async fn install(config: &Config, gem: GemName, gem_server: String) -> Resul
     }
     lockfile.gem.push(gem_section);
     // Now that we have a Gemfile.lock we can install it using code paths from `rv ci`.
-    // Something like:
-    // crate::commands::ci::install_from_lockfile(config, ci_args, lockfile);
+    let install_path = todo!();
+    let ruby_request = todo!(); // Calculate this from the ruby version `use_this_ruby_version_to_install`.
+    crate::commands::ci::install_from_lockfile(config, lockfile, install_path, ruby_request)
+        .await?;
+    let gem_name = gem.cyan();
+    println!(
+        "Installed {gem_name} version {} to {install_path}",
+        version_to_install.version
+    );
     Ok(())
 }
 

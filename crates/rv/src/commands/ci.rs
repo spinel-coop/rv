@@ -163,7 +163,7 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         .parent()
         .ok_or(Error::InvalidLockfilePath(lockfile_path.to_string()))?
         .to_path_buf();
-    let install_path = find_install_path(config, &lockfile_dir, &ruby_request)?;
+    let install_path = find_install_path(config, Some(&lockfile_dir), &ruby_request)?;
     let lockfile_contents = tokio::fs::read_to_string(&lockfile_path).await?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
     let inner_args = CiInnerArgs {
@@ -178,6 +178,24 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     ci_inner(config, &inner_args, lockfile).await
 }
 
+pub async fn install_from_lockfile(
+    config: &Config,
+    lockfile: GemfileDotLock<'_>,
+    install_path: Utf8PathBuf,
+    ruby_request: RubyRequest,
+) -> Result<()> {
+    let extensions_dir = find_exts_dir(config, &ruby_request)?;
+    let args = CiInnerArgs {
+        skip_compile_extensions: false,
+        max_concurrent_requests: 10,
+        max_concurrent_installs: 20,
+        validate_checksums: true,
+        lockfile_dir: None,
+        install_path,
+        extensions_dir,
+    };
+    ci_inner(config, &args, lockfile).await
+}
 async fn ci_inner(config: &Config, args: &CiInnerArgs, lockfile: GemfileDotLock<'_>) -> Result<()> {
     let binstub_dir = args.install_path.join("bin");
     tokio::fs::create_dir_all(&binstub_dir).await?;
@@ -600,7 +618,7 @@ fn find_lockfile_path(gemfile: Option<Utf8PathBuf>) -> Result<Utf8PathBuf> {
 /// Uses Bundler's `bundle_path`.
 fn find_install_path(
     config: &Config,
-    lockfile_dir: &Utf8Path,
+    lockfile_dir: Option<&Utf8Path>,
     version: &RubyRequest,
 ) -> Result<Utf8PathBuf> {
     let env_path = std::env::var("BUNDLE_PATH");
@@ -613,7 +631,7 @@ fn find_install_path(
         version,
         args.as_slice(),
         CaptureOutput::Both,
-        Some(lockfile_dir),
+        lockfile_dir,
         Vec::new(), // env
     ) {
         Ok(output) => output.stdout,
