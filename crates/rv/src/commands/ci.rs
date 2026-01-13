@@ -30,6 +30,7 @@ use crate::commands::ci::checksums::HashReader;
 use crate::commands::ci::checksums::Hashed;
 use crate::commands::ruby::run::CaptureOutput;
 use crate::config::Config;
+use crate::http_client::rv_http_client;
 use std::collections::HashMap;
 use std::env::current_dir;
 use std::io;
@@ -78,8 +79,7 @@ struct CiInnerArgs {
     pub max_concurrent_requests: usize,
     pub max_concurrent_installs: usize,
     pub validate_checksums: bool,
-    pub lockfile_path: Utf8PathBuf,
-    pub lockfile_dir: Utf8PathBuf,
+    pub lockfile_dir: Option<Utf8PathBuf>,
     pub install_path: Utf8PathBuf,
     pub extensions_dir: Utf8PathBuf,
 }
@@ -163,24 +163,40 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         .parent()
         .ok_or(Error::InvalidLockfilePath(lockfile_path.to_string()))?
         .to_path_buf();
-    let install_path = find_install_path(config, &lockfile_dir, &ruby_request)?;
+    let install_path = find_install_path(config, Some(&lockfile_dir), &ruby_request)?;
+    let lockfile_contents = tokio::fs::read_to_string(&lockfile_path).await?;
+    let lockfile = rv_lockfile::parse(&lockfile_contents)?;
     let inner_args = CiInnerArgs {
         skip_compile_extensions: args.skip_compile_extensions,
         max_concurrent_requests: args.max_concurrent_requests,
         max_concurrent_installs: args.max_concurrent_installs,
         validate_checksums: args.validate_checksums,
-        lockfile_path,
-        lockfile_dir,
+        lockfile_dir: Some(lockfile_dir),
         install_path,
         extensions_dir,
     };
-    ci_inner(config, &inner_args).await
+    ci_inner(config, &inner_args, lockfile).await
 }
 
-async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
-    let lockfile_contents = tokio::fs::read_to_string(&args.lockfile_path).await?;
-    let lockfile = rv_lockfile::parse(&lockfile_contents)?;
-
+pub async fn install_from_lockfile(
+    config: &Config,
+    lockfile: GemfileDotLock<'_>,
+    install_path: Utf8PathBuf,
+    ruby_request: RubyRequest,
+) -> Result<()> {
+    let extensions_dir = find_exts_dir(config, &ruby_request)?;
+    let args = CiInnerArgs {
+        skip_compile_extensions: false,
+        max_concurrent_requests: 10,
+        max_concurrent_installs: 20,
+        validate_checksums: true,
+        lockfile_dir: None,
+        install_path,
+        extensions_dir,
+    };
+    ci_inner(config, &args, lockfile).await
+}
+async fn ci_inner(config: &Config, args: &CiInnerArgs, lockfile: GemfileDotLock<'_>) -> Result<()> {
     let binstub_dir = args.install_path.join("bin");
     tokio::fs::create_dir_all(&binstub_dir).await?;
 
@@ -222,7 +238,7 @@ fn install_paths<'i>(
 
 fn install_path(
     path_section: &rv_lockfile::datatypes::PathSection,
-    lockfile_dir: &Utf8Path,
+    lockfile_dir: &Option<Utf8PathBuf>,
     config: &Config,
     args: &CiInnerArgs,
 ) -> Result<()> {
@@ -275,11 +291,14 @@ fn install_path(
                         "-e",
                         &format!(
                             "puts Gem::Specification.load(\"{}\").to_yaml",
-                            lockfile_dir.join(gemspec_path),
+                            match lockfile_dir {
+                                Some(dir) => dir.join(gemspec_path),
+                                None => gemspec_path,
+                            }
                         ),
                     ],
                     CaptureOutput::Both,
-                    Some(lockfile_dir),
+                    lockfile_dir.as_ref().map(|p| p.as_ref()),
                     Vec::new(),
                 )?
                 .stdout;
@@ -599,7 +618,7 @@ fn find_lockfile_path(gemfile: Option<Utf8PathBuf>) -> Result<Utf8PathBuf> {
 /// Uses Bundler's `bundle_path`.
 fn find_install_path(
     config: &Config,
-    lockfile_dir: &Utf8Path,
+    lockfile_dir: Option<&Utf8Path>,
     version: &RubyRequest,
 ) -> Result<Utf8PathBuf> {
     let env_path = std::env::var("BUNDLE_PATH");
@@ -612,7 +631,7 @@ fn find_install_path(
         version,
         args.as_slice(),
         CaptureOutput::Both,
-        Some(lockfile_dir),
+        lockfile_dir,
         Vec::new(), // env
     ) {
         Ok(output) => output.stdout,
@@ -725,23 +744,6 @@ fn install_binstub(dep_name: &str, executables: &[String], binstub_dir: &Utf8Pat
         }
     }
     Ok(())
-}
-
-fn rv_http_client() -> Result<Client> {
-    use reqwest::header;
-    let mut headers = header::HeaderMap::new();
-    headers.insert(
-        "X-RV-PLATFORM",
-        header::HeaderValue::from_static(current_platform::CURRENT_PLATFORM),
-    );
-    headers.insert("X-RV-COMMAND", header::HeaderValue::from_static("ci"));
-
-    let client = reqwest::Client::builder()
-        .user_agent(format!("rv-{}", env!("CARGO_PKG_VERSION")))
-        .default_headers(headers)
-        .build()?;
-
-    Ok(client)
 }
 
 enum KnownChecksumAlgos {
@@ -1479,7 +1481,7 @@ async fn download_gem_source<'i>(
     max_concurrent_requests: usize,
 ) -> Result<Vec<DownloadedRubygems<'i>>> {
     // TODO: If the gem server needs user credentials, accept them and add them to this client.
-    let client = rv_http_client()?;
+    let client = rv_http_client("ci")?;
 
     // Download them all, concurrently.
 
