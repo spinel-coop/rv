@@ -110,12 +110,7 @@ impl RubyRequest {
 
     /// Normalized representation of a ruby request
     pub fn normalized(&self) -> String {
-        let formatted = self.to_string();
-
-        formatted
-            .strip_prefix("ruby-")
-            .unwrap_or(&formatted)
-            .to_string()
+        self.to_string().replace("ruby-", "")
     }
 }
 
