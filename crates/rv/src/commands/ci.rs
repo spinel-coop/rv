@@ -79,8 +79,7 @@ struct CiInnerArgs {
     pub max_concurrent_requests: usize,
     pub max_concurrent_installs: usize,
     pub validate_checksums: bool,
-    pub lockfile_path: Utf8PathBuf,
-    pub lockfile_dir: Utf8PathBuf,
+    pub lockfile_dir: Option<Utf8PathBuf>,
     pub install_path: Utf8PathBuf,
     pub extensions_dir: Utf8PathBuf,
 }
@@ -165,30 +164,21 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         .ok_or(Error::InvalidLockfilePath(lockfile_path.to_string()))?
         .to_path_buf();
     let install_path = find_install_path(config, &lockfile_dir, &ruby_request)?;
+    let lockfile_contents = tokio::fs::read_to_string(&lockfile_path).await?;
+    let lockfile = rv_lockfile::parse(&lockfile_contents)?;
     let inner_args = CiInnerArgs {
         skip_compile_extensions: args.skip_compile_extensions,
         max_concurrent_requests: args.max_concurrent_requests,
         max_concurrent_installs: args.max_concurrent_installs,
         validate_checksums: args.validate_checksums,
-        lockfile_path,
-        lockfile_dir,
+        lockfile_dir: Some(lockfile_dir),
         install_path,
         extensions_dir,
     };
-    ci_inner(config, &inner_args).await
+    ci_inner(config, &inner_args, lockfile).await
 }
 
-async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
-    let lockfile_contents = tokio::fs::read_to_string(&args.lockfile_path).await?;
-    let lockfile = rv_lockfile::parse(&lockfile_contents)?;
-    install_from_lockfile(config, args, lockfile).await
-}
-
-async fn install_from_lockfile<'i>(
-    config: &Config,
-    args: &CiInnerArgs,
-    lockfile: GemfileDotLock<'i>,
-) -> Result<()> {
+async fn ci_inner(config: &Config, args: &CiInnerArgs, lockfile: GemfileDotLock<'_>) -> Result<()> {
     let binstub_dir = args.install_path.join("bin");
     tokio::fs::create_dir_all(&binstub_dir).await?;
 
@@ -230,7 +220,7 @@ fn install_paths<'i>(
 
 fn install_path(
     path_section: &rv_lockfile::datatypes::PathSection,
-    lockfile_dir: &Utf8Path,
+    lockfile_dir: &Option<Utf8PathBuf>,
     config: &Config,
     args: &CiInnerArgs,
 ) -> Result<()> {
@@ -283,11 +273,14 @@ fn install_path(
                         "-e",
                         &format!(
                             "puts Gem::Specification.load(\"{}\").to_yaml",
-                            lockfile_dir.join(gemspec_path),
+                            match lockfile_dir {
+                                Some(dir) => dir.join(gemspec_path),
+                                None => gemspec_path,
+                            }
                         ),
                     ],
                     CaptureOutput::Both,
-                    Some(lockfile_dir),
+                    lockfile_dir.as_ref().map(|p| p.as_ref()),
                     Vec::new(),
                 )?
                 .stdout;
