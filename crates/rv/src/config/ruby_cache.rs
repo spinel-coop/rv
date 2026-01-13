@@ -96,13 +96,10 @@ impl Config {
                     .into_iter()
                     .flatten()
                     .filter_map(|entry| {
-                        entry.ok().and_then(|entry| {
-                            entry
-                                .metadata()
-                                .ok()
-                                .filter(|metadata| metadata.is_dir())
-                                .map(|_| entry.path().to_path_buf())
-                        })
+                        entry
+                            .ok()
+                            .map(|entry| entry.path().to_path_buf())
+                            .filter(|path| path.is_dir())
                     })
             })
             .collect();
