@@ -1,0 +1,80 @@
+--- !ruby/object:Gem::Specification
+name: code_ownership
+version: !ruby/object:Gem::Version
+  version: 2.1.0
+platform: ruby
+authors:
+- Gusto Engineers
+bindir: bin
+cert_chain: []
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: code_teams
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '1.0'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '1.0'
+- !ruby/object:Gem::Dependency
+  name: sorbet-runtime
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 0.5.11249
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 0.5.11249
+description: A gem to help engineering teams declare ownership of code
+email:
+- dev@gusto.com
+executables:
+- codeownership
+extensions:
+- ext/code_ownership/Cargo.toml
+extra_rdoc_files: []
+files:
+- LICENSE
+- README.md
+- ext/code_ownership/Cargo.toml
+- ext/code_ownership/extconf.rb
+- ext/code_ownership/src/lib.rs
+- lib/code_ownership.rb
+homepage: https://github.com/rubyatscale/code_ownership
+licenses:
+- MIT
+metadata:
+  cargo_crate_name: code_ownership
+  homepage_uri: https://github.com/rubyatscale/code_ownership
+  source_code_uri: https://github.com/rubyatscale/code_ownership
+  changelog_uri: https://github.com/rubyatscale/code_ownership/releases
+  allowed_push_host: https://rubygems.org
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '3.2'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 3.6.2
+specification_version: 4
+summary: A gem to help engineering teams declare ownership of code
+test_files: []
