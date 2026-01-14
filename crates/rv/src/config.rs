@@ -5,7 +5,7 @@ use std::{
 
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexSet;
-use tracing::{debug, instrument};
+use tracing::debug;
 
 use rv_ruby::{
     Ruby,
@@ -47,7 +47,6 @@ pub struct Config {
 }
 
 impl Config {
-    #[instrument(skip_all, level = "trace")]
     pub fn rubies(&self) -> Vec<Ruby> {
         self.discover_rubies()
     }
