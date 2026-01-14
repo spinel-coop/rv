@@ -292,6 +292,10 @@ fn extract_ruby_tarball(
     rubies_dir: &Utf8Path,
     version: &str,
 ) -> Result<()> {
+    let span = info_span!("Installing Ruby", version = version);
+    span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name}").unwrap());
+    let _guard = span.enter();
+
     if !rubies_dir.exists() {
         fs_err::create_dir_all(rubies_dir)?;
     }
