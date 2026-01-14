@@ -122,8 +122,6 @@ pub enum Error {
     UrlError(#[from] url::ParseError),
     #[error("Could not read install directory from Bundler")]
     BadBundlePath,
-    #[error("Failed to unpack tarball path {0}")]
-    InvalidPath(PathBuf),
     #[error("Checksum for {0} was not valid YAML")]
     InvalidChecksum(String),
     #[error("Gem {gem_name} archive did not include metadata.gz")]
@@ -346,9 +344,6 @@ fn install_path(
             } else {
                 let gemspec_path =
                     Utf8PathBuf::try_from(path.clone()).expect("gemspec path not valid UTF-8");
-                if !std::fs::exists(&gemspec_path)? {
-                    return Err(Error::InvalidPath(gemspec_path.into()));
-                }
                 // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
                 let yaml_gemspec_vec = crate::commands::ruby::run::run_no_install(
                     config,
