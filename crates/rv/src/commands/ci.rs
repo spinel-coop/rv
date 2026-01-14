@@ -35,7 +35,6 @@ use crate::commands::ruby::run::CaptureOutput;
 use crate::config::Config;
 use crate::progress::WorkProgress;
 use std::collections::HashMap;
-use std::env::current_dir;
 use std::io;
 use std::io::Read;
 use std::io::Write;
@@ -163,7 +162,7 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     // Now that it's installed, we can use Ruby to query various directories
     // we'll need to know later.
     let extensions_dir = find_exts_dir(config, &ruby_request)?;
-    let lockfile_path = find_lockfile_path(&args.gemfile)?;
+    let lockfile_path = find_lockfile_path(&config.current_dir, &args.gemfile);
     let lockfile_dir = lockfile_path
         .parent()
         .ok_or(Error::InvalidLockfilePath(lockfile_path.to_string()))?
@@ -657,19 +656,16 @@ fn download_git_repo<'i>(
     })
 }
 
-fn find_lockfile_path(gemfile: &Option<Utf8PathBuf>) -> Result<Utf8PathBuf> {
+fn find_lockfile_path(current_dir: &Utf8PathBuf, gemfile: &Option<Utf8PathBuf>) -> Utf8PathBuf {
     let lockfile_name: Utf8PathBuf;
     if let Some(path) = gemfile {
         lockfile_name = format!("{}.lock", path).into();
     } else {
         lockfile_name = "Gemfile.lock".into();
     }
-    let lockfile_path = match Utf8PathBuf::from_path_buf(current_dir()?.join(lockfile_name)) {
-        Ok(it) => it,
-        Err(err) => return Err(Error::InvalidPath(err)),
-    };
+    let lockfile_path = current_dir.join(lockfile_name);
     debug!("found lockfile_path {}", lockfile_path);
-    Ok(lockfile_path)
+    lockfile_path
 }
 
 /// Which path should `ci` install gems under?
