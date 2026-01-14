@@ -154,6 +154,8 @@ where
     counter: Arc<AtomicUsize>,
     item_ready_rx: Receiver<I>,
     item_done_tx: Sender<I>,
+    /// Total number of nodes in the graph (used for rayon's len() hint)
+    total_nodes: usize,
 }
 
 impl<I> DepGraphParIter<I>
@@ -167,6 +169,11 @@ where
     pub fn new(ready_nodes: Vec<I>, deps: DependencyMap<I>, rdeps: DependencyMap<I>) -> Self {
         let timeout = Arc::new(RwLock::new(DEFAULT_TIMEOUT));
         let counter = Arc::new(AtomicUsize::new(0));
+
+        // Capture total node count before moving deps to the dispatcher thread.
+        // This is used by IndexedParallelIterator::len() to give rayon an accurate
+        // hint about parallelism, preventing it from spawning more workers than items.
+        let total_nodes = deps.read().unwrap().len();
 
         // Create communication channel for processed nodes
         let (item_ready_tx, item_ready_rx) = crossbeam_channel::unbounded::<I>();
@@ -236,9 +243,9 @@ where
         DepGraphParIter {
             timeout,
             counter,
-
             item_ready_rx,
             item_done_tx,
+            total_nodes,
         }
     }
 
@@ -267,7 +274,16 @@ where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
 {
     fn len(&self) -> usize {
-        num_cpus::get()
+        // Return the minimum of node count and CPU count.
+        //
+        // - If len() > total_nodes: rayon spawns excess workers that block
+        //   forever on recv(), causing deadlocks (seen on ARM with 8+ cores).
+        // - If len() > num_cpus: rayon's work distribution becomes inefficient,
+        //   causing severe slowdowns (seen on ubuntu-latest with 2 cores).
+        //
+        // Using min() handles both cases: it prevents deadlocks while keeping
+        // rayon's work-stealing scheduler efficient.
+        std::cmp::min(self.total_nodes, num_cpus::get())
     }
 
     fn drive<C>(self, consumer: C) -> C::Result

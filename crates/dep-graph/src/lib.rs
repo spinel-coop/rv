@@ -274,6 +274,35 @@ mod tests {
         assert_eq!(result.len(), nodes.len());
     }
 
+    /// Verify that len() returns min(node_count, cpu_count).
+    ///
+    /// - len() > node_count: causes deadlocks (excess workers block on recv)
+    /// - len() > cpu_count: causes inefficient work distribution
+    ///
+    /// Using min() prevents both issues.
+    #[cfg(feature = "parallel")]
+    #[test]
+    fn par_iter_len_is_bounded() {
+        use rayon::iter::IndexedParallelIterator;
+
+        let mut n1 = Node::new("1");
+        let mut n2 = Node::new("2");
+        let n3 = Node::new("3");
+        n1.add_dep(n2.id());
+        n2.add_dep(n3.id());
+        let nodes = vec![n1, n2, n3];
+
+        let graph = DepGraph::new(&nodes);
+        let par_iter = graph.into_par_iter();
+
+        let expected = std::cmp::min(3, num_cpus::get());
+        assert_eq!(
+            par_iter.len(),
+            expected,
+            "len() should return min(node_count, cpu_count)"
+        );
+    }
+
     /// Stress test for the parallel iterator to verify the in_flight fix.
     /// This exercises the timeout code path while ensuring workers have
     /// enough time to complete under coverage instrumentation.
