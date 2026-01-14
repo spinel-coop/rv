@@ -44,6 +44,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Command;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use std::time::Instant;
 use std::vec;
@@ -221,7 +222,8 @@ async fn ci_inner_work(config: &Config, args: &CiInnerArgs, progress: &WorkProgr
 
     debug!("Downloading gems");
     let download_start = Instant::now();
-    let downloaded = download_gems(lockfile.clone(), &config.cache, args, progress).await?;
+    let stats = DownloadStats::default();
+    let downloaded = download_gems(lockfile.clone(), &config.cache, args, progress, &stats).await?;
     let downloaded_count = downloaded.len();
     let download_elapsed = download_start.elapsed();
 
@@ -242,10 +244,14 @@ async fn ci_inner_work(config: &Config, args: &CiInnerArgs, progress: &WorkProgr
 
     let total_elapsed = download_elapsed + install_elapsed + compile_elapsed;
 
+    let (cached_count, network_count) = stats.counts();
+
     println!("Summary:");
     println!(
-        " - {} gems downloaded ({})",
+        " - {} gems fetched: {} cached, {} downloaded ({})",
         downloaded_count,
+        cached_count,
+        network_count,
         format_duration(download_elapsed)
     );
     println!(
@@ -856,18 +862,44 @@ struct HowToChecksum {
     value: Vec<u8>,
 }
 
+/// Tracks how many gems were served from cache vs downloaded from the network.
+#[derive(Default)]
+struct DownloadStats {
+    cached: AtomicU64,
+    downloaded: AtomicU64,
+}
+
+impl DownloadStats {
+    fn cached_one(&self) {
+        self.cached.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn downloaded_one(&self) {
+        self.downloaded.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn counts(&self) -> (u64, u64) {
+        (
+            self.cached.load(Ordering::Relaxed),
+            self.downloaded.load(Ordering::Relaxed),
+        )
+    }
+}
+
 /// Downloads all Rubygem server gems from a Gemfile.lock
 async fn download_gems<'i>(
     lockfile: GemfileDotLock<'i>,
     cache: &rv_cache::Cache,
     args: &CiInnerArgs,
     progress: &WorkProgress,
+    stats: &DownloadStats,
 ) -> Result<Vec<DownloadedRubygems<'i>>> {
     let span = info_span!("Downloading gems");
     span.pb_set_style(
-        &ProgressStyle::with_template("{spinner:.green} {span_name} {pos}/{len}").unwrap(),
+        &ProgressStyle::with_template("{spinner:.green} {span_name} {pos}/{len} - {msg}").unwrap(),
     );
     span.pb_set_length(lockfile.gem_spec_count() as u64);
+    span.pb_set_message("0 cached, 0 downloaded");
     let _guard = span.enter();
 
     let all_sources = futures_util::stream::iter(lockfile.gem);
@@ -906,6 +938,7 @@ async fn download_gems<'i>(
                     cache,
                     args.max_concurrent_requests,
                     progress,
+                    stats,
                     span,
                 )
                 .await
@@ -1601,6 +1634,7 @@ async fn download_gem_source<'i>(
     cache: &rv_cache::Cache,
     max_concurrent_requests: usize,
     progress: &WorkProgress,
+    stats: &DownloadStats,
     span: &tracing::Span,
 ) -> Result<Vec<DownloadedRubygems<'i>>> {
     // TODO: If the gem server needs user credentials, accept them and add them to this client.
@@ -1618,7 +1652,16 @@ async fn download_gem_source<'i>(
         .map(|spec| {
             let client = &client;
             async move {
-                let result = download_gem(gem_source.remote, spec, client, cache, checksums).await;
+                let result = download_gem(
+                    gem_source.remote,
+                    spec,
+                    client,
+                    cache,
+                    checksums,
+                    stats,
+                    span,
+                )
+                .await;
                 span.pb_inc(1);
                 progress.complete_one();
                 result
@@ -1641,6 +1684,8 @@ async fn download_gem<'i>(
     client: &Client,
     cache: &rv_cache::Cache,
     checksums: &HashMap<GemVersion<'i>, HowToChecksum>,
+    stats: &DownloadStats,
+    span: &tracing::Span,
 ) -> Result<DownloadedRubygems<'i>> {
     let url = url_for_spec(remote, &spec)?;
     let cache_key = rv_cache::cache_digest(url.as_ref());
@@ -1651,10 +1696,12 @@ async fn download_gem<'i>(
 
     let contents = if cache_path.exists() {
         debug!("Reusing gem from {url} in cache");
+        stats.cached_one();
         let data = tokio::fs::read(&cache_path).await?;
         Bytes::from(data)
     } else {
         debug!("Downloading gem from {url}");
+        stats.downloaded_one();
         client
             .get(url.clone())
             .send()
@@ -1663,6 +1710,10 @@ async fn download_gem<'i>(
             .bytes()
             .await?
     };
+
+    // Update the progress bar message with current stats
+    let (cached, downloaded) = stats.counts();
+    span.pb_set_message(&format!("{cached} cached, {downloaded} downloaded"));
 
     // Validate the checksums.
     if let Some(checksum) = checksums.get(&spec.gem_version) {
