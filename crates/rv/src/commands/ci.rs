@@ -204,7 +204,10 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
 async fn ci_inner_work(config: &Config, args: &CiInnerArgs, progress: &WorkProgress) -> Result<()> {
     // Resolving phase: parse lockfile, handle path gems and git repos
     let span = info_span!("Resolving gems");
-    span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name}").unwrap());
+    span.pb_set_style(
+        &ProgressStyle::with_template("{spinner:.green} {span_name}")
+            .expect("valid progress template"),
+    );
 
     let lockfile_contents = {
         let _guard = span.enter();
@@ -729,7 +732,8 @@ fn install_gems<'i>(
 
     let span = info_span!("Installing gems");
     span.pb_set_style(
-        &ProgressStyle::with_template("{spinner:.green} {span_name} {pos}/{len}").unwrap(),
+        &ProgressStyle::with_template("{spinner:.green} {span_name} {pos}/{len}")
+            .expect("valid progress template"),
     );
     span.pb_set_length(downloaded.len() as u64);
     let _guard = span.enter();
@@ -909,7 +913,8 @@ async fn download_gems<'i>(
 ) -> Result<Vec<DownloadedRubygems<'i>>> {
     let span = info_span!("Downloading gems");
     span.pb_set_style(
-        &ProgressStyle::with_template("{spinner:.green} {span_name} {pos}/{len} - {msg}").unwrap(),
+        &ProgressStyle::with_template("{spinner:.green} {span_name} {pos}/{len} - {msg}")
+            .expect("valid progress template"),
     );
     span.pb_set_length(lockfile.gem_spec_count() as u64);
     span.pb_set_message("0 cached, 0 downloaded");

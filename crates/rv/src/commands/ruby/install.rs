@@ -274,7 +274,10 @@ async fn download_ruby_tarball(
     progress.start_phase(total_size, 100);
 
     let span = info_span!("Downloading Ruby", version = version);
-    span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name} {msg}").unwrap());
+    span.pb_set_style(
+        &ProgressStyle::with_template("{spinner:.green} {span_name} {msg}")
+            .expect("valid progress template"),
+    );
     let _guard = span.enter();
 
     // Write the tarball bytes to the filesystem.
@@ -303,7 +306,10 @@ fn extract_ruby_tarball(
     version: &str,
 ) -> Result<()> {
     let span = info_span!("Installing Ruby", version = version);
-    span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name}").unwrap());
+    span.pb_set_style(
+        &ProgressStyle::with_template("{spinner:.green} {span_name}")
+            .expect("valid progress template"),
+    );
     let _guard = span.enter();
 
     if !rubies_dir.exists() {
