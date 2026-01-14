@@ -12,7 +12,7 @@ env:
 
 jobs:
   smoke-test:
-    name: ${{ matrix.project }}
+    name: ${{ matrix.project }}-rv
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
