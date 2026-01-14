@@ -61,6 +61,21 @@ fn test_clean_install_gemfile_arg() {
 }
 
 #[test]
+fn test_clean_install_gemfile_arg_implicit() {
+    let mut test = RvTest::new();
+
+    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
+
+    let output = test.ci(&[]);
+    output.assert_failure();
+    assert_eq!(
+        output.normalized_stderr(),
+        "Error: CiError(MissingImplicitGemfile)\n",
+    );
+    releases_mock.assert();
+}
+
+#[test]
 fn test_clean_install_gemfile_arg_in_subdirectory() {
     let mut test = RvTest::new();
 
@@ -126,6 +141,8 @@ fn test_clean_install_invalid_gemfile() {
 #[test]
 fn test_clean_install_missing_lockfile() {
     let mut test = RvTest::new();
+
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.empty");
 
     let releases_mock = test.mock_releases(["4.0.0"].to_vec());
 
