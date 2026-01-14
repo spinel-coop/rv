@@ -17,9 +17,6 @@ fn test_clean_install_download_test_gem() {
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testsource.lock");
     test.replace_source("http://gems.example.com", &test.server_url());
 
-    let gemfile = fs_err::read_to_string(test.cwd.join("Gemfile")).unwrap();
-    println!("{}", gemfile);
-
     let tarball_content =
         fs_err::read("../rv-gem-package/tests/fixtures/test-gem-1.0.0.gem").unwrap();
     let mock = test
@@ -31,6 +28,36 @@ fn test_clean_install_download_test_gem() {
     output.assert_success();
     releases_mock.assert();
     mock.assert();
+}
+
+#[test]
+fn test_clean_install_gemfile_arg() {
+    let mut test = RvTest::new();
+
+    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
+
+    // Let rv infer installation path from Gemfile argument. This test would install real gems to
+    // real rv installation directory, so we use an empty Gemfile to avoid side effects.
+    test.env.remove("BUNDLE_PATH");
+
+    let gemfile_path = test.cwd.join("Gemfile.empty");
+    let gemfile = fs_err::read_to_string("../rv-lockfile/tests/inputs/Gemfile.empty").unwrap();
+    let _ = fs_err::write(
+        gemfile_path,
+        gemfile.replace("https://rubygems.org", &test.server_url()),
+    );
+
+    let lockfile_path = test.cwd.join("Gemfile.empty.lock");
+    let lockfile =
+        fs_err::read_to_string("../rv-lockfile/tests/inputs/Gemfile.empty.lock").unwrap();
+    let _ = fs_err::write(
+        lockfile_path,
+        lockfile.replace("https://rubygems.org", &test.server_url()),
+    );
+
+    let output = test.ci(&["--gemfile", "Gemfile.empty"]);
+    output.assert_success();
+    releases_mock.assert();
 }
 
 #[test]

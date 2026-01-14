@@ -165,12 +165,12 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     // Now that it's installed, we can use Ruby to query various directories
     // we'll need to know later.
     let extensions_dir = find_exts_dir(config, &ruby_request)?;
-    let lockfile_path = find_lockfile_path(args.gemfile)?;
+    let lockfile_path = find_lockfile_path(&args.gemfile)?;
     let lockfile_dir = lockfile_path
         .parent()
         .ok_or(Error::InvalidLockfilePath(lockfile_path.to_string()))?
         .to_path_buf();
-    let install_path = find_install_path(config, &lockfile_dir, &ruby_request)?;
+    let install_path = find_install_path(config, &lockfile_dir, &ruby_request, &args.gemfile)?;
     let inner_args = CiInnerArgs {
         skip_compile_extensions: args.skip_compile_extensions,
         max_concurrent_requests: args.max_concurrent_requests,
@@ -662,7 +662,7 @@ fn download_git_repo<'i>(
     })
 }
 
-fn find_lockfile_path(gemfile: Option<Utf8PathBuf>) -> Result<Utf8PathBuf> {
+fn find_lockfile_path(gemfile: &Option<Utf8PathBuf>) -> Result<Utf8PathBuf> {
     let lockfile_name: Utf8PathBuf;
     if let Some(path) = gemfile {
         lockfile_name = format!("{}.lock", path).into();
@@ -683,19 +683,24 @@ fn find_install_path(
     config: &Config,
     lockfile_dir: &Utf8Path,
     version: &RubyRequest,
+    gemfile: &Option<Utf8PathBuf>,
 ) -> Result<Utf8PathBuf> {
     let env_path = std::env::var("BUNDLE_PATH");
     if let Ok(bundle_path) = env_path {
         return Ok(Utf8PathBuf::from(&bundle_path));
     }
     let args = ["-rbundler", "-e", "puts Bundler.bundle_path"];
+    let mut env = Vec::new();
+    if let Some(path) = gemfile {
+        env.push(("BUNDLE_GEMFILE", path.as_str()));
+    }
     let bundle_path = match crate::commands::ruby::run::run_no_install(
         config,
         version,
         args.as_slice(),
         CaptureOutput::Both,
         Some(lockfile_dir),
-        Vec::new(), // env
+        env,
     ) {
         Ok(output) => output.stdout,
         Err(_) => Vec::from(".rv"),
