@@ -34,14 +34,24 @@ jobs:
         run: bin/smoke-tests/${{ matrix.project }}
 
   baseline:
-    name: baseline-${{ matrix.project }}
+    name: ${{ matrix.project }}-baseline
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
+          - project: gitlab
+            repo: https://gitlab.com/gitlab-org/gitlab.git
+            deps: >-
+              build-essential git ca-certificates pkg-config cmake
+              libyaml-dev libre2-dev libffi-dev libxml2-dev libxslt-dev
+              libcurl4-openssl-dev libicu-dev libkrb5-dev libpq-dev
+              libpcre2-dev libgpgme-dev zlib1g-dev
           - project: lobsters
             repo: https://github.com/lobsters/lobsters.git
+            deps: >-
+              build-essential git ca-certificates
+              libyaml-dev libmariadb-dev libsqlite3-dev
     steps:
       - name: Check out repo
         uses: actions/checkout@v6
@@ -52,9 +62,7 @@ jobs:
       - name: Install native dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-              build-essential git ca-certificates \
-              libyaml-dev libmariadb-dev libsqlite3-dev
+          sudo apt-get install -y --no-install-recommends ${{ matrix.deps }}
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
