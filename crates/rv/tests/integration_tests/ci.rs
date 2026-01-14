@@ -17,9 +17,6 @@ fn test_clean_install_download_test_gem() {
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testsource.lock");
     test.replace_source("http://gems.example.com", &test.server_url());
 
-    let gemfile = fs_err::read_to_string(test.cwd.join("Gemfile")).unwrap();
-    println!("{}", gemfile);
-
     let tarball_content =
         fs_err::read("../rv-gem-package/tests/fixtures/test-gem-1.0.0.gem").unwrap();
     let mock = test
