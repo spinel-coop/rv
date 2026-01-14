@@ -95,8 +95,13 @@ async fn install_inner(
 
     match tarball_path {
         Some(tarball_path) => {
-            extract_local_ruby_tarball(tarball_path, &install_dir, &selected_version.number())
-                .await?
+            extract_local_ruby_tarball(
+                tarball_path,
+                &install_dir,
+                &selected_version.number(),
+                progress,
+            )
+            .await?
         }
         None => {
             download_and_extract_remote_tarball(
@@ -152,8 +157,13 @@ async fn extract_local_ruby_tarball(
     tarball_path: String,
     install_dir: &Utf8PathBuf,
     version: &str,
+    progress: &WorkProgress,
 ) -> Result<()> {
+    // For local tarballs, we only have the extraction phase (no download).
+    // Use 100% allocation since extraction is the only work.
+    progress.start_phase(1, 100);
     extract_ruby_tarball(Utf8Path::new(&tarball_path), install_dir, version)?;
+    progress.complete_one();
 
     Ok(())
 }
