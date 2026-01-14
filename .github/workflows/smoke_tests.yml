@@ -40,6 +40,25 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - project: diaspora
+            repo: https://github.com/diaspora/diaspora.git
+            deps: >-
+              build-essential git ca-certificates cmake pkg-config
+              libyaml-dev libffi-dev libxml2-dev libxslt-dev libpq-dev
+              default-libmysqlclient-dev libcurl4-openssl-dev libyajl-dev
+              libmagickwand-dev libgit2-dev libssh2-1-dev libidn-dev
+          - project: discourse
+            repo: https://github.com/discourse/discourse.git
+            deps: >-
+              build-essential git ca-certificates pkg-config
+              libyaml-dev libpq-dev libxml2-dev libxslt-dev
+              zlib1g-dev libsqlite3-dev
+          - project: fastlane
+            repo: https://github.com/fastlane/fastlane.git
+            deps: >-
+              build-essential git ca-certificates
+              libyaml-dev libffi-dev libssl-dev
+            setup: echo "3.3" > .ruby-version
           - project: gitlab
             repo: https://gitlab.com/gitlab-org/gitlab.git
             deps: >-
@@ -47,11 +66,29 @@ jobs:
               libyaml-dev libre2-dev libffi-dev libxml2-dev libxslt-dev
               libcurl4-openssl-dev libicu-dev libkrb5-dev libpq-dev
               libpcre2-dev libgpgme-dev zlib1g-dev
+          - project: homebrew
+            repo: https://github.com/Homebrew/brew.git
+            workdir: brew/Library/Homebrew
+            deps: >-
+              build-essential git ca-certificates
+              libffi-dev libyaml-dev python3-dev
+          - project: huginn
+            repo: https://github.com/huginn/huginn.git
+            deps: >-
+              build-essential git ca-certificates
+              libyaml-dev libffi-dev libxml2-dev libxslt-dev libpq-dev
+              default-libmysqlclient-dev libcurl4-openssl-dev libsqlite3-dev
           - project: lobsters
             repo: https://github.com/lobsters/lobsters.git
             deps: >-
               build-essential git ca-certificates
               libyaml-dev libmariadb-dev libsqlite3-dev
+          - project: mastodon
+            repo: https://github.com/mastodon/mastodon.git
+            deps: >-
+              build-essential git ca-certificates
+              libyaml-dev libpq-dev libicu-dev libidn-dev
+              libxml2-dev libxslt1-dev zlib1g-dev libpam0g-dev
     steps:
       - name: Check out repo
         uses: actions/checkout@v6
@@ -64,11 +101,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ${{ matrix.deps }}
 
+      - name: Project setup
+        if: matrix.setup
+        working-directory: ${{ matrix.workdir || matrix.project }}
+        run: ${{ matrix.setup }}
+
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          working-directory: ${{ matrix.project }}
+          working-directory: ${{ matrix.workdir || matrix.project }}
 
       - name: Run bundle install
-        working-directory: ${{ matrix.project }}
+        working-directory: ${{ matrix.workdir || matrix.project }}
         run: bundle install
