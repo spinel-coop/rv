@@ -202,19 +202,32 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
 }
 
 async fn ci_inner_work(config: &Config, args: &CiInnerArgs, progress: &WorkProgress) -> Result<()> {
-    let lockfile_contents = tokio::fs::read_to_string(&args.lockfile_path).await?;
+    // Resolving phase: parse lockfile, handle path gems and git repos
+    let span = info_span!("Resolving gems");
+    span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name}").unwrap());
+
+    let lockfile_contents = {
+        let _guard = span.enter();
+        tokio::fs::read_to_string(&args.lockfile_path).await?
+    };
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
 
-    let binstub_dir = args.install_path.join("bin");
-    tokio::fs::create_dir_all(&binstub_dir).await?;
+    {
+        let _guard = span.enter();
 
-    debug!("Installing path gems");
-    install_paths(config, &lockfile.path, args)?;
+        let binstub_dir = args.install_path.join("bin");
+        tokio::fs::create_dir_all(&binstub_dir).await?;
 
-    debug!("Downloading git gems");
-    let repos = download_git_repos(lockfile.clone(), &config.cache, args)?;
-    debug!("Installing git gems");
-    install_git_repos(config, repos, args)?;
+        debug!("Installing path gems");
+        install_paths(config, &lockfile.path, args)?;
+
+        debug!("Downloading git gems");
+        let repos = download_git_repos(lockfile.clone(), &config.cache, args)?;
+        debug!("Installing git gems");
+        install_git_repos(config, repos, args)?;
+    }
+
+    drop(span);
 
     // Phase 1: Downloads (0-40%)
     let gem_count = lockfile.gem_spec_count() as u64;

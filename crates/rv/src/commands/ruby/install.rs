@@ -1,16 +1,20 @@
 use anstream::println;
+use bytesize::ByteSize;
 use camino::{Utf8Path, Utf8PathBuf};
 use core::panic;
 use current_platform::CURRENT_PLATFORM;
 use futures_util::StreamExt;
+use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
 use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
-use tracing::debug;
+use tracing::{debug, info_span};
+use tracing_indicatif::span_ext::IndicatifSpanExt;
 
 use rv_ruby::{request::RubyRequest, version::RubyVersion};
 
 use crate::config::Config;
+use crate::progress::WorkProgress;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -43,6 +47,24 @@ pub async fn install(
     install_dir: Option<String>,
     requested: Option<RubyRequest>,
     tarball_path: Option<String>,
+) -> Result<()> {
+    let progress = WorkProgress::new();
+    let result = install_inner(config, install_dir, requested, tarball_path, &progress).await;
+
+    match &result {
+        Ok(()) => progress.clear(),
+        Err(_) => progress.set_error(),
+    }
+
+    result
+}
+
+async fn install_inner(
+    config: &Config,
+    install_dir: Option<String>,
+    requested: Option<RubyRequest>,
+    tarball_path: Option<String>,
+    progress: &WorkProgress,
 ) -> Result<()> {
     let requested_range = match requested {
         None => config.ruby_request(),
@@ -77,8 +99,13 @@ pub async fn install(
                 .await?
         }
         None => {
-            download_and_extract_remote_tarball(config, &install_dir, &selected_version.number())
-                .await?
+            download_and_extract_remote_tarball(
+                config,
+                &install_dir,
+                &selected_version.number(),
+                progress,
+            )
+            .await?
         }
     }
 
@@ -96,6 +123,7 @@ async fn download_and_extract_remote_tarball(
     config: &Config,
     install_dir: &Utf8PathBuf,
     version: &str,
+    progress: &WorkProgress,
 ) -> Result<()> {
     let url = ruby_url(version)?;
     let tarball_path = tarball_path(config, &url);
@@ -111,7 +139,7 @@ async fn download_and_extract_remote_tarball(
             tarball_path.cyan()
         );
     } else {
-        download_ruby_tarball(config, &url, &tarball_path).await?;
+        download_ruby_tarball(config, &url, &tarball_path, version, progress).await?;
     }
 
     extract_ruby_tarball(&tarball_path, install_dir, version)?;
@@ -175,12 +203,32 @@ async fn write_to_filesystem(
     response: reqwest::Response,
     temp_path: &Utf8Path,
     path: &Utf8Path,
+    total_size: u64,
+    progress: &WorkProgress,
+    span: &tracing::Span,
 ) -> Result<()> {
     let mut file = tokio::fs::File::create(&temp_path).await?;
     let mut stream = response.bytes_stream();
+    let mut downloaded: u64 = 0;
+
     while let Some(chunk) = stream.next().await {
         let chunk = chunk?;
+        let chunk_len = chunk.len() as u64;
         file.write_all(&chunk).await?;
+
+        downloaded += chunk_len;
+        progress.complete_many(chunk_len);
+
+        // Update the progress message
+        if total_size > 0 {
+            span.pb_set_message(&format!(
+                "({} / {})",
+                ByteSize(downloaded),
+                ByteSize(total_size)
+            ));
+        } else {
+            span.pb_set_message(&format!("({})", ByteSize(downloaded)));
+        }
     }
     file.sync_all().await?;
     tokio::fs::rename(temp_path, path).await?;
@@ -191,6 +239,8 @@ async fn download_ruby_tarball(
     config: &Config,
     url: &str,
     tarball_path: &Utf8PathBuf,
+    version: &str,
+    progress: &WorkProgress,
 ) -> Result<()> {
     // Start downloading the tarball.
     let response = reqwest::get(url).await?;
@@ -207,15 +257,33 @@ async fn download_ruby_tarball(
         });
     }
 
+    // Get Content-Length for progress tracking
+    let total_size = response.content_length().unwrap_or(0);
+
+    // Set up progress tracking
+    progress.start_phase(total_size, 100);
+
+    let span = info_span!("Downloading Ruby", version = version);
+    span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name} {msg}").unwrap());
+    let _guard = span.enter();
+
     // Write the tarball bytes to the filesystem.
     let temp_path = temp_tarball_path(config, url);
-    if let Err(e) = write_to_filesystem(response, &temp_path, tarball_path).await {
+    if let Err(e) = write_to_filesystem(
+        response,
+        &temp_path,
+        tarball_path,
+        total_size,
+        progress,
+        &span,
+    )
+    .await
+    {
         // Clean up the temporary file if there was any error.
         tokio::fs::remove_file(temp_path).await?;
         return Err(e);
     }
 
-    println!("Downloaded {} to {}", url.cyan(), tarball_path.cyan());
     Ok(())
 }
 
@@ -224,6 +292,10 @@ fn extract_ruby_tarball(
     rubies_dir: &Utf8Path,
     version: &str,
 ) -> Result<()> {
+    let span = info_span!("Installing Ruby", version = version);
+    span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name}").unwrap());
+    let _guard = span.enter();
+
     if !rubies_dir.exists() {
         fs_err::create_dir_all(rubies_dir)?;
     }

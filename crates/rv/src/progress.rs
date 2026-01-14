@@ -243,6 +243,14 @@ impl WorkProgress {
         self.update_progress();
     }
 
+    /// Mark multiple work items as completed (useful for byte-based progress).
+    pub fn complete_many(&self, count: u64) {
+        self.inner
+            .phase_completed
+            .fetch_add(count, Ordering::Relaxed);
+        self.update_progress();
+    }
+
     /// Get current progress as a percentage (0-100).
     pub fn percent(&self) -> u8 {
         compute_percent(&self.inner)
@@ -514,5 +522,30 @@ mod tests {
 
         // If no compile phase is started (0 native extensions),
         // progress stays at 80% until clear() is called
+    }
+
+    #[test]
+    fn test_compute_percent_byte_based_progress() {
+        // Test byte-based progress (e.g., when downloading a file)
+        // Total size: 100MB, downloaded so far: 45MB
+        let inner = WorkProgressInner {
+            current_phase: AtomicU64::new(1),
+            phase_total: AtomicU64::new(100_000_000), // 100 MB
+            phase_completed: AtomicU64::new(45_000_000), // 45 MB
+            base_percent: AtomicU64::new(0),
+            phase_percent: AtomicU64::new(100), // Single phase uses full 100%
+            running: AtomicBool::new(true),
+            transitioning: AtomicBool::new(false),
+            error_set: AtomicBool::new(false),
+        };
+        // 45% of 100% = 45%
+        assert_eq!(compute_percent(&inner), 45);
+
+        // Simulate completing more chunks
+        inner.phase_completed.store(75_000_000, Ordering::Relaxed);
+        assert_eq!(compute_percent(&inner), 75);
+
+        inner.phase_completed.store(100_000_000, Ordering::Relaxed);
+        assert_eq!(compute_percent(&inner), 100);
     }
 }
