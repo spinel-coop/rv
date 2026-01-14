@@ -274,6 +274,33 @@ mod tests {
         assert_eq!(result.len(), nodes.len());
     }
 
+    /// Verify that the parallel iterator's len() returns the actual node count,
+    /// not the CPU count. This is critical for ARM compatibility - using
+    /// num_cpus::get() caused deadlocks when rayon spawned more blocking
+    /// recv() workers than items in the graph.
+    #[cfg(feature = "parallel")]
+    #[test]
+    fn par_iter_len_matches_node_count() {
+        use rayon::iter::IndexedParallelIterator;
+
+        // Small graph (4 nodes) - would deadlock with num_cpus::get() on 8+ core machines
+        let mut n1 = Node::new("1");
+        let mut n2 = Node::new("2");
+        let n3 = Node::new("3");
+        n1.add_dep(n2.id());
+        n2.add_dep(n3.id());
+        let nodes = vec![n1, n2, n3];
+
+        let graph = DepGraph::new(&nodes);
+        let par_iter = graph.into_par_iter();
+
+        assert_eq!(
+            par_iter.len(),
+            3,
+            "len() should return node count, not CPU count"
+        );
+    }
+
     /// Stress test for the parallel iterator to verify the in_flight fix.
     /// This exercises the timeout code path while ensuring workers have
     /// enough time to complete under coverage instrumentation.
