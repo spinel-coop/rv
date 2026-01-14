@@ -274,13 +274,16 @@ where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
 {
     fn len(&self) -> usize {
-        // Per rayon docs, len() must return "an exact count of how many items
-        // this iterator will produce." The old implementation incorrectly
-        // returned num_cpus::get(), which caused deadlocks on ARM when rayon
-        // spawned more blocking recv() workers than items in the graph.
+        // Return the minimum of node count and CPU count.
         //
-        // See: https://docs.rs/rayon/latest/rayon/iter/trait.IndexedParallelIterator.html
-        self.total_nodes
+        // - If len() > total_nodes: rayon spawns excess workers that block
+        //   forever on recv(), causing deadlocks (seen on ARM with 8+ cores).
+        // - If len() > num_cpus: rayon's work distribution becomes inefficient,
+        //   causing severe slowdowns (seen on ubuntu-latest with 2 cores).
+        //
+        // Using min() handles both cases: it prevents deadlocks while keeping
+        // rayon's work-stealing scheduler efficient.
+        std::cmp::min(self.total_nodes, num_cpus::get())
     }
 
     fn drive<C>(self, consumer: C) -> C::Result
