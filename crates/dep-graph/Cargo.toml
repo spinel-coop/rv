@@ -1,6 +1,6 @@
 [package]
 name = "dep-graph"
-version = "0.2.0-rv"
+version = "0.2.1-rv"
 authors = ["Nicolas Moutschen <nicolas.moutschen@gmail.com>"]
 edition = "2018"
 license = "MIT"
