@@ -59,7 +59,7 @@ pub struct Ruby {
 
 impl Ruby {
     /// Create a new Ruby instance from a directory path
-    #[instrument(skip(dir), fields(dir = %dir.as_str()))]
+    #[instrument(skip(dir), fields(dir = %dir.as_str()), level = "trace")]
     pub fn from_dir(dir: Utf8PathBuf, managed: bool) -> Result<Self, RubyError> {
         let dir_name = dir.file_name().unwrap_or("");
 
@@ -194,7 +194,7 @@ pub enum RubyError {
 }
 
 /// Extract all Ruby information from the executable in a single call
-#[instrument(skip_all)]
+#[instrument(skip_all, level = "trace")]
 fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
     if ruby_bin.as_str().ends_with("0.49/bin/ruby") {
         return ruby_049_version();
