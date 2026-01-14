@@ -1,11 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 # Smoke test for Huginn - https://github.com/huginn/huginn
 # On macOS, you can run this script via Docker:
-# $ docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/huginn
+# $ docker run -it --rm -v .:/src ubuntu:latest /src/bin/smoke-tests/huginn
 
 # Use sudo if available (needed in GHA), skip if not (Docker runs as root)
 SUDO=""
@@ -13,11 +11,13 @@ if command -v sudo &> /dev/null; then
     SUDO="sudo"
 fi
 
+export DEBIAN_FRONTEND=noninteractive
 $SUDO apt-get update
 $SUDO apt-get install -y --no-install-recommends \
     build-essential \
     git \
     ca-certificates \
+    curl \
     libyaml-dev \
     libffi-dev \
     libxml2-dev \
@@ -27,10 +27,16 @@ $SUDO apt-get install -y --no-install-recommends \
     libcurl4-openssl-dev \
     libsqlite3-dev
 
+# Install rv from latest release
+echo ""
+echo "Installing rv..."
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/spinel-coop/rv/releases/latest/download/rv-installer.sh | sh
+source "$HOME/.cargo/env"
+
 [[ -d huginn ]] || git clone --depth 1 https://github.com/huginn/huginn.git
 cd huginn
 
-"$DIR"/../rv ci
+rv ci
 
 echo ""
 echo "Success: huginn smoke test passed"

@@ -1,11 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 # Smoke test for Diaspora - https://github.com/diaspora/diaspora
 # On macOS, you can run this script via Docker:
-# $ docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/diaspora
+# $ docker run -it --rm -v .:/src ubuntu:latest /src/bin/smoke-tests/diaspora
 
 # Use sudo if available (needed in GHA), skip if not (Docker runs as root)
 SUDO=""
@@ -13,11 +11,13 @@ if command -v sudo &> /dev/null; then
     SUDO="sudo"
 fi
 
+export DEBIAN_FRONTEND=noninteractive
 $SUDO apt-get update
 $SUDO apt-get install -y --no-install-recommends \
     build-essential \
     git \
     ca-certificates \
+    curl \
     cmake \
     pkg-config \
     libyaml-dev \
@@ -33,10 +33,16 @@ $SUDO apt-get install -y --no-install-recommends \
     libssh2-1-dev \
     libidn-dev
 
+# Install rv from latest release
+echo ""
+echo "Installing rv..."
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/spinel-coop/rv/releases/latest/download/rv-installer.sh | sh
+source "$HOME/.cargo/env"
+
 [[ -d diaspora ]] || git clone --depth 1 https://github.com/diaspora/diaspora.git
 cd diaspora
 
-"$DIR"/../rv ci
+rv ci
 
 echo ""
 echo "Success: diaspora smoke test passed"
