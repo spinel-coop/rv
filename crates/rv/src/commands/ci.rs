@@ -37,7 +37,6 @@ use crate::progress::WorkProgress;
 use std::collections::HashMap;
 use std::env::current_dir;
 use std::io;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::io::Read;
 use std::io::Write;
 use std::ops::Not;
@@ -45,6 +44,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Command;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use std::time::Instant;
 use std::vec;
@@ -1652,9 +1652,16 @@ async fn download_gem_source<'i>(
         .map(|spec| {
             let client = &client;
             async move {
-                let result =
-                    download_gem(gem_source.remote, spec, client, cache, checksums, stats, span)
-                        .await;
+                let result = download_gem(
+                    gem_source.remote,
+                    spec,
+                    client,
+                    cache,
+                    checksums,
+                    stats,
+                    span,
+                )
+                .await;
                 span.pb_inc(1);
                 progress.complete_one();
                 result
