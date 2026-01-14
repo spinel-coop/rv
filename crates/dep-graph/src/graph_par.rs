@@ -274,11 +274,12 @@ where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
 {
     fn len(&self) -> usize {
-        // Return actual node count, not CPU count. Rayon's bridge() uses len()
-        // to decide how many worker splits to create. Using num_cpus::get()
-        // caused deadlocks on ARM when rayon spawned more blocking recv()
-        // workers than items in the graph—those workers waited forever for
-        // items that would never arrive.
+        // Per rayon docs, len() must return "an exact count of how many items
+        // this iterator will produce." The old implementation incorrectly
+        // returned num_cpus::get(), which caused deadlocks on ARM when rayon
+        // spawned more blocking recv() workers than items in the graph.
+        //
+        // See: https://docs.rs/rayon/latest/rayon/iter/trait.IndexedParallelIterator.html
         self.total_nodes
     }
 

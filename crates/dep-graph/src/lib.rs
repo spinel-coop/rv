@@ -274,10 +274,12 @@ mod tests {
         assert_eq!(result.len(), nodes.len());
     }
 
-    /// Verify that the parallel iterator's len() returns the actual node count,
-    /// not the CPU count. This is critical for ARM compatibility - using
-    /// num_cpus::get() caused deadlocks when rayon spawned more blocking
-    /// recv() workers than items in the graph.
+    /// Verify that the parallel iterator's len() returns the actual node count.
+    /// Per rayon docs, len() must return "an exact count of how many items
+    /// this iterator will produce." Using num_cpus::get() violated this
+    /// contract and caused deadlocks on ARM.
+    ///
+    /// See: https://docs.rs/rayon/latest/rayon/iter/trait.IndexedParallelIterator.html
     #[cfg(feature = "parallel")]
     #[test]
     fn par_iter_len_matches_node_count() {
