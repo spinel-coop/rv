@@ -61,6 +61,103 @@ fn test_clean_install_gemfile_arg() {
 }
 
 #[test]
+fn test_clean_install_gemfile_arg_implicit() {
+    let mut test = RvTest::new();
+
+    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
+
+    let output = test.ci(&[]);
+    output.assert_failure();
+    assert_eq!(
+        output.normalized_stderr(),
+        "Error: CiError(MissingImplicitGemfile)\n",
+    );
+    releases_mock.assert();
+}
+
+#[test]
+fn test_clean_install_gemfile_arg_in_subdirectory() {
+    let mut test = RvTest::new();
+
+    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
+
+    let project_dir = test.temp_root().join("project");
+    std::fs::create_dir_all(project_dir.as_path()).unwrap();
+
+    let gemfile_path = project_dir.join("Gemfile");
+    let gemfile = fs_err::read_to_string("../rv-lockfile/tests/inputs/Gemfile.empty").unwrap();
+    let _ = fs_err::write(
+        gemfile_path,
+        gemfile.replace("https://rubygems.org", &test.server_url()),
+    );
+
+    let lockfile_path = project_dir.join("Gemfile.lock");
+    let lockfile =
+        fs_err::read_to_string("../rv-lockfile/tests/inputs/Gemfile.empty.lock").unwrap();
+    let _ = fs_err::write(
+        lockfile_path,
+        lockfile.replace("https://rubygems.org", &test.server_url()),
+    );
+
+    // Let rv infer installation path from Gemfile argument. This test would install real gems to
+    // real rv installation directory, so we use an empty Gemfile to avoid side effects.
+    test.env.remove("BUNDLE_PATH");
+
+    let output = test.ci(&["--gemfile", "project/Gemfile"]);
+    output.assert_success();
+    releases_mock.assert();
+}
+
+#[test]
+fn test_clean_install_missing_gemfile() {
+    let mut test = RvTest::new();
+
+    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
+
+    let output = test.ci(&["--gemfile", "Gemfile.missing"]);
+    output.assert_failure();
+    assert_eq!(
+        output.normalized_stderr(),
+        "Error: CiError(MissingGemfile(\"Gemfile.missing\"))\n",
+    );
+    releases_mock.assert();
+}
+
+#[test]
+fn test_clean_install_invalid_gemfile() {
+    let mut test = RvTest::new();
+
+    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
+
+    let output = test.ci(&["--gemfile", "/"]);
+    output.assert_failure();
+    assert_eq!(
+        output.normalized_stderr(),
+        "Error: CiError(InvalidGemfilePath(\"/\"))\n",
+    );
+    releases_mock.assert();
+}
+
+#[test]
+fn test_clean_install_missing_lockfile() {
+    let mut test = RvTest::new();
+
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.empty");
+
+    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
+
+    let output = test.ci(&[]);
+    output.assert_failure();
+
+    let expected_err = format!(
+        "Error: CiError(MissingLockfile {{ lockfile_name: \"Gemfile.lock\", lockfile_dir: \"{}\" }})\n",
+        test.temp_root()
+    );
+    assert_eq!(output.normalized_stderr(), expected_err);
+    releases_mock.assert();
+}
+
+#[test]
 fn test_clean_install_respects_ruby() {
     let mut test = RvTest::new();
 

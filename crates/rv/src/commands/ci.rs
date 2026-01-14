@@ -35,7 +35,6 @@ use crate::commands::ruby::run::CaptureOutput;
 use crate::config::Config;
 use crate::progress::WorkProgress;
 use std::collections::HashMap;
-use std::env::current_dir;
 use std::io;
 use std::io::Read;
 use std::io::Write;
@@ -101,6 +100,15 @@ pub enum Error {
     UnknownExtension { filename: String, gemname: String },
     #[error("No gemspec found for downloaded gem {0}")]
     MissingGemspec(String),
+    #[error("rv ci needs a Gemfile, but could not find it")]
+    MissingImplicitGemfile,
+    #[error("Gemfile \"{0}\" does not exist")]
+    MissingGemfile(String),
+    #[error("A {lockfile_name} file was not found in {lockfile_dir}")]
+    MissingLockfile {
+        lockfile_name: String,
+        lockfile_dir: String,
+    },
     #[error("Gem {gem} could not compile extensions")]
     CompileFailures { gem: String },
     #[error(transparent)]
@@ -122,8 +130,6 @@ pub enum Error {
     UrlError(#[from] url::ParseError),
     #[error("Could not read install directory from Bundler")]
     BadBundlePath,
-    #[error("Failed to unpack tarball path {0}")]
-    InvalidPath(PathBuf),
     #[error("Checksum for {0} was not valid YAML")]
     InvalidChecksum(String),
     #[error("Gem {gem_name} archive did not include metadata.gz")]
@@ -147,9 +153,9 @@ pub enum Error {
     #[error("Could not download a git dependency: {error}")]
     Git { error: String },
     #[error(
-        "The lockfile path must be inside a directory with a parent, but it wasn't. Path was {0}"
+        "The gemfile path must be inside a directory with a parent, but it wasn't. Path was {0}"
     )]
-    InvalidLockfilePath(String),
+    InvalidGemfilePath(String),
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -165,12 +171,8 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     // Now that it's installed, we can use Ruby to query various directories
     // we'll need to know later.
     let extensions_dir = find_exts_dir(config, &ruby_request)?;
-    let lockfile_path = find_lockfile_path(&args.gemfile)?;
-    let lockfile_dir = lockfile_path
-        .parent()
-        .ok_or(Error::InvalidLockfilePath(lockfile_path.to_string()))?
-        .to_path_buf();
-    let install_path = find_install_path(config, &lockfile_dir, &ruby_request, &args.gemfile)?;
+    let (lockfile_dir, lockfile_path, gemfile_name) = find_manifest_paths(&args.gemfile)?;
+    let install_path = find_install_path(config, &lockfile_dir, &ruby_request, gemfile_name)?;
     let inner_args = CiInnerArgs {
         skip_compile_extensions: args.skip_compile_extensions,
         max_concurrent_requests: args.max_concurrent_requests,
@@ -346,9 +348,6 @@ fn install_path(
             } else {
                 let gemspec_path =
                     Utf8PathBuf::try_from(path.clone()).expect("gemspec path not valid UTF-8");
-                if !std::fs::exists(&gemspec_path)? {
-                    return Err(Error::InvalidPath(gemspec_path.into()));
-                }
                 // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
                 let yaml_gemspec_vec = crate::commands::ruby::run::run_no_install(
                     config,
@@ -662,19 +661,41 @@ fn download_git_repo<'i>(
     })
 }
 
-fn find_lockfile_path(gemfile: &Option<Utf8PathBuf>) -> Result<Utf8PathBuf> {
-    let lockfile_name: Utf8PathBuf;
-    if let Some(path) = gemfile {
-        lockfile_name = format!("{}.lock", path).into();
-    } else {
-        lockfile_name = "Gemfile.lock".into();
+fn find_manifest_paths(
+    gemfile: &Option<Utf8PathBuf>,
+) -> Result<(Utf8PathBuf, Utf8PathBuf, String)> {
+    let gemfile_name = gemfile
+        .clone()
+        .map_or("Gemfile".to_string(), |g| g.to_string());
+    let gemfile_path = Utf8PathBuf::from(gemfile_name.clone());
+
+    if !gemfile_path.exists() {
+        if gemfile.is_none() {
+            return Err(Error::MissingImplicitGemfile);
+        } else {
+            return Err(Error::MissingGemfile(gemfile_name));
+        }
     }
-    let lockfile_path = match Utf8PathBuf::from_path_buf(current_dir()?.join(lockfile_name)) {
-        Ok(it) => it,
-        Err(err) => return Err(Error::InvalidPath(err)),
-    };
+
+    let lockfile_dir = gemfile_path
+        .canonicalize_utf8()?
+        .parent()
+        .ok_or(Error::InvalidGemfilePath(gemfile_name.clone()))?
+        .to_string();
+
+    let lockfile_path = Utf8PathBuf::from(format!("{}.lock", gemfile_path));
+
+    if !lockfile_path.exists() {
+        let lockfile_name = lockfile_path.file_name().unwrap().to_string();
+
+        return Err(Error::MissingLockfile {
+            lockfile_dir,
+            lockfile_name,
+        });
+    }
+
     debug!("found lockfile_path {}", lockfile_path);
-    Ok(lockfile_path)
+    Ok((lockfile_dir.into(), lockfile_path, gemfile_name))
 }
 
 /// Which path should `ci` install gems under?
@@ -683,24 +704,20 @@ fn find_install_path(
     config: &Config,
     lockfile_dir: &Utf8Path,
     version: &RubyRequest,
-    gemfile: &Option<Utf8PathBuf>,
+    gemfile: String,
 ) -> Result<Utf8PathBuf> {
     let env_path = std::env::var("BUNDLE_PATH");
     if let Ok(bundle_path) = env_path {
         return Ok(Utf8PathBuf::from(&bundle_path));
     }
     let args = ["-rbundler", "-e", "puts Bundler.bundle_path"];
-    let mut env = Vec::new();
-    if let Some(path) = gemfile {
-        env.push(("BUNDLE_GEMFILE", path.as_str()));
-    }
     let bundle_path = match crate::commands::ruby::run::run_no_install(
         config,
         version,
         args.as_slice(),
         CaptureOutput::Both,
         Some(lockfile_dir),
-        env,
+        vec![("BUNDLE_GEMFILE", gemfile.as_str())],
     ) {
         Ok(output) => output.stdout,
         Err(_) => Vec::from(".rv"),
