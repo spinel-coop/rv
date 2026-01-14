@@ -7,6 +7,7 @@ use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
 use glob::glob;
+use indicatif::ProgressStyle;
 use once_cell::sync::Lazy;
 use owo_colors::OwoColorize;
 use rayon::ThreadPoolBuildError;
@@ -23,6 +24,8 @@ use rv_ruby::request::RubyRequest;
 use sha2::Digest;
 use tracing::debug;
 use tracing::info;
+use tracing::info_span;
+use tracing_indicatif::span_ext::IndicatifSpanExt;
 use url::Url;
 
 use crate::commands::ci::checksums::ArchiveChecksums;
@@ -30,6 +33,7 @@ use crate::commands::ci::checksums::HashReader;
 use crate::commands::ci::checksums::Hashed;
 use crate::commands::ruby::run::CaptureOutput;
 use crate::config::Config;
+use crate::progress::WorkProgress;
 use std::collections::HashMap;
 use std::env::current_dir;
 use std::io;
@@ -40,6 +44,8 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Command;
 use std::str::FromStr;
+use std::time::Duration;
+use std::time::Instant;
 use std::vec;
 
 mod checksums;
@@ -178,6 +184,23 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
 }
 
 async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
+    // Terminal progress indicator (OSC 9;4) for supported terminals
+    let progress = WorkProgress::new();
+
+    let result = ci_inner_work(config, args, &progress).await;
+
+    // On success, clear the progress indicator.
+    // On error, set error state but don't clear - this leaves a red/error indicator
+    // visible in the terminal tab/titlebar until the user runs another command.
+    match &result {
+        Ok(()) => progress.clear(),
+        Err(_) => progress.set_error(),
+    }
+
+    result
+}
+
+async fn ci_inner_work(config: &Config, args: &CiInnerArgs, progress: &WorkProgress) -> Result<()> {
     let lockfile_contents = tokio::fs::read_to_string(&args.lockfile_path).await?;
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
 
@@ -192,12 +215,52 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     debug!("Installing git gems");
     install_git_repos(config, repos, args)?;
 
+    // Phase 1: Downloads (0-40%)
+    let gem_count = lockfile.gem_spec_count() as u64;
+    progress.start_phase(gem_count, 40);
+
     debug!("Downloading gems");
-    let downloaded = download_gems(lockfile.clone(), &config.cache, args).await?;
+    let download_start = Instant::now();
+    let downloaded = download_gems(lockfile.clone(), &config.cache, args, progress).await?;
+    let downloaded_count = downloaded.len();
+    let download_elapsed = download_start.elapsed();
+
+    // Phase 2: Installs (40-80%)
+    progress.start_phase(downloaded_count as u64, 40);
+
     debug!("Installing gems");
-    let specs = install_gems(config, downloaded, args)?;
+    let install_start = Instant::now();
+    let specs = install_gems(config, downloaded, args, progress)?;
+    let installed_count = specs.len();
+    let install_elapsed = install_start.elapsed();
+
+    // Phase 3 (Compiles, 80-100%) - start_phase called inside compile_gems after filtering
     debug!("Compiling gems");
-    compile_gems(config, specs, args)?;
+    let compile_start = Instant::now();
+    let compiled_count = compile_gems(config, specs, args, progress)?;
+    let compile_elapsed = compile_start.elapsed();
+
+    let total_elapsed = download_elapsed + install_elapsed + compile_elapsed;
+
+    println!("Summary:");
+    println!(
+        " - {} gems downloaded ({})",
+        downloaded_count,
+        format_duration(download_elapsed)
+    );
+    println!(
+        " - {} gems installed ({})",
+        installed_count,
+        format_duration(install_elapsed)
+    );
+    if compiled_count > 0 {
+        println!(
+            " - {} native extensions compiled ({})",
+            compiled_count,
+            format_duration(compile_elapsed)
+        );
+    }
+    println!(" - {} total elapsed time", format_duration(total_elapsed));
 
     Ok(())
 }
@@ -641,8 +704,16 @@ fn install_gems<'i>(
     config: &Config,
     downloaded: Vec<DownloadedRubygems<'i>>,
     args: &CiInnerArgs,
+    progress: &WorkProgress,
 ) -> Result<Vec<GemSpecification>> {
     use rayon::prelude::*;
+
+    let span = info_span!("Installing gems");
+    span.pb_set_style(
+        &ProgressStyle::with_template("{spinner:.green} {span_name} {pos}/{len}").unwrap(),
+    );
+    span.pb_set_length(downloaded.len() as u64);
+    let _guard = span.enter();
 
     let binstub_dir = args.install_path.join("bin");
     let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
@@ -650,7 +721,12 @@ fn install_gems<'i>(
         downloaded
             .into_iter()
             .par_bridge()
-            .map(|download| install_single_gem(config, download, args, &binstub_dir))
+            .map(|download| {
+                let result = install_single_gem(config, download, args, &binstub_dir);
+                span.pb_inc(1);
+                progress.complete_one();
+                result
+            })
             .collect::<Result<Vec<GemSpecification>>>()
     })?;
 
@@ -674,9 +750,14 @@ fn install_single_gem<'i>(
     Ok(dep_gemspec)
 }
 
-fn compile_gems(config: &Config, specs: Vec<GemSpecification>, args: &CiInnerArgs) -> Result<()> {
+fn compile_gems(
+    config: &Config,
+    specs: Vec<GemSpecification>,
+    args: &CiInnerArgs,
+    progress: &WorkProgress,
+) -> Result<usize> {
     if args.skip_compile_extensions {
-        return Ok(());
+        return Ok(0);
     }
 
     use dep_graph::{DepGraph, Node};
@@ -700,17 +781,39 @@ fn compile_gems(config: &Config, specs: Vec<GemSpecification>, args: &CiInnerArg
     }
 
     let deps: Vec<Node<String>> = nodes.values().cloned().collect();
+    if deps.is_empty() {
+        return Ok(0);
+    }
+
+    let deps_count = deps.len();
+
+    // Phase 3: Compiles (80-100%)
+    progress.start_phase(deps_count as u64, 20);
+
+    let span = info_span!("Compiling native extensions");
+    span.pb_set_style(
+        &ProgressStyle::with_template("{spinner:.green} {span_name} ({pos}/{len}) - {msg}")
+            .unwrap(),
+    );
+    span.pb_set_length(deps_count as u64);
+    let _guard = span.enter();
+
     let graph = DepGraph::new(deps.as_slice());
     graph.into_par_iter().try_for_each(|node| {
         let spec = specs.iter().find(|s| s.name == *node).unwrap();
+        span.pb_set_message(&spec.name);
         let compiled_ok = compile_gem(config, args, spec)?;
+        span.pb_inc(1);
+        progress.complete_one();
         if !compiled_ok {
             return Err(Error::CompileFailures {
                 gem: spec.full_name(),
             });
         }
         Ok(())
-    })
+    })?;
+
+    Ok(deps_count)
 }
 
 fn install_binstub(dep_name: &str, executables: &[String], binstub_dir: &Utf8Path) -> Result<()> {
@@ -758,7 +861,15 @@ async fn download_gems<'i>(
     lockfile: GemfileDotLock<'i>,
     cache: &rv_cache::Cache,
     args: &CiInnerArgs,
+    progress: &WorkProgress,
 ) -> Result<Vec<DownloadedRubygems<'i>>> {
+    let span = info_span!("Downloading gems");
+    span.pb_set_style(
+        &ProgressStyle::with_template("{spinner:.green} {span_name} {pos}/{len}").unwrap(),
+    );
+    span.pb_set_length(lockfile.gem_spec_count() as u64);
+    let _guard = span.enter();
+
     let all_sources = futures_util::stream::iter(lockfile.gem);
     let checksums = if args.validate_checksums
         && let Some(checks) = lockfile.checksums
@@ -786,7 +897,19 @@ async fn download_gems<'i>(
     };
     let downloaded: Vec<_> = all_sources
         .map(|gem_source| {
-            download_gem_source(gem_source, &checksums, cache, args.max_concurrent_requests)
+            let checksums = &checksums;
+            let span = &span;
+            async move {
+                download_gem_source(
+                    gem_source,
+                    checksums,
+                    cache,
+                    args.max_concurrent_requests,
+                    progress,
+                    span,
+                )
+                .await
+            }
         })
         .buffered(args.max_concurrent_requests)
         .try_collect::<Vec<_>>()
@@ -1477,6 +1600,8 @@ async fn download_gem_source<'i>(
     checksums: &HashMap<GemVersion<'i>, HowToChecksum>,
     cache: &rv_cache::Cache,
     max_concurrent_requests: usize,
+    progress: &WorkProgress,
+    span: &tracing::Span,
 ) -> Result<Vec<DownloadedRubygems<'i>>> {
     // TODO: If the gem server needs user credentials, accept them and add them to this client.
     let client = rv_http_client()?;
@@ -1490,7 +1615,15 @@ async fn download_gem_source<'i>(
     });
     let spec_stream = futures_util::stream::iter(gems_to_download);
     let downloaded_gems: Vec<_> = spec_stream
-        .map(|spec| download_gem(gem_source.remote, spec, &client, cache, checksums))
+        .map(|spec| {
+            let client = &client;
+            async move {
+                let result = download_gem(gem_source.remote, spec, client, cache, checksums).await;
+                span.pb_inc(1);
+                progress.complete_one();
+                result
+            }
+        })
         .buffered(max_concurrent_requests)
         .try_collect()
         .await?;
@@ -1557,6 +1690,18 @@ async fn download_gem<'i>(
     }
 
     Ok(DownloadedRubygems { contents, spec })
+}
+
+/// Format a duration in a human-readable way (e.g., "16s" or "1m16s").
+fn format_duration(duration: Duration) -> String {
+    let secs = duration.as_secs();
+    if secs >= 60 {
+        let mins = secs / 60;
+        let remaining_secs = secs % 60;
+        format!("{}m{}s", mins, remaining_secs)
+    } else {
+        format!("{:.1}s", duration.as_secs_f64())
+    }
 }
 
 #[cfg(test)]

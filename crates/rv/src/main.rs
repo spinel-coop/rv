@@ -14,6 +14,7 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberI
 
 pub mod commands;
 pub mod config;
+pub mod progress;
 
 use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir, cache_prune};
 #[cfg(unix)]

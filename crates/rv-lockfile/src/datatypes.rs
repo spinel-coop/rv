@@ -36,6 +36,13 @@ pub struct GemfileDotLock<'i> {
     pub checksums: Option<Vec<Checksum<'i>>>,
 }
 
+impl GemfileDotLock<'_> {
+    /// Returns the total number of gem specs from RubyGems server sources.
+    pub fn gem_spec_count(&self) -> usize {
+        self.gem.iter().map(|s| s.specs.len()).sum()
+    }
+}
+
 /// Git source that gems could come from.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

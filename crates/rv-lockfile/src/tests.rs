@@ -138,3 +138,22 @@ fn must_parse(input: &str) -> crate::datatypes::GemfileDotLock<'_> {
         }
     }
 }
+
+#[test]
+fn test_gem_spec_count_multiple_sources() {
+    let input = include_str!("../tests/inputs/Gemfile.twosources.lock");
+    let lockfile = must_parse(input);
+
+    // twosources.lock has 2 GEM sections with 1 gem each
+    assert_eq!(lockfile.gem.len(), 2);
+    assert_eq!(lockfile.gem_spec_count(), 2);
+}
+
+#[test]
+fn test_gem_spec_count_single_source() {
+    let input = include_str!("../tests/inputs/Gemfile.faker.lock");
+    let lockfile = must_parse(input);
+
+    assert_eq!(lockfile.gem.len(), 1);
+    assert_eq!(lockfile.gem_spec_count(), 33);
+}
