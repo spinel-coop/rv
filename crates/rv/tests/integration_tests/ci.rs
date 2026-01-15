@@ -239,6 +239,51 @@ fn test_clean_install_download_faker() {
     insta::assert_snapshot!(files_sorted);
 }
 
+#[test]
+fn test_clean_install_evaluates_local_gemspecs_in_the_right_cwd() {
+    use indoc::formatdoc;
+
+    let mut test = RvTest::new();
+    let mock = test.mock_releases(["4.0.0"].to_vec());
+
+    let project_dir = test.temp_root().join("project");
+    std::fs::create_dir_all(project_dir.as_path()).unwrap();
+    std::fs::create_dir_all(project_dir.join("foo").as_path()).unwrap();
+
+    let foo_gemspec = formatdoc! {"
+        require './version.rb'
+
+        Gem::Specification.new do |s|
+            s.name = 'foo'
+            s.version = Foo::VERSION
+            s.summary = 'The foo gem'
+            s.author = 'Bandre Barco'
+        end
+    "};
+
+    std::fs::write(project_dir.join("foo/foo.gemspec"), foo_gemspec).unwrap();
+
+    let foo_version = formatdoc! {"
+        module Foo
+            VERSION = '1.0.0'
+        end
+    "};
+
+    std::fs::write(project_dir.join("foo/version.rb"), foo_version).unwrap();
+
+    test.cwd = project_dir;
+
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.relative-gemspec-paths");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.relative-gemspec-paths.lock");
+
+    let output = test.ci(&[]);
+
+    mock.assert();
+    output.assert_success();
+
+    assert_eq!(output.normalized_stderr(), "");
+}
+
 fn find_all_files_in_dir(cwd: &std::path::Path) -> String {
     let test_dir_contents = std::process::Command::new("find")
         .args([".", "-type", "f"])
