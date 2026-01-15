@@ -101,6 +101,8 @@ pub enum Error {
     MissingGemspec(String),
     #[error("Error converting YAML gemspec to Ruby: {0}")]
     GemspecToRubyError(String),
+    #[error("Error evaluating gemspec: {0}")]
+    GemspecError(String),
     #[error("rv ci needs a Gemfile, but could not find it")]
     MissingImplicitGemfile,
     #[error("Gemfile \"{0}\" does not exist")]
@@ -348,7 +350,7 @@ fn install_path(
                 let gemspec_path =
                     Utf8PathBuf::try_from(path.clone()).expect("gemspec path not valid UTF-8");
                 // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
-                let yaml_gemspec_vec = crate::commands::ruby::run::run_no_install(
+                let result = crate::commands::ruby::run::run_no_install(
                     config,
                     &config.ruby_request(),
                     &[
@@ -361,9 +363,15 @@ fn install_path(
                     CaptureOutput::Both,
                     Some(&path_dir),
                     Vec::new(),
-                )?
-                .stdout;
-                String::from_utf8(yaml_gemspec_vec).unwrap() // arghhhhhhhhhh
+                )?;
+
+                let error = String::from_utf8(result.stderr).unwrap();
+
+                if !result.status.success() {
+                    return Err(Error::GemspecError(error));
+                }
+
+                String::from_utf8(result.stdout).unwrap()
             };
             // parse the YAML gemspec to get the executable names
             let dep_gemspec = match rv_gem_specification_yaml::parse(&yaml_contents) {
