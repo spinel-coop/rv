@@ -1,11 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 # Smoke test for Homebrew - https://github.com/Homebrew/brew
 # On macOS, you can run this script via Docker:
-# $ docker run -it --rm -v .:/src rust:latest /src/bin/smoke-tests/homebrew
+# $ docker run -it --rm -v .:/src ubuntu:latest /src/bin/smoke-tests/homebrew
 
 # Use sudo if available (needed in GHA), skip if not (Docker runs as root)
 SUDO=""
@@ -13,19 +11,27 @@ if command -v sudo &> /dev/null; then
     SUDO="sudo"
 fi
 
+export DEBIAN_FRONTEND=noninteractive
 $SUDO apt-get update
 $SUDO apt-get install -y --no-install-recommends \
     build-essential \
     git \
     ca-certificates \
+    curl \
     libffi-dev \
     libyaml-dev \
     python3-dev
 
+# Install rv from latest release
+echo ""
+echo "Installing rv..."
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/spinel-coop/rv/releases/latest/download/rv-installer.sh | sh
+source "$HOME/.cargo/env"
+
 [[ -d brew ]] || git clone --depth 1 https://github.com/Homebrew/brew.git
 cd brew/Library/Homebrew
 
-"$DIR"/../rv ci
+rv ci
 
 echo ""
 echo "Success: homebrew smoke test passed"

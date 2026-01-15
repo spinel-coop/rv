@@ -49,6 +49,7 @@ jobs:
               libmagickwand-dev libgit2-dev libssh2-1-dev libidn-dev
           - project: discourse
             repo: https://github.com/discourse/discourse.git
+            ruby-version: "3.3"
             deps: >-
               build-essential git ca-certificates pkg-config
               libyaml-dev libpq-dev libxml2-dev libxslt-dev
@@ -68,12 +69,13 @@ jobs:
               libpcre2-dev libgpgme-dev zlib1g-dev
           - project: homebrew
             repo: https://github.com/Homebrew/brew.git
-            workdir: brew/Library/Homebrew
+            workdir: homebrew/Library/Homebrew
             deps: >-
               build-essential git ca-certificates
               libffi-dev libyaml-dev python3-dev
           - project: huginn
             repo: https://github.com/huginn/huginn.git
+            ruby-version: "3.3"
             deps: >-
               build-essential git ca-certificates
               libyaml-dev libffi-dev libxml2-dev libxslt-dev libpq-dev
@@ -110,6 +112,7 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           working-directory: ${{ matrix.workdir || matrix.project }}
+          ruby-version: ${{ matrix.ruby-version || '' }}
 
       - name: Run bundle install
         working-directory: ${{ matrix.workdir || matrix.project }}
