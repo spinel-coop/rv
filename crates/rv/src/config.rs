@@ -146,13 +146,9 @@ pub fn find_requested_ruby(
         let tools_versions = project_dir.join(".tool-versions");
         if tools_versions.exists() {
             let tools_versions_string = std::fs::read_to_string(&tools_versions)?;
-            let mut tools_version = None;
-
-            for line in tools_versions_string.lines() {
-                if line.trim_start().starts_with("ruby ") {
-                    tools_version = line.trim_start().strip_prefix("ruby ")
-                }
-            }
+            let tools_version = tools_versions_string
+                .lines()
+                .find_map(|l| l.trim_start().strip_prefix("ruby "));
 
             if let Some(version) = tools_version {
                 return Ok(Some((
