@@ -1,0 +1,16 @@
+PATH
+  remote: foo
+  specs:
+    foo (1.0.0)
+
+GEM
+  specs:
+
+PLATFORMS
+  universal-java-22
+
+DEPENDENCIES
+  foo!
+
+BUNDLED WITH
+   2.6.9

@@ -85,7 +85,6 @@ struct CiInnerArgs {
     pub max_concurrent_installs: usize,
     pub validate_checksums: bool,
     pub lockfile_path: Utf8PathBuf,
-    pub lockfile_dir: Utf8PathBuf,
     pub install_path: Utf8PathBuf,
     pub extensions_dir: Utf8PathBuf,
 }
@@ -179,7 +178,6 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         max_concurrent_installs: args.max_concurrent_installs,
         validate_checksums: args.validate_checksums,
         lockfile_path,
-        lockfile_dir,
         install_path,
         extensions_dir,
     };
@@ -297,7 +295,7 @@ fn install_paths<'i>(
         paths
             .iter()
             .par_bridge()
-            .map(|path| install_path(path, &args.lockfile_dir, config, args))
+            .map(|path| install_path(path, config, args))
             .collect::<Result<Vec<_>>>()?;
         Ok::<_, Error>(())
     })?;
@@ -306,7 +304,6 @@ fn install_paths<'i>(
 
 fn install_path(
     path_section: &rv_lockfile::datatypes::PathSection,
-    lockfile_dir: &Utf8Path,
     config: &Config,
     args: &CiInnerArgs,
 ) -> Result<()> {
@@ -356,11 +353,11 @@ fn install_path(
                         "-e",
                         &format!(
                             "puts Gem::Specification.load(\"{}\").to_yaml",
-                            lockfile_dir.join(gemspec_path),
+                            gemspec_path.canonicalize_utf8()?,
                         ),
                     ],
                     CaptureOutput::Both,
-                    Some(lockfile_dir),
+                    Some(&path_dir),
                     Vec::new(),
                 )?
                 .stdout;
