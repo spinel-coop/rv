@@ -490,41 +490,15 @@ fn install_git_repo(
             let cache_key = format!("{gitsha}-{gemname}.gemspec");
             let cached_gemspec_path = cached_gemspecs_dir.join(&cache_key);
             let cached = std::fs::exists(&cached_gemspec_path).is_ok_and(|exists| exists);
-            let yaml_contents = if cached {
-                std::fs::read_to_string(cached_gemspec_path)?
-            } else {
-                // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
-                let yaml_gemspec_vec = crate::commands::ruby::run::run_no_install(
-                    config,
-                    &config.ruby_request(),
-                    &[
-                        "-e",
-                        &format!(
-                            "puts Gem::Specification.load(\"{}\").to_yaml",
-                            path.to_string_lossy() // TODO: how do I interpolate an os_str into a shell arg :(
-                        ),
-                    ],
-                    CaptureOutput::Both,
-                    Some(&repo.path),
-                    Vec::new(),
-                )?
-                .stdout;
-                let yaml_gemspec = String::from_utf8(yaml_gemspec_vec).unwrap(); // arghhhhhhh
-                // cache the YAML gemspec as "gitsha-gemname.gemspec"
-                debug!("writing YAML gemspec to {}", &cached_gemspec_path);
-                fs_err::write(&cached_gemspec_path, &yaml_gemspec)?;
-                yaml_gemspec
-            };
-            // parse the YAML gemspec to get the executable names
-            let dep_gemspec = match rv_gem_specification_yaml::parse(&yaml_contents) {
-                Ok(parsed) => parsed,
-                Err(e) => {
-                    eprintln!(
-                        "Warning: git gem specification at {} was invalid: {e}",
-                        path.to_string_lossy()
-                    );
-                    return Ok(());
+            let dep_gemspec = if cached {
+                let yaml_contents = std::fs::read_to_string(&cached_gemspec_path)?;
+
+                match rv_gem_specification_yaml::parse(&yaml_contents) {
+                    Ok(parsed) => parsed,
+                    Err(_) => cache_gemspec_path(config, &repo.path, path, cached_gemspec_path)?,
                 }
+            } else {
+                cache_gemspec_path(config, &repo.path, path, cached_gemspec_path)?
             };
             // pass the executable names to generate binstubs
             let binstub_dir = args.install_path.join("bin");
