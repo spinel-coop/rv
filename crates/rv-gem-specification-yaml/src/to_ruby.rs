@@ -21,11 +21,11 @@ pub fn to_ruby(spec: Specification) -> String {
         required_ruby_version,
         required_rubygems_version,
         platform: _,
-        specification_version: _, // TODO: When should this get added? See below.
+        specification_version,
         files,
         executables,
         extensions,
-        dependencies: _,
+        dependencies,
         post_install_message: _,
         requirements: _,
         test_files: _,
@@ -134,14 +134,31 @@ pub fn to_ruby(spec: Specification) -> String {
 
     // Wrap it up.
     ruby_src.push_str("\n  s.installed_by_version = \"4.0.3\".freeze\n");
-    // TODO: When should this get added? Unclear.
-    //
-    // writeln!(
-    //     ruby_src,
-    //     "\n  s.specification_version = \"{}\".freeze",
-    //     specification_version,
-    // )
-    // .unwrap();
+
+    if dependencies.is_empty().not() {
+        writeln!(
+            ruby_src,
+            "\n  s.specification_version = {}\n",
+            specification_version,
+        )
+        .unwrap();
+
+        for dep in dependencies {
+            let dep_name = dep.name;
+            let dep_req: Vec<_> = dep
+                .requirement
+                .constraints
+                .into_iter()
+                .map(|constr| format!("\"{constr}\".freeze"))
+                .collect();
+            let dep_req = dep_req.join(", ");
+            writeln!(
+                ruby_src,
+                "  s.add_runtime_dependency(%q<{dep_name}>.freeze, [{dep_req}])",
+            )
+            .unwrap();
+        }
+    }
     ruby_src.push_str("end\n");
     ruby_src
 }
