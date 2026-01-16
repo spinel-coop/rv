@@ -2,11 +2,10 @@ use camino::Utf8Path;
 use miette::{IntoDiagnostic, Result};
 use rayon::prelude::*;
 use rayon_tracing::TracedIndexedParallelIterator;
-use std::str::FromStr;
 use tracing::debug;
 
 use rv_ruby::Ruby;
-use rv_ruby::{request::RubyRequest, version::RubyVersion};
+use rv_ruby::request::RubyRequest;
 
 use super::{Config, Error};
 
@@ -106,11 +105,7 @@ impl Config {
                         entry
                             .ok()
                             .map(|entry| entry.path().to_path_buf())
-                            .filter(|path| {
-                                path.is_dir()
-                                    && RubyVersion::from_str(path.file_name().unwrap())
-                                        .map_or(true, |v| v.satisfies(request))
-                            })
+                            .filter(|path| path.is_dir() && request.matches_dir(path))
                     })
             })
             .collect();

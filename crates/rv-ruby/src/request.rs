@@ -2,7 +2,7 @@ use camino::Utf8PathBuf;
 use rv_cache::{CacheKey, CacheKeyHasher};
 use std::{fmt::Display, str::FromStr};
 
-use crate::{Ruby, engine::RubyEngine};
+use crate::{Ruby, engine::RubyEngine, version::RubyVersion};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 pub type VersionPart = u32;
@@ -106,6 +106,11 @@ impl RubyRequest {
     /// A version that toolfiles like .tool-version/.ruby-version/Gemfile/Gemfile.lock knows how to read.
     pub fn to_tool_consumable_version(&self) -> String {
         self.to_string().replace("ruby-", "")
+    }
+
+    /// Does the given ruby install directory satisfy this requested range?
+    pub fn matches_dir(&self, path: &Utf8PathBuf) -> bool {
+        RubyVersion::from_str(path.file_name().unwrap()).map_or(true, |v| v.satisfies(self))
     }
 }
 
@@ -248,7 +253,6 @@ impl CacheKey for RubyRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::version::RubyVersion;
 
     #[track_caller]
     fn v(version: &str) -> RubyVersion {
