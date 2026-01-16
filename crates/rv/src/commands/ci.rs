@@ -338,7 +338,6 @@ fn install_path(
             let cache_key = format!("{path_key}-{gemname}.gemspec");
             let cached_gemspec_path = cached_gemspecs_dir.join(&cache_key);
 
-            // check the cache for "gitsha-gemname.gemspec", if not:
             let cached = std::fs::exists(&cached_gemspec_path).is_ok_and(|exists| exists) && {
                 let gemspec_modified = std::fs::metadata(&path)?.modified()?;
                 let cache_modified = std::fs::metadata(&cached_gemspec_path)?.modified()?;
@@ -376,7 +375,6 @@ fn install_path(
             // parse the YAML gemspec to get the executable names
             let dep_gemspec = match rv_gem_specification_yaml::parse(&yaml_contents) {
                 Ok(parsed) => {
-                    // cache the YAML gemspec as "gitsha-gemname.gemspec"
                     debug!("writing YAML gemspec to {}", &cached_gemspec_path);
                     fs_err::write(&cached_gemspec_path, &yaml_contents)?;
                     parsed
