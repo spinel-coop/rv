@@ -57,7 +57,9 @@ impl Config {
     }
 
     pub fn matching_ruby(&self, request: &RubyRequest) -> Option<Ruby> {
-        self.discover_rubies(request).last().cloned()
+        self.discover_rubies_matching(|path| request.matches_dir(path))
+            .last()
+            .cloned()
     }
 
     pub fn current_ruby(&self) -> Option<Ruby> {
