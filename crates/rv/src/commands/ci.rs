@@ -99,6 +99,8 @@ pub enum Error {
     UnknownExtension { filename: String, gemname: String },
     #[error("No gemspec found for downloaded gem {0}")]
     MissingGemspec(String),
+    #[error("Error converting YAML gemspec to Ruby: {0}")]
+    GemspecToRubyError(String),
     #[error("rv ci needs a Gemfile, but could not find it")]
     MissingImplicitGemfile,
     #[error("Gemfile \"{0}\" does not exist")]
@@ -1086,13 +1088,11 @@ impl<'i> DownloadedRubygems<'i> {
         };
         if args.validate_checksums
             && let Some(ref checksums) = checksums
-            && let Some(hashed) = metadata_hashed
         {
-            checksums.validate_metadata(full_name.clone(), hashed)?
-        }
-        if args.validate_checksums
-            && let Some(ref checksums) = checksums
-        {
+            if let Some(hashed) = metadata_hashed {
+                checksums.validate_metadata(full_name.clone(), hashed)?
+            }
+
             checksums.validate_data_tar(full_name, &data_tar_unpacked.hashed)?
         }
 
@@ -1459,12 +1459,12 @@ fn convert_gemspec_yaml_to_ruby(config: &Config, contents: String) -> Result<Str
     let mut temp_file = fs_err::File::create(&temp_path)?;
     temp_file.write_all(contents.as_bytes())?;
 
-    let output = crate::commands::ruby::run::run_no_install(
+    let result = crate::commands::ruby::run::run_no_install(
         config,
         &config.ruby_request(),
         &[
             "-e",
-            "Gem.load_yaml; print Gem::SafeYAML.safe_load(ARGF.read).to_ruby",
+            "Gem.discover_gems_on_require = false; Gem.load_yaml; print Gem::SafeYAML.safe_load(ARGF.read).to_ruby",
             temp_path.as_str(),
         ],
         CaptureOutput::Both,
@@ -1472,7 +1472,13 @@ fn convert_gemspec_yaml_to_ruby(config: &Config, contents: String) -> Result<Str
         vec![],
     )?;
 
-    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    let error = String::from_utf8(result.stderr).unwrap();
+
+    if !result.status.success() {
+        return Err(Error::GemspecToRubyError(error));
+    }
+
+    Ok(String::from_utf8(result.stdout).unwrap())
 }
 
 fn platform_for_gem(gem_version: &str) -> Platform {
