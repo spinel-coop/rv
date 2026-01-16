@@ -86,7 +86,7 @@ impl Config {
     }
 
     /// Discover all Ruby installations from configured directories with caching
-    pub fn discover_all_rubies(&self) -> Vec<Ruby> {
+    pub fn discover_installed_rubies(&self) -> Vec<Ruby> {
         self.discover_rubies(&RubyRequest::default())
     }
 
@@ -185,22 +185,22 @@ mod tests {
     }
 
     #[test]
-    fn test_discover_all_rubies_empty() {
+    fn test_discover_installed_rubies_empty() {
         let (config, _temp_dir) = create_test_config();
-        let rubies = config.discover_all_rubies();
+        let rubies = config.discover_installed_rubies();
         assert!(rubies.is_empty());
     }
 
     #[test]
-    fn test_discover_all_rubies_with_installations() {
+    fn test_discover_installed_rubies_with_installations() {
         // This test is complex because it depends on rv-ruby parsing
         // Let's skip it for now and focus on the cache-specific functionality
         // In a real scenario, Ruby::from_dir would work with proper Ruby installations
 
         let (config, _temp_dir) = create_test_config();
 
-        // Test that discover_all_rubies doesn't crash with empty directories
-        let rubies = config.discover_all_rubies();
+        // Test that discover_installed_rubies doesn't crash with empty directories
+        let rubies = config.discover_installed_rubies();
         assert_eq!(rubies.len(), 0);
 
         // The parallel processing code itself is tested via integration tests
@@ -213,9 +213,9 @@ mod tests {
         // The caching logic is tested indirectly through integration tests
         let (config, _temp_dir) = create_test_config();
 
-        // Test that discover_all_rubies can be called multiple times without crashing
-        let rubies1 = config.discover_all_rubies();
-        let rubies2 = config.discover_all_rubies();
+        // Test that discover_installed_rubies can be called multiple times without crashing
+        let rubies1 = config.discover_installed_rubies();
+        let rubies2 = config.discover_installed_rubies();
 
         // Both should return empty since we don't have valid Ruby installations
         assert_eq!(rubies1.len(), 0);

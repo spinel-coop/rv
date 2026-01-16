@@ -49,7 +49,7 @@ pub struct Config {
 impl Config {
     #[instrument(skip_all, level = "trace")]
     pub fn rubies(&self) -> Vec<Ruby> {
-        self.discover_all_rubies()
+        self.discover_installed_rubies()
     }
 
     pub async fn remote_rubies(&self) -> Vec<Ruby> {
