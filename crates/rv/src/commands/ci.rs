@@ -203,31 +203,34 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
 
 async fn ci_inner_work(config: &Config, args: &CiInnerArgs, progress: &WorkProgress) -> Result<()> {
     // Resolving phase: parse lockfile, handle path gems and git repos
-    let span = info_span!("Resolving gems");
-    span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name}").unwrap());
-
-    let lockfile_contents = {
-        let _guard = span.enter();
-        tokio::fs::read_to_string(&args.lockfile_path).await?
-    };
+    let lockfile_contents = { tokio::fs::read_to_string(&args.lockfile_path).await? };
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
 
-    {
+    debug!("Installing path gems");
+
+    let binstub_dir = args.install_path.join("bin");
+    tokio::fs::create_dir_all(&binstub_dir).await?;
+
+    let path_install_start = Instant::now();
+    let path_count = install_paths(config, &lockfile.path, args)?;
+    let path_install_elapsed = path_install_start.elapsed();
+
+    let (git_count, git_install_elapsed) = {
+        let span = info_span!("Downloading and installing git gems");
+        span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name}").unwrap());
+
         let _guard = span.enter();
 
-        let binstub_dir = args.install_path.join("bin");
-        tokio::fs::create_dir_all(&binstub_dir).await?;
-
-        debug!("Installing path gems");
-        install_paths(config, &lockfile.path, args)?;
+        let git_install_start = Instant::now();
 
         debug!("Downloading git gems");
         let repos = download_git_repos(lockfile.clone(), &config.cache, args)?;
-        debug!("Installing git gems");
-        install_git_repos(config, repos, args)?;
-    }
 
-    drop(span);
+        debug!("Installing git gems");
+        install_git_repos(config, &repos, args)?;
+
+        (repos.len(), git_install_start.elapsed())
+    };
 
     // Phase 1: Downloads (0-40%)
     let gem_count = lockfile.gem_spec_count() as u64;
@@ -246,8 +249,10 @@ async fn ci_inner_work(config: &Config, args: &CiInnerArgs, progress: &WorkProgr
     debug!("Installing gems");
     let install_start = Instant::now();
     let specs = install_gems(config, downloaded, args, progress)?;
-    let installed_count = specs.len();
-    let install_elapsed = install_start.elapsed();
+    let gem_server_count = specs.len();
+    let gem_server_install_elapsed = install_start.elapsed();
+
+    let install_elapsed = gem_server_install_elapsed + git_install_elapsed + path_install_elapsed;
 
     // Phase 3 (Compiles, 80-100%) - start_phase called inside compile_gems after filtering
     debug!("Compiling gems");
@@ -268,8 +273,11 @@ async fn ci_inner_work(config: &Config, args: &CiInnerArgs, progress: &WorkProgr
         format_duration(download_elapsed)
     );
     println!(
-        " - {} gems installed ({})",
-        installed_count,
+        " - {} gems installed: {} from gem servers, {} from git repos, {} from local paths ({})",
+        gem_server_count + git_count + path_count,
+        gem_server_count,
+        git_count,
+        path_count,
         format_duration(install_elapsed)
     );
     if compiled_count > 0 {
@@ -288,25 +296,28 @@ fn install_paths<'i>(
     config: &Config,
     paths: &Vec<rv_lockfile::datatypes::PathSection<'i>>,
     args: &CiInnerArgs,
-) -> Result<()> {
+) -> Result<usize> {
     use rayon::prelude::*;
     let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
-    pool.install(|| {
+    let path_spec_count = pool.install(|| {
         paths
             .iter()
             .par_bridge()
             .map(|path| install_path(path, config, args))
-            .collect::<Result<Vec<_>>>()?;
-        Ok::<_, Error>(())
-    })?;
-    Ok(())
+            .collect::<Result<Vec<_>>>()
+    });
+    Ok(path_spec_count
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .len())
 }
 
 fn install_path(
     path_section: &rv_lockfile::datatypes::PathSection,
     config: &Config,
     args: &CiInnerArgs,
-) -> Result<()> {
+) -> Result<Vec<GemSpecification>> {
     let cached_gemspecs_dir = config
         .cache
         .shard(rv_cache::CacheBucket::Gemspec, "gemspecs")
@@ -316,6 +327,7 @@ fn install_path(
     let path_key = rv_cache::cache_digest(path_section.remote);
     let path_dir = Utf8PathBuf::from(path_section.remote);
 
+    let mut path_specs = Vec::new();
     let pattern = path_dir.join("**/*.gemspec").to_string();
     for path in glob(&pattern).expect("invalid glob pattern").flatten() {
         debug!("found gemspec at {:?}", path);
@@ -376,21 +388,24 @@ fn install_path(
                         "Warning: path gem specification at {} was invalid: {e}",
                         path.to_string_lossy()
                     );
-                    return Ok(());
+                    continue;
                 }
             };
+
+            path_specs.push(dep_gemspec.clone());
+
             // pass the executable names to generate binstubs
             let binstub_dir = args.install_path.join("bin");
             install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir)?;
         }
     }
 
-    Ok(())
+    Ok(path_specs)
 }
 
 fn install_git_repos<'i>(
     config: &Config,
-    repos: Vec<DownloadedGitRepo<'i>>,
+    repos: &Vec<DownloadedGitRepo<'i>>,
     args: &CiInnerArgs,
 ) -> Result<()> {
     let git_gems_dir = args.install_path.join("bundler/gems");
