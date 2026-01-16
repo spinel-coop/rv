@@ -34,14 +34,14 @@ type Result<T> = miette::Result<T, Error>;
 // Struct for JSON output and maintaing the list of installed/active rubies
 #[derive(Serialize)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
-struct JsonRubyEntry {
+struct RubyEntry {
     #[serde(flatten)]
     details: Ruby,
     installed: bool,
     active: bool,
 }
 
-impl JsonRubyEntry {
+impl RubyEntry {
     fn installed(details: Ruby, active_ruby: &Option<Ruby>) -> Self {
         Self::new(details, true, active_ruby)
     }
@@ -51,7 +51,7 @@ impl JsonRubyEntry {
     }
 
     fn new(details: Ruby, installed: bool, active_ruby: &Option<Ruby>) -> Self {
-        JsonRubyEntry {
+        RubyEntry {
             active: active_ruby.as_ref().is_some_and(|a| a == &details),
             installed,
             details,
@@ -73,12 +73,12 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
     let mut active_ruby = requested.find_match_in(&installed_rubies);
 
     // Might have multiple installed rubies with the same version (e.g., "ruby-3.2.0" and "mruby-3.2.0").
-    let mut rubies_map: BTreeMap<String, Vec<JsonRubyEntry>> = BTreeMap::new();
+    let mut rubies_map: BTreeMap<String, Vec<RubyEntry>> = BTreeMap::new();
     for ruby in installed_rubies {
         rubies_map
             .entry(ruby.display_name())
             .or_default()
-            .push(JsonRubyEntry::installed(ruby, &active_ruby));
+            .push(RubyEntry::installed(ruby, &active_ruby));
     }
 
     if !installed_only {
@@ -92,7 +92,7 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
         for ruby in selected_remote_rubies {
             rubies_map
                 .entry(ruby.display_name())
-                .or_insert(vec![JsonRubyEntry::available(ruby, &active_ruby)]);
+                .or_insert(vec![RubyEntry::available(ruby, &active_ruby)]);
         }
 
         let insert_requested_if_available = || {
@@ -103,7 +103,7 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
 
                 rubies_map
                     .entry(details.display_name())
-                    .or_insert(vec![JsonRubyEntry {
+                    .or_insert(vec![RubyEntry {
                         details,
                         installed: false,
                         active: true,
@@ -122,7 +122,7 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
     }
 
     // Create entries for output
-    let entries: Vec<JsonRubyEntry> = rubies_map.into_values().flatten().collect();
+    let entries: Vec<RubyEntry> = rubies_map.into_values().flatten().collect();
 
     print_entries(&entries, format)
 }
@@ -163,7 +163,7 @@ fn latest_patch_version(remote_rubies: &Vec<Ruby>) -> Vec<Ruby> {
     available_rubies.into_values().collect()
 }
 
-fn print_entries(entries: &[JsonRubyEntry], format: OutputFormat) -> Result<()> {
+fn print_entries(entries: &[RubyEntry], format: OutputFormat) -> Result<()> {
     match format {
         OutputFormat::Text => {
             let width = entries
@@ -183,7 +183,7 @@ fn print_entries(entries: &[JsonRubyEntry], format: OutputFormat) -> Result<()> 
 }
 
 /// Formats a single entry for text output.
-fn format_ruby_entry(entry: &JsonRubyEntry, width: usize) -> String {
+fn format_ruby_entry(entry: &RubyEntry, width: usize) -> String {
     let marker = if entry.active { "*" } else { " " };
     let name = entry.details.display_name();
 
