@@ -178,11 +178,6 @@ impl RubyVersion {
 
         version.parse()
     }
-
-    /// Check whether the str satisfies the request when parsed successfully
-    pub fn str_satisfies(str: &str, request: &RubyRequest) -> bool {
-        Self::from_str(str).is_ok_and(|v| v.satisfies(request))
-    }
 }
 
 impl std::fmt::Display for RubyVersion {
