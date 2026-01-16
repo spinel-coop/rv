@@ -99,18 +99,18 @@ impl RubyRequest {
         rubies
             .iter()
             .rev()
-            .find(|r| self.is_satisfied_by(&r.version))
+            .find(|r| r.version.satisfies(self))
             .cloned()
-    }
-
-    /// Does the given Ruby version satisfy this requested range?
-    pub fn is_satisfied_by(&self, version: &RubyVersion) -> bool {
-        version.satisfies(self)
     }
 
     /// A version that toolfiles like .tool-version/.ruby-version/Gemfile/Gemfile.lock knows how to read.
     pub fn to_tool_consumable_version(&self) -> String {
         self.to_string().replace("ruby-", "")
+    }
+
+    /// Does the given ruby install directory satisfy this requested range?
+    pub fn matches_dir(&self, path: &Utf8PathBuf) -> bool {
+        RubyVersion::from_str(path.file_name().unwrap()).map_or(true, |v| v.satisfies(self))
     }
 }
 
@@ -512,16 +512,5 @@ mod tests {
     fn test_version_comparisons() {
         assert!(v("3.3.9") < v("3.3.10"));
         assert!(v("4.0.0-preview3") < v("4.0.0"));
-    }
-
-    #[test]
-    fn test_ruby_request_satisfied_by() {
-        let request = RubyRequest::default();
-
-        let mut version = v("3.0.0");
-        assert!(request.is_satisfied_by(&version));
-
-        version = v("4.0.0-preview3");
-        assert!(!request.is_satisfied_by(&version));
     }
 }

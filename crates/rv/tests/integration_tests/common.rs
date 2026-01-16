@@ -68,6 +68,16 @@ impl RvTest {
         self.temp_dir.path().canonicalize_utf8().unwrap()
     }
 
+    pub fn enable_cache(&mut self) -> Utf8PathBuf {
+        self.env.remove("RV_NO_CACHE");
+
+        let cache_dir = self.temp_root().join("cache");
+        self.env
+            .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
+
+        cache_dir
+    }
+
     pub fn temp_home(&self) -> Utf8PathBuf {
         self.temp_root().join("home")
     }

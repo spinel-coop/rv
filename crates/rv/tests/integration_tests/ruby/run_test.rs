@@ -1,4 +1,6 @@
 use crate::common::{RvOutput, RvTest};
+use std::fs;
+
 #[derive(Debug, Default)]
 pub struct RunOptions {
     pub set_no_install: bool,
@@ -37,6 +39,36 @@ fn test_ruby_run_simple() {
         output.normalized_stdout(),
         "ruby\n3.3.5\naarch64-darwin23\naarch64\ndarwin23\n\n"
     );
+}
+
+#[test]
+fn test_ruby_run_interpreter_cache() {
+    let mut test = RvTest::new();
+
+    test.create_ruby_dir("ruby-3.3.5");
+    test.create_ruby_dir("ruby-3.4.1");
+
+    let cache_dir = test.enable_cache();
+
+    let output = test.ruby_run(
+        Some("3.4.1"),
+        Default::default(),
+        &["-e", "'puts \"Hello, World\"'"],
+    );
+
+    output.assert_success();
+
+    let interpreters_dir = cache_dir.join("ruby-v0").join("interpreters");
+    assert!(interpreters_dir.exists());
+
+    // it should cache a single version, not both versions
+    assert_eq!(
+        fs::read_dir(&interpreters_dir)
+            .unwrap()
+            .collect::<Vec<_>>()
+            .len(),
+        1
+    )
 }
 
 #[test]

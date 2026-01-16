@@ -24,10 +24,7 @@ fn test_ruby_install_no_specific_version() {
         .mock_tarball_download(&download_suffix, &tarball_content)
         .create();
 
-    test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_root().join("cache");
-    test.env
-        .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
+    let cache_dir = test.enable_cache();
 
     let mock = test.mock_releases(["3.4.5"].to_vec());
 
@@ -60,10 +57,7 @@ fn test_ruby_install_incomplete_request() {
         .mock_tarball_download(&download_suffix, &tarball_content)
         .create();
 
-    test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_root().join("cache");
-    test.env
-        .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
+    let cache_dir = test.enable_cache();
 
     let mock = test.mock_releases(["4.0.0"].to_vec());
 
@@ -96,10 +90,7 @@ fn test_ruby_install_successful_download() {
         .mock_tarball_download(&download_suffix, &tarball_content)
         .create();
 
-    test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_root().join("cache");
-    test.env
-        .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
+    let cache_dir = test.enable_cache();
 
     let output = test.rv(&["ruby", "install", "3.4.5"]);
 
@@ -174,10 +165,7 @@ fn test_ruby_install_http_failure_no_empty_file() {
         .with_status(404)
         .create();
 
-    test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_root().join("cache");
-    test.env
-        .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
+    let cache_dir = test.enable_cache();
 
     let output = test.rv(&["ruby", "install", "3.4.5"]);
 
@@ -245,10 +233,7 @@ fn test_ruby_install_interrupted_download_cleanup() {
         .with_body("partial")
         .create();
 
-    test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_root().join("cache");
-    test.env
-        .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
+    let cache_dir = test.enable_cache();
 
     let output = test.rv(&["ruby", "install", "3.4.5"]);
 
@@ -288,10 +273,7 @@ fn test_ruby_install_cached_file_reused() {
         .expect(1)
         .create();
 
-    test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_root().join("cache");
-    test.env
-        .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
+    let _cache_dir = test.enable_cache();
 
     // This one should actually download tarballs, from the mocked server.
     let output1 = test.rv(&["ruby", "install", "3.4.5"]);
@@ -319,10 +301,7 @@ fn test_ruby_install_invalid_url() {
         "http://invalid-url-that-does-not-exist.com".into(),
     );
 
-    test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_root().join("cache");
-    test.env
-        .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
+    let cache_dir = test.enable_cache();
 
     let output = test.rv(&["ruby", "install", "3.4.5"]);
 
@@ -371,10 +350,7 @@ fn test_ruby_install_atomic_rename_behavior() {
         .mock_tarball_download(&download_suffix, &tarball_content)
         .create();
 
-    test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_root().join("cache");
-    test.env
-        .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
+    let cache_dir = test.enable_cache();
 
     let output = test.rv(&["ruby", "install", "3.4.5"]);
     output.assert_success();
@@ -446,10 +422,7 @@ fn test_ruby_install_temp_file_cleanup_on_extraction_failure() {
         .with_body("invalid-tarball-content")
         .create();
 
-    test.env.remove("RV_NO_CACHE");
-    let cache_dir = test.temp_root().join("cache");
-    test.env
-        .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
+    let cache_dir = test.enable_cache();
 
     let output = test.rv(&["ruby", "install", "3.4.5"]);
 
