@@ -1464,7 +1464,7 @@ fn convert_gemspec_yaml_to_ruby(config: &Config, contents: String) -> Result<Str
         &config.ruby_request(),
         &[
             "-e",
-            "Gem.load_yaml; print Gem::SafeYAML.safe_load(ARGF.read).to_ruby",
+            "Gem.discover_gems_on_require = false; Gem.load_yaml; print Gem::SafeYAML.safe_load(ARGF.read).to_ruby",
             temp_path.as_str(),
         ],
         CaptureOutput::Both,
