@@ -2,7 +2,7 @@ use camino::Utf8PathBuf;
 use rv_cache::{CacheKey, CacheKeyHasher};
 use std::{fmt::Display, str::FromStr};
 
-use crate::{Ruby, engine::RubyEngine, version::RubyVersion};
+use crate::{Ruby, engine::RubyEngine};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 pub type VersionPart = u32;
@@ -99,13 +99,8 @@ impl RubyRequest {
         rubies
             .iter()
             .rev()
-            .find(|r| self.is_satisfied_by(&r.version))
+            .find(|r| r.version.satisfies(self))
             .cloned()
-    }
-
-    /// Does the given Ruby version satisfy this requested range?
-    pub fn is_satisfied_by(&self, version: &RubyVersion) -> bool {
-        version.satisfies(self)
     }
 
     /// A version that toolfiles like .tool-version/.ruby-version/Gemfile/Gemfile.lock knows how to read.
@@ -253,6 +248,7 @@ impl CacheKey for RubyRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::version::RubyVersion;
 
     #[track_caller]
     fn v(version: &str) -> RubyVersion {
@@ -512,16 +508,5 @@ mod tests {
     fn test_version_comparisons() {
         assert!(v("3.3.9") < v("3.3.10"));
         assert!(v("4.0.0-preview3") < v("4.0.0"));
-    }
-
-    #[test]
-    fn test_ruby_request_satisfied_by() {
-        let request = RubyRequest::default();
-
-        let mut version = v("3.0.0");
-        assert!(request.is_satisfied_by(&version));
-
-        version = v("4.0.0-preview3");
-        assert!(!request.is_satisfied_by(&version));
     }
 }
