@@ -57,7 +57,7 @@ impl Config {
     }
 
     pub fn matching_ruby(&self, request: &RubyRequest) -> Option<Ruby> {
-        self.discover_rubies_matching(|path| request.matches_dir(path))
+        self.discover_rubies_matching(|dir_name| RubyVersion::str_satisfies(dir_name, request))
             .last()
             .cloned()
     }
