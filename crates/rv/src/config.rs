@@ -1,6 +1,7 @@
 use std::{
     env::{self, JoinPathsError, join_paths, split_paths},
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -57,9 +58,11 @@ impl Config {
     }
 
     pub fn matching_ruby(&self, request: &RubyRequest) -> Option<Ruby> {
-        self.discover_rubies_matching(|path| request.matches_dir(path))
-            .last()
-            .cloned()
+        self.discover_rubies_matching(|dir_name| {
+            RubyVersion::from_str(dir_name).is_ok_and(|v| v.satisfies(request))
+        })
+        .last()
+        .cloned()
     }
 
     pub fn current_ruby(&self) -> Option<Ruby> {
