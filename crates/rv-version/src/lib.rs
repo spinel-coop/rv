@@ -62,7 +62,7 @@ impl Version {
             "" => Ok("0".into()),
 
             // Check for invalid characters and patterns
-            v if v.lines().count() > 1 => Err(VersionError::ContainsNewlines { version: v.into() }),
+            v if v.contains('\n') => Err(VersionError::ContainsNewlines { version: v.into() }),
             v if v.contains("..") => Err(VersionError::ConsecutiveDots { version: v.into() }),
 
             // Check for obvious junk
