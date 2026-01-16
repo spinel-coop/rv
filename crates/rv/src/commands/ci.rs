@@ -343,49 +343,16 @@ fn install_path(
                 let cache_modified = std::fs::metadata(&cached_gemspec_path)?.modified()?;
                 gemspec_modified < cache_modified
             };
-            let yaml_contents = if cached {
-                std::fs::read_to_string(&cached_gemspec_path)?
-            } else {
-                let gemspec_path =
-                    Utf8PathBuf::try_from(path.clone()).expect("gemspec path not valid UTF-8");
-                // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
-                let result = crate::commands::ruby::run::run_no_install(
-                    config,
-                    &config.ruby_request(),
-                    &[
-                        "-e",
-                        &format!(
-                            "puts Gem::Specification.load(\"{}\").to_yaml",
-                            gemspec_path.canonicalize_utf8()?,
-                        ),
-                    ],
-                    CaptureOutput::Both,
-                    Some(&path_dir),
-                    Vec::new(),
-                )?;
-
-                let error = String::from_utf8(result.stderr).unwrap();
-
-                if !result.status.success() {
-                    return Err(Error::GemspecError(error));
-                }
-
-                String::from_utf8(result.stdout).unwrap()
-            };
             // parse the YAML gemspec to get the executable names
-            let dep_gemspec = match rv_gem_specification_yaml::parse(&yaml_contents) {
-                Ok(parsed) => {
-                    debug!("writing YAML gemspec to {}", &cached_gemspec_path);
-                    fs_err::write(&cached_gemspec_path, &yaml_contents)?;
-                    parsed
+            let dep_gemspec = if cached {
+                let yaml_contents = std::fs::read_to_string(&cached_gemspec_path)?;
+
+                match rv_gem_specification_yaml::parse(&yaml_contents) {
+                    Ok(parsed) => parsed,
+                    Err(_) => cache_gemspec_path(config, &path_dir, path, cached_gemspec_path)?,
                 }
-                Err(e) => {
-                    eprintln!(
-                        "Warning: path gem specification at {} was invalid: {e}",
-                        path.to_string_lossy()
-                    );
-                    return Ok(());
-                }
+            } else {
+                cache_gemspec_path(config, &path_dir, path, cached_gemspec_path)?
             };
             // pass the executable names to generate binstubs
             let binstub_dir = args.install_path.join("bin");
@@ -664,6 +631,46 @@ fn download_git_repo<'i>(
         path: git_repo_dir,
         submodules: git_source.submodules,
     })
+}
+
+fn cache_gemspec_path(
+    config: &Config,
+    path_dir: &Utf8PathBuf,
+    path: PathBuf,
+    cached_path: Utf8PathBuf,
+) -> Result<GemSpecification> {
+    let gemspec_path = Utf8PathBuf::try_from(path).expect("gemspec path not valid UTF-8");
+    // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
+    let result = crate::commands::ruby::run::run_no_install(
+        config,
+        &config.ruby_request(),
+        &[
+            "-e",
+            &format!(
+                "puts Gem::Specification.load(\"{}\").to_yaml",
+                gemspec_path.canonicalize_utf8()?,
+            ),
+        ],
+        CaptureOutput::Both,
+        Some(path_dir),
+        Vec::new(),
+    )?;
+
+    let error = String::from_utf8(result.stderr).unwrap();
+
+    if !result.status.success() {
+        return Err(Error::GemspecError(error));
+    }
+
+    let yaml_contents = String::from_utf8(result.stdout).unwrap();
+
+    let dep_gemspec = rv_gem_specification_yaml::parse(&yaml_contents)
+        .expect("Failed to parse the result of RubyGems YAML serialization");
+
+    debug!("writing YAML gemspec to {}", &cached_path);
+    fs_err::write(&cached_path, &yaml_contents)?;
+
+    Ok(dep_gemspec)
 }
 
 fn find_manifest_paths(
