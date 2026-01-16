@@ -31,7 +31,7 @@ pub fn to_ruby(spec: Specification) -> String {
         test_files: _,
         extra_rdoc_files,
         rdoc_options,
-        cert_chain: _,
+        cert_chain,
         signing_key: _,
         autorequire: _,
         installed_by_version: _,
@@ -70,6 +70,9 @@ pub fn to_ruby(spec: Specification) -> String {
     )
     .unwrap();
     writeln!(ruby_src, "  s.authors = [{}]", ruby_list_opt(authors)).unwrap();
+    if cert_chain.is_empty().not() {
+        writeln!(ruby_src, "  s.cert_chain = [{}]", ruby_list(cert_chain)).unwrap();
+    }
     if bindir != "bin" {
         writeln!(ruby_src, "  s.bindir = \"{}\".freeze", bindir).unwrap();
     }
