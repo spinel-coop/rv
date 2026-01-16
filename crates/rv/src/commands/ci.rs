@@ -1086,13 +1086,11 @@ impl<'i> DownloadedRubygems<'i> {
         };
         if args.validate_checksums
             && let Some(ref checksums) = checksums
-            && let Some(hashed) = metadata_hashed
         {
-            checksums.validate_metadata(full_name.clone(), hashed)?
-        }
-        if args.validate_checksums
-            && let Some(ref checksums) = checksums
-        {
+            if let Some(hashed) = metadata_hashed {
+                checksums.validate_metadata(full_name.clone(), hashed)?
+            }
+
             checksums.validate_data_tar(full_name, &data_tar_unpacked.hashed)?
         }
 
