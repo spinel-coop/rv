@@ -1,0 +1,74 @@
+--- !ruby/object:Gem::Specification
+name: net-imap
+version: !ruby/object:Gem::Version
+  version: 0.6.2
+platform: ruby
+authors:
+- Shugo Maeda
+- nicholas a. evans
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: net-protocol
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+- !ruby/object:Gem::Dependency
+  name: date
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+description: Ruby client api for Internet Message Access Protocol
+email:
+- shugo@ruby-lang.org
+- nick@rubinick.dev
+executables: []
+extensions: []
+extra_rdoc_files: []
+files: []
+homepage: https://github.com/ruby/net-imap
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  changelog_uri: https://github.com/ruby/net-imap/releases
+  homepage_uri: https://github.com/ruby/net-imap
+  source_code_uri: https://github.com/ruby/net-imap
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 3.2.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Ruby client api for Internet Message Access Protocol
+test_files: []

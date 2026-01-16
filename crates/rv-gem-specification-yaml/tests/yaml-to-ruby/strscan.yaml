@@ -1,0 +1,82 @@
+--- !ruby/object:Gem::Specification
+name: strscan
+version: !ruby/object:Gem::Version
+  version: 3.1.6
+platform: ruby
+authors:
+- Minero Aoki
+- Sutou Kouhei
+- Charles Oliver Nutter
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: Provides lexical scanning operations on a String.
+email:
+-
+- kou@cozmixng.org
+- headius@headius.com
+executables: []
+extensions:
+- ext/strscan/extconf.rb
+extra_rdoc_files:
+- ".rdoc_options"
+- doc/strscan/helper_methods.md
+- doc/strscan/link_refs.txt
+- doc/strscan/methods
+- doc/strscan/methods/get_byte.md
+- doc/strscan/methods/get_charpos.md
+- doc/strscan/methods/get_pos.md
+- doc/strscan/methods/getch.md
+- doc/strscan/methods/scan.md
+- doc/strscan/methods/scan_until.md
+- doc/strscan/methods/set_pos.md
+- doc/strscan/methods/skip.md
+- doc/strscan/methods/skip_until.md
+- doc/strscan/methods/terminate.md
+- doc/strscan/strscan.md
+files:
+- ".rdoc_options"
+- COPYING
+- LICENSE.txt
+- doc/strscan/helper_methods.md
+- doc/strscan/link_refs.txt
+- doc/strscan/methods
+- doc/strscan/methods/get_byte.md
+- doc/strscan/methods/get_charpos.md
+- doc/strscan/methods/get_pos.md
+- doc/strscan/methods/getch.md
+- doc/strscan/methods/scan.md
+- doc/strscan/methods/scan_until.md
+- doc/strscan/methods/set_pos.md
+- doc/strscan/methods/skip.md
+- doc/strscan/methods/skip_until.md
+- doc/strscan/methods/terminate.md
+- doc/strscan/strscan.md
+- ext/strscan/extconf.rb
+- ext/strscan/strscan.c
+- lib/lib/strscan/strscan.rb
+homepage: https://github.com/ruby/strscan
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata: {}
+rdoc_options:
+- "-idoc"
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.4.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Provides lexical scanning operations on a String.
+test_files: []

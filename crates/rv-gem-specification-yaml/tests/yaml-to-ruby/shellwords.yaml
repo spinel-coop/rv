@@ -1,0 +1,44 @@
+--- !ruby/object:Gem::Specification
+name: shellwords
+version: !ruby/object:Gem::Version
+  version: 0.2.2
+platform: ruby
+authors:
+- Akinori MUSHA
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: Manipulates strings with word parsing rules of UNIX Bourne shell.
+email:
+- knu@idaemons.org
+executables: []
+extensions: []
+extra_rdoc_files: []
+files:
+- lib/shellwords.rb
+homepage: https://github.com/ruby/shellwords
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  homepage_uri: https://github.com/ruby/shellwords
+  source_code_uri: https://github.com/ruby/shellwords
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.3.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Manipulates strings with word parsing rules of UNIX Bourne shell.
+test_files: []

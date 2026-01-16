@@ -1,0 +1,43 @@
+--- !ruby/object:Gem::Specification
+name: mutex_m
+version: !ruby/object:Gem::Version
+  version: 0.3.0
+platform: ruby
+authors:
+- Keiju ISHITSUKA
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: Mixin to extend objects to be handled like a Mutex.
+email:
+- keiju@ruby-lang.org
+executables: []
+extensions: []
+extra_rdoc_files: []
+files: []
+homepage: https://github.com/ruby/mutex_m
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  bug_tracker_uri: https://github.com/ruby/mutex_m/issues
+  source_code_uri: https://github.com/ruby/mutex_m
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '2.5'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 3.4.20
+specification_version: 4
+summary: Mixin to extend objects to be handled like a Mutex.
+test_files: []

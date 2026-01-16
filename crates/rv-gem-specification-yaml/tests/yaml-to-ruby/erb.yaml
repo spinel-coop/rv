@@ -1,0 +1,56 @@
+--- !ruby/object:Gem::Specification
+name: erb
+version: !ruby/object:Gem::Version
+  version: 6.0.1
+platform: ruby
+authors:
+- Masatoshi SEKI
+- Takashi Kokubun
+bindir: libexec
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: An easy to use but powerful templating system for Ruby.
+email:
+- seki@ruby-lang.org
+- k0kubun@ruby-lang.org
+executables:
+- erb
+extensions:
+- ext/erb/escape/extconf.rb
+extra_rdoc_files: []
+files:
+- erb/escape.bundle
+- ext/erb/escape/extconf.rb
+- lib/erb.rb
+- lib/erb/compiler.rb
+- lib/erb/def_method.rb
+- lib/erb/util.rb
+- lib/erb/version.rb
+- libexec/erb
+homepage: https://github.com/ruby/erb
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  changelog_uri: https://github.com/ruby/erb/blob/v6.0.1/NEWS.md
+  homepage_uri: https://github.com/ruby/erb
+  source_code_uri: https://github.com/ruby/erb
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 3.2.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: An easy to use but powerful templating system for Ruby.
+test_files: []

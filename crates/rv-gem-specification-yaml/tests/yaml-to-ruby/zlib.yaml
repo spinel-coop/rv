@@ -1,0 +1,51 @@
+--- !ruby/object:Gem::Specification
+name: zlib
+version: !ruby/object:Gem::Version
+  version: 3.2.2
+platform: ruby
+authors:
+- Yukihiro Matsumoto
+- UENO Katsuhiro
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: Ruby interface for the zlib compression/decompression library
+email:
+- matz@ruby-lang.org
+-
+executables: []
+extensions:
+- ext/zlib/extconf.rb
+extra_rdoc_files: []
+files:
+- BSDL
+- COPYING
+- README.md
+- ext/zlib/extconf.rb
+- ext/zlib/zlib.c
+- zlib.bundle
+- zlib.gemspec
+homepage: https://github.com/ruby/zlib
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata: {}
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.5.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Ruby interface for the zlib compression/decompression library
+test_files: []

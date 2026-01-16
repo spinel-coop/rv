@@ -1,0 +1,50 @@
+--- !ruby/object:Gem::Specification
+name: io-nonblock
+version: !ruby/object:Gem::Version
+  version: 0.3.2
+platform: ruby
+authors:
+- Nobu Nakada
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: Enables non-blocking mode with IO class
+email:
+- nobu@ruby-lang.org
+executables: []
+extensions:
+- ext/io/nonblock/extconf.rb
+extra_rdoc_files: []
+files:
+- COPYING
+- README.md
+- ext/io/nonblock/depend
+- ext/io/nonblock/extconf.rb
+- ext/io/nonblock/nonblock.c
+- io/nonblock.bundle
+homepage: https://github.com/ruby/io-nonblock
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  homepage_uri: https://github.com/ruby/io-nonblock
+  source_code_uri: https://github.com/ruby/io-nonblock
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '3.0'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Enables non-blocking mode with IO class
+test_files: []

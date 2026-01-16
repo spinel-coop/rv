@@ -1,0 +1,44 @@
+--- !ruby/object:Gem::Specification
+name: tempfile
+version: !ruby/object:Gem::Version
+  version: 0.3.1
+platform: ruby
+authors:
+- Yukihiro Matsumoto
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: A utility class for managing temporary files.
+email:
+- matz@ruby-lang.org
+executables: []
+extensions: []
+extra_rdoc_files: []
+files:
+- lib/tempfile.rb
+homepage: https://github.com/ruby/tempfile
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  homepage_uri: https://github.com/ruby/tempfile
+  source_code_uri: https://github.com/ruby/tempfile
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.5.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: A utility class for managing temporary files.
+test_files: []

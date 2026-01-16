@@ -1,0 +1,60 @@
+--- !ruby/object:Gem::Specification
+name: did_you_mean
+version: !ruby/object:Gem::Version
+  version: 2.0.0
+platform: ruby
+authors:
+- Yuki Nishijima
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: The gem that has been saving people from typos since 2014.
+email:
+- mail@yukinishijima.net
+executables: []
+extensions: []
+extra_rdoc_files: []
+files:
+- lib/did_you_mean.rb
+- lib/did_you_mean/core_ext/name_error.rb
+- lib/did_you_mean/experimental.rb
+- lib/did_you_mean/formatter.rb
+- lib/did_you_mean/formatters/plain_formatter.rb
+- lib/did_you_mean/formatters/verbose_formatter.rb
+- lib/did_you_mean/jaro_winkler.rb
+- lib/did_you_mean/levenshtein.rb
+- lib/did_you_mean/spell_checker.rb
+- lib/did_you_mean/spell_checkers/key_error_checker.rb
+- lib/did_you_mean/spell_checkers/method_name_checker.rb
+- lib/did_you_mean/spell_checkers/name_error_checkers.rb
+- lib/did_you_mean/spell_checkers/name_error_checkers/class_name_checker.rb
+- lib/did_you_mean/spell_checkers/name_error_checkers/variable_name_checker.rb
+- lib/did_you_mean/spell_checkers/null_checker.rb
+- lib/did_you_mean/spell_checkers/pattern_key_name_checker.rb
+- lib/did_you_mean/spell_checkers/require_path_checker.rb
+- lib/did_you_mean/tree_spell_checker.rb
+- lib/did_you_mean/verbose.rb
+- lib/did_you_mean/version.rb
+homepage: https://github.com/ruby/did_you_mean
+licenses:
+- MIT
+metadata: {}
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.5.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: '"Did you mean?" experience in Ruby'
+test_files: []
