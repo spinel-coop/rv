@@ -58,47 +58,25 @@ impl Version {
     }
 
     fn normalize_version(version: &str) -> Result<String, VersionError> {
-        let trimmed = version.trim();
+        match version.trim() {
+            "" => Ok("0".into()),
 
-        if trimmed.is_empty() {
-            return Ok("0".to_string());
+            // Check for invalid characters and patterns
+            v if v.lines().count() > 1 => Err(VersionError::ContainsNewlines { version: v.into() }),
+            v if v.contains("..") => Err(VersionError::ConsecutiveDots { version: v.into() }),
+
+            // Check for obvious junk
+            v if v.chars().all(|c| c.is_alphabetic()) => {
+                Err(VersionError::PureAlphabetic { version: v.into() })
+            }
+
+            // Check for trailing dots or spaces within
+            v if v.ends_with('.') || v.contains(' ') => {
+                Err(VersionError::MalformedVersion { version: v.into() })
+            }
+
+            v => Ok(v.into()),
         }
-
-        // Check for invalid characters and patterns
-        if trimmed.contains('\n') && trimmed.lines().count() > 1 {
-            return Err(VersionError::ContainsNewlines {
-                version: version.to_string(),
-            });
-        }
-
-        if trimmed.contains("..") {
-            return Err(VersionError::ConsecutiveDots {
-                version: version.to_string(),
-            });
-        }
-
-        // Check for obvious junk
-        if trimmed.chars().all(|c| c.is_alphabetic()) {
-            return Err(VersionError::PureAlphabetic {
-                version: version.to_string(),
-            });
-        }
-
-        // Check for trailing dots
-        if trimmed.ends_with('.') {
-            return Err(VersionError::MalformedVersion {
-                version: version.to_string(),
-            });
-        }
-
-        // Check for spaces in version (not allowed)
-        if trimmed.contains(' ') {
-            return Err(VersionError::MalformedVersion {
-                version: version.to_string(),
-            });
-        }
-
-        Ok(trimmed.to_string())
     }
 
     fn parse_segments(version: &str) -> Result<Vec<VersionSegment>, VersionError> {
