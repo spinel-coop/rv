@@ -324,10 +324,6 @@ fn install_path(
     for path in glob(&pattern).expect("invalid glob pattern").flatten() {
         debug!("found gemspec at {:?}", path);
         // find the .gemspec file(s)
-        let cached_gemspecs_dir = config
-            .cache
-            .shard(rv_cache::CacheBucket::Gemspec, "gemspecs")
-            .into_path_buf();
         let dep = path_section.specs.iter().find(|s| {
             path.to_string_lossy()
                 .contains(&format!("{}.gemspec", s.gem_version.name))
@@ -476,10 +472,6 @@ fn install_git_repo(
         debug!("found gemspec at {:?}", path);
         // find the .gemspec file(s)
         let gitsha = &repo.sha;
-        let cached_gemspecs_dir = config
-            .cache
-            .shard(rv_cache::CacheBucket::Gemspec, "gemspecs")
-            .into_path_buf();
         let dep = repo.specs.iter().find(|s| {
             path.to_string_lossy()
                 .contains(&format!("{}.gemspec", s.gem_version.name))
