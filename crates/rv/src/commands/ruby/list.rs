@@ -133,7 +133,7 @@ fn latest_patch_version(remote_rubies: &Vec<Ruby>) -> Vec<Ruby> {
     available_rubies.into_values().collect()
 }
 
-fn print_entries(entries: &[RubyEntry]) -> () {
+fn print_entries(entries: &[RubyEntry]) {
     let width = entries
         .iter()
         .map(|e| e.ruby.display_name().len())
