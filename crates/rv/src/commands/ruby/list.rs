@@ -36,95 +36,65 @@ type Result<T> = miette::Result<T, Error>;
 #[cfg_attr(test, derive(Debug, PartialEq))]
 struct RubyEntry {
     #[serde(flatten)]
-    details: Ruby,
+    ruby: Ruby,
     installed: bool,
     active: bool,
 }
 
-impl RubyEntry {
-    fn installed(details: Ruby, active_ruby: &Option<Ruby>) -> Self {
-        Self::new(details, true, active_ruby)
-    }
-
-    fn available(details: Ruby, active_ruby: &Option<Ruby>) -> Self {
-        Self::new(details, false, active_ruby)
-    }
-
-    fn new(details: Ruby, installed: bool, active_ruby: &Option<Ruby>) -> Self {
-        RubyEntry {
-            active: active_ruby.as_ref().is_some_and(|a| a == &details),
-            installed,
-            details,
-        }
-    }
-}
-
 /// Lists the available and installed rubies.
 pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -> Result<()> {
-    let installed_rubies = config.rubies();
-
-    if installed_only && installed_rubies.is_empty() && format == OutputFormat::Text {
-        warn!("No Ruby installations found.");
-        info!("Try installing Ruby with 'rv ruby install <version>'");
-        return Ok(());
-    }
-
-    let requested = config.ruby_request();
-    let mut active_ruby = requested.find_match_in(&installed_rubies);
+    let request = config.ruby_request();
+    let rubies: Vec<Ruby> = config.rubies();
+    let active_ruby = request.find_match_in(&rubies);
 
     // Might have multiple installed rubies with the same version (e.g., "ruby-3.2.0" and "mruby-3.2.0").
     let mut rubies_map: BTreeMap<String, Vec<RubyEntry>> = BTreeMap::new();
-    for ruby in installed_rubies {
+
+    for ruby in rubies {
         rubies_map
             .entry(ruby.display_name())
             .or_default()
-            .push(RubyEntry::installed(ruby, &active_ruby));
+            .push(RubyEntry {
+                ruby: ruby.clone(),
+                active: active_ruby.as_ref().is_some_and(|r| *r == ruby),
+                installed: true,
+            });
     }
 
     if !installed_only {
         let remote_rubies = config.remote_rubies().await;
+        let platform_rubies = latest_patch_version(&remote_rubies);
 
-        let selected_remote_rubies = latest_patch_version(&remote_rubies);
+        let active_ruby = active_ruby.or_else(|| request.find_match_in(&platform_rubies));
 
-        active_ruby = active_ruby.or_else(|| requested.find_match_in(&selected_remote_rubies));
-
-        // Add selected remote rubies that are not already installed to the list
-        for ruby in selected_remote_rubies {
+        for ruby in platform_rubies {
             rubies_map
                 .entry(ruby.display_name())
-                .or_insert(vec![RubyEntry::available(ruby, &active_ruby)]);
-        }
-
-        let insert_requested_if_available = || {
-            let ruby = requested.find_match_in(&remote_rubies);
-
-            if ruby.is_some() {
-                let details = ruby.clone().unwrap();
-
-                rubies_map
-                    .entry(details.display_name())
-                    .or_insert(vec![RubyEntry {
-                        details,
-                        installed: false,
-                        active: true,
-                    }]);
-            };
-
-            ruby
-        };
-
-        active_ruby.or_else(insert_requested_if_available);
-
-        if rubies_map.is_empty() && format == OutputFormat::Text {
-            warn!("No rubies found for your platform.");
-            return Ok(());
+                .or_insert(vec![RubyEntry {
+                    ruby: ruby.clone(),
+                    active: active_ruby.as_ref().is_some_and(|r| *r == ruby),
+                    installed: false,
+                }]);
         }
     }
 
-    // Create entries for output
     let entries: Vec<RubyEntry> = rubies_map.into_values().flatten().collect();
 
-    print_entries(&entries, format)
+    match format {
+        OutputFormat::Json => serde_json::to_writer_pretty(io::stdout(), entries.as_slice())?,
+        OutputFormat::Text => {
+            if entries.iter().all(|r| !r.installed) {
+                warn!("No Ruby installations found.");
+                info!("Try installing Ruby with 'rv ruby install <version>'");
+            } else if entries.is_empty() {
+                warn!("No rubies found for your platform.");
+            } else {
+                print_entries(&entries);
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn latest_patch_version(remote_rubies: &Vec<Ruby>) -> Vec<Ruby> {
@@ -163,38 +133,26 @@ fn latest_patch_version(remote_rubies: &Vec<Ruby>) -> Vec<Ruby> {
     available_rubies.into_values().collect()
 }
 
-fn print_entries(entries: &[RubyEntry], format: OutputFormat) -> Result<()> {
-    match format {
-        OutputFormat::Text => {
-            let width = entries
-                .iter()
-                .map(|e| e.details.display_name().len())
-                .max()
-                .unwrap_or(0);
-            for entry in entries {
-                println!("{}", format_ruby_entry(entry, width));
-            }
-        }
-        OutputFormat::Json => {
-            serde_json::to_writer_pretty(io::stdout(), entries)?;
-        }
-    }
-    Ok(())
-}
+fn print_entries(entries: &[RubyEntry]) -> () {
+    let width = entries
+        .iter()
+        .map(|e| e.ruby.display_name().len())
+        .max()
+        .unwrap_or(0);
 
-/// Formats a single entry for text output.
-fn format_ruby_entry(entry: &RubyEntry, width: usize) -> String {
-    let marker = if entry.active { "*" } else { " " };
-    let name = entry.details.display_name();
+    for entry in entries {
+        let marker = if entry.active { "*" } else { " " };
+        let name = entry.ruby.display_name();
 
-    if entry.installed {
-        format!(
-            "{marker} {name:width$} {} {}",
-            "[installed]".green(),
-            entry.details.executable_path().cyan()
-        )
-    } else {
-        format!("{marker} {name:width$} {}", "[available]".dimmed())
+        if entry.installed {
+            println!(
+                "{marker} {name:width$} {} {}",
+                "[installed]".green(),
+                entry.ruby.executable_path().cyan()
+            )
+        } else {
+            println!("{marker} {name:width$} {}", "[available]".dimmed())
+        }
     }
 }
 
