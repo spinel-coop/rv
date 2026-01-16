@@ -1,11 +1,10 @@
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
 use miette::{IntoDiagnostic, Result};
 use rayon::prelude::*;
 use rayon_tracing::TracedIndexedParallelIterator;
 use tracing::debug;
 
 use rv_ruby::Ruby;
-use rv_ruby::request::RubyRequest;
 
 use super::{Config, Error};
 
@@ -86,11 +85,14 @@ impl Config {
 
     /// Discover all Ruby installations from configured directories with caching
     pub fn discover_installed_rubies(&self) -> Vec<Ruby> {
-        self.discover_rubies(&RubyRequest::default())
+        self.discover_rubies_matching(|_| true)
     }
 
     /// Discover Ruby installations matching a request from configured directories with caching
-    pub fn discover_rubies(&self, request: &RubyRequest) -> Vec<Ruby> {
+    pub fn discover_rubies_matching<F>(&self, predicate: F) -> Vec<Ruby>
+    where
+        F: Fn(&Utf8PathBuf) -> bool,
+    {
         // Collect all potential Ruby paths first
         let ruby_paths: Vec<_> = self
             .ruby_dirs
@@ -105,7 +107,7 @@ impl Config {
                         entry
                             .ok()
                             .map(|entry| entry.path().to_path_buf())
-                            .filter(|path| path.is_dir() && request.matches_dir(path))
+                            .filter(|path| path.is_dir() && predicate(path))
                     })
             })
             .collect();
