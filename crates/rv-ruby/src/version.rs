@@ -50,28 +50,44 @@ impl PartialOrd for RubyVersion {
     }
 }
 
+/// Ways a Ruby version can fail to be parsed.
+#[derive(thiserror::Error, Debug)]
+pub enum ParseVersionError {
+    #[error(transparent)]
+    Invalid(#[from] RequestError),
+    #[error("Missing major version")]
+    MissingMajor,
+    #[error("Missing minor version")]
+    MissingMinor,
+    #[error("Missing patch version")]
+    MissingPatch,
+}
+
+impl FromStr for RubyVersion {
+    type Err = ParseVersionError;
+
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        RubyRequest::from_str(input)?.try_into()
+    }
+}
+
 /// If the Ruby request is very specific, it can be made into a specific Ruby version.
 impl TryFrom<RubyRequest> for RubyVersion {
-    type Error = String;
+    type Error = ParseVersionError;
 
     fn try_from(request: RubyRequest) -> Result<Self, Self::Error> {
-        if let Some(major) = request.major
-            && let Some(minor) = request.minor
-            && let Some(patch) = request.patch
-        {
-            Ok(RubyVersion {
-                major,
-                minor,
-                patch,
-                engine: request.engine,
-                tiny: request.tiny,
-                prerelease: request.prerelease,
-            })
-        } else {
-            Err(format!(
-                "The range {request} was not specific enough to pick a specific Ruby version"
-            ))
-        }
+        let major = request.major.ok_or(ParseVersionError::MissingMajor)?;
+        let minor = request.minor.ok_or(ParseVersionError::MissingMinor)?;
+        let patch = request.patch.ok_or(ParseVersionError::MissingPatch)?;
+
+        Ok(Self {
+            engine: request.engine,
+            major,
+            minor,
+            patch,
+            tiny: request.tiny,
+            prerelease: request.prerelease,
+        })
     }
 }
 
@@ -180,37 +196,6 @@ impl std::fmt::Display for RubyVersion {
         };
 
         Ok(())
-    }
-}
-
-/// Ways that a ruby version could fail to be parsed.
-#[derive(thiserror::Error, Debug)]
-pub enum ParseVersionError {
-    #[error(transparent)]
-    Invalid(#[from] RequestError),
-    #[error("Missing major version")]
-    MissingMajor,
-    #[error("Missing minor version")]
-    MissingMinor,
-    #[error("Missing patch version")]
-    MissingPatch,
-}
-
-impl FromStr for RubyVersion {
-    type Err = ParseVersionError;
-    fn from_str(input: &str) -> Result<Self, ParseVersionError> {
-        let req = RubyRequest::from_str(input)?;
-        let major = req.major.ok_or(ParseVersionError::MissingMajor)?;
-        let minor = req.minor.ok_or(ParseVersionError::MissingMinor)?;
-        let patch = req.patch.ok_or(ParseVersionError::MissingPatch)?;
-        Ok(Self {
-            engine: req.engine,
-            major,
-            minor,
-            patch,
-            tiny: req.tiny,
-            prerelease: req.prerelease,
-        })
     }
 }
 
