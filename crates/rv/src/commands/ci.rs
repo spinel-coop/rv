@@ -101,6 +101,8 @@ pub enum Error {
     MissingGemspec(String),
     #[error("Error converting YAML gemspec to Ruby: {0}")]
     GemspecToRubyError(String),
+    #[error("Error evaluating gemspec: {0}")]
+    GemspecError(String),
     #[error("rv ci needs a Gemfile, but could not find it")]
     MissingImplicitGemfile,
     #[error("Gemfile \"{0}\" does not exist")]
@@ -322,10 +324,6 @@ fn install_path(
     for path in glob(&pattern).expect("invalid glob pattern").flatten() {
         debug!("found gemspec at {:?}", path);
         // find the .gemspec file(s)
-        let cached_gemspecs_dir = config
-            .cache
-            .shard(rv_cache::CacheBucket::Gemspec, "gemspecs")
-            .into_path_buf();
         let dep = path_section.specs.iter().find(|s| {
             path.to_string_lossy()
                 .contains(&format!("{}.gemspec", s.gem_version.name))
@@ -336,50 +334,21 @@ fn install_path(
             let cache_key = format!("{path_key}-{gemname}.gemspec");
             let cached_gemspec_path = cached_gemspecs_dir.join(&cache_key);
 
-            // check the cache for "gitsha-gemname.gemspec", if not:
             let cached = std::fs::exists(&cached_gemspec_path).is_ok_and(|exists| exists) && {
                 let gemspec_modified = std::fs::metadata(&path)?.modified()?;
                 let cache_modified = std::fs::metadata(&cached_gemspec_path)?.modified()?;
                 gemspec_modified < cache_modified
             };
-            let yaml_contents = if cached {
-                std::fs::read_to_string(&cached_gemspec_path)?
-            } else {
-                let gemspec_path =
-                    Utf8PathBuf::try_from(path.clone()).expect("gemspec path not valid UTF-8");
-                // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
-                let yaml_gemspec_vec = crate::commands::ruby::run::run_no_install(
-                    config,
-                    &config.ruby_request(),
-                    &[
-                        "-e",
-                        &format!(
-                            "puts Gem::Specification.load(\"{}\").to_yaml",
-                            gemspec_path.canonicalize_utf8()?,
-                        ),
-                    ],
-                    CaptureOutput::Both,
-                    Some(&path_dir),
-                    Vec::new(),
-                )?
-                .stdout;
-                String::from_utf8(yaml_gemspec_vec).unwrap() // arghhhhhhhhhh
-            };
             // parse the YAML gemspec to get the executable names
-            let dep_gemspec = match rv_gem_specification_yaml::parse(&yaml_contents) {
-                Ok(parsed) => {
-                    // cache the YAML gemspec as "gitsha-gemname.gemspec"
-                    debug!("writing YAML gemspec to {}", &cached_gemspec_path);
-                    fs_err::write(&cached_gemspec_path, &yaml_contents)?;
-                    parsed
+            let dep_gemspec = if cached {
+                let yaml_contents = std::fs::read_to_string(&cached_gemspec_path)?;
+
+                match rv_gem_specification_yaml::parse(&yaml_contents) {
+                    Ok(parsed) => parsed,
+                    Err(_) => cache_gemspec_path(config, &path_dir, path, cached_gemspec_path)?,
                 }
-                Err(e) => {
-                    eprintln!(
-                        "Warning: path gem specification at {} was invalid: {e}",
-                        path.to_string_lossy()
-                    );
-                    return Ok(());
-                }
+            } else {
+                cache_gemspec_path(config, &path_dir, path, cached_gemspec_path)?
             };
             // pass the executable names to generate binstubs
             let binstub_dir = args.install_path.join("bin");
@@ -503,10 +472,6 @@ fn install_git_repo(
         debug!("found gemspec at {:?}", path);
         // find the .gemspec file(s)
         let gitsha = &repo.sha;
-        let cached_gemspecs_dir = config
-            .cache
-            .shard(rv_cache::CacheBucket::Gemspec, "gemspecs")
-            .into_path_buf();
         let dep = repo.specs.iter().find(|s| {
             path.to_string_lossy()
                 .contains(&format!("{}.gemspec", s.gem_version.name))
@@ -517,41 +482,15 @@ fn install_git_repo(
             let cache_key = format!("{gitsha}-{gemname}.gemspec");
             let cached_gemspec_path = cached_gemspecs_dir.join(&cache_key);
             let cached = std::fs::exists(&cached_gemspec_path).is_ok_and(|exists| exists);
-            let yaml_contents = if cached {
-                std::fs::read_to_string(cached_gemspec_path)?
-            } else {
-                // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
-                let yaml_gemspec_vec = crate::commands::ruby::run::run_no_install(
-                    config,
-                    &config.ruby_request(),
-                    &[
-                        "-e",
-                        &format!(
-                            "puts Gem::Specification.load(\"{}\").to_yaml",
-                            path.to_string_lossy() // TODO: how do I interpolate an os_str into a shell arg :(
-                        ),
-                    ],
-                    CaptureOutput::Both,
-                    Some(&repo.path),
-                    Vec::new(),
-                )?
-                .stdout;
-                let yaml_gemspec = String::from_utf8(yaml_gemspec_vec).unwrap(); // arghhhhhhh
-                // cache the YAML gemspec as "gitsha-gemname.gemspec"
-                debug!("writing YAML gemspec to {}", &cached_gemspec_path);
-                fs_err::write(&cached_gemspec_path, &yaml_gemspec)?;
-                yaml_gemspec
-            };
-            // parse the YAML gemspec to get the executable names
-            let dep_gemspec = match rv_gem_specification_yaml::parse(&yaml_contents) {
-                Ok(parsed) => parsed,
-                Err(e) => {
-                    eprintln!(
-                        "Warning: git gem specification at {} was invalid: {e}",
-                        path.to_string_lossy()
-                    );
-                    return Ok(());
+            let dep_gemspec = if cached {
+                let yaml_contents = std::fs::read_to_string(&cached_gemspec_path)?;
+
+                match rv_gem_specification_yaml::parse(&yaml_contents) {
+                    Ok(parsed) => parsed,
+                    Err(_) => cache_gemspec_path(config, &repo.path, path, cached_gemspec_path)?,
                 }
+            } else {
+                cache_gemspec_path(config, &repo.path, path, cached_gemspec_path)?
             };
             // pass the executable names to generate binstubs
             let binstub_dir = args.install_path.join("bin");
@@ -658,6 +597,46 @@ fn download_git_repo<'i>(
         path: git_repo_dir,
         submodules: git_source.submodules,
     })
+}
+
+fn cache_gemspec_path(
+    config: &Config,
+    path_dir: &Utf8PathBuf,
+    path: PathBuf,
+    cached_path: Utf8PathBuf,
+) -> Result<GemSpecification> {
+    let gemspec_path = Utf8PathBuf::try_from(path).expect("gemspec path not valid UTF-8");
+    // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
+    let result = crate::commands::ruby::run::run_no_install(
+        config,
+        &config.ruby_request(),
+        &[
+            "-e",
+            &format!(
+                "puts Gem::Specification.load(\"{}\").to_yaml",
+                gemspec_path.canonicalize_utf8()?,
+            ),
+        ],
+        CaptureOutput::Both,
+        Some(path_dir),
+        Vec::new(),
+    )?;
+
+    let error = String::from_utf8(result.stderr).unwrap();
+
+    if !result.status.success() {
+        return Err(Error::GemspecError(error));
+    }
+
+    let yaml_contents = String::from_utf8(result.stdout).unwrap();
+
+    let dep_gemspec = rv_gem_specification_yaml::parse(&yaml_contents)
+        .expect("Failed to parse the result of RubyGems YAML serialization");
+
+    debug!("writing YAML gemspec to {}", &cached_path);
+    fs_err::write(&cached_path, &yaml_contents)?;
+
+    Ok(dep_gemspec)
 }
 
 fn find_manifest_paths(

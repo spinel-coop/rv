@@ -284,6 +284,48 @@ fn test_clean_install_evaluates_local_gemspecs_in_the_right_cwd() {
     assert_eq!(output.normalized_stderr(), "");
 }
 
+#[test]
+fn test_clean_install_fails_if_evaluating_a_path_gemspec_fails() {
+    use indoc::formatdoc;
+
+    let mut test = RvTest::new();
+    let mock = test.mock_releases(["4.0.0"].to_vec());
+
+    let project_dir = test.temp_root().join("project");
+    std::fs::create_dir_all(project_dir.as_path()).unwrap();
+    std::fs::create_dir_all(project_dir.join("foo").as_path()).unwrap();
+
+    let foo_gemspec = formatdoc! {"
+        require './missing.rb'
+
+        Gem::Specification.new do |s|
+            s.name = 'foo'
+            s.version = Foo::VERSION
+            s.summary = 'The foo gem'
+            s.author = 'Bandre Barco'
+        end
+    "};
+
+    std::fs::write(project_dir.join("foo/foo.gemspec"), foo_gemspec).unwrap();
+
+    test.cwd = project_dir;
+
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.relative-gemspec-paths");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.relative-gemspec-paths.lock");
+
+    let output = test.ci(&[]);
+
+    mock.assert();
+    output.assert_failure();
+
+    assert!(
+        !output
+            .normalized_stderr()
+            .contains("cannot load no such file -- ./missing.rb"),
+        "should show an error about the file that failed to load"
+    );
+}
+
 fn find_all_files_in_dir(cwd: &std::path::Path) -> String {
     let test_dir_contents = std::process::Command::new("find")
         .args([".", "-type", "f"])
