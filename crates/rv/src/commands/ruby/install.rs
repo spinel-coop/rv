@@ -26,6 +26,8 @@ pub enum Error {
     StripPrefixError(#[from] std::path::StripPrefixError),
     #[error(transparent)]
     ZipError(#[from] zip::result::ZipError),
+    #[error(transparent)]
+    SevenZipError(#[from] sevenz_rust2::Error),
     #[error("no matching ruby version found")]
     NoMatchingRuby,
     #[error("Download from URL {url} failed with status code {status}. Response body was {body}")]
@@ -156,7 +158,7 @@ fn platform_info() -> Result<(&'static str, &'static str)> {
         "x86_64-apple-darwin" => Ok(("ventura", "tar.gz")),
         "x86_64-unknown-linux-gnu" => Ok(("x86_64_linux", "tar.gz")),
         "aarch64-unknown-linux-gnu" => Ok(("arm64_linux", "tar.gz")),
-        "x86_64-pc-windows-msvc" => Ok(("x86_64_windows", "zip")),
+        "x86_64-pc-windows-msvc" => Ok(("x64", "7z")),
         other => Err(rv_gem_types::platform::PlatformError::UnsupportedPlatform {
             platform: other.to_string(),
         }
@@ -167,6 +169,20 @@ fn platform_info() -> Result<(&'static str, &'static str)> {
 fn ruby_url(version: &str) -> Result<String> {
     let (arch, ext) = platform_info()?;
 
+    // Windows uses RubyInstaller2 directly
+    if cfg!(target_os = "windows") {
+        let download_base = std::env::var("RV_INSTALL_URL").unwrap_or_else(|_| {
+            format!(
+                "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-{version}-1"
+            )
+        });
+        // RubyInstaller2 URL pattern: rubyinstaller-{version}-1-x64.7z
+        return Ok(format!(
+            "{download_base}/rubyinstaller-{version}-1-{arch}.{ext}"
+        ));
+    }
+
+    // macOS/Linux use rv-ruby
     let download_base = std::env::var("RV_INSTALL_URL")
         .unwrap_or("https://github.com/spinel-coop/rv-ruby/releases/latest/download".to_owned());
 
@@ -314,10 +330,10 @@ fn extract_ruby_archive(
 
     // Determine archive type by extension
     let extension = archive_path.extension().unwrap_or("");
-    if extension == "zip" {
-        extract_zip(archive_path, rubies_dir, version)
-    } else {
-        extract_tarball(archive_path, rubies_dir, version)
+    match extension {
+        "zip" => extract_zip(archive_path, rubies_dir, version),
+        "7z" => extract_7z(archive_path, rubies_dir, version),
+        _ => extract_tarball(archive_path, rubies_dir, version),
     }
 }
 
@@ -372,6 +388,22 @@ fn extract_zip(zip_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> Res
     Ok(())
 }
 
+fn extract_7z(archive_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> Result<()> {
+    // Extract 7z archive to rubies_dir
+    sevenz_rust2::decompress_file(archive_path.as_std_path(), rubies_dir.as_std_path())?;
+
+    // RubyInstaller2 extracts to: rubyinstaller-{version}-1-x64/
+    // We need to rename it to: ruby-{version}/
+    let extracted_dir = rubies_dir.join(format!("rubyinstaller-{version}-1-x64"));
+    let target_dir = rubies_dir.join(format!("ruby-{version}"));
+
+    if extracted_dir.exists() {
+        fs_err::rename(&extracted_dir, &target_dir)?;
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -387,8 +419,8 @@ mod tests {
             Ok((arch, ext)) => {
                 assert!(!arch.is_empty(), "arch should not be empty");
                 assert!(
-                    ext == "tar.gz" || ext == "zip",
-                    "extension should be tar.gz or zip, got: {ext}"
+                    ext == "tar.gz" || ext == "zip" || ext == "7z",
+                    "extension should be tar.gz, zip, or 7z, got: {ext}"
                 );
             }
             Err(Error::UnsupportedPlatform(_)) => {
