@@ -75,3 +75,28 @@ jobs:
           wsl -d Ubuntu-24.04 -- ./target/release/rv --version
           wsl -d Ubuntu-24.04 -- ./target/release/rv --help
           wsl -d Ubuntu-24.04 -- ./target/release/rv ruby run 3.4.7 -- -e 'puts RUBY_DESCRIPTION'
+
+  native-windows:
+    name: Run on Native Windows
+    runs-on: windows-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build rv
+        run: cargo build --release --locked --bin rv
+
+      - name: Test rv runs
+        run: |
+          .\target\release\rv.exe --version
+          .\target\release\rv.exe --help
+
+      - name: Test rv installs and runs Ruby (RubyInstaller2)
+        run: |
+          .\target\release\rv.exe ruby run 3.4.4 -- -e "puts RUBY_DESCRIPTION"
