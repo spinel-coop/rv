@@ -60,6 +60,7 @@ clap_complete_nushell = "4.5.10"
 url = "2.5.7"
 bytes = "1.11.0"
 saphyr.workspace = true
+sevenz-rust2.workspace = true
 sha2.workspace = true
 hex = "0.4.3"
 assert_fs.workspace = true

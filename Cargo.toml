@@ -54,6 +54,7 @@ serde_json = "1.0"
 serde_with = { version = "3.16.0", default-features = false, features = [
   "macros",
 ] }
+sevenz-rust2 = "0.20.1"
 sha1 = "0.10"
 sha2 = "0.10"
 shell-escape = "0.1.5"
