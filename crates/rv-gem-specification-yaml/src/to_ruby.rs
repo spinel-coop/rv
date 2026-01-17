@@ -44,7 +44,7 @@ pub fn to_ruby(spec: Specification) -> String {
     );
     if extensions.is_empty().not() {
         ruby_src.push_str("# stub: ");
-        // REVIEW: Is this _seriously_ the joining character?
+        // Yes, this is actually the joining character, null byte.
         let exts = extensions.join("\0");
         ruby_src.push_str(&exts);
         ruby_src.push('\n');
@@ -207,14 +207,14 @@ fn ruby_scalar(input: &str) -> String {
 }
 
 fn ruby_list(v: &[String]) -> String {
-    v.into_iter()
+    v.iter()
         .map(|p| format!("\"{}\".freeze", ruby_scalar(p)))
         .collect::<Vec<_>>()
         .join(", ")
 }
 
 fn ruby_list_opt(v: &[Option<String>]) -> String {
-    v.into_iter()
+    v.iter()
         .flatten()
         .map(|p| format!("\"{}\".freeze", ruby_scalar(p)))
         .collect::<Vec<_>>()
@@ -222,7 +222,7 @@ fn ruby_list_opt(v: &[Option<String>]) -> String {
 }
 
 fn ruby_list_opt_nil(v: &[Option<String>]) -> String {
-    v.into_iter()
+    v.iter()
         .map(|p| {
             if let Some(p) = p {
                 format!("\"{}\".freeze", ruby_scalar(p))
