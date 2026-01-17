@@ -12,7 +12,7 @@ Gem::Specification.new do |s|
   s.authors = ["Nobu Nakada".freeze]
   s.date = "2026-01-13"
   s.description = "add console capabilities to IO instances.".freeze
-  s.email = "nobu@ruby-lang.org".freeze
+  s.email = ["nobu@ruby-lang.org".freeze]
   s.extensions = ["ext/io/console/extconf.rb".freeze]
   s.files = [".document".freeze, "BSDL".freeze, "COPYING".freeze, "README.md".freeze, "ext/io/console/console.c".freeze, "ext/io/console/extconf.rb".freeze, "ext/io/console/win32_vk.inc".freeze, "io/console.bundle".freeze, "lib/console/size.rb".freeze, "lib/lib/io/console/size.rb".freeze]
   s.homepage = "https://github.com/ruby/io-console".freeze

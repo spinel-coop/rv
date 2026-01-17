@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::Not};
+use std::ops::Not;
 
 use rv_gem_types::Specification;
 
@@ -73,7 +73,7 @@ pub fn to_ruby(spec: Specification) -> String {
         ruby_list(&require_paths)
     )
     .unwrap();
-    writeln!(ruby_src, "  s.authors = [{}]", ruby_list_opt(authors)).unwrap();
+    writeln!(ruby_src, "  s.authors = [{}]", ruby_list_opt(&authors)).unwrap();
     if cert_chain.is_empty().not() {
         writeln!(ruby_src, "  s.cert_chain = [{}]", ruby_list(&cert_chain)).unwrap();
     }
@@ -99,7 +99,7 @@ pub fn to_ruby(spec: Specification) -> String {
         .unwrap();
     }
     if email.is_empty().not() {
-        writeln!(ruby_src, "  s.email = [{}]", ruby_list_opt_nil(email)).unwrap();
+        writeln!(ruby_src, "  s.email = [{}]", ruby_list_opt_nil(&email)).unwrap();
     }
     if executables.is_empty().not() {
         writeln!(ruby_src, "  s.executables = [{}]", ruby_list(&executables)).unwrap();
@@ -188,12 +188,14 @@ pub fn to_ruby(spec: Specification) -> String {
 }
 
 fn ruby_scalar(input: &str) -> String {
-    // Escape quotes
+    // Escape strings so they can be put into a Ruby string literal.
     let mut s = String::new();
     for ch in input.chars() {
+        // Escape double-quotes
         if ch == '"' {
             s.push('\\');
             s.push(ch);
+        // Escape newlines
         } else if ch == '\n' {
             s.push('\\');
             s.push('n');
@@ -211,19 +213,19 @@ fn ruby_list(v: &[String]) -> String {
         .join(", ")
 }
 
-fn ruby_list_opt<T: Display>(v: Vec<Option<T>>) -> String {
+fn ruby_list_opt(v: &[Option<String>]) -> String {
     v.into_iter()
         .flatten()
-        .map(|p| format!("\"{p}\".freeze"))
+        .map(|p| format!("\"{}\".freeze", ruby_scalar(p)))
         .collect::<Vec<_>>()
         .join(", ")
 }
 
-fn ruby_list_opt_nil<T: Display>(v: Vec<Option<T>>) -> String {
+fn ruby_list_opt_nil(v: &[Option<String>]) -> String {
     v.into_iter()
         .map(|p| {
             if let Some(p) = p {
-                format!("\"{p}\".freeze")
+                format!("\"{}\".freeze", ruby_scalar(p))
             } else {
                 "nil".to_owned()
             }
@@ -302,7 +304,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Some weird null bytes in this file"]
     fn test_digest() {
         run_test("digest");
     }
@@ -363,7 +364,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Email as a single string vs. array of one string"]
     fn test_console() {
         run_test("io-console");
     }
@@ -389,7 +389,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Email as a single string vs. array of one string"]
     fn test_json() {
         run_test("json");
     }
