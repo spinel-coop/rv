@@ -62,7 +62,7 @@ pub fn to_ruby(spec: Specification) -> String {
         write!(ruby_src, "  s.metadata = {{ ").unwrap();
         let mut md_items = Vec::with_capacity(metadata.len());
         for (k, v) in &metadata {
-            md_items.push(format!("\"{k}\" => \"{v}\""));
+            md_items.push(format!("\"{}\" => \"{}\"", k, v));
         }
         ruby_src.push_str(&md_items.join(", "));
         writeln!(ruby_src, " }} if s.respond_to? :metadata=").unwrap();
@@ -173,12 +173,13 @@ pub fn to_ruby(spec: Specification) -> String {
                 .requirement
                 .constraints
                 .into_iter()
-                .map(|constr| format!("\"{constr}\".freeze"))
+                .map(|constraint| format!("\"{}\".freeze", constraint))
                 .collect();
             let dep_req = dep_req.join(", ");
             writeln!(
                 ruby_src,
-                "  s.add_{dep_type}_dependency(%q<{dep_name}>.freeze, [{dep_req}])",
+                "  s.add_{}_dependency(%q<{}>.freeze, [{}])",
+                dep_type, dep_name, dep_req,
             )
             .unwrap();
         }
@@ -187,10 +188,10 @@ pub fn to_ruby(spec: Specification) -> String {
     ruby_src
 }
 
-fn ruby_scalar(input: &str) -> String {
+fn ruby_scalar<T: std::fmt::Display>(input: &T) -> String {
     // Escape strings so they can be put into a Ruby string literal.
     let mut s = String::new();
-    for ch in input.chars() {
+    for ch in input.to_string().chars() {
         // Escape double-quotes
         if ch == '"' {
             s.push('\\');
@@ -240,8 +241,8 @@ mod tests {
     use super::*;
 
     fn run_test(name: &str) {
-        let input_path = format!("tests/yaml-to-ruby/{name}.yaml");
-        let output_path = format!("tests/yaml-to-ruby/{name}.gemspec");
+        let input_path = format!("tests/yaml-to-ruby/{}.yaml", name);
+        let output_path = format!("tests/yaml-to-ruby/{}.gemspec", name);
         let input = fs_err::read_to_string(input_path).unwrap();
         let expected = fs_err::read_to_string(output_path).unwrap();
         let actual = to_ruby(crate::parse(&input).unwrap());
