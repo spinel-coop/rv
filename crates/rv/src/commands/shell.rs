@@ -34,6 +34,8 @@ pub enum Shell {
     Bash,
     Fish,
     Nu,
+    #[clap(name = "powershell")]
+    PowerShell,
 }
 
 impl std::fmt::Display for Shell {
@@ -43,6 +45,7 @@ impl std::fmt::Display for Shell {
             Self::Bash => write!(f, "bash"),
             Self::Fish => write!(f, "fish"),
             Self::Nu => write!(f, "nu"),
+            Self::PowerShell => write!(f, "powershell"),
         }
     }
 }
@@ -105,6 +108,16 @@ pub fn setup(config: &Config, shell: Shell) -> Result<()> {
                 echo 'mkdir ($nu.data-dir | path join \"vendor/autoload\")
                 {rv} shell init nu | save -f ($nu.data-dir | path join \"vendor/autoload/rv.nu\")
                 {rv} shell completions nu | save --append ($nu.data-dir | path join \"vendor/autoload/rv.nu\")' | save --append $nu.config-path
+            "};
+
+            Ok(())
+        }
+        Shell::PowerShell => {
+            printdoc! {"
+                {header}
+
+                Add-Content -Path $PROFILE -Value 'Invoke-Expression (& {rv} shell init powershell)'
+                Add-Content -Path $PROFILE -Value 'Invoke-Expression (& {rv} shell completions powershell)'
             "};
 
             Ok(())
