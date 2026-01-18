@@ -3,13 +3,11 @@ use std::str::FromStr;
 use reqwest::Client;
 use rv_lockfile::datatypes::SemverConstraint;
 use rv_ruby::{request::RequestError, version::ParseVersionError};
+use rv_version::Version as GemVersion;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::{
-    commands::tool::install::{GemName, gem_version::GemVersion},
-    http_client::rv_http_client,
-};
+use crate::{commands::tool::install::GemName, http_client::rv_http_client};
 
 pub struct Gemserver {
     pub url: Url,
@@ -95,7 +93,7 @@ pub enum VersionAvailableParse {
     #[error("Unknown semver constraint type {0}")]
     UnknownSemverType(String),
     #[error(transparent)]
-    InvalidGemVersion(#[from] super::gem_version::InvalidGemVersion),
+    InvalidGemVersion(#[from] rv_version::VersionError),
 }
 
 impl VersionAvailable {

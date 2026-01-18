@@ -9,7 +9,6 @@ use crate::{
     config::Config,
 };
 
-mod gem_version;
 mod gemserver;
 mod pubgrub_bridge;
 mod transitive_dep_query;

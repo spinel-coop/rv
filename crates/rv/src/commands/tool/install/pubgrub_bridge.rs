@@ -2,10 +2,10 @@ use std::collections::HashMap;
 
 use pubgrub::{OfflineDependencyProvider, Ranges, SelectedDependencies};
 use rv_lockfile::datatypes::SemverConstraint;
+use rv_version::Version as GemVersion;
 
 use super::{
     GemName,
-    gem_version::GemVersion,
     gemserver::{VersionAvailable, VersionConstraints},
 };
 
@@ -63,12 +63,16 @@ impl From<VersionConstraints> for Ranges<GemVersion> {
                 SemverConstraint::GreaterThanOrEqual => vec![Ranges::higher_than(v)],
                 SemverConstraint::LessThanOrEqual => vec![Ranges::lower_than(v)],
                 // if >1.0, use the given numbers as the floor and the next major as not allowed.
-                SemverConstraint::Pessimistic if v.major >= 1 => vec![
-                    // Given version as the floor
-                    Ranges::higher_than(v.clone()),
-                    // Next major as not allowed.
-                    Ranges::strictly_lower_than(v.next_major()),
-                ],
+                SemverConstraint::Pessimistic
+                    if v.major() >= rv_version::VersionSegment::Number(1) =>
+                {
+                    vec![
+                        // Given version as the floor
+                        Ranges::higher_than(v.clone()),
+                        // Next major as not allowed.
+                        Ranges::strictly_lower_than(v.next_major()),
+                    ]
+                }
                 // if <1.0, use the given number as the floor and the next minor as not allowed.
                 SemverConstraint::Pessimistic => vec![
                     // Given version as the floor

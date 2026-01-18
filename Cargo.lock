@@ -2153,6 +2153,7 @@ dependencies = [
  "rv-gem-types",
  "rv-lockfile",
  "rv-ruby",
+ "rv-version",
  "saphyr",
  "serde",
  "serde_json",
@@ -2285,6 +2286,7 @@ dependencies = [
 name = "rv-version"
 version = "0.1.0"
 dependencies = [
+ "serde",
  "thiserror",
 ]
 
