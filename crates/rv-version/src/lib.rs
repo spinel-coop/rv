@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum VersionError {
     #[error("Malformed version number string {version}")]
@@ -12,7 +14,7 @@ pub enum VersionError {
     PureAlphabetic { version: String },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum VersionSegment {
     Number(u32),
     String(String),
@@ -30,6 +32,13 @@ impl VersionSegment {
     pub fn is_number(&self) -> bool {
         matches!(self, Self::Number(_))
     }
+
+    pub fn increment(&mut self) {
+        match self {
+            Self::Number(n) => *self = Self::Number(*n + 1),
+            Self::String(_) => {}
+        }
+    }
 }
 
 impl std::fmt::Display for VersionSegment {
@@ -41,7 +50,7 @@ impl std::fmt::Display for VersionSegment {
     }
 }
 
-#[derive(Debug, Clone, Eq)]
+#[derive(Debug, Clone, Eq, Serialize, Deserialize)]
 pub struct Version {
     pub version: String,
     pub segments: Vec<VersionSegment>,
@@ -225,6 +234,36 @@ impl Version {
         }
 
         parts
+    }
+    pub fn next_major(&self) -> Self {
+        let mut major = self.major();
+        major.increment();
+        Self::new(major.to_string()).expect("Invalid version string format")
+    }
+
+    pub fn next_minor(&self) -> Self {
+        let segments = self.canonical_segments();
+        let mut segments = segments.iter();
+
+        let major = segments.next().expect("Version cannot be empty");
+        let minor = match segments.next() {
+            Some(minor) => {
+                let mut m = minor.clone();
+                m.increment();
+                m
+            }
+            None => VersionSegment::Number(1),
+        };
+        Self::new(format!("{major}.{minor}")).expect("Invalid string version format")
+    }
+
+    pub fn major(&self) -> VersionSegment {
+        self.canonical_segments()
+            .first()
+            .as_ref()
+            .expect("Version cannot be empty")
+            .to_owned()
+            .to_owned()
     }
 }
 
@@ -540,5 +579,24 @@ mod tests {
 
         assert_eq!(Ordering::Less, v("5.a").cmp(&v("5.0.0.rc2")));
         assert_eq!(Ordering::Greater, v("5.x").cmp(&v("5.0.0.rc2")));
+    }
+}
+
+#[cfg(test)]
+mod next_version {
+    use super::*;
+
+    #[test]
+    fn example_next_major() {
+        // so ~>2.1.5 allows >=2.1.5, <3.0.0
+        let v: Version = "2.1.5".parse().unwrap();
+        assert_eq!(v.next_major(), "3.0.0".parse().unwrap());
+    }
+
+    #[test]
+    fn example_next_minor() {
+        // ~> 0.4.3 allows >=0.4.3, <0.5
+        let v: Version = "0.4.3".parse().unwrap();
+        assert_eq!(v.next_minor(), "0.5".parse().unwrap());
     }
 }
