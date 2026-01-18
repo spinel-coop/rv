@@ -200,6 +200,11 @@ fn ruby_scalar<T: std::fmt::Display>(input: &T) -> String {
         } else if ch == '\n' {
             s.push('\\');
             s.push('n');
+        // Escape backslashes
+        } else if ch == '\\' {
+            s.push('\\');
+            s.push(ch);
+        // No escape needed, just do the character like normal.
         } else {
             s.push(ch);
         }
