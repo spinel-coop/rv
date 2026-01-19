@@ -578,4 +578,23 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn test_sorted() {
+        let versions: Vec<_> = [
+            ".0.0.pre",
+            "1.0.0.pre2",
+            "1.0.0.rc",
+            "1.0.0.rc2",
+            "1.0.0",
+            "1.1.0.a",
+            "1.1.0",
+        ]
+        .into_iter()
+        .map(|s| Version::new(s).unwrap())
+        .collect();
+        let mut v2 = versions.clone();
+        v2.sort_unstable();
+        assert_eq!(v2, versions);
+    }
 }
