@@ -1,0 +1,125 @@
+--- !ruby/object:Gem::Specification
+name: rdoc
+version: !ruby/object:Gem::Version
+  version: 7.0.3
+platform: ruby
+authors:
+- Eric Hodel
+- Dave Thomas
+- Phil Hagelberg
+- Tony Strauss
+- Zachary Scott
+- Hiroshi SHIBATA
+- ITOYANAGI Sakura
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: psych
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 4.0.0
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 4.0.0
+- !ruby/object:Gem::Dependency
+  name: erb
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+- !ruby/object:Gem::Dependency
+  name: tsort
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+description: |
+  RDoc produces HTML and command-line documentation for Ruby projects.
+  RDoc includes the +rdoc+ and +ri+ tools for generating and displaying documentation from the command-line.
+email:
+- drbrain@segment7.net
+- ''
+- ''
+- ''
+- mail@zzak.io
+- hsbt@ruby-lang.org
+- aycabta@gmail.com
+executables:
+- rdoc
+- ri
+extensions: []
+extra_rdoc_files:
+- CONTRIBUTING.md
+- CVE-2013-0256.rdoc
+- ExampleMarkdown.md
+- ExampleRDoc.rdoc
+- History.rdoc
+- LEGAL.rdoc
+- LICENSE.rdoc
+- README.md
+- RI.md
+- TODO.rdoc
+files:
+- CONTRIBUTING.md
+- CVE-2013-0256.rdoc
+- ExampleMarkdown.md
+- ExampleRDoc.rdoc
+- History.rdoc
+- LEGAL.rdoc
+- LICENSE.rdoc
+- README.md
+- RI.md
+- TODO.rdoc
+- exe/rdoc
+- exe/ri
+homepage: https://ruby.github.io/rdoc
+licenses:
+- Ruby
+metadata:
+  changelog_uri: https://github.com/ruby/rdoc/releases
+  homepage_uri: https://ruby.github.io/rdoc
+  source_code_uri: https://github.com/ruby/rdoc
+rdoc_options:
+- "--main"
+- README.md
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.6.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '2.2'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: RDoc produces HTML and command-line documentation for Ruby projects
+test_files: []

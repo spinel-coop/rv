@@ -1,0 +1,86 @@
+--- !ruby/object:Gem::Specification
+name: openssl
+version: !ruby/object:Gem::Version
+  version: 4.0.0
+platform: ruby
+authors:
+- Martin Bosslet
+- SHIBATA Hiroshi
+- Zachary Scott
+- Kazuki Yamaguchi
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: OpenSSL for Ruby provides access to SSL/TLS and general-purpose cryptography
+  based on the OpenSSL library.
+email:
+- ruby-core@ruby-lang.org
+executables: []
+extensions:
+- ext/openssl/extconf.rb
+extra_rdoc_files:
+- CONTRIBUTING.md
+- NEWS.md
+- README.ja.md
+- README.md
+files:
+- BSDL
+- CONTRIBUTING.md
+- COPYING
+- History.md
+- NEWS.md
+- README.ja.md
+- README.md
+- ext/openssl/extconf.rb
+- lib/lib/openssl.rb
+- lib/lib/openssl/bn.rb
+- lib/lib/openssl/buffering.rb
+- lib/lib/openssl/cipher.rb
+- lib/lib/openssl/digest.rb
+- lib/lib/openssl/hmac.rb
+- lib/lib/openssl/marshal.rb
+- lib/lib/openssl/pkcs5.rb
+- lib/lib/openssl/pkey.rb
+- lib/lib/openssl/ssl.rb
+- lib/lib/openssl/version.rb
+- lib/lib/openssl/x509.rb
+- lib/openssl.rb
+- lib/openssl/bn.rb
+- lib/openssl/buffering.rb
+- lib/openssl/cipher.rb
+- lib/openssl/digest.rb
+- lib/openssl/hmac.rb
+- lib/openssl/marshal.rb
+- lib/openssl/pkcs5.rb
+- lib/openssl/pkey.rb
+- lib/openssl/ssl.rb
+- lib/openssl/version.rb
+- lib/openssl/x509.rb
+- openssl.bundle
+homepage: https://github.com/ruby/openssl
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  msys2_mingw_dependencies: openssl
+rdoc_options:
+- "--main"
+- README.md
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.7.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: SSL/TLS and general-purpose cryptography for Ruby
+test_files: []

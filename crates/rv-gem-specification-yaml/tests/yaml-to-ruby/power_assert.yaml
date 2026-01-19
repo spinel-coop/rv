@@ -1,0 +1,47 @@
+--- !ruby/object:Gem::Specification
+name: power_assert
+version: !ruby/object:Gem::Version
+  version: 3.0.1
+platform: ruby
+authors:
+- Kazuki Tsujimoto
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: Power Assert shows each value of variables and method calls in the expression.
+  It is useful for testing, providing which value wasn't correct when the condition
+  is not satisfied.
+email:
+- kazuki@callcc.net
+executables: []
+extensions: []
+extra_rdoc_files:
+- README.md
+files:
+- README.md
+homepage: https://github.com/ruby/power_assert
+licenses:
+- BSD-2-Clause
+- Ruby
+metadata: {}
+rdoc_options:
+- "--main"
+- README.md
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Power Assert for Ruby
+test_files: []

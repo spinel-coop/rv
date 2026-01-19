@@ -1,0 +1,55 @@
+--- !ruby/object:Gem::Specification
+name: fcntl
+version: !ruby/object:Gem::Version
+  version: 1.3.0
+platform: ruby
+authors:
+- Yukihiro Matsumoto
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: Loads constants defined in the OS fcntl.h C header file
+email:
+- matz@ruby-lang.org
+executables: []
+extensions:
+- ext/fcntl/extconf.rb
+extra_rdoc_files:
+- ".document"
+- ".rdoc_options"
+- BSDL
+- COPYING
+- README.md
+files:
+- ".document"
+- ".rdoc_options"
+- BSDL
+- COPYING
+- README.md
+- ext/fcntl/extconf.rb
+- ext/fcntl/fcntl.c
+- fcntl.bundle
+homepage: https://github.com/ruby/fcntl
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata: {}
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.5.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Loads constants defined in the OS fcntl.h C header file
+test_files: []

@@ -1,0 +1,62 @@
+--- !ruby/object:Gem::Specification
+name: csv
+version: !ruby/object:Gem::Version
+  version: 3.3.5
+platform: ruby
+authors:
+- James Edward Gray II
+- Kouhei Sutou
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: The CSV library provides a complete interface to CSV files and data.
+  It offers tools to enable you to read and write to and from Strings or IO objects,
+  as needed.
+email:
+-
+- kou@cozmixng.org
+executables: []
+extensions: []
+extra_rdoc_files:
+- LICENSE.txt
+- NEWS.md
+- README.md
+- doc/csv/recipes/filtering.rdoc
+- doc/csv/recipes/generating.rdoc
+- doc/csv/recipes/parsing.rdoc
+- doc/csv/recipes/recipes.rdoc
+files:
+- LICENSE.txt
+- NEWS.md
+- README.md
+- doc/csv/recipes/filtering.rdoc
+- doc/csv/recipes/generating.rdoc
+- doc/csv/recipes/parsing.rdoc
+- doc/csv/recipes/recipes.rdoc
+homepage: https://github.com/ruby/csv
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  changelog_uri: https://github.com/ruby/csv/releases/tag/v3.3.5
+rdoc_options:
+- "--main"
+- README.md
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.5.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 3.4.20
+specification_version: 4
+summary: CSV Reading and Writing
+test_files: []

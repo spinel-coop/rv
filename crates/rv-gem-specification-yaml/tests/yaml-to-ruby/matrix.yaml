@@ -1,0 +1,41 @@
+--- !ruby/object:Gem::Specification
+name: matrix
+version: !ruby/object:Gem::Version
+  version: 0.4.3
+platform: ruby
+authors:
+- Marc-Andre Lafortune
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: An implementation of Matrix and Vector classes.
+email:
+- ruby-core@marc-andre.ca
+executables: []
+extensions: []
+extra_rdoc_files: []
+files: []
+homepage: https://github.com/ruby/matrix
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata: {}
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.5.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: An implementation of Matrix and Vector classes.
+test_files: []

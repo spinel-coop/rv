@@ -1,0 +1,62 @@
+--- !ruby/object:Gem::Specification
+name: bootsnap
+version: !ruby/object:Gem::Version
+  version: 1.18.6
+platform: ruby
+authors:
+- Burke Libbey
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: msgpack
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '1.2'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '1.2'
+description: Boot large ruby/rails apps faster
+email:
+- burke.libbey@shopify.com
+executables:
+- bootsnap
+extensions:
+- ext/bootsnap/extconf.rb
+extra_rdoc_files: []
+files:
+- exe/bootsnap
+- ext/bootsnap/extconf.rb
+homepage: https://github.com/Shopify/bootsnap
+licenses:
+- MIT
+metadata:
+  allowed_push_host: https://rubygems.org
+  bug_tracker_uri: https://github.com/Shopify/bootsnap/issues
+  changelog_uri: https://github.com/Shopify/bootsnap/blob/main/CHANGELOG.md
+  source_code_uri: https://github.com/Shopify/bootsnap
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.6.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 3.6.8
+specification_version: 4
+summary: Boot large ruby/rails apps faster
+test_files: []

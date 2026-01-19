@@ -1,0 +1,77 @@
+--- !ruby/object:Gem::Specification
+name: repl_type_completor
+version: !ruby/object:Gem::Version
+  version: 0.1.12
+platform: ruby
+authors:
+- tompng
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: prism
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '1.0'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '1.0'
+- !ruby/object:Gem::Dependency
+  name: rbs
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 2.7.0
+    - - "<"
+      - !ruby/object:Gem::Version
+        version: 4.0.0
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 2.7.0
+    - - "<"
+      - !ruby/object:Gem::Version
+        version: 4.0.0
+description: Type based completion for REPL.
+email:
+- tomoyapenguin@gmail.com
+executables: []
+extensions: []
+extra_rdoc_files: []
+files: []
+homepage: https://github.com/ruby/repl_type_completor
+licenses:
+- MIT
+metadata:
+  documentation_uri: https://github.com/ruby/repl_type_completor
+  homepage_uri: https://github.com/ruby/repl_type_completor
+  source_code_uri: https://github.com/ruby/repl_type_completor
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 3.0.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 3.4.20
+specification_version: 4
+summary: Type based completion for REPL.
+test_files: []

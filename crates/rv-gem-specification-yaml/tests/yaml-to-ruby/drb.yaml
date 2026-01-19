@@ -1,0 +1,44 @@
+--- !ruby/object:Gem::Specification
+name: drb
+version: !ruby/object:Gem::Version
+  version: 2.2.3
+platform: ruby
+authors:
+- Masatoshi SEKI
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: Distributed object system for Ruby
+email:
+- seki@ruby-lang.org
+executables: []
+extensions: []
+extra_rdoc_files: []
+files: []
+homepage: https://github.com/ruby/drb
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  changelog_uri: https://github.com/ruby/drb/releases/tag/v2.2.3
+  homepage_uri: https://github.com/ruby/drb
+  source_code_uri: https://github.com/ruby/drb
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.7.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Distributed object system for Ruby
+test_files: []

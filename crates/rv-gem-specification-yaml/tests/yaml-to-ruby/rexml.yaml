@@ -1,0 +1,75 @@
+--- !ruby/object:Gem::Specification
+name: rexml
+version: !ruby/object:Gem::Version
+  version: 3.4.4
+platform: ruby
+authors:
+- Kouhei Sutou
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: An XML toolkit for Ruby
+email:
+- kou@cozmixng.org
+executables: []
+extensions: []
+extra_rdoc_files:
+- LICENSE.txt
+- NEWS.md
+- README.md
+- doc/rexml/context.rdoc
+- doc/rexml/tasks/rdoc/child.rdoc
+- doc/rexml/tasks/rdoc/document.rdoc
+- doc/rexml/tasks/rdoc/element.rdoc
+- doc/rexml/tasks/rdoc/node.rdoc
+- doc/rexml/tasks/rdoc/parent.rdoc
+- doc/rexml/tasks/tocs/child_toc.rdoc
+- doc/rexml/tasks/tocs/document_toc.rdoc
+- doc/rexml/tasks/tocs/element_toc.rdoc
+- doc/rexml/tasks/tocs/master_toc.rdoc
+- doc/rexml/tasks/tocs/node_toc.rdoc
+- doc/rexml/tasks/tocs/parent_toc.rdoc
+- doc/rexml/tutorial.rdoc
+files:
+- LICENSE.txt
+- NEWS.md
+- README.md
+- doc/rexml/context.rdoc
+- doc/rexml/tasks/rdoc/child.rdoc
+- doc/rexml/tasks/rdoc/document.rdoc
+- doc/rexml/tasks/rdoc/element.rdoc
+- doc/rexml/tasks/rdoc/node.rdoc
+- doc/rexml/tasks/rdoc/parent.rdoc
+- doc/rexml/tasks/tocs/child_toc.rdoc
+- doc/rexml/tasks/tocs/document_toc.rdoc
+- doc/rexml/tasks/tocs/element_toc.rdoc
+- doc/rexml/tasks/tocs/master_toc.rdoc
+- doc/rexml/tasks/tocs/node_toc.rdoc
+- doc/rexml/tasks/tocs/parent_toc.rdoc
+- doc/rexml/tutorial.rdoc
+homepage: https://github.com/ruby/rexml
+licenses:
+- BSD-2-Clause
+metadata:
+  changelog_uri: https://github.com/ruby/rexml/releases/tag/v3.4.4
+rdoc_options:
+- "--main"
+- README.md
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.5.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 3.4.20
+specification_version: 4
+summary: An XML toolkit for Ruby
+test_files: []

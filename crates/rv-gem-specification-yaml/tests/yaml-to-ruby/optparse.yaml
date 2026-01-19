@@ -1,0 +1,52 @@
+--- !ruby/object:Gem::Specification
+name: optparse
+version: !ruby/object:Gem::Version
+  version: 0.8.1
+platform: ruby
+authors:
+- Nobu Nakada
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: OptionParser is a class for command-line option analysis.
+email:
+- nobu@ruby-lang.org
+executables: []
+extensions: []
+extra_rdoc_files: []
+files:
+- lib/optionparser.rb
+- lib/optparse.rb
+- lib/optparse/ac.rb
+- lib/optparse/date.rb
+- lib/optparse/kwargs.rb
+- lib/optparse/shellwords.rb
+- lib/optparse/time.rb
+- lib/optparse/uri.rb
+- lib/optparse/version.rb
+homepage: https://github.com/ruby/optparse
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  homepage_uri: https://github.com/ruby/optparse
+  source_code_uri: https://github.com/ruby/optparse
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.5.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: OptionParser is a class for command-line option analysis.
+test_files: []

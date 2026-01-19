@@ -1,0 +1,67 @@
+--- !ruby/object:Gem::Specification
+name: test-unit
+version: !ruby/object:Gem::Version
+  version: 3.7.5
+platform: ruby
+authors:
+- Kouhei Sutou
+- Haruka Yoshihara
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: power_assert
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+description: |-
+  test-unit (Test::Unit) is unit testing framework for Ruby, based on xUnit
+  principles. These were originally designed by Kent Beck, creator of extreme
+  programming software development methodology, for Smalltalk's SUnit. It allows
+  writing tests, checking results and automated testing in Ruby.
+email:
+- kou@cozmixng.org
+- yoshihara@clear-code.com
+executables:
+- test-unit
+extensions: []
+extra_rdoc_files: []
+files:
+- bin/test-unit
+homepage: https://test-unit.github.io/
+licenses:
+- Ruby
+- BSDL
+- PSFL
+metadata:
+  bug_tracker_uri: https://github.com/test-unit/test-unit/issues
+  documentation_uri: https://test-unit.github.io/test-unit/en/
+  source_code_uri: https://github.com/test-unit/test-unit
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 3.4.20
+specification_version: 4
+summary: An xUnit family unit testing framework for Ruby.
+test_files: []

@@ -1,0 +1,58 @@
+--- !ruby/object:Gem::Specification
+name: time
+version: !ruby/object:Gem::Version
+  version: 0.4.2
+platform: ruby
+authors:
+- Tanaka Akira
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: date
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+description: Extends the Time class with methods for parsing and conversion.
+email:
+- akr@fsij.org
+executables: []
+extensions: []
+extra_rdoc_files: []
+files:
+- lib/time.rb
+homepage: https://github.com/ruby/time
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  homepage_uri: https://github.com/ruby/time
+  source_code_uri: https://github.com/ruby/time
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.4.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Extends the Time class with methods for parsing and conversion.
+test_files: []

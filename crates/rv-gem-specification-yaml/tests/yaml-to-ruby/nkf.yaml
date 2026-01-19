@@ -1,0 +1,47 @@
+--- !ruby/object:Gem::Specification
+name: nkf
+version: !ruby/object:Gem::Version
+  version: 0.2.0
+platform: ruby
+authors:
+- NARUSE Yui
+- Charles Oliver Nutter
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: Ruby extension for Network Kanji Filter
+email:
+- naruse@airemix.jp
+- headius@headius.com
+executables: []
+extensions:
+- ext/nkf/extconf.rb
+extra_rdoc_files: []
+files:
+- ext/nkf/extconf.rb
+homepage: https://github.com/ruby/nkf
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  homepage_uri: https://github.com/ruby/nkf
+  source_code_uri: https://github.com/ruby/nkf
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.3.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Ruby extension for Network Kanji Filter
+test_files: []
