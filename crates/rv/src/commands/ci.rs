@@ -266,28 +266,28 @@ async fn ci_inner_work(config: &Config, args: &CiInnerArgs, progress: &WorkProgr
 
     println!("Summary:");
     println!(
-        " - {} gem packages fetched: {} cached, {} downloaded ({})",
+        " - {} fetching {} gem packages: {} cached, {} downloaded",
+        format_duration(download_elapsed),
         downloaded_count,
         cached_count,
         network_count,
-        format_duration(download_elapsed)
     );
     println!(
-        " - {} gems installed: {} from gem packages, {} from git repos, {} from local paths ({})",
+        " - {} installing {} gems: {} from gem packages, {} from git repos, {} from local paths",
+        format_duration(install_elapsed),
         package_count + git_count + path_count,
         package_count,
         git_count,
         path_count,
-        format_duration(install_elapsed)
     );
     if compiled_count > 0 {
         println!(
-            " - {} native extensions compiled ({})",
+            " - {} compiling {} native extensions",
+            format_duration(compile_elapsed),
             compiled_count,
-            format_duration(compile_elapsed)
         );
     }
-    println!(" - {} total elapsed time", format_duration(total_elapsed));
+    println!(" - {} total", format_duration(total_elapsed));
 
     Ok(())
 }
