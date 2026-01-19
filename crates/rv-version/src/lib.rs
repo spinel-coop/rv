@@ -32,13 +32,6 @@ impl VersionSegment {
     pub fn is_number(&self) -> bool {
         matches!(self, Self::Number(_))
     }
-
-    pub fn increment(&mut self) {
-        match self {
-            Self::Number(n) => *self = Self::Number(*n + 1),
-            Self::String(_) => {}
-        }
-    }
 }
 
 impl std::fmt::Display for VersionSegment {
@@ -235,35 +228,14 @@ impl Version {
 
         parts
     }
-    pub fn next_major(&self) -> Self {
-        let mut major = self.major();
-        major.increment();
-        Self::new(major.to_string()).expect("Invalid version string format")
-    }
 
-    pub fn next_minor(&self) -> Self {
-        let segments = self.canonical_segments();
-        let mut segments = segments.iter();
-
-        let major = segments.next().expect("Version cannot be empty");
-        let minor = match segments.next() {
-            Some(minor) => {
-                let mut m = minor.clone();
-                m.increment();
-                m
-            }
-            None => VersionSegment::Number(1),
-        };
-        Self::new(format!("{major}.{minor}")).expect("Invalid string version format")
-    }
-
-    pub fn major(&self) -> VersionSegment {
-        self.canonical_segments()
-            .first()
-            .as_ref()
-            .expect("Version cannot be empty")
-            .to_owned()
-            .to_owned()
+    /// Give the lower and upper bound for ~> on this version.
+    /// The range is >= the first element of this tuple,
+    /// and < the second element of this tuple.
+    pub fn pessimistic_range(&self) -> (Self, Self) {
+        let lower = self.to_owned();
+        let upper = self.bump();
+        (lower, upper)
     }
 }
 
@@ -580,23 +552,30 @@ mod tests {
         assert_eq!(Ordering::Less, v("5.a").cmp(&v("5.0.0.rc2")));
         assert_eq!(Ordering::Greater, v("5.x").cmp(&v("5.0.0.rc2")));
     }
-}
-
-#[cfg(test)]
-mod next_version {
-    use super::*;
 
     #[test]
-    fn example_next_major() {
-        // so ~>2.1.5 allows >=2.1.5, <3.0.0
-        let v: Version = "2.1.5".parse().unwrap();
-        assert_eq!(v.next_major(), "3.0.0".parse().unwrap());
-    }
-
-    #[test]
-    fn example_next_minor() {
-        // ~> 0.4.3 allows >=0.4.3, <0.5
-        let v: Version = "0.4.3".parse().unwrap();
-        assert_eq!(v.next_minor(), "0.5".parse().unwrap());
+    fn test_pessimistic_range() {
+        for (test_index, input, (expected_lower, expected_higher)) in [
+            // From https://guides.rubygems.org/patterns/
+            (2, "2.2", ("2.2.0", "3.0")),
+            (3, "2.2.0", ("2.2.0", "2.3.0")),
+            // From https://thoughtbot.com/blog/rubys-pessimistic-operator
+            (4, "3.0.3", ("3.0.3", "3.1")),
+            (5, "1.1", ("1.1", "2.0")),
+            (6, "2", ("2", "3")),
+        ] {
+            let v: Version = input.parse().unwrap();
+            let (actual_lower, actual_higher) = v.pessimistic_range();
+            let expected_lower = expected_lower.parse().unwrap();
+            let expected_higher = expected_higher.parse().unwrap();
+            assert_eq!(
+                actual_lower, expected_lower,
+                "wrong lower bound for test {test_index}: input {input}, got {actual_lower}, expected {expected_lower}"
+            );
+            assert_eq!(
+                actual_higher, expected_higher,
+                "wrong upper bound for test {test_index}: input {input}, got {actual_higher}, expected {expected_higher}"
+            );
+        }
     }
 }
