@@ -321,13 +321,10 @@ async fn run() -> Result<()> {
         } else {
             None
         })
-        .with(filter);
+        .with(filter)
+        .with(indicatif_layer);
 
-    if std::env::var("RV_DISABLE_INDICATIF").is_ok() || matches!(cli.command, Commands::Shell(_)) {
-        reg.init();
-    } else {
-        reg.with(indicatif_layer).init();
-    }
+    reg.init();
 
     let config = cli.config()?;
     run_cmd(&config, cli.command).await
