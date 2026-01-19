@@ -224,8 +224,7 @@ async fn ci_inner_work(config: &Config, args: &CiInnerArgs, progress: &WorkProgr
 
         install_paths(config, &lockfile.path, args)?;
 
-        let repos = download_git_repos(&lockfile.git, &config.cache, args)?;
-        install_git_repos(config, repos, args)?;
+        install_git_repos(config, &lockfile.git, args)?;
     }
 
     drop(span);
@@ -358,11 +357,12 @@ fn install_path(
 
 fn install_git_repos<'i>(
     config: &Config,
-    repos: Vec<DownloadedGitRepo<'i>>,
+    git_sources: &Vec<rv_lockfile::datatypes::GitSection<'i>>,
     args: &CiInnerArgs,
 ) -> Result<()> {
-    debug!("Installing git gems");
+    let repos = download_git_repos(git_sources, &config.cache, args)?;
 
+    debug!("Installing git gems");
     let git_gems_dir = args.install_path.join("bundler/gems");
 
     use rayon::prelude::*;
