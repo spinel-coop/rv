@@ -13,6 +13,7 @@ use owo_colors::OwoColorize;
 use rayon::ThreadPoolBuildError;
 use regex::Regex;
 use reqwest::Client;
+use rv_gem_types::Platform;
 use rv_gem_types::Specification as GemSpecification;
 use rv_lockfile::datatypes::ChecksumAlgorithm;
 use rv_lockfile::datatypes::GemSection;
@@ -49,9 +50,6 @@ use std::time::Instant;
 use std::vec;
 
 mod checksums;
-
-const ARM_STRINGS: [&str; 3] = ["arm64", "arm", "aarch64"];
-const X86_STRINGS: [&str; 4] = ["x86", "i686", "win32", "win64"];
 
 #[derive(Debug, clap_derive::Args)]
 pub struct CleanInstallArgs {
@@ -1431,176 +1429,6 @@ where
     })
 }
 
-fn platform_for_gem(gem_version: &str) -> Platform {
-    let is_arm = ARM_STRINGS.iter().any(|s| gem_version.contains(s));
-    let is_x86 = X86_STRINGS.iter().any(|s| gem_version.contains(s));
-    // Comments starting with `when` are relevant examples from rubygems.
-    let (cpu, os) = if gem_version.contains("darwin") {
-        //        when /^i686-darwin(\d)/     then ["x86",       "darwin",  $1]
-        //        when "powerpc-darwin"       then ["powerpc",   "darwin",  nil]
-        //        when /powerpc-darwin(\d)/   then ["powerpc",   "darwin",  $1]
-        //        when /universal-darwin(\d)/ then ["universal", "darwin",  $1]
-        if is_x86 {
-            (Cpu::X86, Os::Darwin)
-        } else if gem_version.contains("powerpc") {
-            (Cpu::Powerpc, Os::Darwin)
-        } else if gem_version.contains("universal") {
-            (Cpu::Universal, Os::Darwin)
-        } else if is_arm {
-            (Cpu::Arm, Os::Darwin)
-        } else {
-            (Cpu::Unknown, Os::Darwin)
-        }
-    } else if gem_version.contains("linux") {
-        // when /^i\d86-linux/         then ["x86",       "linux",   nil]
-        if is_x86 {
-            (Cpu::X86, Os::Linux)
-        } else if is_arm {
-            (Cpu::Arm, Os::Linux)
-        } else {
-            (Cpu::Unknown, Os::Linux)
-        }
-    } else if gem_version.contains("sparc-solaris") {
-        // when /sparc-solaris2.8/     then ["sparc",     "solaris", "2.8"]
-        if gem_version.contains("sparc") {
-            (Cpu::Sparc, Os::Solaris)
-        } else {
-            (Cpu::Unknown, Os::Solaris)
-        }
-    } else if gem_version.contains("mswin") {
-        // when /mswin32(\_(\d+))?/    then ["x86",       "mswin32", $2]
-        // when /mswin64(\_(\d+))?/    then ["x64",       "mswin64", $2]
-        if is_x86 {
-            (Cpu::X86, Os::Windows)
-        } else if is_arm {
-            (Cpu::Arm, Os::Windows)
-        } else {
-            (Cpu::Unknown, Os::Windows)
-        }
-    } else if gem_version.contains("mingw") {
-        if gem_version.contains("32") || gem_version.contains("64") {
-            (Cpu::X86, Os::Mingw)
-        } else if is_arm {
-            (Cpu::Arm, Os::Mingw)
-        } else {
-            (Cpu::Unknown, Os::Mingw)
-        }
-    } else if gem_version.contains("java") || gem_version.contains("jruby") {
-        // when "java", "jruby"        then [nil,         "java",    nil]
-        (Cpu::Unknown, Os::Java)
-    } else if gem_version.contains("dalvik") {
-        // when /^dalvik(\d+)?$/       then [nil,         "dalvik",  $1]
-        (Cpu::Unknown, Os::Dalvik)
-    } else if gem_version.contains("dotnet") {
-        // when /dotnet(\-(\d+\.\d+))? then ["universal", "dotnet",  $2]
-        (Cpu::Universal, Os::Dotnet)
-    } else {
-        (Cpu::Unknown, Os::Unknown)
-    };
-    Platform { cpu, os }
-}
-
-#[derive(Debug, Eq, PartialEq)]
-enum Cpu {
-    X86,
-    Arm,
-    Powerpc,
-    Unknown,
-    Universal,
-    Sparc,
-}
-
-impl Cpu {
-    fn matches(&self, other: &Self) -> bool {
-        match (self, other) {
-            // Err on the side of caution for unknown.
-            // And universal means it should match everything, right?
-            (Self::Universal, _)
-            | (Self::Unknown, _)
-            | (_, Self::Universal)
-            | (_, Self::Unknown) => true,
-            // Other types should be matched exactly, i.e. be the same enum variant.
-            (a, b) => a == b,
-        }
-    }
-}
-
-#[derive(Debug, Eq, PartialEq)]
-enum Os {
-    Darwin,
-    Windows,
-    Mingw,
-    Linux,
-    Solaris,
-    Java,
-    Dalvik,
-    Dotnet,
-    Unknown,
-}
-
-impl Os {
-    fn matches(&self, other: &Self) -> bool {
-        match (self, other) {
-            // Err on the side of caution for unknown.
-            (Self::Unknown, _) | (_, Self::Unknown) => true,
-            // Other types should be matched exactly, i.e. be the same enum variant.
-            (a, b) => a == b,
-        }
-    }
-}
-
-#[derive(Debug, Eq, PartialEq)]
-struct Platform {
-    cpu: Cpu,
-    os: Os,
-}
-
-impl Platform {
-    fn matches(&self, other: &Self) -> bool {
-        self.cpu.matches(&other.cpu) && self.os.matches(&other.os)
-    }
-}
-
-impl Platform {
-    fn current() -> Self {
-        match CURRENT_PLATFORM {
-            "aarch64-apple-darwin" => Platform {
-                os: Os::Darwin,
-                cpu: Cpu::Arm,
-            },
-            "x86_64-apple-darwin" => Platform {
-                os: Os::Darwin,
-                cpu: Cpu::X86,
-            },
-            "x86_64-unknown-linux-gnu" => Platform {
-                os: Os::Linux,
-                cpu: Cpu::X86,
-            },
-            "aarch64-unknown-linux-gnu" => Platform {
-                os: Os::Linux,
-                cpu: Cpu::Arm,
-            },
-            other => {
-                #[cfg(debug_assertions)]
-                {
-                    panic!(
-                        "Unknown target {}, please add it to the above match stmt",
-                        other
-                    );
-                }
-                #[cfg(not(debug_assertions))]
-                {
-                    eprintln!("Warning: unknown OS {}", other.yellow());
-                    Platform {
-                        os: Os::Unknown,
-                        cpu: Cpu::Unknown,
-                    }
-                }
-            }
-        }
-    }
-}
-
 fn url_for_spec(remote: &str, spec: &Spec<'_>) -> Result<Url> {
     let gem_name = spec.gem_version.name;
     let gem_version = spec.gem_version.version;
@@ -1631,9 +1459,14 @@ async fn download_gem_source<'i>(
     // Download them all, concurrently.
 
     let gems_to_download = gem_source.specs.into_iter().filter(|spec| {
-        let arch = platform_for_gem(spec.gem_version.version);
-        let this_arch = Platform::current();
-        arch.matches(&this_arch)
+        let Some((_version, plat)) =
+            rv_gem_types::platform::version_platform_split(spec.gem_version.version)
+        else {
+            // If we couldn't parse a platform, assume there's no platform, so we should download this.
+            return true;
+        };
+        let this_plat = Platform::new(CURRENT_PLATFORM).expect("Could not parse current platform");
+        plat.matches(&this_plat)
     });
     let spec_stream = futures_util::stream::iter(gems_to_download);
     let downloaded_gems: Vec<_> = spec_stream
@@ -1779,99 +1612,26 @@ end"#;
     }
 
     #[test]
-    fn test_matches() {
-        use Cpu::*;
-        use Os::*;
-        let should_match = [
-            // They're the same.
-            ((Arm, Darwin), (Arm, Darwin)),
-            // Unknown should always match a known.
-            ((Cpu::Unknown, Darwin), (Arm, Darwin)),
-            ((Arm, Darwin), (Cpu::Unknown, Darwin)),
-            ((Arm, Os::Unknown), (Arm, Darwin)),
-            ((Arm, Darwin), (Arm, Os::Unknown)),
-        ];
-        for input in should_match {
-            let p0 = Platform {
-                cpu: input.0.0,
-                os: input.0.1,
-            };
-            let p1 = Platform {
-                cpu: input.1.0,
-                os: input.1.1,
-            };
-            assert!(p0.matches(&p1));
-        }
-        let should_not_match = [
-            // Different OS, same CPU
-            ((Arm, Darwin), (Arm, Linux)),
-            // Different CPU, same OS
-            ((Arm, Linux), (X86, Linux)),
-            // Different CPU and OS
-            ((Arm, Darwin), (X86, Linux)),
-        ];
-        for input in should_not_match {
-            let p0 = Platform {
-                cpu: input.0.0,
-                os: input.0.1,
-            };
-            let p1 = Platform {
-                cpu: input.1.0,
-                os: input.1.1,
-            };
-            assert!(!p0.matches(&p1));
-        }
-    }
-
-    #[test]
-    fn test_platform_for_gem() {
-        use Cpu::*;
-        use Os::*;
-        for (gem_version, expected) in [
-            // Real gem versions taken from Discourse's gemfile.lock
-            ("1.17.2-arm64-darwin", (Arm, Darwin)),
-            ("1.17.2-x86_64-darwin", (X86, Darwin)),
-            ("2.7.4-x86_64-linux-gnu", (X86, Linux)),
-            ("2.7.4-x86_64-linux-musl", (X86, Linux)),
-            ("0.5.5-aarch64-linux-musl", (Arm, Linux)),
-            ("2.7.4-aarch64-linux-gnu", (Arm, Linux)),
-            ("1.17.2-arm-linux-gnu", (Arm, Linux)),
-        ] {
-            let actual = platform_for_gem(gem_version);
-            let expected = Platform {
-                cpu: expected.0,
-                os: expected.1,
-            };
-            assert_eq!(actual, expected);
-        }
-    }
-
-    #[test]
     fn test_platform_current() {
-        use Cpu::*;
-        use Os::*;
         #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
-        let expected = Platform {
-            os: Darwin,
-            cpu: X86,
-        };
+        let expected = ("darwin", "x86_64");
         #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-        let expected = Platform {
-            os: Darwin,
-            cpu: Arm,
-        };
+        let expected = ("darwin", "aarch64");
         #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-        let expected = Platform {
-            os: Linux,
-            cpu: X86,
-        };
+        let expected = ("linux", "x86_64");
         #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
-        let expected = Platform {
-            os: Linux,
-            cpu: Arm,
+        let expected = ("linux", "aarch64");
+        let actual = Platform::new(CURRENT_PLATFORM).unwrap();
+        let Platform::Specific {
+            cpu: actual_cpu,
+            os: actual_os,
+            version: _,
+        } = actual
+        else {
+            panic!("Platform should be specific");
         };
-        let actual = Platform::current();
-        assert_eq!(actual, expected);
+        assert_eq!(actual_cpu.unwrap(), expected.1);
+        assert_eq!(actual_os, expected.0);
     }
 
     #[test]
