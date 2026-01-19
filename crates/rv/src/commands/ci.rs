@@ -283,7 +283,7 @@ async fn ci_inner_work(config: &Config, args: &CiInnerArgs, progress: &WorkProgr
 
 fn install_paths<'i>(
     config: &Config,
-    paths: &Vec<rv_lockfile::datatypes::PathSection<'i>>,
+    path_sources: &Vec<rv_lockfile::datatypes::PathSection<'i>>,
     args: &CiInnerArgs,
 ) -> Result<()> {
     use rayon::prelude::*;
@@ -292,10 +292,10 @@ fn install_paths<'i>(
 
     let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
     pool.install(|| {
-        paths
+        path_sources
             .iter()
             .par_bridge()
-            .map(|path| install_path(path, config, args))
+            .map(|path_source| install_path(path_source, config, args))
             .collect::<Result<Vec<_>>>()?;
         Ok::<_, Error>(())
     })?;
