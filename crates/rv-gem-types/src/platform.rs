@@ -1,5 +1,6 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
+use rv_version::Version;
 use std::{borrow::Cow, str::FromStr};
 
 // Cached regexes for platform parsing to avoid repeated compilation
@@ -269,6 +270,24 @@ impl FromStr for Platform {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Platform::new(s)
     }
+}
+
+/// Splits a gem version with a platform suffix, like `1.11.0.rc1-x86_64-linux`,
+/// into its version and platform components.
+pub fn version_platform_split(s: &str) -> Option<(Version, Platform)> {
+    let splits: Vec<_> = s.split('-').collect();
+    for i in (1..splits.len()).rev() {
+        let maybe_version = splits[..i].join("-");
+        let maybe_platform = splits[i..].join("-");
+        let Ok(version) = Version::new(maybe_version) else {
+            continue;
+        };
+        let Ok(platform) = Platform::new(maybe_platform) else {
+            continue;
+        };
+        return Some((version, platform));
+    }
+    None
 }
 
 #[cfg(test)]
@@ -842,6 +861,14 @@ mod tests {
                 panic!("Expected Specific platform for edge case: {platform_str}");
             }
         }
+    }
+
+    #[test]
+    fn test_version_platform_separation() {
+        let input = "1.11.0.rc1-x86_64-linux";
+        let (version, platform) = version_platform_split(input).unwrap();
+        assert_eq!(version, "1.11.0.rc1".parse().unwrap());
+        assert_eq!(platform, Platform::new("x86_64-linux").unwrap());
     }
 
     #[test]
