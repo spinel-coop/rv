@@ -226,7 +226,7 @@ async fn ci_inner_work(config: &Config, args: &CiInnerArgs, progress: &WorkProgr
         install_paths(config, &lockfile.path, args)?;
 
         debug!("Downloading git gems");
-        let repos = download_git_repos(lockfile.clone(), &config.cache, args)?;
+        let repos = download_git_repos(&lockfile.git, &config.cache, args)?;
         debug!("Installing git gems");
         install_git_repos(config, repos, args)?;
     }
@@ -503,7 +503,7 @@ fn install_git_repo(
 
 /// Note this is not async, it shells out to `git clone` so it will block.
 fn download_git_repos<'i>(
-    lockfile: GemfileDotLock<'i>,
+    git_sources: &Vec<rv_lockfile::datatypes::GitSection<'i>>,
     cache: &rv_cache::Cache,
     args: &CiInnerArgs,
 ) -> Result<Vec<DownloadedGitRepo<'i>>> {
@@ -516,8 +516,7 @@ fn download_git_repos<'i>(
     let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
     use rayon::prelude::*;
     let downloads = pool.install(|| {
-        lockfile
-            .git
+        git_sources
             .par_iter()
             .map(|git_source| download_git_repo(&git_clone_dir, git_source))
             .collect::<Result<Vec<_>>>()
