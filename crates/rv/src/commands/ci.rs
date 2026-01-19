@@ -258,14 +258,14 @@ async fn ci_inner_work(config: &Config, args: &CiInnerArgs, progress: &WorkProgr
 
     println!("Summary:");
     println!(
-        " - {} gems fetched: {} cached, {} downloaded ({})",
+        " - {} gem packages fetched: {} cached, {} downloaded ({})",
         downloaded_count,
         cached_count,
         network_count,
         format_duration(download_elapsed)
     );
     println!(
-        " - {} gems installed ({})",
+        " - {} gem packages installed ({})",
         installed_count,
         format_duration(install_elapsed)
     );
@@ -727,8 +727,8 @@ fn install_gems<'i>(
 ) -> Result<Vec<GemSpecification>> {
     use rayon::prelude::*;
 
-    debug!("Installing gems");
-    let span = info_span!("Installing gems");
+    debug!("Installing gem packages");
+    let span = info_span!("Installing gem packages");
     span.pb_set_style(
         &ProgressStyle::with_template("{spinner:.green} {span_name} {pos}/{len}").unwrap(),
     );
@@ -810,7 +810,7 @@ fn compile_gems(
     // Phase 3: Compiles (80-100%)
     progress.start_phase(deps_count as u64, 20);
 
-    debug!("Compiling gems");
+    debug!("Compiling gem packages");
     let span = info_span!("Compiling native extensions");
     span.pb_set_style(
         &ProgressStyle::with_template("{spinner:.green} {span_name} ({pos}/{len}) - {msg}")
@@ -909,8 +909,8 @@ async fn download_gems<'i>(
     progress: &WorkProgress,
     stats: &DownloadStats,
 ) -> Result<Vec<DownloadedRubygems<'i>>> {
-    debug!("Downloading gems");
-    let span = info_span!("Downloading gems");
+    debug!("Downloading gem packages");
+    let span = info_span!("Downloading gem packages");
     span.pb_set_style(
         &ProgressStyle::with_template("{spinner:.green} {span_name} {pos}/{len} - {msg}").unwrap(),
     );
