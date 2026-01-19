@@ -1,0 +1,43 @@
+--- !ruby/object:Gem::Specification
+name: getoptlong
+version: !ruby/object:Gem::Version
+  version: 0.2.1
+platform: ruby
+authors:
+- Yukihiro Matsumoto
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: GetoptLong for Ruby
+email:
+- matz@ruby-lang.org
+executables: []
+extensions: []
+extra_rdoc_files: []
+files: []
+homepage: https://github.com/ruby/getoptlong
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  homepage_uri: https://github.com/ruby/getoptlong
+  source_code_uri: https://github.com/ruby/getoptlong
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: GetoptLong for Ruby
+test_files: []

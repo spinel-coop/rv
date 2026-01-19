@@ -1,0 +1,44 @@
+--- !ruby/object:Gem::Specification
+name: base64
+version: !ruby/object:Gem::Version
+  version: 0.3.0
+platform: ruby
+authors:
+- Yusuke Endoh
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: Support for encoding and decoding binary data using a Base64 representation.
+email:
+- mame@ruby-lang.org
+executables: []
+extensions: []
+extra_rdoc_files: []
+files: []
+homepage: https://github.com/ruby/base64
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  changelog_uri: https://github.com/ruby/base64/releases
+  homepage_uri: https://github.com/ruby/base64
+  source_code_uri: https://github.com/ruby/base64
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '2.4'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 3.4.20
+specification_version: 4
+summary: Support for encoding and decoding binary data using a Base64 representation.
+test_files: []

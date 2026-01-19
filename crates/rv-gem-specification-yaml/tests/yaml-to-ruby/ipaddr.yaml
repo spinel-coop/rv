@@ -1,0 +1,48 @@
+--- !ruby/object:Gem::Specification
+name: ipaddr
+version: !ruby/object:Gem::Version
+  version: 1.2.8
+platform: ruby
+authors:
+- Akinori MUSHA
+- Hajimu UMEMOTO
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: |
+  IPAddr provides a set of methods to manipulate an IP address.
+  Both IPv4 and IPv6 are supported.
+email:
+- knu@idaemons.org
+- ume@mahoroba.org
+executables: []
+extensions: []
+extra_rdoc_files: []
+files:
+- LICENSE.txt
+- README.md
+- lib/ipaddr.rb
+homepage: https://github.com/ruby/ipaddr
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata: {}
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '2.4'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: A class to manipulate an IP address in ruby
+test_files: []

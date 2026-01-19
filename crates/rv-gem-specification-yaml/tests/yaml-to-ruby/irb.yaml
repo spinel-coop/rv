@@ -1,0 +1,91 @@
+--- !ruby/object:Gem::Specification
+name: irb
+version: !ruby/object:Gem::Version
+  version: 1.16.0
+platform: ruby
+authors:
+- aycabta
+- Keiju ISHITSUKA
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: reline
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 0.4.2
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 0.4.2
+- !ruby/object:Gem::Dependency
+  name: rdoc
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 4.0.0
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 4.0.0
+- !ruby/object:Gem::Dependency
+  name: pp
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 0.6.0
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 0.6.0
+description: Interactive Ruby command-line tool for REPL (Read Eval Print Loop).
+email:
+- aycabta@gmail.com
+- keiju@ruby-lang.org
+executables:
+- irb
+extensions: []
+extra_rdoc_files: []
+files:
+- exe/irb
+homepage: https://github.com/ruby/irb
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  changelog_uri: https://github.com/ruby/irb/releases
+  documentation_uri: https://ruby.github.io/irb/
+  homepage_uri: https://github.com/ruby/irb
+  source_code_uri: https://github.com/ruby/irb
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '2.7'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 3.4.20
+specification_version: 4
+summary: Interactive Ruby command-line tool for REPL (Read Eval Print Loop).
+test_files: []

@@ -1,0 +1,42 @@
+--- !ruby/object:Gem::Specification
+name: ostruct
+version: !ruby/object:Gem::Version
+  version: 0.6.3
+platform: ruby
+authors:
+- Marc-Andre Lafortune
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: Class to build custom data structures, similar to a Hash.
+email:
+- ruby-core@marc-andre.ca
+executables: []
+extensions: []
+extra_rdoc_files: []
+files: []
+homepage: https://github.com/ruby/ostruct
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  changelog_uri: https://github.com/ruby/ostruct/releases
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.5.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Class to build custom data structures, similar to a Hash.
+test_files: []

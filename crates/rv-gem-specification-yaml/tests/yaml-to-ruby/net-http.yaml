@@ -1,0 +1,69 @@
+--- !ruby/object:Gem::Specification
+name: net-http
+version: !ruby/object:Gem::Version
+  version: 0.9.1
+platform: ruby
+authors:
+- NARUSE, Yui
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: uri
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 0.11.1
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 0.11.1
+description: HTTP client api for Ruby.
+email:
+- naruse@airemix.jp
+executables: []
+extensions: []
+extra_rdoc_files: []
+files:
+- lib/net/http.rb
+- lib/net/http/exceptions.rb
+- lib/net/http/generic_request.rb
+- lib/net/http/header.rb
+- lib/net/http/proxy_delta.rb
+- lib/net/http/request.rb
+- lib/net/http/requests.rb
+- lib/net/http/response.rb
+- lib/net/http/responses.rb
+- lib/net/http/status.rb
+- lib/net/https.rb
+homepage: https://github.com/ruby/net-http
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  changelog_uri: https://github.com/ruby/net-http/releases
+  homepage_uri: https://github.com/ruby/net-http
+  source_code_uri: https://github.com/ruby/net-http
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.7.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: HTTP client api for Ruby.
+test_files: []

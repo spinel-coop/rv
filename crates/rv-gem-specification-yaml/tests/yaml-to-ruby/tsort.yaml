@@ -1,0 +1,45 @@
+--- !ruby/object:Gem::Specification
+name: tsort
+version: !ruby/object:Gem::Version
+  version: 0.2.0
+platform: ruby
+authors:
+- Tanaka Akira
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: Topological sorting using Tarjan's algorithm
+email:
+- akr@fsij.org
+executables: []
+extensions: []
+extra_rdoc_files: []
+files:
+- lib/tsort.rb
+homepage: https://github.com/ruby/tsort
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  changelog_uri: https://github.com/ruby/tsort/releases
+  homepage_uri: https://github.com/ruby/tsort
+  source_code_uri: https://github.com/ruby/tsort
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.3.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Topological sorting using Tarjan's algorithm
+test_files: []

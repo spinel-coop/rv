@@ -1,0 +1,58 @@
+--- !ruby/object:Gem::Specification
+name: date
+version: !ruby/object:Gem::Version
+  version: 3.5.1
+platform: ruby
+authors:
+- Tadayoshi Funaba
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: The official date library for Ruby.
+email:
+-
+executables: []
+extensions:
+- ext/date/extconf.rb
+extra_rdoc_files: []
+files:
+- BSDL
+- COPYING
+- README.md
+- date_core.bundle
+- ext/date/date_core.c
+- ext/date/date_parse.c
+- ext/date/date_strftime.c
+- ext/date/date_strptime.c
+- ext/date/date_tmx.h
+- ext/date/extconf.rb
+- ext/date/prereq.mk
+- ext/date/zonetab.h
+- ext/date/zonetab.list
+- lib/date.rb
+- lib/lib/date.rb
+homepage: https://github.com/ruby/date
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  changelog_uri: https://github.com/ruby/date/releases
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.6.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: The official date library for Ruby.
+test_files: []

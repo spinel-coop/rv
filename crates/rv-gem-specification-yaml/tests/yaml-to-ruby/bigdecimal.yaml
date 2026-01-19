@@ -1,0 +1,47 @@
+--- !ruby/object:Gem::Specification
+name: bigdecimal
+version: !ruby/object:Gem::Version
+  version: 4.0.1
+platform: ruby
+authors:
+- Kenta Murata
+- Zachary Scott
+- Shigeo Kobayashi
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: This library provides arbitrary-precision decimal floating-point number
+  class.
+email:
+- mrkn@mrkn.jp
+executables: []
+extensions:
+- ext/bigdecimal/extconf.rb
+extra_rdoc_files: []
+files:
+- ext/bigdecimal/extconf.rb
+homepage: https://github.com/ruby/bigdecimal
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  changelog_uri: https://github.com/ruby/bigdecimal/blob/master/CHANGES.md
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.5.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Arbitrary-precision decimal floating-point number library.
+test_files: []

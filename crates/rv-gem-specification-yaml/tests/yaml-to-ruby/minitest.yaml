@@ -1,0 +1,188 @@
+--- !ruby/object:Gem::Specification
+name: minitest
+version: !ruby/object:Gem::Version
+  version: 6.0.0
+platform: ruby
+authors:
+- Ryan Davis
+bindir: bin
+cert_chain:
+- |
+  -----BEGIN CERTIFICATE-----
+  MIIDPjCCAiagAwIBAgIBCTANBgkqhkiG9w0BAQsFADBFMRMwEQYDVQQDDApyeWFu
+  ZC1ydWJ5MRkwFwYKCZImiZPyLGQBGRYJemVuc3BpZGVyMRMwEQYKCZImiZPyLGQB
+  GRYDY29tMB4XDTI1MDEwNjIzMjcwMVoXDTI2MDEwNjIzMjcwMVowRTETMBEGA1UE
+  AwwKcnlhbmQtcnVieTEZMBcGCgmSJomT8ixkARkWCXplbnNwaWRlcjETMBEGCgmS
+  JomT8ixkARkWA2NvbTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALda
+  b9DCgK+627gPJkB6XfjZ1itoOQvpqH1EXScSaba9/S2VF22VYQbXU1xQXL/WzCkx
+  taCPaLmfYIaFcHHCSY4hYDJijRQkLxPeB3xbOfzfLoBDbjvx5JxgJxUjmGa7xhcT
+  oOvjtt5P8+GSK9zLzxQP0gVLS/D0FmoE44XuDr3iQkVS2ujU5zZL84mMNqNB1znh
+  GiadM9GHRaDiaxuX0cIUBj19T01mVE2iymf9I6bEsiayK/n6QujtyCbTWsAS9Rqt
+  qhtV7HJxNKuPj/JFH0D2cswvzznE/a5FOYO68g+YCuFi5L8wZuuM8zzdwjrWHqSV
+  gBEfoTEGr7Zii72cx+sCAwEAAaM5MDcwCQYDVR0TBAIwADALBgNVHQ8EBAMCBLAw
+  HQYDVR0OBBYEFEfFe9md/r/tj/Wmwpy+MI8d9k/hMA0GCSqGSIb3DQEBCwUAA4IB
+  AQAC0WQJcPOWPFwkojhzweilRVjTJ19UiLhiBTw3C1wJO3LVdBkWDmnnhAmKuX4D
+  r7vjQvESlABGIPdutI1Yl7mrHQzTkfLfXvNN6MT0nLChPyIYauT6SZZxubwJrUfA
+  7R0c2CJTIboZ0XaGpLsXqHEF1c29H7TV1QvVuqKAN2mCjh4N82QVn+ZKtys28AwT
+  6GfQX2fqLoi4KSc7xIzHKaNzqxeOICmJofk9w5VZ2rRN6yes8jvFYwz9HR41wdj8
+  bwfinv7Yp5fA6AysuZLhCykyfDuZVRrUp0Vb68YCKsLjJly/Theak+euNTxvHsB+
+  al9oSgPPHICMEX65qvLywitx
+  -----END CERTIFICATE-----
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: prism
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '1.5'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '1.5'
+- !ruby/object:Gem::Dependency
+  name: rdoc
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '4.0'
+    - - "<"
+      - !ruby/object:Gem::Version
+        version: '7'
+  type: :development
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '4.0'
+    - - "<"
+      - !ruby/object:Gem::Version
+        version: '7'
+- !ruby/object:Gem::Dependency
+  name: simplecov
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '0.21'
+  type: :development
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '0.21'
+- !ruby/object:Gem::Dependency
+  name: hoe
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '4.3'
+  type: :development
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '4.3'
+description: |-
+  minitest provides a complete suite of testing facilities supporting
+  TDD, BDD, and benchmarking.
+
+      "I had a class with Jim Weirich on testing last week and we were
+       allowed to choose our testing frameworks. Kirk Haines and I were
+       paired up and we cracked open the code for a few test
+       frameworks...
+
+       I MUST say that minitest is *very* readable / understandable
+       compared to the 'other two' options we looked at. Nicely done and
+       thank you for helping us keep our mental sanity."
+
+      -- Wayne E. Seguin
+
+  minitest/test is a small and incredibly fast unit testing framework.
+  It provides a rich set of assertions to make your tests clean and
+  readable.
+
+  minitest/spec is a functionally complete spec engine. It hooks onto
+  minitest/test and seamlessly bridges test assertions over to spec
+  expectations.
+
+  minitest/benchmark is an awesome way to assert the performance of your
+  algorithms in a repeatable manner. Now you can assert that your newb
+  co-worker doesn't replace your linear algorithm with an exponential
+  one!
+
+  minitest/pride shows pride in testing and adds coloring to your test
+  output. I guess it is an example of how to write IO pipes too. :P
+
+  minitest/test is meant to have a clean implementation for language
+  implementors that need a minimal set of methods to bootstrap a working
+  test suite. For example, there is no magic involved for test-case
+  discovery.
+
+      "Again, I can't praise enough the idea of a testing/specing
+       framework that I can actually read in full in one sitting!"
+
+      -- Piotr Szotkowski
+
+  Comparing to rspec:
+
+      rspec is a testing DSL. minitest is ruby.
+
+      -- Adam Hawkins, "Bow Before MiniTest"
+
+  minitest doesn't reinvent anything that ruby already provides, like:
+  classes, modules, inheritance, methods. This means you only have to
+  learn ruby to use minitest and all of your regular OO practices like
+  extract-method refactorings still apply.
+email:
+- ryand-ruby@zenspider.com
+executables:
+- minitest
+extensions: []
+extra_rdoc_files:
+- History.rdoc
+- Manifest.txt
+- README.rdoc
+files:
+- History.rdoc
+- Manifest.txt
+- README.rdoc
+- bin/minitest
+homepage: https://minite.st/
+licenses:
+- MIT
+metadata:
+  bug_tracker_uri: https://github.com/minitest/minitest/issues
+  changelog_uri: https://github.com/minitest/minitest/blob/master/History.rdoc
+  homepage_uri: https://minite.st/
+  source_code_uri: https://github.com/minitest/minitest
+rdoc_options:
+- "--main"
+- README.rdoc
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '3.2'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 3.4.20
+specification_version: 4
+summary: minitest provides a complete suite of testing facilities supporting TDD,
+  BDD, and benchmarking
+test_files: []

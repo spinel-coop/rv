@@ -1,0 +1,46 @@
+--- !ruby/object:Gem::Specification
+name: error_highlight
+version: !ruby/object:Gem::Version
+  version: 0.7.1
+platform: ruby
+authors:
+- Yusuke Endoh
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: The gem enhances Exception#message by adding a short explanation where
+  the exception is raised
+email:
+- mame@ruby-lang.org
+executables: []
+extensions: []
+extra_rdoc_files: []
+files:
+- lib/error_highlight.rb
+- lib/error_highlight/base.rb
+- lib/error_highlight/core_ext.rb
+- lib/error_highlight/formatter.rb
+- lib/error_highlight/version.rb
+homepage: https://github.com/ruby/error_highlight
+licenses:
+- MIT
+metadata: {}
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 3.2.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Shows a one-line code snippet with an underline in the error backtrace
+test_files: []

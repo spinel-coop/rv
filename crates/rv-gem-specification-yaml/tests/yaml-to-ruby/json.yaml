@@ -1,0 +1,136 @@
+--- !ruby/object:Gem::Specification
+name: json
+version: !ruby/object:Gem::Version
+  version: 2.18.0
+platform: ruby
+authors:
+- Florian Frank
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: This is a JSON implementation as a Ruby extension in C.
+email: flori@ping.de
+executables: []
+extensions:
+- ext/json/extconf.rb
+- ext/json/generator/extconf.rb
+- ext/json/parser/extconf.rb
+extra_rdoc_files:
+- README.md
+files:
+- BSDL
+- CHANGES.md
+- COPYING
+- LEGAL
+- README.md
+- ext/json/extconf.h
+- ext/json/extconf.rb
+- ext/json/fbuffer/fbuffer.h
+- ext/json/generator/extconf.h
+- ext/json/generator/extconf.rb
+- ext/json/generator/generator.c
+- ext/json/json.h
+- ext/json/lib/json.rb
+- ext/json/lib/json/add/bigdecimal.rb
+- ext/json/lib/json/add/complex.rb
+- ext/json/lib/json/add/core.rb
+- ext/json/lib/json/add/date.rb
+- ext/json/lib/json/add/date_time.rb
+- ext/json/lib/json/add/exception.rb
+- ext/json/lib/json/add/ostruct.rb
+- ext/json/lib/json/add/range.rb
+- ext/json/lib/json/add/rational.rb
+- ext/json/lib/json/add/regexp.rb
+- ext/json/lib/json/add/set.rb
+- ext/json/lib/json/add/string.rb
+- ext/json/lib/json/add/struct.rb
+- ext/json/lib/json/add/symbol.rb
+- ext/json/lib/json/add/time.rb
+- ext/json/lib/json/common.rb
+- ext/json/lib/json/ext.rb
+- ext/json/lib/json/ext/generator/state.rb
+- ext/json/lib/json/generic_object.rb
+- ext/json/lib/json/version.rb
+- ext/json/parser/extconf.h
+- ext/json/parser/extconf.rb
+- ext/json/parser/parser.c
+- ext/json/simd/conf.rb
+- ext/json/simd/simd.h
+- ext/json/vendor/fpconv.c
+- ext/json/vendor/jeaiii-ltoa.h
+- ext/json/vendor/ryu.h
+- json.gemspec
+- lib/json.rb
+- lib/json/add/bigdecimal.rb
+- lib/json/add/complex.rb
+- lib/json/add/core.rb
+- lib/json/add/date.rb
+- lib/json/add/date_time.rb
+- lib/json/add/exception.rb
+- lib/json/add/ostruct.rb
+- lib/json/add/range.rb
+- lib/json/add/rational.rb
+- lib/json/add/regexp.rb
+- lib/json/add/set.rb
+- lib/json/add/string.rb
+- lib/json/add/struct.rb
+- lib/json/add/symbol.rb
+- lib/json/add/time.rb
+- lib/json/common.rb
+- lib/json/ext.rb
+- lib/json/ext/generator/state.rb
+- lib/json/generic_object.rb
+- lib/json/version.rb
+- lib/lib/json.rb
+- lib/lib/json/add/bigdecimal.rb
+- lib/lib/json/add/complex.rb
+- lib/lib/json/add/core.rb
+- lib/lib/json/add/date.rb
+- lib/lib/json/add/date_time.rb
+- lib/lib/json/add/exception.rb
+- lib/lib/json/add/ostruct.rb
+- lib/lib/json/add/range.rb
+- lib/lib/json/add/rational.rb
+- lib/lib/json/add/regexp.rb
+- lib/lib/json/add/set.rb
+- lib/lib/json/add/string.rb
+- lib/lib/json/add/struct.rb
+- lib/lib/json/add/symbol.rb
+- lib/lib/json/add/time.rb
+- lib/lib/json/common.rb
+- lib/lib/json/ext.rb
+- lib/lib/json/ext/generator/state.rb
+- lib/lib/json/generic_object.rb
+- lib/lib/json/version.rb
+homepage: https://github.com/ruby/json
+licenses:
+- Ruby
+metadata:
+  bug_tracker_uri: https://github.com/ruby/json/issues
+  changelog_uri: https://github.com/ruby/json/blob/master/CHANGES.md
+  documentation_uri: https://docs.ruby-lang.org/en/master/JSON.html
+  homepage_uri: https://github.com/ruby/json
+  source_code_uri: https://github.com/ruby/json
+rdoc_options:
+- "--title"
+- JSON implementation for Ruby
+- "--main"
+- README.md
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '2.7'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: JSON Implementation for Ruby
+test_files: []

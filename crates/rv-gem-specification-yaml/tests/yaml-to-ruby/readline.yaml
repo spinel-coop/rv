@@ -1,0 +1,58 @@
+--- !ruby/object:Gem::Specification
+name: readline
+version: !ruby/object:Gem::Version
+  version: 0.0.4
+platform: ruby
+authors:
+- aycabta
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: reline
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+description: |
+  This is just a loader for "readline". If Ruby has the "readline-ext" gem
+  that is a native extension, this gem will load it. If Ruby does not have
+  the "readline-ext" gem this gem will load "reline", a library that is
+  compatible with the "readline-ext" gem and implemented in pure Ruby.
+email:
+- aycabta@gmail.com
+executables: []
+extensions: []
+extra_rdoc_files: []
+files: []
+homepage: https://github.com/ruby/readline
+licenses:
+- Ruby
+metadata: {}
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 3.4.20
+specification_version: 4
+summary: Loader for "readline".
+test_files: []

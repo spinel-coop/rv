@@ -19,6 +19,7 @@ criterion = { workspace = true }
 insta = { workspace = true }
 pretty_assertions = { workspace = true, features = ["unstable"] }
 miette = { workspace = true, features = ["fancy"] }
+fs-err.workspace = true
 
 [[example]]
 name = "parse_gem_spec"

@@ -2203,6 +2203,7 @@ name = "rv-gem-specification-yaml"
 version = "0.1.0"
 dependencies = [
  "criterion",
+ "fs-err",
  "indexmap",
  "insta",
  "miette",

@@ -1,0 +1,63 @@
+--- !ruby/object:Gem::Specification
+name: rbs
+version: !ruby/object:Gem::Version
+  version: 3.10.0
+platform: ruby
+authors:
+- Soutaro Matsumoto
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: logger
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+description: RBS is the language for type signatures for Ruby and standard library
+  definitions.
+email:
+- matsumoto@soutaro.com
+executables:
+- rbs
+extensions:
+- ext/rbs_extension/extconf.rb
+extra_rdoc_files: []
+files:
+- exe/rbs
+- ext/rbs_extension/extconf.rb
+homepage: https://github.com/ruby/rbs
+licenses:
+- BSD-2-Clause
+- Ruby
+metadata:
+  changelog_uri: https://github.com/ruby/rbs/blob/master/CHANGELOG.md
+  homepage_uri: https://github.com/ruby/rbs
+  source_code_uri: https://github.com/ruby/rbs.git
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '3.1'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Type signature for Ruby.
+test_files: []

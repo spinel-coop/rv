@@ -1,0 +1,61 @@
+--- !ruby/object:Gem::Specification
+name: uri
+version: !ruby/object:Gem::Version
+  version: 1.1.1
+platform: ruby
+authors:
+- Akira Yamada
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: URI is a module providing classes to handle Uniform Resource Identifiers
+email:
+- akira@ruby-lang.org
+executables: []
+extensions: []
+extra_rdoc_files: []
+files:
+- lib/uri.rb
+- lib/uri/common.rb
+- lib/uri/file.rb
+- lib/uri/ftp.rb
+- lib/uri/generic.rb
+- lib/uri/http.rb
+- lib/uri/https.rb
+- lib/uri/ldap.rb
+- lib/uri/ldaps.rb
+- lib/uri/mailto.rb
+- lib/uri/rfc2396_parser.rb
+- lib/uri/rfc3986_parser.rb
+- lib/uri/version.rb
+- lib/uri/ws.rb
+- lib/uri/wss.rb
+homepage: https://github.com/ruby/uri
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  bug_tracker_uri: https://github.com/ruby/uri/issues
+  changelog_uri: https://github.com/ruby/uri/releases
+  documentation_uri: https://ruby.github.io/uri/
+  homepage_uri: https://github.com/ruby/uri
+  source_code_uri: https://github.com/ruby/uri
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '2.5'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: URI is a module providing classes to handle Uniform Resource Identifiers
+test_files: []

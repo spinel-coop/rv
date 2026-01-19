@@ -75,6 +75,8 @@ use rv_gem_types::requirement::RequirementError;
 
 pub mod parser;
 pub mod serialize;
+mod to_ruby;
+pub use to_ruby::to_ruby;
 
 use saphyr::EmitError;
 pub use serialize::serialize_specification_to_yaml;

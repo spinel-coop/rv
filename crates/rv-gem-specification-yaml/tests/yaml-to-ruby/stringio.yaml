@@ -1,0 +1,65 @@
+--- !ruby/object:Gem::Specification
+name: stringio
+version: !ruby/object:Gem::Version
+  version: 3.2.0
+platform: ruby
+authors:
+- Nobu Nakada
+- Charles Oliver Nutter
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: Pseudo `IO` class from/to `String`.
+email:
+- nobu@ruby-lang.org
+- headius@headius.com
+executables: []
+extensions:
+- ext/stringio/extconf.rb
+extra_rdoc_files:
+- ".document"
+- ".rdoc_options"
+- COPYING
+- LICENSE.txt
+- NEWS.md
+- README.md
+- docs/io.rb
+- ext/stringio/.document
+files:
+- ".document"
+- ".rdoc_options"
+- COPYING
+- LICENSE.txt
+- NEWS.md
+- README.md
+- docs/io.rb
+- ext/stringio/.document
+- ext/stringio/extconf.rb
+- ext/stringio/stringio.c
+- lib/docs/io.rb
+- stringio.bundle
+homepage: https://github.com/ruby/stringio
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  changelog_uri: https://github.com/ruby/stringio/releases/tag/v3.2.0
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '2.7'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Pseudo IO on String
+test_files: []

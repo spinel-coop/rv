@@ -1,0 +1,63 @@
+--- !ruby/object:Gem::Specification
+name: etc
+version: !ruby/object:Gem::Version
+  version: 1.4.6
+platform: ruby
+authors:
+- Yukihiro Matsumoto
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: Provides access to information typically stored in UNIX /etc directory.
+email:
+- matz@ruby-lang.org
+executables: []
+extensions:
+- ext/etc/extconf.rb
+extra_rdoc_files:
+- BSDL
+- COPYING
+- ChangeLog
+- README.md
+- ext/etc/constdefs.h
+- ext/etc/etc.c
+- ext/etc/extconf.rb
+- ext/etc/mkconstants.rb
+- test/etc/test_etc.rb
+files:
+- BSDL
+- COPYING
+- ChangeLog
+- README.md
+- etc.bundle
+- ext/etc/constdefs.h
+- ext/etc/etc.c
+- ext/etc/extconf.rb
+- ext/etc/mkconstants.rb
+- test/etc/test_etc.rb
+homepage: https://github.com/ruby/etc
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata: {}
+rdoc_options:
+- "--main"
+- README.md
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.7.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Provides access to information typically stored in UNIX /etc directory.
+test_files: []

@@ -1,0 +1,45 @@
+--- !ruby/object:Gem::Specification
+name: securerandom
+version: !ruby/object:Gem::Version
+  version: 0.4.1
+platform: ruby
+authors:
+- Tanaka Akira
+bindir: exe
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: Interface for secure random number generator.
+email:
+- akr@fsij.org
+executables: []
+extensions: []
+extra_rdoc_files: []
+files:
+- lib/securerandom.rb
+homepage: https://github.com/ruby/securerandom
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  changelog_uri: https://github.com/ruby/securerandom/releases
+  homepage_uri: https://github.com/ruby/securerandom
+  source_code_uri: https://github.com/ruby/securerandom
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 3.1.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Interface for secure random number generator.
+test_files: []

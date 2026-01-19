@@ -1,0 +1,57 @@
+--- !ruby/object:Gem::Specification
+name: reline
+version: !ruby/object:Gem::Version
+  version: 0.6.3
+platform: ruby
+authors:
+- aycabta
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: io-console
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '0.5'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '0.5'
+description: Alternative GNU Readline or Editline implementation by pure Ruby.
+email:
+- aycabta@gmail.com
+executables: []
+extensions: []
+extra_rdoc_files: []
+files: []
+homepage: https://github.com/ruby/reline
+licenses:
+- Ruby
+metadata:
+  bug_tracker_uri: https://github.com/ruby/reline/issues
+  changelog_uri: https://github.com/ruby/reline/releases
+  source_code_uri: https://github.com/ruby/reline
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '2.6'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 3.4.20
+specification_version: 4
+summary: Alternative GNU Readline or Editline implementation by pure Ruby.
+test_files: []

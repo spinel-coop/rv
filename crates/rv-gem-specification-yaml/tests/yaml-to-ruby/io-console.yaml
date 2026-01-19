@@ -1,0 +1,53 @@
+--- !ruby/object:Gem::Specification
+name: io-console
+version: !ruby/object:Gem::Version
+  version: 0.8.2
+platform: ruby
+authors:
+- Nobu Nakada
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies: []
+description: add console capabilities to IO instances.
+email: nobu@ruby-lang.org
+executables: []
+extensions:
+- ext/io/console/extconf.rb
+extra_rdoc_files: []
+files:
+- ".document"
+- BSDL
+- COPYING
+- README.md
+- ext/io/console/console.c
+- ext/io/console/extconf.rb
+- ext/io/console/win32_vk.inc
+- io/console.bundle
+- lib/console/size.rb
+- lib/lib/io/console/size.rb
+homepage: https://github.com/ruby/io-console
+licenses:
+- Ruby
+- BSD-2-Clause
+metadata:
+  changelog_uri: https://github.com/ruby/io-console/releases
+  source_code_url: https://github.com/ruby/io-console
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: 2.6.0
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Console interface
+test_files: []

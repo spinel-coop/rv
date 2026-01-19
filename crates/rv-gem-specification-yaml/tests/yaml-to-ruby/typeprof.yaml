@@ -1,0 +1,75 @@
+--- !ruby/object:Gem::Specification
+name: typeprof
+version: !ruby/object:Gem::Version
+  version: 0.31.1
+platform: ruby
+authors:
+- Yusuke Endoh
+bindir: bin
+cert_chain: []
+date: 2026-01-13 00:00:00.000000000 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: prism
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 1.4.0
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 1.4.0
+- !ruby/object:Gem::Dependency
+  name: rbs
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 3.6.0
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 3.6.0
+description: |
+  TypeProf performs a type analysis of non-annotated Ruby code.
+
+  It abstractly executes input Ruby code in a level of types instead of values, gathers what types are passed to and returned by methods, and prints the analysis result in RBS format, a standard type description format for Ruby 3.0.
+email:
+- mame@ruby-lang.org
+executables:
+- typeprof
+extensions: []
+extra_rdoc_files: []
+files:
+- bin/typeprof
+homepage: https://github.com/ruby/typeprof
+licenses:
+- MIT
+metadata:
+  homepage_uri: https://github.com/ruby/typeprof
+  source_code_uri: https://github.com/ruby/typeprof
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '3.3'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: TypeProf is a type analysis tool for Ruby code based on abstract interpretation
+test_files: []

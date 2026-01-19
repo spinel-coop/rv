@@ -1393,7 +1393,7 @@ struct UnpackedMetdata {
 /// Given the metadata.gz from a gem, write it to the filesystem under
 /// BUNDLEPATH/specifications/name-version.gemspec
 fn unpack_metadata<R>(
-    config: &Config,
+    _config: &Config,
     bundle_path: &Utf8Path,
     nameversion: &str,
     metadata_gz: HashReader<R>,
@@ -1419,45 +1419,16 @@ where
             None
         }
     };
-    let ruby_contents = convert_gemspec_yaml_to_ruby(config, yaml_contents)?;
-    std::io::copy(&mut ruby_contents.as_bytes(), &mut dst)?;
+    if let Some(spec) = parsed.clone() {
+        let ruby_contents = rv_gem_specification_yaml::to_ruby(spec);
+        std::io::copy(&mut ruby_contents.as_bytes(), &mut dst)?;
+    }
 
     let h = unzipper.into_inner();
     Ok(UnpackedMetdata {
         hashed: h.finalize(),
         gemspec: parsed,
     })
-}
-
-// TODO: Remove this. We should not need to shell out to Ruby to convert a YAML file to Ruby.
-fn convert_gemspec_yaml_to_ruby(config: &Config, contents: String) -> Result<String> {
-    use std::io::Write;
-
-    let temp_dir = camino_tempfile::tempdir()?;
-    let temp_path = temp_dir.path().join("gemspec.yaml");
-    let mut temp_file = fs_err::File::create(&temp_path)?;
-    temp_file.write_all(contents.as_bytes())?;
-
-    let result = crate::commands::ruby::run::run_no_install(
-        config,
-        &config.ruby_request(),
-        &[
-            "-e",
-            "Gem.discover_gems_on_require = false; Gem.load_yaml; print Gem::SafeYAML.safe_load(ARGF.read).to_ruby",
-            temp_path.as_str(),
-        ],
-        CaptureOutput::Both,
-        None,
-        vec![],
-    )?;
-
-    let error = String::from_utf8(result.stderr).unwrap();
-
-    if !result.status.success() {
-        return Err(Error::GemspecToRubyError(error));
-    }
-
-    Ok(String::from_utf8(result.stdout).unwrap())
 }
 
 fn platform_for_gem(gem_version: &str) -> Platform {
