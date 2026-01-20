@@ -23,5 +23,9 @@ pub fn shell_completions(cmd: &mut clap::Command, shell: Shell) {
             let clap_complete_shell = clap_complete_nushell::Nushell;
             generate(clap_complete_shell, cmd, name, &mut stdout());
         }
+        Shell::PowerShell => {
+            let clap_complete_shell: ClapCompleteShell = ClapCompleteShell::PowerShell;
+            generate(clap_complete_shell, cmd, name, &mut stdout());
+        }
     }
 }

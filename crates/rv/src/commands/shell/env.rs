@@ -49,6 +49,17 @@ pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
             println!("{}", serialized);
             Ok(())
         }
+        Shell::PowerShell => {
+            // PowerShell uses $env:VAR for environment variables
+            // Use backticks to escape special characters (following uv's pattern)
+            for var in unset {
+                println!("Remove-Item Env:\\{var} -ErrorAction SilentlyContinue");
+            }
+            for (var, val) in set {
+                println!("$env:{var} = \"{}\"", powershell_escape(&val));
+            }
+            Ok(())
+        }
     }
 }
 
@@ -68,7 +79,7 @@ fn nu_env(unset: Vec<&str>, set: Vec<(&str, String)>) -> serde_json::Value {
     serde_json::Value::Object(env_changes)
 }
 
-// From uv's crates/uv-shell/src/lib.rs
+// Credit to uv's crates/uv-shell/src/lib.rs
 // Assumes strings will be outputed as "str", so escapes any \ or " character
 fn fish_var_escape(s: String) -> String {
     let mut escaped = String::with_capacity(s.len());
@@ -78,6 +89,21 @@ fn fish_var_escape(s: String) -> String {
             _ => {}
         }
         escaped.push(c)
+    }
+    escaped
+}
+
+// Credit to uv's crates/uv-shell/src/lib.rs (backtick_escape)
+// PowerShell uses backticks for escaping special characters
+fn powershell_escape(s: &str) -> String {
+    let mut escaped = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            // Escape double quotes, backticks, dollar signs, and unicode quotes
+            '"' | '`' | '$' | '\u{201C}' | '\u{201D}' | '\u{201E}' => escaped.push('`'),
+            _ => {}
+        }
+        escaped.push(c);
     }
     escaped
 }

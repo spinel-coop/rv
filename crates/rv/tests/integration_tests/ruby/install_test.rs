@@ -42,7 +42,7 @@ fn test_ruby_install_no_specific_version() {
     let cache_key = rv_cache::cache_digest(format!("{}/{}", test.server_url(), download_suffix));
     let tarball_path = cache_dir
         .join("ruby-v0")
-        .join("tarballs")
+        .join("archives")
         .join(format!("{}.tar.gz", cache_key));
     assert!(tarball_path.exists(), "Tarball should be cached");
 }
@@ -75,7 +75,7 @@ fn test_ruby_install_incomplete_request() {
     let cache_key = rv_cache::cache_digest(format!("{}/{}", test.server_url(), download_suffix));
     let tarball_path = cache_dir
         .join("ruby-v0")
-        .join("tarballs")
+        .join("archives")
         .join(format!("{}.tar.gz", cache_key));
     assert!(tarball_path.exists(), "Tarball should be cached");
 }
@@ -99,13 +99,13 @@ fn test_ruby_install_successful_download() {
     let cache_key = rv_cache::cache_digest(format!("{}/{}", test.server_url(), download_suffix));
     let tarball_path = cache_dir
         .join("ruby-v0")
-        .join("tarballs")
+        .join("archives")
         .join(format!("{}.tar.gz", cache_key));
     assert!(tarball_path.exists(), "Tarball should be cached");
 
     let temp_path = cache_dir
         .join("ruby-v0")
-        .join("tarballs")
+        .join("archives")
         .join(format!("{}.tar.gz.tmp", cache_key));
     assert!(
         !temp_path.exists(),
@@ -178,11 +178,11 @@ fn test_ruby_install_http_failure_no_empty_file() {
     ));
     let tarball_path = cache_dir
         .join("ruby-v0")
-        .join("tarballs")
+        .join("archives")
         .join(format!("{}.tar.gz", cache_key));
     let temp_path = cache_dir
         .join("ruby-v0")
-        .join("tarballs")
+        .join("archives")
         .join(format!("{}.tar.gz.tmp", cache_key));
 
     assert!(
@@ -243,11 +243,11 @@ fn test_ruby_install_interrupted_download_cleanup() {
     let cache_key = rv_cache::cache_digest(tarball_name);
     let tarball_path = cache_dir
         .join("ruby-v0")
-        .join("tarballs")
+        .join("archives")
         .join(format!("{}.tar.gz", cache_key));
     let temp_path = cache_dir
         .join("ruby-v0")
-        .join("tarballs")
+        .join("archives")
         .join(format!("{}.tar.gz.tmp", cache_key));
 
     assert!(
@@ -275,7 +275,7 @@ fn test_ruby_install_cached_file_reused() {
 
     let _cache_dir = test.enable_cache();
 
-    // This one should actually download tarballs, from the mocked server.
+    // This one should actually download archives, from the mocked server.
     let output1 = test.rv(&["ruby", "install", "3.4.5"]);
     output1.assert_success();
 
@@ -307,12 +307,12 @@ fn test_ruby_install_invalid_url() {
 
     output.assert_failure();
 
-    let tarballs_dir = cache_dir.join("ruby-v0").join("tarballs");
-    if tarballs_dir.exists() {
-        let entries: Vec<_> = fs::read_dir(&tarballs_dir).unwrap().collect();
+    let archives_dir = cache_dir.join("ruby-v0").join("archives");
+    if archives_dir.exists() {
+        let entries: Vec<_> = fs::read_dir(&archives_dir).unwrap().collect();
         assert!(
             entries.is_empty(),
-            "No files should be created in tarballs directory"
+            "No files should be created in archives directory"
         );
     }
 }
@@ -358,7 +358,7 @@ fn test_ruby_install_atomic_rename_behavior() {
     let cache_key = rv_cache::cache_digest(format!("{}/{}", test.server_url(), download_suffix));
     let tarball_path = cache_dir
         .join("ruby-v0")
-        .join("tarballs")
+        .join("archives")
         .join(format!("{}.tar.gz", cache_key));
 
     assert!(tarball_path.exists(), "Final tarball should exist");
@@ -435,7 +435,7 @@ fn test_ruby_install_temp_file_cleanup_on_extraction_failure() {
     ));
     let temp_path = cache_dir
         .join("ruby-v0")
-        .join("tarballs")
+        .join("archives")
         .join(format!("{}.tar.gz.tmp", cache_key));
 
     assert!(!temp_path.exists(), "Temp file should be cleaned up");
