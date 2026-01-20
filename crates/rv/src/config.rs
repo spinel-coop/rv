@@ -96,17 +96,17 @@ fn legacy_default_path() -> String {
 /// Default Ruby installation directories
 pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
     let paths: [(_, _); 6] = [
-        (xdg_data_path(), true),
-        (legacy_default_data_path(), false),
-        (legacy_default_path(), false),
-        ("/opt/rubies".into(), false),
-        ("/usr/local/rubies".into(), false),
-        ("/opt/homebrew/Cellar/ruby".into(), false),
+        (true, xdg_data_path()),
+        (false, legacy_default_data_path()),
+        (false, legacy_default_path()),
+        (false, "/opt/rubies".into()),
+        (false, "/usr/local/rubies".into()),
+        (false, "/opt/homebrew/Cellar/ruby".into()),
     ];
 
     paths
         .iter()
-        .filter_map(|(path, always_include)| {
+        .filter_map(|(always_include, path)| {
             let join = root.join(path.strip_prefix("/").unwrap_or(path));
             join.canonicalize_utf8()
                 .ok()
