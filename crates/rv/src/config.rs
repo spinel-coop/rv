@@ -85,47 +85,32 @@ fn xdg_data_path() -> String {
     path_buf.to_str().unwrap().to_owned()
 }
 
-struct PathInfo<'a> {
-    path: &'a str,
-    // Always include, even if it doesn't exist yet.
-    always_include: bool,
+fn legacy_default_data_path() -> String {
+    shellexpand::tilde("~/.data/rv/rubies").into()
 }
 
-impl<'a> PathInfo<'a> {
-    pub fn new(path: &'a str, always_include: bool) -> Self {
-        Self {
-            path,
-            always_include,
-        }
-    }
+fn legacy_default_path() -> String {
+    shellexpand::tilde("~/.rubies").into()
 }
 
 /// Default Ruby installation directories
 pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
-    let mut paths: Vec<PathInfo> = vec![];
-    let xdg_path = xdg_data_path();
-    paths.push(PathInfo::new(&xdg_path, true));
-
-    let legacy_default_data_path = shellexpand::tilde("~/.data/rv/rubies");
-    let legacy_default_path = shellexpand::tilde("~/.rubies");
-
-    paths.push(PathInfo::new(legacy_default_data_path.as_ref(), false));
-    paths.push(PathInfo::new(legacy_default_path.as_ref(), false));
-    paths.push(PathInfo::new("/opt/rubies", false));
-    paths.push(PathInfo::new("/usr/local/rubies", false));
-    paths.push(PathInfo::new("/opt/homebrew/Cellar/ruby", false));
+    let paths: [(_, _); 6] = [
+        (xdg_data_path(), true),
+        (legacy_default_data_path(), false),
+        (legacy_default_path(), false),
+        ("/opt/rubies".into(), false),
+        ("/usr/local/rubies".into(), false),
+        ("/opt/homebrew/Cellar/ruby".into(), false),
+    ];
 
     paths
-        .into_iter()
-        .filter_map(|path_info| {
-            let path = path_info.path;
-            let joinable_path = path.strip_prefix("/").unwrap_or(path);
-            let canonical_path = root.join(joinable_path).canonicalize_utf8();
-            if path_info.always_include {
-                Some(canonical_path.unwrap_or(Utf8PathBuf::from(path)))
-            } else {
-                canonical_path.ok()
-            }
+        .iter()
+        .filter_map(|(path, always_include)| {
+            let join = root.join(path.strip_prefix("/").unwrap_or(path));
+            join.canonicalize_utf8()
+                .ok()
+                .or(always_include.then_some(path.into()))
         })
         .collect()
 }
