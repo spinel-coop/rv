@@ -81,11 +81,7 @@ struct Cli {
 
 impl Cli {
     fn config(&self) -> Result<Config> {
-        let root = if self.root_dir.is_some() {
-            self.root_dir.clone().unwrap()
-        } else {
-            "/".into()
-        };
+        let root = self.root_dir.as_ref().unwrap_or(&"/".into()).to_owned();
 
         let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
         let ruby_dirs = if self.ruby_dir.is_empty() {
