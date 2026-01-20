@@ -55,17 +55,12 @@ fn test_clean_install_gemfile_arg() {
         lockfile.replace("https://rubygems.org", &test.server_url()),
     );
 
+    // Test passing an explicit Gemfile works
     let output = test.ci(&["--gemfile", "Gemfile.empty"]);
     output.assert_success();
     releases_mock.assert();
-}
 
-#[test]
-fn test_clean_install_gemfile_arg_implicit() {
-    let mut test = RvTest::new();
-
-    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
-
+    // Test failing to implicitly find a Gemfile
     let output = test.ci(&[]);
     output.assert_failure();
     assert_eq!(
@@ -73,17 +68,11 @@ fn test_clean_install_gemfile_arg_implicit() {
         "Error: CiError(MissingImplicitGemfile)\n",
     );
     releases_mock.assert();
-}
-
-#[test]
-fn test_clean_install_gemfile_arg_in_subdirectory() {
-    let mut test = RvTest::new();
-
-    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
 
     let project_dir = test.temp_root().join("project");
     std::fs::create_dir_all(project_dir.as_path()).unwrap();
 
+    // Test pasing a Gemfile in a subdirectory works
     let gemfile_path = project_dir.join("Gemfile");
     let gemfile = fs_err::read_to_string("../rv-lockfile/tests/inputs/Gemfile.empty").unwrap();
     let _ = fs_err::write(
@@ -106,14 +95,8 @@ fn test_clean_install_gemfile_arg_in_subdirectory() {
     let output = test.ci(&["--gemfile", "project/Gemfile"]);
     output.assert_success();
     releases_mock.assert();
-}
 
-#[test]
-fn test_clean_install_missing_gemfile() {
-    let mut test = RvTest::new();
-
-    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
-
+    // Test passing a missing gemfile gives a nice error
     let output = test.ci(&["--gemfile", "Gemfile.missing"]);
     output.assert_failure();
     assert_eq!(
@@ -121,14 +104,8 @@ fn test_clean_install_missing_gemfile() {
         "Error: CiError(MissingGemfile(\"Gemfile.missing\"))\n",
     );
     releases_mock.assert();
-}
 
-#[test]
-fn test_clean_install_invalid_gemfile() {
-    let mut test = RvTest::new();
-
-    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
-
+    // Test passing an invalid gemfile gives a nice error
     let output = test.ci(&["--gemfile", "/"]);
     output.assert_failure();
     assert_eq!(
