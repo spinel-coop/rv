@@ -12,7 +12,6 @@ Gem::Specification.new do |s|
   s.date = "2026-01-13"
   s.description = "Require 'English.rb' to reference global variables with less cryptic names.".freeze
   s.email = ["matz@ruby-lang.org".freeze]
-  s.files = ["lib/English.rb".freeze]
   s.homepage = "https://github.com/ruby/English".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.3.0".freeze)

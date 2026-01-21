@@ -12,7 +12,6 @@ Gem::Specification.new do |s|
   s.date = "2026-01-13"
   s.description = "This module supports top-down traversal of a set of file paths.".freeze
   s.email = ["kazuki@callcc.net".freeze]
-  s.files = ["lib/find.rb".freeze]
   s.homepage = "https://github.com/ruby/find".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.3.0".freeze)

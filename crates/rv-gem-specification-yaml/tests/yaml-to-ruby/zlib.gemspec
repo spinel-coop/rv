@@ -14,7 +14,6 @@ Gem::Specification.new do |s|
   s.description = "Ruby interface for the zlib compression/decompression library".freeze
   s.email = ["matz@ruby-lang.org".freeze, nil]
   s.extensions = ["ext/zlib/extconf.rb".freeze]
-  s.files = ["BSDL".freeze, "COPYING".freeze, "README.md".freeze, "ext/zlib/extconf.rb".freeze, "ext/zlib/zlib.c".freeze, "zlib.bundle".freeze, "zlib.gemspec".freeze]
   s.homepage = "https://github.com/ruby/zlib".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.5.0".freeze)

@@ -15,7 +15,6 @@ Gem::Specification.new do |s|
   s.email = ["matz@ruby-lang.org".freeze]
   s.extensions = ["ext/etc/extconf.rb".freeze]
   s.extra_rdoc_files = ["BSDL".freeze, "COPYING".freeze, "ChangeLog".freeze, "README.md".freeze, "ext/etc/constdefs.h".freeze, "ext/etc/etc.c".freeze, "ext/etc/extconf.rb".freeze, "ext/etc/mkconstants.rb".freeze, "test/etc/test_etc.rb".freeze]
-  s.files = ["BSDL".freeze, "COPYING".freeze, "ChangeLog".freeze, "README.md".freeze, "etc.bundle".freeze, "ext/etc/constdefs.h".freeze, "ext/etc/etc.c".freeze, "ext/etc/extconf.rb".freeze, "ext/etc/mkconstants.rb".freeze, "test/etc/test_etc.rb".freeze]
   s.homepage = "https://github.com/ruby/etc".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.rdoc_options = ["--main".freeze, "README.md".freeze]

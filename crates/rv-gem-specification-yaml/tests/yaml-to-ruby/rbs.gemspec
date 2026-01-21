@@ -16,7 +16,6 @@ Gem::Specification.new do |s|
   s.email = ["matsumoto@soutaro.com".freeze]
   s.executables = ["rbs".freeze]
   s.extensions = ["ext/rbs_extension/extconf.rb".freeze]
-  s.files = ["exe/rbs".freeze, "ext/rbs_extension/extconf.rb".freeze]
   s.homepage = "https://github.com/ruby/rbs".freeze
   s.licenses = ["BSD-2-Clause".freeze, "Ruby".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 3.1".freeze)

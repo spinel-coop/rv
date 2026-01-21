@@ -14,7 +14,6 @@ Gem::Specification.new do |s|
   s.description = "MessagePack is a binary-based efficient object serialization library. It enables to exchange structured objects between many languages like JSON. But unlike JSON, it is very fast and small.".freeze
   s.email = ["frsyuki@gmail.com".freeze, "theo@iconara.net".freeze, "tagomoris@gmail.com".freeze]
   s.extensions = ["ext/msgpack/extconf.rb".freeze]
-  s.files = ["ext/msgpack/extconf.rb".freeze]
   s.homepage = "http://msgpack.org/".freeze
   s.licenses = ["Apache 2.0".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.5".freeze)

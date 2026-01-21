@@ -10,7 +10,6 @@ Gem::Specification.new do |s|
   s.authors = ["Nobuyoshi Nakada".freeze]
   s.date = "2026-01-13"
   s.extra_rdoc_files = ["LICENSE".freeze, "README.md".freeze, "ChangeLog".freeze]
-  s.files = ["ChangeLog".freeze, "LICENSE".freeze, "README.md".freeze, "lib/lib/ruby2_keywords.rb".freeze, "lib/ruby2_keywords.rb".freeze]
   s.homepage = "https://github.com/ruby/ruby2_keywords".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.rdoc_options = ["--main".freeze, "README.md".freeze]

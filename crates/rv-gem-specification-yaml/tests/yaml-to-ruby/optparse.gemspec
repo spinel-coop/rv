@@ -13,7 +13,6 @@ Gem::Specification.new do |s|
   s.date = "2026-01-13"
   s.description = "OptionParser is a class for command-line option analysis.".freeze
   s.email = ["nobu@ruby-lang.org".freeze]
-  s.files = ["lib/optionparser.rb".freeze, "lib/optparse.rb".freeze, "lib/optparse/ac.rb".freeze, "lib/optparse/date.rb".freeze, "lib/optparse/kwargs.rb".freeze, "lib/optparse/shellwords.rb".freeze, "lib/optparse/time.rb".freeze, "lib/optparse/uri.rb".freeze, "lib/optparse/version.rb".freeze]
   s.homepage = "https://github.com/ruby/optparse".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.5.0".freeze)

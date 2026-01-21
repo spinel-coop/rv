@@ -12,7 +12,6 @@ Gem::Specification.new do |s|
   s.date = "2026-01-13"
   s.description = "A utility class for managing temporary files.".freeze
   s.email = ["matz@ruby-lang.org".freeze]
-  s.files = ["lib/tempfile.rb".freeze]
   s.homepage = "https://github.com/ruby/tempfile".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.5.0".freeze)

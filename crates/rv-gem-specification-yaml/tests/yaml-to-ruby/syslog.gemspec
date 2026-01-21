@@ -14,7 +14,6 @@ Gem::Specification.new do |s|
   s.description = "Ruby interface for the POSIX system logging facility.".freeze
   s.email = ["knu@idaemons.org".freeze]
   s.extensions = ["ext/syslog/extconf.rb".freeze]
-  s.files = ["ext/syslog/extconf.rb".freeze]
   s.homepage = "https://github.com/ruby/syslog".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.5.0".freeze)

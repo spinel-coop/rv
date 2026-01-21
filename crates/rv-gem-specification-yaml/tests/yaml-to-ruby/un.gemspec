@@ -13,7 +13,6 @@ Gem::Specification.new do |s|
   s.date = "2026-01-13"
   s.description = "Utilities to replace common UNIX commands".freeze
   s.email = ["eban@ruby-lang.org".freeze]
-  s.files = ["lib/un.rb".freeze]
   s.homepage = "https://github.com/ruby/un".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.3.0".freeze)

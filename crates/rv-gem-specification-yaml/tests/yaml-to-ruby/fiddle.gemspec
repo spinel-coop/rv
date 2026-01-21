@@ -14,7 +14,6 @@ Gem::Specification.new do |s|
   s.description = "A libffi wrapper for Ruby.".freeze
   s.email = ["aaron@tenderlovemaking.com".freeze, "hsbt@ruby-lang.org".freeze]
   s.extensions = ["ext/fiddle/extconf.rb".freeze]
-  s.files = ["ext/fiddle/extconf.rb".freeze]
   s.homepage = "https://github.com/ruby/fiddle".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.5.0".freeze)

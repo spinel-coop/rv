@@ -13,7 +13,6 @@ Gem::Specification.new do |s|
   s.description = "An XML toolkit for Ruby".freeze
   s.email = ["kou@cozmixng.org".freeze]
   s.extra_rdoc_files = ["LICENSE.txt".freeze, "NEWS.md".freeze, "README.md".freeze, "doc/rexml/context.rdoc".freeze, "doc/rexml/tasks/rdoc/child.rdoc".freeze, "doc/rexml/tasks/rdoc/document.rdoc".freeze, "doc/rexml/tasks/rdoc/element.rdoc".freeze, "doc/rexml/tasks/rdoc/node.rdoc".freeze, "doc/rexml/tasks/rdoc/parent.rdoc".freeze, "doc/rexml/tasks/tocs/child_toc.rdoc".freeze, "doc/rexml/tasks/tocs/document_toc.rdoc".freeze, "doc/rexml/tasks/tocs/element_toc.rdoc".freeze, "doc/rexml/tasks/tocs/master_toc.rdoc".freeze, "doc/rexml/tasks/tocs/node_toc.rdoc".freeze, "doc/rexml/tasks/tocs/parent_toc.rdoc".freeze, "doc/rexml/tutorial.rdoc".freeze]
-  s.files = ["LICENSE.txt".freeze, "NEWS.md".freeze, "README.md".freeze, "doc/rexml/context.rdoc".freeze, "doc/rexml/tasks/rdoc/child.rdoc".freeze, "doc/rexml/tasks/rdoc/document.rdoc".freeze, "doc/rexml/tasks/rdoc/element.rdoc".freeze, "doc/rexml/tasks/rdoc/node.rdoc".freeze, "doc/rexml/tasks/rdoc/parent.rdoc".freeze, "doc/rexml/tasks/tocs/child_toc.rdoc".freeze, "doc/rexml/tasks/tocs/document_toc.rdoc".freeze, "doc/rexml/tasks/tocs/element_toc.rdoc".freeze, "doc/rexml/tasks/tocs/master_toc.rdoc".freeze, "doc/rexml/tasks/tocs/node_toc.rdoc".freeze, "doc/rexml/tasks/tocs/parent_toc.rdoc".freeze, "doc/rexml/tutorial.rdoc".freeze]
   s.homepage = "https://github.com/ruby/rexml".freeze
   s.licenses = ["BSD-2-Clause".freeze]
   s.rdoc_options = ["--main".freeze, "README.md".freeze]

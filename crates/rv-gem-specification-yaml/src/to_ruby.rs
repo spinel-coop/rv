@@ -22,7 +22,7 @@ pub fn to_ruby(spec: Specification) -> String {
         required_rubygems_version,
         platform: _,
         specification_version,
-        files,
+        files: _,
         executables,
         extensions,
         dependencies,
@@ -119,9 +119,6 @@ pub fn to_ruby(spec: Specification) -> String {
             ruby_list(&extra_rdoc_files)
         )
         .unwrap();
-    }
-    if !files.is_empty() {
-        writeln!(ruby_src, "  s.files = [{}]", ruby_list(&files)).unwrap();
     }
     if let Some(homepage) = homepage {
         writeln!(ruby_src, "  s.homepage = \"{}\".freeze", homepage).unwrap();

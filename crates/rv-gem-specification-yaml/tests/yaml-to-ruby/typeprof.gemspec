@@ -13,7 +13,6 @@ Gem::Specification.new do |s|
   s.description = "TypeProf performs a type analysis of non-annotated Ruby code.\n\nIt abstractly executes input Ruby code in a level of types instead of values, gathers what types are passed to and returned by methods, and prints the analysis result in RBS format, a standard type description format for Ruby 3.0.\n".freeze
   s.email = ["mame@ruby-lang.org".freeze]
   s.executables = ["typeprof".freeze]
-  s.files = ["bin/typeprof".freeze]
   s.homepage = "https://github.com/ruby/typeprof".freeze
   s.licenses = ["MIT".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 3.3".freeze)

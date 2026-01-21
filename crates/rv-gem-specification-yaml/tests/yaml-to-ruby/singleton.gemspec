@@ -13,7 +13,6 @@ Gem::Specification.new do |s|
   s.date = "2026-01-13"
   s.description = "The Singleton module implements the Singleton pattern.".freeze
   s.email = ["matz@ruby-lang.org".freeze]
-  s.files = ["lib/singleton.rb".freeze]
   s.homepage = "https://github.com/ruby/singleton".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.rubygems_version = "4.0.3".freeze

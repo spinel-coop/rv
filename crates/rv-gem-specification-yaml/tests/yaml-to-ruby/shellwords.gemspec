@@ -12,7 +12,6 @@ Gem::Specification.new do |s|
   s.date = "2026-01-13"
   s.description = "Manipulates strings with word parsing rules of UNIX Bourne shell.".freeze
   s.email = ["knu@idaemons.org".freeze]
-  s.files = ["lib/shellwords.rb".freeze]
   s.homepage = "https://github.com/ruby/shellwords".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.3.0".freeze)

@@ -16,7 +16,6 @@ Gem::Specification.new do |s|
   s.executables = ["racc".freeze]
   s.extensions = ["ext/racc/cparse/extconf.rb".freeze]
   s.extra_rdoc_files = ["README.ja.rdoc".freeze, "README.rdoc".freeze]
-  s.files = ["README.ja.rdoc".freeze, "README.rdoc".freeze, "bin/racc".freeze, "ext/racc/cparse/extconf.rb".freeze]
   s.homepage = "https://github.com/ruby/racc".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.rdoc_options = ["--main".freeze, "README.rdoc".freeze]

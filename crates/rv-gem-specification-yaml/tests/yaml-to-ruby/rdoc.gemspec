@@ -15,7 +15,6 @@ Gem::Specification.new do |s|
   s.email = ["drbrain@segment7.net".freeze, "".freeze, "".freeze, "".freeze, "mail@zzak.io".freeze, "hsbt@ruby-lang.org".freeze, "aycabta@gmail.com".freeze]
   s.executables = ["rdoc".freeze, "ri".freeze]
   s.extra_rdoc_files = ["CONTRIBUTING.md".freeze, "CVE-2013-0256.rdoc".freeze, "ExampleMarkdown.md".freeze, "ExampleRDoc.rdoc".freeze, "History.rdoc".freeze, "LEGAL.rdoc".freeze, "LICENSE.rdoc".freeze, "README.md".freeze, "RI.md".freeze, "TODO.rdoc".freeze]
-  s.files = ["CONTRIBUTING.md".freeze, "CVE-2013-0256.rdoc".freeze, "ExampleMarkdown.md".freeze, "ExampleRDoc.rdoc".freeze, "History.rdoc".freeze, "LEGAL.rdoc".freeze, "LICENSE.rdoc".freeze, "README.md".freeze, "RI.md".freeze, "TODO.rdoc".freeze, "exe/rdoc".freeze, "exe/ri".freeze]
   s.homepage = "https://ruby.github.io/rdoc".freeze
   s.licenses = ["Ruby".freeze]
   s.rdoc_options = ["--main".freeze, "README.md".freeze]

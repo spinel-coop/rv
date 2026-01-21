@@ -16,7 +16,6 @@ Gem::Specification.new do |s|
   s.email = ["burke.libbey@shopify.com".freeze]
   s.executables = ["bootsnap".freeze]
   s.extensions = ["ext/bootsnap/extconf.rb".freeze]
-  s.files = ["exe/bootsnap".freeze, "ext/bootsnap/extconf.rb".freeze]
   s.homepage = "https://github.com/Shopify/bootsnap".freeze
   s.licenses = ["MIT".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.6.0".freeze)
