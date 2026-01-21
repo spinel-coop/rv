@@ -139,9 +139,7 @@ mod tests {
     #[test]
     fn test_is_github_url_subdomains() {
         assert!(is_github_url("https://api.github.com/repos/owner/repo"));
-        assert!(is_github_url(
-            "https://raw.github.com/owner/repo/main/file"
-        ));
+        assert!(is_github_url("https://raw.github.com/owner/repo/main/file"));
         assert!(is_github_url("https://objects.github.com/something"));
     }
 

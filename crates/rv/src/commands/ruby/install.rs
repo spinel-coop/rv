@@ -163,7 +163,6 @@ fn valid_tarball_exists(path: &Utf8Path) -> bool {
     fs_err::metadata(path).is_ok_and(|m| m.is_file() && m.len() > 0)
 }
 
-
 fn ruby_url(version: &str) -> Result<String> {
     let arch = Platform::local_precompiled_ruby_arch()?;
 
