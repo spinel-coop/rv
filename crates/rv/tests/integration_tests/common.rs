@@ -187,6 +187,15 @@ impl RvTest {
         self.mock_tarball_download(&path, content)
     }
 
+    pub fn mock_info_endpoint(&mut self, name: &str, content: &[u8]) -> Mock {
+        let path = format!("/info/{}", name);
+        self.server
+            .mock("GET", path.as_str())
+            .with_status(200)
+            .with_header("content-type", "text/plain; charset=utf-8")
+            .with_body(content)
+    }
+
     /// Mock a tarball on disk for testing
     pub fn mock_tarball_on_disk(&mut self, filename: &str, content: &[u8]) -> Utf8PathBuf {
         let temp_dir = self.temp_root().join("tmp");

@@ -2,6 +2,7 @@ mod ci;
 mod common;
 mod ruby;
 mod shell;
+mod tool;
 
 use crate::common::RvTest;
 use regex::Regex;

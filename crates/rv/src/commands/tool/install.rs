@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use fs_err as fs;
 use owo_colors::OwoColorize;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_ruby::request::Source;
@@ -98,7 +97,7 @@ pub async fn install(config: &Config, gem: GemName, gem_server: String, force: b
 
     // Check if the tool was already installed.
     let install_path = super::tool_dir(&args.gem, &version_to_install.version);
-    let already_installed = fs::exists(&install_path).unwrap_or_default();
+    let already_installed = install_path.exists();
     if already_installed {
         if force {
             debug!("Reinstalling tool");
