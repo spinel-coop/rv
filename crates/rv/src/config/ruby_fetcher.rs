@@ -140,7 +140,17 @@ async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Release> {
     let mut request_builder = client
         .get(url)
         .header("User-Agent", "rv-cli")
-        .header("Accept", "application/vnd.github+json");
+        .header("Accept", "application/vnd.github+json")
+        .header("X-GitHub-Api-Version", super::github::GITHUB_API_VERSION);
+
+    // Add GitHub token authentication if available
+    // Check GITHUB_TOKEN first (GitHub Actions), then GH_TOKEN (GitHub CLI/general use)
+    if let Some(token) = super::github::github_token() {
+        debug!("Using authenticated GitHub API request");
+        request_builder = request_builder.header("Authorization", format!("Bearer {}", token));
+    } else {
+        debug!("No GitHub token found, using unauthenticated API request");
+    }
 
     // 4. Use ETag for conditional requests if we have one
     if let Some(etag) = &etag {

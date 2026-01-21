@@ -237,8 +237,22 @@ async fn download_ruby_tarball(
     progress: &WorkProgress,
 ) -> Result<()> {
     debug!("Downloading tarball from {url}");
+    // Build the request with optional GitHub authentication
+    let client = reqwest::Client::new();
+    let mut request_builder = client.get(url);
+
+    // Add GitHub token authentication if available and URL is from GitHub
+    // Check GITHUB_TOKEN first (GitHub Actions), then GH_TOKEN (GitHub CLI/general use)
+    if url.contains("github.com") {
+        if let Some(token) = crate::config::github::github_token() {
+            debug!("Using authenticated GitHub request for tarball download");
+            request_builder = request_builder.header("Authorization", format!("Bearer {}", token));
+        } else {
+            debug!("No GitHub token found, using unauthenticated request for tarball download");
+        }
+    }
     // Start downloading the tarball.
-    let response = reqwest::get(url).await?;
+    let response = request_builder.send().await?;
     if !response.status().is_success() {
         let status = response.status();
         let body = response

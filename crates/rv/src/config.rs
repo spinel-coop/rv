@@ -14,6 +14,7 @@ use rv_ruby::{
     version::{ParseVersionError, RubyVersion},
 };
 
+pub mod github;
 mod ruby_cache;
 mod ruby_fetcher;
 
