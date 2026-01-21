@@ -40,91 +40,42 @@ mod tests {
         assert!(GITHUB_API_VERSION.chars().nth(7) == Some('-'));
     }
 
-    // Helper to safely manipulate environment variables in tests.
-    // Saves original value on creation and restores it on drop.
-    // This ensures tests don't pollute each other or leak env changes.
-    struct EnvGuard {
-        key: &'static str,
-        original: Option<String>,
-    }
-
-    impl EnvGuard {
-        fn new(key: &'static str) -> Self {
-            let original = std::env::var(key).ok();
-            Self { key, original }
-        }
-
-        fn set(&self, value: &str) {
-            // SAFETY: We restore the original value in Drop, and each test
-            // uses its own guards, so concurrent tests may race but will
-            // each restore their expected state.
-            unsafe {
-                std::env::set_var(self.key, value);
-            }
-        }
-
-        fn remove(&self) {
-            // SAFETY: See set() above.
-            unsafe {
-                std::env::remove_var(self.key);
-            }
-        }
-    }
-
-    impl Drop for EnvGuard {
-        fn drop(&mut self) {
-            // SAFETY: Restoring the original environment state.
-            unsafe {
-                match &self.original {
-                    Some(val) => std::env::set_var(self.key, val),
-                    None => std::env::remove_var(self.key),
-                }
-            }
-        }
-    }
-
     #[test]
     fn test_github_token_prefers_github_token_over_gh_token() {
-        let github_guard = EnvGuard::new("GITHUB_TOKEN");
-        let gh_guard = EnvGuard::new("GH_TOKEN");
-
-        github_guard.set("github_token_value");
-        gh_guard.set("gh_token_value");
-
-        assert_eq!(github_token(), Some("github_token_value".to_string()));
+        unsafe {
+            std::env::set_var("GH_TOKEN", "gh_token_value");
+            assert_eq!(github_token(), Some("gh_token_value".to_string()));
+            std::env::set_var("GITHUB_TOKEN", "github_token_value");
+            assert_eq!(github_token(), Some("github_token_value".to_string()));
+        }
     }
 
     #[test]
     fn test_github_token_falls_back_to_gh_token() {
-        let github_guard = EnvGuard::new("GITHUB_TOKEN");
-        let gh_guard = EnvGuard::new("GH_TOKEN");
-
-        github_guard.remove();
-        gh_guard.set("gh_token_value");
-
-        assert_eq!(github_token(), Some("gh_token_value".to_string()));
+        unsafe {
+            std::env::remove_var("GITHUB_TOKEN");
+            assert_eq!(github_token(), None);
+            std::env::set_var("GH_TOKEN", "gh_token_value");
+            assert_eq!(github_token(), Some("gh_token_value".to_string()));
+        }
     }
 
     #[test]
     fn test_github_token_returns_none_when_neither_set() {
-        let github_guard = EnvGuard::new("GITHUB_TOKEN");
-        let gh_guard = EnvGuard::new("GH_TOKEN");
-
-        github_guard.remove();
-        gh_guard.remove();
-
-        assert_eq!(github_token(), None);
+        unsafe {
+            std::env::remove_var("GITHUB_TOKEN");
+            std::env::remove_var("GH_TOKEN");
+            assert_eq!(github_token(), None);
+        }
     }
 
     #[test]
     fn test_github_token_uses_github_token_when_gh_token_not_set() {
-        let github_guard = EnvGuard::new("GITHUB_TOKEN");
-        let gh_guard = EnvGuard::new("GH_TOKEN");
-
-        github_guard.set("only_github_token");
-        gh_guard.remove();
-
-        assert_eq!(github_token(), Some("only_github_token".to_string()));
+        unsafe {
+            std::env::set_var("GITHUB_TOKEN", "only_github_token");
+            std::env::remove_var("GH_TOKEN");
+            assert_eq!(github_token(), Some("only_github_token".to_string()));
+        }
     }
 
     #[test]
