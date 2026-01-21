@@ -212,7 +212,7 @@ impl Platform {
 
     pub fn matches(&self, other: &Platform) -> bool {
         match (self, other) {
-            (Platform::Ruby, Platform::Ruby) => true,
+            (Platform::Ruby, _) => true,
             (Platform::Current, Platform::Current) => true,
             (
                 Platform::Specific {
@@ -424,7 +424,7 @@ mod tests {
     #[test]
     fn test_platform_matching() {
         let linux_x86_64 = Platform::new("x86_64-linux").unwrap();
-        let _linux_x86_64_gnu = Platform::new("x86_64-linux-gnu").unwrap();
+        let linux_x86_64_gnu = Platform::new("x86_64-linux-gnu").unwrap();
         let linux_arm = Platform::new("arm-linux").unwrap();
 
         assert!(linux_x86_64.matches(&linux_x86_64));
@@ -435,6 +435,13 @@ mod tests {
 
         assert!(universal_darwin.matches(&x86_darwin));
         assert!(x86_darwin.matches(&universal_darwin));
+
+        // the generic platform matches everything
+        assert!(Platform::Ruby.matches(&linux_x86_64));
+        assert!(Platform::Ruby.matches(&linux_x86_64_gnu));
+        assert!(Platform::Ruby.matches(&linux_arm));
+        assert!(Platform::Ruby.matches(&universal_darwin));
+        assert!(Platform::Ruby.matches(&x86_darwin));
     }
 
     #[test]
