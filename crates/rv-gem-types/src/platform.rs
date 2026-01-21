@@ -52,7 +52,15 @@ impl Platform {
     }
 
     pub fn local() -> Self {
-        Self::new(CURRENT_PLATFORM).expect("Could not parse current platform")
+        let rubygems_platform = CURRENT_PLATFORM
+            // ignore vendor
+            .replace("-unknown", "")
+            .replace("-pc", "")
+            .replace("-apple", "")
+            // rubygems uses arm64 in macOS instead of aarch64
+            .replace("aarch64-darwin", "arm64-darwin");
+
+        Self::new(rubygems_platform).expect("Could not parse current platform")
     }
 
     pub fn local_precompiled_ruby_arch() -> Result<String, PlatformError> {
