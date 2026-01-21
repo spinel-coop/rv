@@ -311,17 +311,13 @@ impl FromStr for Platform {
 /// into its version and platform components.
 pub fn version_platform_split(s: &str) -> Option<(Version, Platform)> {
     let splits: Vec<_> = s.split('-').collect();
-    for i in (1..splits.len()).rev() {
-        let maybe_version = splits[..i].join("-");
-        let maybe_platform = splits[i..].join("-");
-        let Ok(version) = Version::new(maybe_version) else {
-            continue;
-        };
-        let Ok(platform) = Platform::new(maybe_platform) else {
-            continue;
-        };
+
+    if let Ok(version) = Version::new(splits[0])
+        && let Ok(platform) = Platform::new(splits[1..].join("-"))
+    {
         return Some((version, platform));
     }
+
     None
 }
 
@@ -907,10 +903,23 @@ mod tests {
 
     #[test]
     fn test_version_platform_separation() {
-        let input = "1.11.0.rc1-x86_64-linux";
-        let (version, platform) = version_platform_split(input).unwrap();
-        assert_eq!(version, "1.11.0.rc1".parse().unwrap());
-        assert_eq!(platform, Platform::new("x86_64-linux").unwrap());
+        let test_cases = vec![
+            ("1.11.0.rc1-x86_64-linux", ("1.11.0.rc1", "x86_64-linux")),
+            // Real gem versions taken from Discourse's gemfile.lock
+            ("1.17.2-arm64-darwin", ("1.17.2", "arm64-darwin")),
+            ("1.17.2-x86_64-darwin", ("1.17.2", "x86_64-darwin")),
+            ("2.7.4-x86_64-linux-gnu", ("2.7.4", "x86_64-linux-gnu")),
+            ("2.7.4-x86_64-linux-musl", ("2.7.4", "x86_64-linux-musl")),
+            ("0.5.5-aarch64-linux-gnu", ("0.5.5", "aarch64-linux-gnu")),
+            ("2.7.4-aarch64-linux-musl", ("2.7.4", "aarch64-linux-musl")),
+            ("1.17.2-arm-linux-gnu", ("1.17.2", "arm-linux-gnu")),
+        ];
+
+        for (input, (expected_version, expected_platform)) in test_cases {
+            let (version, platform) = version_platform_split(input).unwrap();
+            assert_eq!(version, Version::new(expected_version).unwrap());
+            assert_eq!(platform, Platform::new(expected_platform).unwrap());
+        }
     }
 
     #[test]
