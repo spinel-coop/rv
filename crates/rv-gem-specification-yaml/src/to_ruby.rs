@@ -20,7 +20,7 @@ pub fn to_ruby(spec: Specification) -> String {
         bindir,
         required_ruby_version,
         required_rubygems_version,
-        platform: _,
+        platform,
         specification_version,
         files: _,
         executables,
@@ -40,7 +40,7 @@ pub fn to_ruby(spec: Specification) -> String {
     use std::fmt::Write;
     let mut ruby_src = format!(
         "# -*- encoding: utf-8 -*-
-# stub: {name} {version} ruby lib\n"
+# stub: {name} {version} {platform} lib\n"
     );
     if extensions.is_empty().not() {
         ruby_src.push_str("# stub: ");
@@ -56,6 +56,11 @@ pub fn to_ruby(spec: Specification) -> String {
     ruby_src.push_str("Gem::Specification.new do |s|\n");
     writeln!(ruby_src, "  s.name = \"{}\".freeze", name).unwrap();
     writeln!(ruby_src, "  s.version = \"{}\".freeze", version).unwrap();
+
+    if !platform.is_ruby() {
+        writeln!(ruby_src, "  s.platform = \"{}\".freeze", platform).unwrap();
+    }
+
     ruby_src.push('\n');
     writeln!(
         ruby_src,
