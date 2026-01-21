@@ -70,8 +70,10 @@ pub fn to_ruby(spec: Specification) -> String {
     .unwrap();
     if !metadata.is_empty() {
         write!(ruby_src, "  s.metadata = {{ ").unwrap();
+        let mut sorted_metadata: Vec<_> = metadata.iter().collect();
+        sorted_metadata.sort_by_key(|(key, _)| *key);
         let mut md_items = Vec::with_capacity(metadata.len());
-        for (k, v) in &metadata {
+        for (k, v) in &sorted_metadata {
             md_items.push(format!("\"{}\" => \"{}\"", k, v));
         }
         ruby_src.push_str(&md_items.join(", "));
