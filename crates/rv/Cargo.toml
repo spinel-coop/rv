@@ -80,7 +80,6 @@ camino-tempfile-ext = { workspace = true }
 mockito = "1.4.0"
 pretty_assertions = { workspace = true }
 rexpect = "0.6.2"
-serial_test = "3.2"
 
 [lints]
 workspace = true
