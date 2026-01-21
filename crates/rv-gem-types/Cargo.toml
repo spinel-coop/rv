@@ -10,6 +10,7 @@ regex = { workspace = true }
 once_cell = { workspace = true }
 indexmap = { workspace = true }
 rv-version = { workspace = true }
+serde = { workspace = true }
 
 [dev-dependencies]
 insta = { workspace = true }

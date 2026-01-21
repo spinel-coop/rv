@@ -32,6 +32,13 @@ impl VersionSegment {
     pub fn is_number(&self) -> bool {
         matches!(self, Self::Number(_))
     }
+
+    pub fn increment(&mut self) {
+        match self {
+            Self::Number(n) => *self = Self::Number(*n + 1),
+            Self::String(_) => {}
+        }
+    }
 }
 
 impl std::fmt::Display for VersionSegment {

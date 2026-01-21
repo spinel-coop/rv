@@ -264,6 +264,8 @@ pub enum CacheBucket {
     Git,
     /// YAML-format gemspec.
     Gemspec,
+    /// Getting all transitive dependencies of a gem
+    GemDeps,
 }
 
 impl CacheBucket {
@@ -273,6 +275,7 @@ impl CacheBucket {
             Self::Gem => "gem-v0",
             Self::Git => "git-v0",
             Self::Gemspec => "gemspec-v0",
+            Self::GemDeps => "gemdeps-v0",
         }
     }
 
