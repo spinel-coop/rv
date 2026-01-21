@@ -13,7 +13,6 @@ Gem::Specification.new do |s|
   s.date = "2026-01-13"
   s.description = "Extends the Time class with methods for parsing and conversion.".freeze
   s.email = ["akr@fsij.org".freeze]
-  s.files = ["lib/time.rb".freeze]
   s.homepage = "https://github.com/ruby/time".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.4.0".freeze)

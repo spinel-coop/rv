@@ -12,7 +12,6 @@ Gem::Specification.new do |s|
   s.date = "2026-01-13"
   s.description = "Provides three abilities to delegate method calls to an object.".freeze
   s.email = ["matz@ruby-lang.org".freeze]
-  s.files = ["lib/delegate.rb".freeze]
   s.homepage = "https://github.com/ruby/delegate".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 3.0".freeze)

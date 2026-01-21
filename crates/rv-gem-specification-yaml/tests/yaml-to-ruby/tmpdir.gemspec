@@ -13,7 +13,6 @@ Gem::Specification.new do |s|
   s.date = "2026-01-13"
   s.description = "Extends the Dir class to manage the OS temporary file path.".freeze
   s.email = ["matz@ruby-lang.org".freeze]
-  s.files = ["lib/tmpdir.rb".freeze]
   s.homepage = "https://github.com/ruby/tmpdir".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.7.0".freeze)

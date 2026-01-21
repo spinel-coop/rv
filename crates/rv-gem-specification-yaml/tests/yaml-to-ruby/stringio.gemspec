@@ -15,7 +15,6 @@ Gem::Specification.new do |s|
   s.email = ["nobu@ruby-lang.org".freeze, "headius@headius.com".freeze]
   s.extensions = ["ext/stringio/extconf.rb".freeze]
   s.extra_rdoc_files = [".document".freeze, ".rdoc_options".freeze, "COPYING".freeze, "LICENSE.txt".freeze, "NEWS.md".freeze, "README.md".freeze, "docs/io.rb".freeze, "ext/stringio/.document".freeze]
-  s.files = [".document".freeze, ".rdoc_options".freeze, "COPYING".freeze, "LICENSE.txt".freeze, "NEWS.md".freeze, "README.md".freeze, "docs/io.rb".freeze, "ext/stringio/.document".freeze, "ext/stringio/extconf.rb".freeze, "ext/stringio/stringio.c".freeze, "lib/docs/io.rb".freeze, "stringio.bundle".freeze]
   s.homepage = "https://github.com/ruby/stringio".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.7".freeze)

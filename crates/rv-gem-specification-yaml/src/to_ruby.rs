@@ -20,9 +20,9 @@ pub fn to_ruby(spec: Specification) -> String {
         bindir,
         required_ruby_version,
         required_rubygems_version,
-        platform: _,
+        platform,
         specification_version,
-        files,
+        files: _,
         executables,
         extensions,
         dependencies,
@@ -40,7 +40,7 @@ pub fn to_ruby(spec: Specification) -> String {
     use std::fmt::Write;
     let mut ruby_src = format!(
         "# -*- encoding: utf-8 -*-
-# stub: {name} {version} ruby lib\n"
+# stub: {name} {version} {platform} lib\n"
     );
     if extensions.is_empty().not() {
         ruby_src.push_str("# stub: ");
@@ -56,12 +56,24 @@ pub fn to_ruby(spec: Specification) -> String {
     ruby_src.push_str("Gem::Specification.new do |s|\n");
     writeln!(ruby_src, "  s.name = \"{}\".freeze", name).unwrap();
     writeln!(ruby_src, "  s.version = \"{}\".freeze", version).unwrap();
+
+    if !platform.is_ruby() {
+        writeln!(ruby_src, "  s.platform = \"{}\".freeze", platform).unwrap();
+    }
+
     ruby_src.push('\n');
-    writeln!(ruby_src, "  s.required_rubygems_version = Gem::Requirement.new(\"{}\".freeze) if s.respond_to? :required_rubygems_version=", required_rubygems_version).unwrap();
+    writeln!(
+        ruby_src,
+        "  s.required_rubygems_version = {} if s.respond_to? :required_rubygems_version=",
+        required_rubygems_version.to_ruby()
+    )
+    .unwrap();
     if !metadata.is_empty() {
         write!(ruby_src, "  s.metadata = {{ ").unwrap();
+        let mut sorted_metadata: Vec<_> = metadata.iter().collect();
+        sorted_metadata.sort_by_key(|(key, _)| *key);
         let mut md_items = Vec::with_capacity(metadata.len());
-        for (k, v) in &metadata {
+        for (k, v) in &sorted_metadata {
             md_items.push(format!("\"{}\" => \"{}\"", k, v));
         }
         ruby_src.push_str(&md_items.join(", "));
@@ -115,9 +127,6 @@ pub fn to_ruby(spec: Specification) -> String {
         )
         .unwrap();
     }
-    if !files.is_empty() {
-        writeln!(ruby_src, "  s.files = [{}]", ruby_list(&files)).unwrap();
-    }
     if let Some(homepage) = homepage {
         writeln!(ruby_src, "  s.homepage = \"{}\".freeze", homepage).unwrap();
     }
@@ -133,8 +142,8 @@ pub fn to_ruby(spec: Specification) -> String {
     if required_ruby_version != Default::default() {
         writeln!(
             ruby_src,
-            "  s.required_ruby_version = Gem::Requirement.new(\"{}\".freeze)",
-            required_ruby_version
+            "  s.required_ruby_version = {}",
+            required_ruby_version.to_ruby()
         )
         .unwrap();
     }
@@ -342,6 +351,11 @@ mod tests {
     #[test]
     fn test_fcntl() {
         run_test("fcntl");
+    }
+
+    #[test]
+    fn test_ffi() {
+        run_test("ffi");
     }
 
     #[test]

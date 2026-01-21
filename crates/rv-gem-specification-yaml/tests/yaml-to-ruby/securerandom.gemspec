@@ -13,7 +13,6 @@ Gem::Specification.new do |s|
   s.date = "2026-01-13"
   s.description = "Interface for secure random number generator.".freeze
   s.email = ["akr@fsij.org".freeze]
-  s.files = ["lib/securerandom.rb".freeze]
   s.homepage = "https://github.com/ruby/securerandom".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 3.1.0".freeze)

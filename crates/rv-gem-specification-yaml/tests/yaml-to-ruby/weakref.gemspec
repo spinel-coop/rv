@@ -12,7 +12,6 @@ Gem::Specification.new do |s|
   s.date = "2026-01-13"
   s.description = "Allows a referenced object to be garbage-collected.".freeze
   s.email = ["matz@ruby-lang.org".freeze]
-  s.files = ["lib/weakref.rb".freeze]
   s.homepage = "https://github.com/ruby/weakref".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.rubygems_version = "4.0.3".freeze

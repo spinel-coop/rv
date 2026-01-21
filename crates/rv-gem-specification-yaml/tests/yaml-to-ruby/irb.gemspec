@@ -14,7 +14,6 @@ Gem::Specification.new do |s|
   s.description = "Interactive Ruby command-line tool for REPL (Read Eval Print Loop).".freeze
   s.email = ["aycabta@gmail.com".freeze, "keiju@ruby-lang.org".freeze]
   s.executables = ["irb".freeze]
-  s.files = ["exe/irb".freeze]
   s.homepage = "https://github.com/ruby/irb".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.7".freeze)

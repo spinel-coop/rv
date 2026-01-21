@@ -13,7 +13,6 @@ Gem::Specification.new do |s|
   s.date = "2026-01-13"
   s.description = "Popen, but with stderr, too".freeze
   s.email = ["matz@ruby-lang.org".freeze]
-  s.files = ["lib/open3.rb".freeze, "lib/open3/version.rb".freeze]
   s.homepage = "https://github.com/ruby/open3".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.6.0".freeze)

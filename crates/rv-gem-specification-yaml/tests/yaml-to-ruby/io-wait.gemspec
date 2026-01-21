@@ -15,7 +15,6 @@ Gem::Specification.new do |s|
   s.description = "Waits until IO is readable or writable without blocking.".freeze
   s.email = ["nobu@ruby-lang.org".freeze, "headius@headius.com".freeze]
   s.extensions = ["ext/io/wait/extconf.rb".freeze]
-  s.files = ["ext/io/wait/extconf.rb".freeze, "io/wait.bundle".freeze]
   s.homepage = "https://github.com/ruby/io-wait".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 3.2".freeze)

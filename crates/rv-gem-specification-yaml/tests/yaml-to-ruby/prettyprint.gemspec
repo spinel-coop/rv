@@ -13,7 +13,6 @@ Gem::Specification.new do |s|
   s.date = "2026-01-13"
   s.description = "Implements a pretty printing algorithm for readable structure.".freeze
   s.email = ["akr@fsij.org".freeze]
-  s.files = ["lib/prettyprint.rb".freeze]
   s.homepage = "https://github.com/ruby/prettyprint".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.3.0".freeze)

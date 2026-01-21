@@ -12,7 +12,6 @@ Gem::Specification.new do |s|
   s.date = "2026-01-13"
   s.description = "The abstract interface for net-* client.".freeze
   s.email = ["matz@ruby-lang.org".freeze]
-  s.files = ["lib/net/protocol.rb".freeze]
   s.homepage = "https://github.com/ruby/net-protocol".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.6.0".freeze)

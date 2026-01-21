@@ -11,7 +11,6 @@ Gem::Specification.new do |s|
   s.date = "2026-01-13"
   s.description = "IPAddr provides a set of methods to manipulate an IP address.\nBoth IPv4 and IPv6 are supported.\n".freeze
   s.email = ["knu@idaemons.org".freeze, "ume@mahoroba.org".freeze]
-  s.files = ["LICENSE.txt".freeze, "README.md".freeze, "lib/ipaddr.rb".freeze]
   s.homepage = "https://github.com/ruby/ipaddr".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.4".freeze)

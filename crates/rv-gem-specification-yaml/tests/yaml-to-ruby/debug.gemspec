@@ -16,7 +16,6 @@ Gem::Specification.new do |s|
   s.email = ["ko1@atdot.net".freeze]
   s.executables = ["rdbg".freeze]
   s.extensions = ["ext/debug/extconf.rb".freeze]
-  s.files = ["exe/rdbg".freeze, "ext/debug/extconf.rb".freeze]
   s.homepage = "https://github.com/ruby/debug".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.7.0".freeze)

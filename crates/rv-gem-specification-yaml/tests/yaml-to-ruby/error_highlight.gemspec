@@ -11,7 +11,6 @@ Gem::Specification.new do |s|
   s.date = "2026-01-13"
   s.description = "The gem enhances Exception#message by adding a short explanation where the exception is raised".freeze
   s.email = ["mame@ruby-lang.org".freeze]
-  s.files = ["lib/error_highlight.rb".freeze, "lib/error_highlight/base.rb".freeze, "lib/error_highlight/core_ext.rb".freeze, "lib/error_highlight/formatter.rb".freeze, "lib/error_highlight/version.rb".freeze]
   s.homepage = "https://github.com/ruby/error_highlight".freeze
   s.licenses = ["MIT".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 3.2.0".freeze)

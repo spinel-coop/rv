@@ -13,7 +13,6 @@ Gem::Specification.new do |s|
   s.description = "Power Assert shows each value of variables and method calls in the expression. It is useful for testing, providing which value wasn't correct when the condition is not satisfied.".freeze
   s.email = ["kazuki@callcc.net".freeze]
   s.extra_rdoc_files = ["README.md".freeze]
-  s.files = ["README.md".freeze]
   s.homepage = "https://github.com/ruby/power_assert".freeze
   s.licenses = ["BSD-2-Clause".freeze, "Ruby".freeze]
   s.rdoc_options = ["--main".freeze, "README.md".freeze]

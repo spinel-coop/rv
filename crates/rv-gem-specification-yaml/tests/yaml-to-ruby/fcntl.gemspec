@@ -15,7 +15,6 @@ Gem::Specification.new do |s|
   s.email = ["matz@ruby-lang.org".freeze]
   s.extensions = ["ext/fcntl/extconf.rb".freeze]
   s.extra_rdoc_files = [".document".freeze, ".rdoc_options".freeze, "BSDL".freeze, "COPYING".freeze, "README.md".freeze]
-  s.files = [".document".freeze, ".rdoc_options".freeze, "BSDL".freeze, "COPYING".freeze, "README.md".freeze, "ext/fcntl/extconf.rb".freeze, "ext/fcntl/fcntl.c".freeze, "fcntl.bundle".freeze]
   s.homepage = "https://github.com/ruby/fcntl".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.5.0".freeze)

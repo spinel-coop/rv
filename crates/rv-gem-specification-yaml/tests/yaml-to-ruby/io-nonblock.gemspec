@@ -14,7 +14,6 @@ Gem::Specification.new do |s|
   s.description = "Enables non-blocking mode with IO class".freeze
   s.email = ["nobu@ruby-lang.org".freeze]
   s.extensions = ["ext/io/nonblock/extconf.rb".freeze]
-  s.files = ["COPYING".freeze, "README.md".freeze, "ext/io/nonblock/depend".freeze, "ext/io/nonblock/extconf.rb".freeze, "ext/io/nonblock/nonblock.c".freeze, "io/nonblock.bundle".freeze]
   s.homepage = "https://github.com/ruby/io-nonblock".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 3.0".freeze)

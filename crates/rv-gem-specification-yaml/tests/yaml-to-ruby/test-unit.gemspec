@@ -13,7 +13,6 @@ Gem::Specification.new do |s|
   s.description = "test-unit (Test::Unit) is unit testing framework for Ruby, based on xUnit\nprinciples. These were originally designed by Kent Beck, creator of extreme\nprogramming software development methodology, for Smalltalk's SUnit. It allows\nwriting tests, checking results and automated testing in Ruby.".freeze
   s.email = ["kou@cozmixng.org".freeze, "yoshihara@clear-code.com".freeze]
   s.executables = ["test-unit".freeze]
-  s.files = ["bin/test-unit".freeze]
   s.homepage = "https://test-unit.github.io/".freeze
   s.licenses = ["Ruby".freeze, "BSDL".freeze, "PSFL".freeze]
   s.rubygems_version = "3.4.20".freeze

@@ -15,7 +15,6 @@ Gem::Specification.new do |s|
   s.email = ["ryand-ruby@zenspider.com".freeze]
   s.executables = ["minitest".freeze]
   s.extra_rdoc_files = ["History.rdoc".freeze, "Manifest.txt".freeze, "README.rdoc".freeze]
-  s.files = ["History.rdoc".freeze, "Manifest.txt".freeze, "README.rdoc".freeze, "bin/minitest".freeze]
   s.homepage = "https://minite.st/".freeze
   s.licenses = ["MIT".freeze]
   s.rdoc_options = ["--main".freeze, "README.rdoc".freeze]

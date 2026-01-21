@@ -14,7 +14,6 @@ Gem::Specification.new do |s|
   s.description = "This library provides arbitrary-precision decimal floating-point number class.".freeze
   s.email = ["mrkn@mrkn.jp".freeze]
   s.extensions = ["ext/bigdecimal/extconf.rb".freeze]
-  s.files = ["ext/bigdecimal/extconf.rb".freeze]
   s.homepage = "https://github.com/ruby/bigdecimal".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.5.0".freeze)
