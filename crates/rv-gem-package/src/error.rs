@@ -1,3 +1,6 @@
+// https://github.com/zkat/miette/issues/458
+#![expect(unused_assignments, reason = "miette macros trigger false positives")]
+
 use miette::Diagnostic;
 use std::io;
 use thiserror::Error;
