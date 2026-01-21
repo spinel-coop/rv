@@ -41,6 +41,7 @@ reqwest = { workspace = true, features = ["stream", "socks"] }
 flate2 = { workspace = true }
 tar = { workspace = true }
 rv-cache = { workspace = true, features = ["clap"] }
+rv-version = { workspace = true }
 rv-gem-specification-yaml = { workspace = true }
 rv-gem-types = { workspace = true }
 rv-ruby = { workspace = true }
@@ -68,6 +69,7 @@ dircpy = "0.3.19"
 glob = "0.3.3"
 base64 = "0.22.1"
 dep-graph = { workspace = true }
+pubgrub = "0.3.0"
 
 [dev-dependencies]
 insta = { workspace = true }

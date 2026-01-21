@@ -3,6 +3,7 @@ use camino::{FromPathBufError, Utf8PathBuf};
 use clap::builder::Styles;
 use clap::builder::styling::AnsiColor;
 use clap::{ArgAction, CommandFactory, Parser, Subcommand};
+use clap_verbosity_flag::tracing::LevelFilter;
 use config::Config;
 use indexmap::IndexSet;
 use miette::Report;
@@ -14,6 +15,7 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberI
 
 pub mod commands;
 pub mod config;
+pub mod http_client;
 pub mod progress;
 
 use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir, cache_prune};
@@ -33,6 +35,8 @@ use crate::commands::shell::env::env as shell_env;
 use crate::commands::shell::init::init as shell_init;
 use crate::commands::shell::setup as shell_setup;
 use crate::commands::shell::{ShellArgs, ShellCommand};
+use crate::commands::tool::ToolArgs;
+use crate::commands::tool::install::install as tool_install;
 
 const STYLES: Styles = Styles::styled()
     .header(AnsiColor::Green.on_default().bold())
@@ -126,6 +130,8 @@ enum Commands {
     #[cfg(unix)]
     #[command(about = "Clean install from a Gemfile.lock", visible_alias = "ci")]
     CleanInstall(CleanInstallArgs),
+    #[command(about = "Manage Ruby tools", hide = true)]
+    Tool(ToolArgs),
 }
 
 #[derive(Debug, Copy, Clone, clap::ValueEnum)]
@@ -202,6 +208,8 @@ pub enum Error {
     ShellError(#[from] commands::shell::Error),
     #[error(transparent)]
     EnvError(#[from] commands::shell::env::Error),
+    #[error(transparent)]
+    ToolInstallError(#[from] commands::tool::install::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -249,9 +257,26 @@ async fn run() -> Result<()> {
         color_mode.color_choice_for_terminal(std::io::stderr()),
     ));
 
+    let global_level_filter = cli.verbose.tracing_level_filter();
+
+    // the pubgrub crate is pretty noisy, it emits a lot of tracing::info spans when it's
+    // resolving versions. So let's make it quieter, and make its log levels a bit less verbose
+    let pubgrub_level_filter = match global_level_filter {
+        LevelFilter::OFF => LevelFilter::OFF,
+        LevelFilter::ERROR => LevelFilter::ERROR,
+        LevelFilter::WARN => LevelFilter::WARN,
+        LevelFilter::INFO => LevelFilter::WARN,
+        LevelFilter::DEBUG => LevelFilter::INFO,
+        LevelFilter::TRACE => LevelFilter::TRACE,
+    };
+    let h2_level_filter = LevelFilter::INFO;
+
     let filter = EnvFilter::builder()
-        .with_default_directive(cli.verbose.tracing_level_filter().into())
-        .from_env()?;
+        .with_default_directive(global_level_filter.into())
+        .parse_lossy(format!(
+            "{},pubgrub={},h2={}",
+            global_level_filter, pubgrub_level_filter, h2_level_filter
+        ));
 
     let reg = tracing_subscriber::registry()
         .with(
@@ -327,6 +352,13 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
                 shell_completions(&mut Cli::command(), shell)
             }
             Some(ShellCommand::Env { shell }) => shell_env(config, shell)?,
+        },
+        Commands::Tool(tool) => match tool.command {
+            commands::tool::ToolCommand::Install {
+                gem,
+                gem_server,
+                force,
+            } => tool_install(config, gem, gem_server, force).await?,
         },
     };
 

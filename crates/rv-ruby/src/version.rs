@@ -151,6 +151,11 @@ impl RubyVersion {
         version
     }
 
+    /// Is this ruby version a prerelease.
+    pub fn is_prerelease(&self) -> bool {
+        self.prerelease.is_some()
+    }
+
     /// Parse a Ruby version from Gemfile.lock format.
     ///
     /// Gemfile.lock uses the format "ruby X.Y.ZpNN" where:

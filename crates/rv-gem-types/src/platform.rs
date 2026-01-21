@@ -2,6 +2,7 @@ use current_platform::CURRENT_PLATFORM;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rv_version::Version;
+use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, str::FromStr};
 
 // Cached regexes for platform parsing to avoid repeated compilation
@@ -21,7 +22,7 @@ static OPENBSD_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"openbsd-?(\d+\.\d+
 static SOLARIS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"solaris-?(\d+\.\d+)?").unwrap());
 static PLATFORM_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+_platform)-?(\d+)?").unwrap());
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Platform {
     Ruby,
     Current,

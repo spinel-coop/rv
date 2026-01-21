@@ -90,7 +90,7 @@ on_success = "back" # so that we don't open the browser at each change
 # if it makes sense for this crate.
 [jobs.run]
 command = [
-    "cargo", "run",
+    "cargo", "run", "--quiet",
     # put launch parameters for your program behind a `--` separator
 ]
 need_stdout = true

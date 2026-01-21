@@ -37,7 +37,7 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Config {
     pub ruby_dirs: IndexSet<Utf8PathBuf>,
     pub root: Utf8PathBuf,

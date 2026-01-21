@@ -188,7 +188,18 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     // Terminal progress indicator (OSC 9;4) for supported terminals
     let progress = WorkProgress::new();
 
-    let result = ci_inner_work(config, args, &progress).await;
+    // Initial phase: parse lockfile, handle path gems and git repos
+    let span = info_span!("Parsing lockfile");
+    span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name}").unwrap());
+
+    let lockfile_contents = {
+        let _guard = span.enter();
+        tokio::fs::read_to_string(&args.lockfile_path).await?
+    };
+    let lockfile = rv_lockfile::parse(&lockfile_contents)?;
+
+    drop(span);
+    let result = ci_inner_work(config, args, &progress, lockfile).await;
 
     // On success, clear the progress indicator.
     // On error, set error state but don't clear - this leaves a red/error indicator
@@ -201,25 +212,53 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     result
 }
 
-async fn ci_inner_work(config: &Config, args: &CiInnerArgs, progress: &WorkProgress) -> Result<()> {
-    // Initial phase: parse lockfile, handle path gems and git repos
-    let span = info_span!("Parsing lockfile");
-    span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name}").unwrap());
-
-    let lockfile_contents = {
-        let _guard = span.enter();
-        tokio::fs::read_to_string(&args.lockfile_path).await?
-    };
-    let lockfile = rv_lockfile::parse(&lockfile_contents)?;
-
-    {
-        let _guard = span.enter();
-
-        let binstub_dir = args.install_path.join("bin");
-        tokio::fs::create_dir_all(&binstub_dir).await?;
+pub async fn install_from_lockfile(
+    config: &Config,
+    lockfile: GemfileDotLock<'_>,
+    install_path: Utf8PathBuf,
+) -> Result<()> {
+    // We need some Ruby installed, because we need to run Ruby code when installing
+    // gems. Ensure Ruby is installed here so we can use it later.
+    let ruby_request = config.ruby_request();
+    if config.matching_ruby(&ruby_request).is_none() {
+        crate::ruby_install(config, None, Some(ruby_request.clone()), None).await?;
     }
 
-    drop(span);
+    let inner_args = CiInnerArgs {
+        skip_compile_extensions: false,
+        max_concurrent_requests: 10,
+        max_concurrent_installs: 20,
+        validate_checksums: true,
+        lockfile_path: Default::default(),
+        install_path,
+        extensions_dir: find_exts_dir(config, &ruby_request)?,
+    };
+
+    // Terminal progress indicator (OSC 9;4) for supported terminals
+    let progress = WorkProgress::new();
+
+    // Do the work.
+    let result = ci_inner_work(config, &inner_args, &progress, lockfile).await;
+
+    // On success, clear the progress indicator.
+    // On error, set error state but don't clear - this leaves a red/error indicator
+    // visible in the terminal tab/titlebar until the user runs another command.
+    match &result {
+        Ok(()) => progress.clear(),
+        Err(_) => progress.set_error(),
+    }
+
+    result
+}
+
+async fn ci_inner_work(
+    config: &Config,
+    args: &CiInnerArgs,
+    progress: &WorkProgress,
+    lockfile: GemfileDotLock<'_>,
+) -> Result<()> {
+    let binstub_dir = args.install_path.join("bin");
+    tokio::fs::create_dir_all(&binstub_dir).await?;
 
     let path_install_start = Instant::now();
     let path_specs = install_paths(config, &lockfile.path, args)?;
