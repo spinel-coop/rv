@@ -18,19 +18,45 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     brew install cargo-binstall
   fi
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-  SUDO=""
-  if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
-    SUDO="sudo"
+  # Check if required build tools are available
+  MISSING_TOOLS=()
+  for tool in curl pkg-config git gcc; do
+    if ! which "$tool" > /dev/null 2>&1; then
+      MISSING_TOOLS+=("$tool")
+    fi
+  done
+
+  # Check for OpenSSL development headers (needed for Rust crates)
+  if ! pkg-config --exists openssl 2>/dev/null; then
+    MISSING_TOOLS+=("openssl-dev")
   fi
 
-  set -x
-  if which apt; then
-    $SUDO apt update -qq
-    $SUDO apt install -y -qq curl pkg-config git gcc libssl-dev
+  if [[ ${#MISSING_TOOLS[@]} -gt 0 ]]; then
+    echo "Missing required tools: ${MISSING_TOOLS[*]}"
+
+    SUDO=""
+    if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+      SUDO="sudo"
+    fi
+
+    set -x
+    if which apt > /dev/null 2>&1; then
+      $SUDO apt update -qq
+      $SUDO apt install -y -qq curl pkg-config git gcc libssl-dev
+    elif which dnf > /dev/null 2>&1; then
+      # Fedora, RHEL, CentOS
+      # NOTE: Atomic variants (Silverblue, Kinoite, Aurora, Bazzite, etc.) should use
+      # distrobox/toolbox or install these tools via homebrew instead.
+      $SUDO dnf install -y -q curl pkgconf-pkg-config git gcc openssl-devel
+    else
+      echo "We don't support automatic dev setup for your package manager yet, sorry."
+      echo "Please install the following tools manually: ${MISSING_TOOLS[*]}"
+      echo "We'd love to get a pull request adding support, though!"
+      exit 1
+    fi
+    set +x
   else
-    echo "We don't support automatic dev setup for your package manager yet, sorry."
-    echo "We'd love to get a pull request adding support, though!"
-    exit 1
+    echo "All required build tools are already installed."
   fi
 
   if [[ -z $(which rustup) ]]; then
