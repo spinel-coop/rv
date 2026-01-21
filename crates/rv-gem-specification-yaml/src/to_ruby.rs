@@ -57,7 +57,12 @@ pub fn to_ruby(spec: Specification) -> String {
     writeln!(ruby_src, "  s.name = \"{}\".freeze", name).unwrap();
     writeln!(ruby_src, "  s.version = \"{}\".freeze", version).unwrap();
     ruby_src.push('\n');
-    writeln!(ruby_src, "  s.required_rubygems_version = Gem::Requirement.new(\"{}\".freeze) if s.respond_to? :required_rubygems_version=", required_rubygems_version).unwrap();
+    writeln!(
+        ruby_src,
+        "  s.required_rubygems_version = {} if s.respond_to? :required_rubygems_version=",
+        required_rubygems_version.to_ruby()
+    )
+    .unwrap();
     if !metadata.is_empty() {
         write!(ruby_src, "  s.metadata = {{ ").unwrap();
         let mut md_items = Vec::with_capacity(metadata.len());
@@ -133,8 +138,8 @@ pub fn to_ruby(spec: Specification) -> String {
     if required_ruby_version != Default::default() {
         writeln!(
             ruby_src,
-            "  s.required_ruby_version = Gem::Requirement.new(\"{}\".freeze)",
-            required_ruby_version
+            "  s.required_ruby_version = {}",
+            required_ruby_version.to_ruby()
         )
         .unwrap();
     }

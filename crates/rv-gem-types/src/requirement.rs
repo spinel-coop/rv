@@ -143,6 +143,22 @@ impl Requirement {
             .any(|constraint| constraint.version.is_prerelease())
     }
 
+    pub fn to_ruby(&self) -> String {
+        match self.as_sole_constraint() {
+            Some(constraint) => format!("Gem::Requirement.new(\"{}\".freeze)", constraint),
+            None => {
+                let constraints = self
+                    .constraints
+                    .iter()
+                    .map(|c| format!("\"{}\".freeze", c))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                format!("Gem::Requirement.new([{}])", constraints)
+            }
+        }
+    }
+
     /// If this has exactly 1 constraint, return it.
     fn as_sole_constraint(&self) -> Option<&VersionConstraint> {
         (self.constraints.len() == 1).then(|| self.constraints.first())?
