@@ -163,14 +163,6 @@ fn valid_tarball_exists(path: &Utf8Path) -> bool {
     fs_err::metadata(path).is_ok_and(|m| m.is_file() && m.len() > 0)
 }
 
-/// Checks if the URL is a GitHub URL by parsing the host.
-/// Returns true if the host is exactly "github.com" or ends with ".github.com".
-fn is_github_url(url: &str) -> bool {
-    url::Url::parse(url)
-        .ok()
-        .and_then(|u| u.host_str().map(|h| h.to_lowercase()))
-        .is_some_and(|host| host == "github.com" || host.ends_with(".github.com"))
-}
 
 fn ruby_url(version: &str) -> Result<String> {
     let arch = Platform::local_precompiled_ruby_arch()?;
@@ -252,7 +244,7 @@ async fn download_ruby_tarball(
 
     // Add GitHub token authentication if available and URL is from GitHub
     // Check GITHUB_TOKEN first (GitHub Actions), then GH_TOKEN (GitHub CLI/general use)
-    if is_github_url(url) {
+    if crate::config::github::is_github_url(url) {
         if let Some(token) = crate::config::github::github_token() {
             debug!("Using authenticated GitHub request for tarball download");
             request_builder = request_builder.header("Authorization", format!("Bearer {}", token));

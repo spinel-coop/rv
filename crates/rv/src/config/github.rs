@@ -19,6 +19,15 @@ pub fn github_token() -> Option<String> {
         .or_else(|| std::env::var("GH_TOKEN").ok())
 }
 
+/// Checks if the URL is a GitHub URL by parsing the host.
+/// Returns true if the host is exactly "github.com" or ends with ".github.com".
+pub fn is_github_url(url: &str) -> bool {
+    url::Url::parse(url)
+        .ok()
+        .and_then(|u| u.host_str().map(|h| h.to_lowercase()))
+        .is_some_and(|host| host == "github.com" || host.ends_with(".github.com"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -29,5 +38,62 @@ mod tests {
         assert_eq!(GITHUB_API_VERSION.len(), 10);
         assert!(GITHUB_API_VERSION.chars().nth(4) == Some('-'));
         assert!(GITHUB_API_VERSION.chars().nth(7) == Some('-'));
+    }
+
+    #[test]
+    fn test_is_github_url_exact_match() {
+        assert!(is_github_url("https://github.com/owner/repo"));
+        assert!(is_github_url("http://github.com/owner/repo"));
+        assert!(is_github_url(
+            "https://github.com/spinel-coop/rv-ruby/releases/latest/download/ruby-3.3.0.tar.gz"
+        ));
+    }
+
+    #[test]
+    fn test_is_github_url_subdomains() {
+        assert!(is_github_url("https://api.github.com/repos/owner/repo"));
+        assert!(is_github_url(
+            "https://raw.github.com/owner/repo/main/file"
+        ));
+        assert!(is_github_url("https://objects.github.com/something"));
+    }
+
+    #[test]
+    fn test_is_github_url_case_insensitive() {
+        assert!(is_github_url("https://GITHUB.COM/owner/repo"));
+        assert!(is_github_url("https://GitHub.com/owner/repo"));
+        assert!(is_github_url("https://API.GITHUB.COM/repos"));
+    }
+
+    #[test]
+    fn test_is_github_url_rejects_fake_domains() {
+        // These should NOT match - they're not actually github.com
+        assert!(!is_github_url("https://fakegithub.com/owner/repo"));
+        assert!(!is_github_url("https://notgithub.com/owner/repo"));
+        assert!(!is_github_url("https://github.com.evil.com/owner/repo"));
+        assert!(!is_github_url("https://mygithub.company.com/owner/repo"));
+    }
+
+    #[test]
+    fn test_is_github_url_rejects_github_in_path() {
+        // github.com in path should not match
+        assert!(!is_github_url("https://example.com/github.com/owner/repo"));
+        assert!(!is_github_url(
+            "https://mirror.example.com/proxy/github.com/file"
+        ));
+    }
+
+    #[test]
+    fn test_is_github_url_rejects_non_github() {
+        assert!(!is_github_url("https://gitlab.com/owner/repo"));
+        assert!(!is_github_url("https://bitbucket.org/owner/repo"));
+        assert!(!is_github_url("https://example.com/file.tar.gz"));
+    }
+
+    #[test]
+    fn test_is_github_url_handles_invalid_urls() {
+        assert!(!is_github_url("not a url"));
+        assert!(!is_github_url(""));
+        assert!(!is_github_url("github.com/owner/repo")); // missing scheme
     }
 }
