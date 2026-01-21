@@ -1,3 +1,4 @@
+use current_platform::CURRENT_PLATFORM;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rv_version::Version;
@@ -37,6 +38,8 @@ pub enum PlatformError {
     InvalidPlatform { platform: String },
     #[error("Array platform must have at most 3 elements")]
     InvalidArray,
+    #[error("rv does not (yet) support your platform ({platform}). Sorry :(")]
+    UnsupportedPlatform { platform: String },
 }
 
 impl Platform {
@@ -48,12 +51,36 @@ impl Platform {
         }
     }
 
+    pub fn local() -> Self {
+        Self::new(CURRENT_PLATFORM).expect("Could not parse current platform")
+    }
+
+    pub fn local_precompiled_ruby_arch() -> Result<String, PlatformError> {
+        let result = match CURRENT_PLATFORM {
+            "aarch64-apple-darwin" => "arm64_sonoma",
+            "x86_64-apple-darwin" => "ventura",
+            "x86_64-unknown-linux-gnu" => "x86_64_linux",
+            "aarch64-unknown-linux-gnu" => "arm64_linux",
+            other => {
+                return Err(PlatformError::UnsupportedPlatform {
+                    platform: other.to_string(),
+                });
+            }
+        };
+
+        Ok(result.to_string())
+    }
+
     pub fn ruby() -> Self {
         Platform::Ruby
     }
 
     pub fn is_ruby(&self) -> bool {
         matches!(self, Platform::Ruby)
+    }
+
+    pub fn is_local(&self) -> bool {
+        self.matches(&Platform::local())
     }
 
     pub fn java() -> Self {

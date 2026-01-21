@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+current_platform = { workspace = true }
 thiserror = { workspace = true }
 regex = { workspace = true }
 once_cell = { workspace = true }

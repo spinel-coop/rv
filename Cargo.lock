@@ -2218,6 +2218,7 @@ dependencies = [
 name = "rv-gem-types"
 version = "0.1.0"
 dependencies = [
+ "current_platform",
  "indexmap",
  "insta",
  "once_cell",

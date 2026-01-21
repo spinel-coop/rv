@@ -2,7 +2,6 @@ use anstream::println;
 use bytesize::ByteSize;
 use camino::{Utf8Path, Utf8PathBuf};
 use core::panic;
-use current_platform::CURRENT_PLATFORM;
 use futures_util::StreamExt;
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
@@ -11,6 +10,7 @@ use tokio::io::AsyncWriteExt;
 use tracing::{debug, info_span};
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 
+use rv_gem_types::Platform;
 use rv_ruby::{request::RubyRequest, version::RubyVersion};
 
 use crate::config::Config;
@@ -36,8 +36,8 @@ pub enum Error {
     GetLatestReleaseFailed { error: super::list::Error },
     #[error("Failed to unpack tarball path {0}")]
     InvalidTarballPath(PathBuf),
-    #[error("rv does not (yet) support your platform ({0}). Sorry :(")]
-    UnsupportedPlatform(&'static str),
+    #[error(transparent)]
+    UnsupportedPlatform(#[from] rv_gem_types::platform::PlatformError),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -164,13 +164,7 @@ fn valid_tarball_exists(path: &Utf8Path) -> bool {
 }
 
 fn ruby_url(version: &str) -> Result<String> {
-    let arch = match CURRENT_PLATFORM {
-        "aarch64-apple-darwin" => "arm64_sonoma",
-        "x86_64-apple-darwin" => "ventura",
-        "x86_64-unknown-linux-gnu" => "x86_64_linux",
-        "aarch64-unknown-linux-gnu" => "arm64_linux",
-        other => return Err(Error::UnsupportedPlatform(other)),
-    };
+    let arch = Platform::local_precompiled_ruby_arch()?;
 
     let download_base = std::env::var("RV_INSTALL_URL")
         .unwrap_or("https://github.com/spinel-coop/rv-ruby/releases/latest/download".to_owned());
