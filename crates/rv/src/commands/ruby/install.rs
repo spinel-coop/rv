@@ -236,6 +236,7 @@ async fn download_ruby_tarball(
     version: &str,
     progress: &WorkProgress,
 ) -> Result<()> {
+    debug!("Downloading tarball from {url}");
     // Start downloading the tarball.
     let response = reqwest::get(url).await?;
     if !response.status().is_success() {
