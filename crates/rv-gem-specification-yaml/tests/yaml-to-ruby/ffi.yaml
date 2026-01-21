@@ -1,0 +1,183 @@
+--- !ruby/object:Gem::Specification
+name: ffi
+version: !ruby/object:Gem::Version
+  version: 1.17.3
+platform: arm64-darwin
+authors:
+- Wayne Meissner
+bindir: bin
+cert_chain: []
+date: 1980-01-02 00:00:00.000000000 Z
+dependencies: []
+description: Ruby FFI library
+email: wmeissner@gmail.com
+executables: []
+extensions: []
+extra_rdoc_files: []
+files:
+- CHANGELOG.md
+- COPYING
+- Gemfile
+- LICENSE
+- LICENSE.SPECS
+- README.md
+- Rakefile
+- Steepfile
+- ffi.gemspec
+- lib/3.0/ffi_c.bundle
+- lib/3.1/ffi_c.bundle
+- lib/3.2/ffi_c.bundle
+- lib/3.3/ffi_c.bundle
+- lib/3.4/ffi_c.bundle
+- lib/4.0/ffi_c.bundle
+- lib/ffi.rb
+- lib/ffi/abstract_memory.rb
+- lib/ffi/autopointer.rb
+- lib/ffi/buffer.rb
+- lib/ffi/callback.rb
+- lib/ffi/compat.rb
+- lib/ffi/data_converter.rb
+- lib/ffi/dynamic_library.rb
+- lib/ffi/enum.rb
+- lib/ffi/errno.rb
+- lib/ffi/ffi.rb
+- lib/ffi/function.rb
+- lib/ffi/io.rb
+- lib/ffi/library.rb
+- lib/ffi/library_path.rb
+- lib/ffi/managedstruct.rb
+- lib/ffi/memorypointer.rb
+- lib/ffi/platform.rb
+- lib/ffi/platform/aarch64-darwin/types.conf
+- lib/ffi/platform/aarch64-freebsd/types.conf
+- lib/ffi/platform/aarch64-freebsd12/types.conf
+- lib/ffi/platform/aarch64-linux/types.conf
+- lib/ffi/platform/aarch64-openbsd/types.conf
+- lib/ffi/platform/aarch64-windows/types.conf
+- lib/ffi/platform/arm-freebsd/types.conf
+- lib/ffi/platform/arm-freebsd12/types.conf
+- lib/ffi/platform/arm-linux/types.conf
+- lib/ffi/platform/hppa1.1-linux/types.conf
+- lib/ffi/platform/hppa2.0-linux/types.conf
+- lib/ffi/platform/i386-cygwin/types.conf
+- lib/ffi/platform/i386-darwin/types.conf
+- lib/ffi/platform/i386-freebsd/types.conf
+- lib/ffi/platform/i386-freebsd12/types.conf
+- lib/ffi/platform/i386-gnu/types.conf
+- lib/ffi/platform/i386-linux/types.conf
+- lib/ffi/platform/i386-netbsd/types.conf
+- lib/ffi/platform/i386-openbsd/types.conf
+- lib/ffi/platform/i386-solaris/types.conf
+- lib/ffi/platform/i386-windows/types.conf
+- lib/ffi/platform/ia64-linux/types.conf
+- lib/ffi/platform/loongarch64-linux/types.conf
+- lib/ffi/platform/mips-linux/types.conf
+- lib/ffi/platform/mips64-linux/types.conf
+- lib/ffi/platform/mips64el-linux/types.conf
+- lib/ffi/platform/mipsel-linux/types.conf
+- lib/ffi/platform/mipsisa32r6-linux/types.conf
+- lib/ffi/platform/mipsisa32r6el-linux/types.conf
+- lib/ffi/platform/mipsisa64r6-linux/types.conf
+- lib/ffi/platform/mipsisa64r6el-linux/types.conf
+- lib/ffi/platform/powerpc-aix/types.conf
+- lib/ffi/platform/powerpc-darwin/types.conf
+- lib/ffi/platform/powerpc-linux/types.conf
+- lib/ffi/platform/powerpc-openbsd/types.conf
+- lib/ffi/platform/powerpc64-linux/types.conf
+- lib/ffi/platform/powerpc64le-linux/types.conf
+- lib/ffi/platform/riscv64-linux/types.conf
+- lib/ffi/platform/s390-linux/types.conf
+- lib/ffi/platform/s390x-linux/types.conf
+- lib/ffi/platform/sparc-linux/types.conf
+- lib/ffi/platform/sparc-solaris/types.conf
+- lib/ffi/platform/sparcv9-linux/types.conf
+- lib/ffi/platform/sparcv9-openbsd/types.conf
+- lib/ffi/platform/sparcv9-solaris/types.conf
+- lib/ffi/platform/sw_64-linux/types.conf
+- lib/ffi/platform/x86_64-cygwin/types.conf
+- lib/ffi/platform/x86_64-darwin/types.conf
+- lib/ffi/platform/x86_64-dragonflybsd/types.conf
+- lib/ffi/platform/x86_64-freebsd/types.conf
+- lib/ffi/platform/x86_64-freebsd12/types.conf
+- lib/ffi/platform/x86_64-haiku/types.conf
+- lib/ffi/platform/x86_64-linux/types.conf
+- lib/ffi/platform/x86_64-msys/types.conf
+- lib/ffi/platform/x86_64-netbsd/types.conf
+- lib/ffi/platform/x86_64-openbsd/types.conf
+- lib/ffi/platform/x86_64-solaris/types.conf
+- lib/ffi/platform/x86_64-windows/types.conf
+- lib/ffi/pointer.rb
+- lib/ffi/struct.rb
+- lib/ffi/struct_by_reference.rb
+- lib/ffi/struct_layout.rb
+- lib/ffi/struct_layout_builder.rb
+- lib/ffi/tools/const_generator.rb
+- lib/ffi/tools/generator.rb
+- lib/ffi/tools/generator_task.rb
+- lib/ffi/tools/struct_generator.rb
+- lib/ffi/types.rb
+- lib/ffi/union.rb
+- lib/ffi/variadic.rb
+- lib/ffi/version.rb
+- samples/getlogin.rb
+- samples/getpid.rb
+- samples/gettimeofday.rb
+- samples/hello.rb
+- samples/hello_ractor.rb
+- samples/inotify.rb
+- samples/pty.rb
+- samples/qsort.rb
+- samples/qsort_ractor.rb
+- sig/ffi.rbs
+- sig/ffi/abstract_memory.rbs
+- sig/ffi/auto_pointer.rbs
+- sig/ffi/buffer.rbs
+- sig/ffi/data_converter.rbs
+- sig/ffi/dynamic_library.rbs
+- sig/ffi/enum.rbs
+- sig/ffi/errno.rbs
+- sig/ffi/function.rbs
+- sig/ffi/library.rbs
+- sig/ffi/native_type.rbs
+- sig/ffi/platform.rbs
+- sig/ffi/pointer.rbs
+- sig/ffi/struct.rbs
+- sig/ffi/struct_by_reference.rbs
+- sig/ffi/struct_by_value.rbs
+- sig/ffi/struct_layout.rbs
+- sig/ffi/struct_layout_builder.rbs
+- sig/ffi/type.rbs
+homepage: https://github.com/ffi/ffi/wiki
+licenses:
+- BSD-3-Clause
+metadata:
+  bug_tracker_uri: https://github.com/ffi/ffi/issues
+  changelog_uri: https://github.com/ffi/ffi/blob/master/CHANGELOG.md
+  documentation_uri: https://github.com/ffi/ffi/wiki
+  wiki_uri: https://github.com/ffi/ffi/wiki
+  source_code_uri: https://github.com/ffi/ffi/
+  mailing_list_uri: http://groups.google.com/group/ruby-ffi
+  rubygems_mfa_required: 'true'
+rdoc_options:
+- "--exclude=ext/ffi_c/.*\\.o$"
+- "--exclude=ffi_c\\.(bundle|so)$"
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '3.0'
+  - - "<"
+    - !ruby/object:Gem::Version
+      version: 4.1.dev
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Ruby FFI
+test_files: []

@@ -354,6 +354,11 @@ mod tests {
     }
 
     #[test]
+    fn test_ffi() {
+        run_test("ffi");
+    }
+
+    #[test]
     fn test_fiddle() {
         run_test("fiddle");
     }
