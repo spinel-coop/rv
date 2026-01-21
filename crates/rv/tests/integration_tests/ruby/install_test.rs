@@ -1,18 +1,7 @@
-use current_platform::CURRENT_PLATFORM;
-
 use crate::common::RvTest;
+use rv_gem_types::Platform;
 use std::fs;
 use std::process::Command;
-
-fn arch() -> &'static str {
-    match CURRENT_PLATFORM {
-        "aarch64-apple-darwin" => "arm64_sonoma",
-        "x86_64-apple-darwin" => "ventura",
-        "x86_64-unknown-linux-gnu" => "x86_64_linux",
-        "aarch64-unknown-linux-gnu" => "arm64_linux",
-        other => panic!("Unsupported platform {other}"),
-    }
-}
 
 #[test]
 fn test_ruby_install_no_specific_version() {
@@ -171,7 +160,7 @@ fn test_ruby_install_http_failure_no_empty_file() {
 
     output.assert_failure();
 
-    let arch = arch();
+    let arch = Platform::local_precompiled_ruby_arch().unwrap();
     let cache_key = rv_cache::cache_digest(format!(
         "{}/portable-ruby-3.4.5.{arch}.bottle.tar.gz",
         test.server_url()
@@ -428,7 +417,7 @@ fn test_ruby_install_temp_file_cleanup_on_extraction_failure() {
 
     output.assert_failure();
 
-    let arch = arch();
+    let arch = Platform::local_precompiled_ruby_arch().unwrap();
     let cache_key = rv_cache::cache_digest(format!(
         "{}/download/3.4.5/portable-ruby-3.4.5.{arch}.bottle.tar.gz",
         test.server_url()

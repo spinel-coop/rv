@@ -1,7 +1,6 @@
 use bytes::Bytes;
 use camino::Utf8Path;
 use camino::Utf8PathBuf;
-use current_platform::CURRENT_PLATFORM;
 use dircpy::copy_dir;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
@@ -13,7 +12,6 @@ use owo_colors::OwoColorize;
 use rayon::ThreadPoolBuildError;
 use regex::Regex;
 use reqwest::Client;
-use rv_gem_types::Platform;
 use rv_gem_types::Specification as GemSpecification;
 use rv_lockfile::datatypes::ChecksumAlgorithm;
 use rv_lockfile::datatypes::GemSection;
@@ -1500,8 +1498,7 @@ async fn download_gem_source<'i>(
             // If we couldn't parse a platform, assume there's no platform, so we should download this.
             return true;
         };
-        let this_plat = Platform::new(CURRENT_PLATFORM).expect("Could not parse current platform");
-        plat.matches(&this_plat)
+        plat.is_local()
     });
     let spec_stream = futures_util::stream::iter(gems_to_download);
     let downloaded_gems: Vec<_> = spec_stream
@@ -1614,6 +1611,7 @@ fn format_duration(duration: Duration) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rv_gem_types::Platform;
 
     #[test]
     fn test_generate_binstub() {
@@ -1651,12 +1649,12 @@ end"#;
         #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
         let expected = ("darwin", "x86_64");
         #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-        let expected = ("darwin", "aarch64");
+        let expected = ("darwin", "arm64");
         #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
         let expected = ("linux", "x86_64");
         #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
         let expected = ("linux", "aarch64");
-        let actual = Platform::new(CURRENT_PLATFORM).unwrap();
+        let actual = Platform::local();
         let Platform::Specific {
             cpu: actual_cpu,
             os: actual_os,

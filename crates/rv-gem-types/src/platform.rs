@@ -1,3 +1,4 @@
+use current_platform::CURRENT_PLATFORM;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rv_version::Version;
@@ -37,6 +38,8 @@ pub enum PlatformError {
     InvalidPlatform { platform: String },
     #[error("Array platform must have at most 3 elements")]
     InvalidArray,
+    #[error("rv does not (yet) support your platform ({platform}). Sorry :(")]
+    UnsupportedPlatform { platform: String },
 }
 
 impl Platform {
@@ -48,12 +51,44 @@ impl Platform {
         }
     }
 
+    pub fn local() -> Self {
+        let rubygems_platform = CURRENT_PLATFORM
+            // ignore vendor
+            .replace("-unknown", "")
+            .replace("-pc", "")
+            .replace("-apple", "")
+            // rubygems uses arm64 in macOS instead of aarch64
+            .replace("aarch64-darwin", "arm64-darwin");
+
+        Self::new(rubygems_platform).expect("Could not parse current platform")
+    }
+
+    pub fn local_precompiled_ruby_arch() -> Result<String, PlatformError> {
+        let result = match CURRENT_PLATFORM {
+            "aarch64-apple-darwin" => "arm64_sonoma",
+            "x86_64-apple-darwin" => "ventura",
+            "x86_64-unknown-linux-gnu" => "x86_64_linux",
+            "aarch64-unknown-linux-gnu" => "arm64_linux",
+            other => {
+                return Err(PlatformError::UnsupportedPlatform {
+                    platform: other.to_string(),
+                });
+            }
+        };
+
+        Ok(result.to_string())
+    }
+
     pub fn ruby() -> Self {
         Platform::Ruby
     }
 
     pub fn is_ruby(&self) -> bool {
         matches!(self, Platform::Ruby)
+    }
+
+    pub fn is_local(&self) -> bool {
+        self.matches(&Platform::local())
     }
 
     pub fn java() -> Self {
@@ -177,7 +212,7 @@ impl Platform {
 
     pub fn matches(&self, other: &Platform) -> bool {
         match (self, other) {
-            (Platform::Ruby, Platform::Ruby) => true,
+            (Platform::Ruby, _) => true,
             (Platform::Current, Platform::Current) => true,
             (
                 Platform::Specific {
@@ -275,19 +310,12 @@ impl FromStr for Platform {
 /// Splits a gem version with a platform suffix, like `1.11.0.rc1-x86_64-linux`,
 /// into its version and platform components.
 pub fn version_platform_split(s: &str) -> Option<(Version, Platform)> {
-    let splits: Vec<_> = s.split('-').collect();
-    for i in (1..splits.len()).rev() {
-        let maybe_version = splits[..i].join("-");
-        let maybe_platform = splits[i..].join("-");
-        let Ok(version) = Version::new(maybe_version) else {
-            continue;
-        };
-        let Ok(platform) = Platform::new(maybe_platform) else {
-            continue;
-        };
-        return Some((version, platform));
-    }
-    None
+    let (v, p) = s.split_once('-')?;
+
+    let version = Version::new(v).ok()?;
+    let platform = Platform::new(p).ok()?;
+
+    Some((version, platform))
 }
 
 #[cfg(test)]
@@ -389,7 +417,7 @@ mod tests {
     #[test]
     fn test_platform_matching() {
         let linux_x86_64 = Platform::new("x86_64-linux").unwrap();
-        let _linux_x86_64_gnu = Platform::new("x86_64-linux-gnu").unwrap();
+        let linux_x86_64_gnu = Platform::new("x86_64-linux-gnu").unwrap();
         let linux_arm = Platform::new("arm-linux").unwrap();
 
         assert!(linux_x86_64.matches(&linux_x86_64));
@@ -400,6 +428,13 @@ mod tests {
 
         assert!(universal_darwin.matches(&x86_darwin));
         assert!(x86_darwin.matches(&universal_darwin));
+
+        // the generic platform matches everything
+        assert!(Platform::Ruby.matches(&linux_x86_64));
+        assert!(Platform::Ruby.matches(&linux_x86_64_gnu));
+        assert!(Platform::Ruby.matches(&linux_arm));
+        assert!(Platform::Ruby.matches(&universal_darwin));
+        assert!(Platform::Ruby.matches(&x86_darwin));
     }
 
     #[test]
@@ -865,10 +900,23 @@ mod tests {
 
     #[test]
     fn test_version_platform_separation() {
-        let input = "1.11.0.rc1-x86_64-linux";
-        let (version, platform) = version_platform_split(input).unwrap();
-        assert_eq!(version, "1.11.0.rc1".parse().unwrap());
-        assert_eq!(platform, Platform::new("x86_64-linux").unwrap());
+        let test_cases = vec![
+            ("1.11.0.rc1-x86_64-linux", ("1.11.0.rc1", "x86_64-linux")),
+            // Real gem versions taken from Discourse's gemfile.lock
+            ("1.17.2-arm64-darwin", ("1.17.2", "arm64-darwin")),
+            ("1.17.2-x86_64-darwin", ("1.17.2", "x86_64-darwin")),
+            ("2.7.4-x86_64-linux-gnu", ("2.7.4", "x86_64-linux-gnu")),
+            ("2.7.4-x86_64-linux-musl", ("2.7.4", "x86_64-linux-musl")),
+            ("0.5.5-aarch64-linux-gnu", ("0.5.5", "aarch64-linux-gnu")),
+            ("2.7.4-aarch64-linux-musl", ("2.7.4", "aarch64-linux-musl")),
+            ("1.17.2-arm-linux-gnu", ("1.17.2", "arm-linux-gnu")),
+        ];
+
+        for (input, (expected_version, expected_platform)) in test_cases {
+            let (version, platform) = version_platform_split(input).unwrap();
+            assert_eq!(version, Version::new(expected_version).unwrap());
+            assert_eq!(platform, Platform::new(expected_platform).unwrap());
+        }
     }
 
     #[test]
