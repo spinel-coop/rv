@@ -88,12 +88,26 @@ pub enum VersionAvailableParse {
     MissingPipe,
     #[error("Missing a colon")]
     MissingColon,
+    #[error("Missing a colon in metadata field: {0}")]
+    MissingMetadataColon(String),
     #[error(transparent)]
     ParseVersionError(#[from] ParseVersionError),
     #[error(transparent)]
     ParseRequestError(#[from] RequestError),
     #[error("Unknown semver constraint type {0}")]
     UnknownSemverType(String),
+    #[error("Unknown metadata key {key} in metadata field: {metadata}")]
+    UnknownMetadataKey { key: String, metadata: String },
+    #[error("Invalid checksum in metadata field {metadata}: {source}")]
+    InvalidChecksum {
+        source: hex::FromHexError,
+        metadata: String,
+    },
+    #[error("Invalid constraint in metadata field {metadata}: {source}")]
+    MetadataConstraintParse {
+        source: Box<VersionAvailableParse>,
+        metadata: String,
+    },
     #[error(transparent)]
     InvalidGemVersion(#[from] rv_version::VersionError),
 }
@@ -131,23 +145,7 @@ impl VersionAvailable {
                 })
                 .collect::<std::result::Result<Vec<_>, _>>()?
         };
-        let metadata: Metadata =
-            metadata
-                .split(',')
-                .fold(Metadata::default(), |mut partial, md_str| {
-                    let (k, v) = md_str.split_once(':').unwrap();
-                    if k == "checksum" {
-                        partial.checksum = hex::decode(v).unwrap();
-                    } else if k == "ruby" {
-                        partial.ruby = v.split('&').map(|s| s.parse().unwrap()).collect();
-                    } else if k == "rubygems" {
-                        partial.rubygems = v.split('&').map(|s| s.parse().unwrap()).collect();
-                    } else {
-                        eprintln!("unexpected key {k}, {md_str}");
-                        panic!();
-                    }
-                    partial
-                });
+        let metadata = parse_metadata(metadata)?;
 
         let (version, platform) = if let Some((version, platform)) =
             rv_gem_types::platform::version_platform_split(version)
@@ -163,6 +161,54 @@ impl VersionAvailable {
             metadata,
         })
     }
+}
+
+fn parse_metadata(metadata: &str) -> Result<Metadata, VersionAvailableParse> {
+    let mut out = Metadata::default();
+    for md_str in metadata.split(',') {
+        if md_str.is_empty() {
+            continue;
+        }
+        let (k, v) = md_str
+            .split_once(':')
+            .ok_or_else(|| VersionAvailableParse::MissingMetadataColon(md_str.to_owned()))?;
+        match k {
+            "checksum" => {
+                out.checksum =
+                    hex::decode(v).map_err(|err| VersionAvailableParse::InvalidChecksum {
+                        source: err,
+                        metadata: md_str.to_owned(),
+                    })?;
+            }
+            "ruby" => {
+                out.ruby = v
+                    .split('&')
+                    .map(VersionConstraint::from_str)
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(|err| VersionAvailableParse::MetadataConstraintParse {
+                        source: Box::new(err),
+                        metadata: md_str.to_owned(),
+                    })?;
+            }
+            "rubygems" => {
+                out.rubygems = v
+                    .split('&')
+                    .map(VersionConstraint::from_str)
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(|err| VersionAvailableParse::MetadataConstraintParse {
+                        source: Box::new(err),
+                        metadata: md_str.to_owned(),
+                    })?;
+            }
+            _ => {
+                return Err(VersionAvailableParse::UnknownMetadataKey {
+                    key: k.to_owned(),
+                    metadata: md_str.to_owned(),
+                });
+            }
+        }
+    }
+    Ok(out)
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -244,7 +290,9 @@ impl FromStr for VersionConstraint {
             constraint_type: semver_constr
                 .parse()
                 .map_err(VersionAvailableParse::UnknownSemverType)?,
-            version: v.parse().unwrap(),
+            version: v
+                .parse()
+                .map_err(VersionAvailableParse::InvalidGemVersion)?,
         })
     }
 }
