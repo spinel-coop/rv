@@ -310,15 +310,12 @@ impl FromStr for Platform {
 /// Splits a gem version with a platform suffix, like `1.11.0.rc1-x86_64-linux`,
 /// into its version and platform components.
 pub fn version_platform_split(s: &str) -> Option<(Version, Platform)> {
-    let splits: Vec<_> = s.split('-').collect();
+    let (v, p) = s.split_once('-')?;
 
-    if let Ok(version) = Version::new(splits[0])
-        && let Ok(platform) = Platform::new(splits[1..].join("-"))
-    {
-        return Some((version, platform));
-    }
+    let version = Version::new(v).ok()?;
+    let platform = Platform::new(p).ok()?;
 
-    None
+    Some((version, platform))
 }
 
 #[cfg(test)]
