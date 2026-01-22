@@ -4,12 +4,12 @@ use reqwest::Client;
 use rv_gem_types::Platform;
 use rv_lockfile::datatypes::SemverConstraint;
 use rv_ruby::{request::RequestError, version::ParseVersionError};
-use rv_version::Version as GemVersion;
+use rv_version::Version;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use url::Url;
 
-use crate::{commands::tool::install::GemName, http_client::rv_http_client};
+use crate::http_client::rv_http_client;
 
 pub struct Gemserver {
     pub url: Url,
@@ -21,7 +21,7 @@ pub enum Error {
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),
     #[error("The requested gem {gem} was not found on the RubyGems server {gem_server}")]
-    GemNotFound { gem: GemName, gem_server: Url },
+    GemNotFound { gem: String, gem_server: Url },
 }
 
 impl Gemserver {
@@ -74,7 +74,7 @@ pub fn parse_version_from_body(
 /// All the information about a versiom of a gem available on some Gemserver.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VersionAvailable {
-    pub version: GemVersion,
+    pub version: Version,
     pub platform: Option<Platform>,
     pub deps: Vec<Dep>,
     pub metadata: Metadata,
@@ -109,7 +109,7 @@ pub enum VersionAvailableParse {
         metadata: String,
     },
     #[error(transparent)]
-    InvalidGemVersion(#[from] rv_version::VersionError),
+    InvalidVersion(#[from] rv_version::VersionError),
 }
 
 impl VersionAvailable {
@@ -214,7 +214,7 @@ fn parse_metadata(metadata: &str) -> Result<Metadata, VersionAvailableParse> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Dep {
     /// What gem this dependency uses.
-    pub gem_name: GemName,
+    pub gem_name: String,
     /// Constraints on what version of the gem can be used.
     pub version_constraints: VersionConstraints,
 }
@@ -270,7 +270,7 @@ impl std::fmt::Debug for Metadata {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct VersionConstraint {
     pub constraint_type: SemverConstraint,
-    pub version: GemVersion,
+    pub version: Version,
 }
 
 impl std::fmt::Debug for VersionConstraint {
@@ -290,9 +290,7 @@ impl FromStr for VersionConstraint {
             constraint_type: semver_constr
                 .parse()
                 .map_err(VersionAvailableParse::UnknownSemverType)?,
-            version: v
-                .parse()
-                .map_err(VersionAvailableParse::InvalidGemVersion)?,
+            version: v.parse().map_err(VersionAvailableParse::InvalidVersion)?,
         })
     }
 }
@@ -304,7 +302,7 @@ mod tests {
     fn test_parser() {
         for (expected_version, input) in [
             (
-                "0".parse::<GemVersion>().unwrap(),
+                "0".parse::<Version>().unwrap(),
                 "0 activemodel-globalid:>= 0,activesupport:>= 4.1.0|checksum:76c450d211f74a575fd4d32d08e5578d829a419058126fbb3b89ad5bf3621c94,ruby:>= 1.9.3",
             ),
             (

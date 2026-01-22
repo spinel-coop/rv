@@ -27,8 +27,6 @@ mod gemserver;
 mod pubgrub_bridge;
 mod transitive_dep_query;
 
-type GemName = String;
-
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error("{0} is not a valid URL")]
@@ -76,11 +74,11 @@ struct InnerArgs {
     /// Gemserver to install from.
     gem_server: Url,
     /// Gem to install as a tool.
-    gem: GemName,
+    gem: String,
 }
 
 impl InnerArgs {
-    fn new(gem: GemName, gem_server: String) -> Result<Self> {
+    fn new(gem: String, gem_server: String) -> Result<Self> {
         let out = Self {
             gem_server: gem_server.parse().map_err(|_| Error::BadUrl(gem_server))?,
             gem,
@@ -91,7 +89,7 @@ impl InnerArgs {
 
 pub async fn install(
     config: &Config,
-    gem: GemName,
+    gem: String,
     gem_server: String,
     force: bool,
 ) -> Result<Installed> {
@@ -115,7 +113,7 @@ pub async fn install(
     let gemserver = Gemserver::new(args.gem_server)?;
 
     // Maps gem names to their dependency lists.
-    let mut gems_to_deps: HashMap<GemName, Vec<VersionAvailable>> = HashMap::new();
+    let mut gems_to_deps: HashMap<String, Vec<VersionAvailable>> = HashMap::new();
 
     // Look up the gem to install.
     let versions_resp = gemserver
@@ -292,7 +290,7 @@ impl LockfileBuilder {
     }
 
     fn spec_for_gem_dep<'a>(
-        gem_name: &'a GemName,
+        gem_name: &'a String,
         version: &'a str,
     ) -> rv_lockfile::datatypes::Spec<'a> {
         rv_lockfile::datatypes::Spec {

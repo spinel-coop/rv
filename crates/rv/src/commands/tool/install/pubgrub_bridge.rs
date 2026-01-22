@@ -2,30 +2,27 @@ use std::collections::HashMap;
 
 use pubgrub::{OfflineDependencyProvider, Ranges, SelectedDependencies};
 use rv_lockfile::datatypes::SemverConstraint;
-use rv_version::Version as GemVersion;
+use rv_version::Version;
 
-use super::{
-    GemName,
-    gemserver::{VersionAvailable, VersionConstraints},
-};
+use super::gemserver::{VersionAvailable, VersionConstraints};
 
 pub fn solve(
-    gem: GemName,
-    version: GemVersion,
-    gem_info: HashMap<GemName, Vec<VersionAvailable>>,
+    gem: String,
+    version: Version,
+    gem_info: HashMap<String, Vec<VersionAvailable>>,
 ) -> Result<SelectedDependencies<DepProvider>, pubgrub::PubGrubError<DepProvider>> {
     let provider = all_dependencies(gem_info);
     pubgrub::resolve(&provider, gem, version)
 }
 
-pub type DepProvider = OfflineDependencyProvider<GemName, Ranges<GemVersion>>;
+pub type DepProvider = OfflineDependencyProvider<String, Ranges<Version>>;
 
 /// Build a PubGrub "dependency provider", i.e. something that can be queried
 /// with all the information of a GemServer (which gems are available, what versions that gem has,
 /// and what dependencies that gem-version pair has).
 /// This is really just taking the `gem_info` hashmap and organizing it in a way that PubGrub can understand.
-fn all_dependencies(gem_info: HashMap<GemName, Vec<VersionAvailable>>) -> DepProvider {
-    let mut m: OfflineDependencyProvider<GemName, Ranges<GemVersion>> =
+fn all_dependencies(gem_info: HashMap<String, Vec<VersionAvailable>>) -> DepProvider {
+    let mut m: OfflineDependencyProvider<String, Ranges<Version>> =
         OfflineDependencyProvider::new();
     for (package, versions_available) in gem_info {
         for version_available in versions_available {
@@ -42,7 +39,7 @@ fn all_dependencies(gem_info: HashMap<GemName, Vec<VersionAvailable>>) -> DepPro
     m
 }
 
-impl From<VersionConstraints> for Ranges<GemVersion> {
+impl From<VersionConstraints> for Ranges<Version> {
     fn from(constraints: VersionConstraints) -> Self {
         // Convert the RubyGems constraints into PubGrub ranges.
         let ranges = constraints.inner.into_iter().flat_map(|constraint| {
@@ -96,7 +93,7 @@ mod tests {
     fn test_mapping() {
         struct Test {
             input: Vec<VersionConstraint>,
-            expected: Ranges<GemVersion>,
+            expected: Ranges<Version>,
         }
         #[expect(clippy::single_element_loop)] // Remove this 'expect' if you add another test.
         for Test { input, expected } in [Test {
@@ -105,8 +102,8 @@ mod tests {
                 version: "3.0.3".parse().unwrap(),
             }],
             expected: Ranges::intersection(
-                &Ranges::higher_than(GemVersion::from_str("3.0.3").unwrap()),
-                &Ranges::strictly_lower_than(GemVersion::from_str("3.1").unwrap()),
+                &Ranges::higher_than(Version::from_str("3.0.3").unwrap()),
+                &Ranges::strictly_lower_than(Version::from_str("3.1").unwrap()),
             ),
         }] {
             // Take the Ruby gem version requirements,
