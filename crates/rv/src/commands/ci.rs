@@ -858,10 +858,10 @@ fn compile_gems(
     }
 
     for spec in &specs {
-        if let Some(gem) = nodes.get_mut(&spec.name) {
+        if nodes.contains_key(&spec.name) {
             for dep in &spec.dependencies {
-                if dep.is_runtime() {
-                    gem.add_dep(dep.name.clone());
+                if nodes.contains_key(&dep.name) && dep.is_runtime() {
+                    nodes.get_mut(&spec.name).unwrap().add_dep(dep.name.clone());
                 }
             }
         }
