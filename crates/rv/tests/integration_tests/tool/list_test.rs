@@ -13,18 +13,18 @@ fn test_tool_list() {
 
     let _releases_mock = test.mock_releases(["4.0.0"].to_vec());
 
-    let info_endpoint_content = fs_err::read("tests/fixtures/info-test-gem").unwrap();
+    let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
     let _info_endpoint_mock = test
-        .mock_info_endpoint("test-gem", &info_endpoint_content)
+        .mock_info_endpoint("indirect", &info_endpoint_content)
         .create();
 
     let tarball_content =
-        fs_err::read("../rv-gem-package/tests/fixtures/test-gem-1.0.0.gem").unwrap();
+        fs_err::read("../rv-gem-package/tests/fixtures/indirect-1.2.0.gem").unwrap();
     let _tarball_mock = test
-        .mock_gem_download("test-gem-1.0.0.gem", &tarball_content)
+        .mock_gem_download("indirect-1.2.0.gem", &tarball_content)
         .create();
 
-    let output = test.tool_install(&["test-gem"]);
+    let output = test.tool_install(&["indirect"]);
     output.assert_success();
 
     // Test the list has 1 row
@@ -33,13 +33,13 @@ fn test_tool_list() {
     let json_out = list_output.normalized_stdout();
     assert_eq!(
         json_out,
-        "[{\"gem_name\":\"test-gem\",\"version\":\"1.0.0\"}]\n"
+        "[{\"gem_name\":\"indirect\",\"version\":\"1.2.0\"}]\n"
     );
 
     // Manually remove tool
     rm_rf(
         test.temp_home()
-            .join(".local/share/rv/tools/test-gem@1.0.0"),
+            .join(".local/share/rv/tools/indirect@1.2.0"),
     )
     .unwrap();
 

@@ -1,15 +1,19 @@
 use std::collections::HashMap;
 
 use owo_colors::OwoColorize;
+use rv_gem_types::Specification as GemSpecification;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_ruby::request::Source;
 use tracing::debug;
 use url::Url;
 
 use crate::{
-    commands::tool::install::{
-        choosing_ruby_version::ruby_to_use_for,
-        gemserver::{Gemserver, VersionAvailable},
+    commands::{
+        ci::ValidationErr,
+        tool::install::{
+            choosing_ruby_version::ruby_to_use_for,
+            gemserver::{Gemserver, VersionAvailable},
+        },
     },
     config::Config,
 };
@@ -146,8 +150,31 @@ pub async fn install(config: &Config, gem: GemName, gem_server: String, force: b
     let lockfile = lockfile_builder.lockfile();
     let mut config_for_install = config.clone();
     config_for_install.requested_ruby = Some((ruby_to_use.into(), Source::Other));
-    crate::commands::ci::install_from_lockfile(&config_for_install, lockfile, install_path.clone())
-        .await?;
+
+    let gem_name = args.gem.to_owned();
+    let must_have_executables =
+        |gemspec: &GemSpecification| -> std::result::Result<(), ValidationErr> {
+            // Make sure we're only validating the gem being installed as the tool.
+            if gemspec.name != gem_name {
+                return Ok(());
+            }
+            // There's no point installing a gem that doesn't have any executables.
+            if gemspec.executables.is_empty() {
+                Err(ValidationErr::NoExecutable {
+                    gem_name: gem_name.clone(),
+                })
+            } else {
+                Ok(())
+            }
+        };
+
+    crate::commands::ci::install_from_lockfile(
+        &config_for_install,
+        lockfile,
+        install_path.clone(),
+        &must_have_executables,
+    )
+    .await?;
     let gem_name = args.gem.cyan();
     println!(
         "Installed {} version {} to {}",

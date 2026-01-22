@@ -1,0 +1,12 @@
+#!/bin/bash
+set -euo pipefail
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}"/ )/.." && pwd )"
+
+echo "+ cargo build -q --bin rv"
+(
+    cd "$DIR"
+    cargo build -q --bin rv
+)
+
+set -x
+exec "$DIR"/target/debug/rv "$@"
