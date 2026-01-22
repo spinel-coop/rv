@@ -33,7 +33,7 @@ fn test_tool_install_twice() {
     let output = test.tool_install(&["test-gem"]);
     output.assert_success();
 
-    let tool_home = "/tmp/home/.local/share/rv/tools/test-gem-1.0.0";
+    let tool_home = "/tmp/home/.local/share/rv/tools/test-gem@1.0.0";
     let expected_info_message = format!(
         "Installed {} version 1.0.0 to {}",
         "test-gem".cyan(),
@@ -50,7 +50,7 @@ fn test_tool_install_twice() {
     // Manually remove tool
     rm_rf(
         test.temp_home()
-            .join(".local/share/rv/tools/test-gem-1.0.0"),
+            .join(".local/share/rv/tools/test-gem@1.0.0"),
     )
     .unwrap();
 
