@@ -751,10 +751,6 @@ fn find_install_path(
     version: &RubyRequest,
     gemfile: String,
 ) -> Result<Utf8PathBuf> {
-    let env_path = std::env::var("BUNDLE_PATH");
-    if let Ok(bundle_path) = env_path {
-        return Ok(Utf8PathBuf::from(&bundle_path));
-    }
     let args = ["-rbundler", "-e", "puts Bundler.bundle_path"];
     let bundle_path = match crate::commands::ruby::run::run_no_install(
         config,
