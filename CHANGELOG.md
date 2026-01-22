@@ -1,6 +1,11 @@
 # `rv` changelog
 
-## rv 0.4.2 (22 Jan, 2025)
+## rv 0.4.3 (22 January, 2026)
+
+- `rv ci` did not respect custom gem lib directories (#402, @deivid-rodriguez)
+- `rv ci` install path was wrong if BUNDLE_PATH was set (#403, @deivid-rodriguez)
+- better summary statistics for `rv ci` (#401, @deivid-rodriguez)
+
 ## rv 0.4.2 (22 January, 2026)
 
 ## Fixed
