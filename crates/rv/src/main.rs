@@ -363,7 +363,7 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
                 gem_server,
                 force,
             } => tool_install(config, gem, gem_server, force).await?,
-            commands::tool::ToolCommand::List { format } => tool_list(config, format)?,
+            commands::tool::ToolCommand::List { format } => tool_list(config, format).await?,
         },
     };
 

@@ -19,7 +19,7 @@ struct Tool {
     version: String,
 }
 
-pub fn list(_config: &Config, format: OutputFormat) -> Result<(), Error> {
+pub async fn list(_config: &Config, format: OutputFormat) -> Result<(), Error> {
     let tool_dir = crate::commands::tool::tool_dir();
 
     // If the tool directory is missing, then there's nothing installed.
