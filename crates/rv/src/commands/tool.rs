@@ -1,5 +1,6 @@
 pub mod install;
 pub mod list;
+pub mod uninstall;
 
 use camino::Utf8PathBuf;
 use clap::{Args, Subcommand};
@@ -31,6 +32,11 @@ pub enum ToolCommand {
         /// Output format for the list
         #[arg(long, value_enum, default_value = "text")]
         format: OutputFormat,
+    },
+    #[command(about = "Remove tools")]
+    Uninstall {
+        /// What to uninstall
+        gem: String,
     },
 }
 
