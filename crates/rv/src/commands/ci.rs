@@ -260,60 +260,60 @@ async fn ci_inner_work(
     let binstub_dir = args.install_path.join("bin");
     tokio::fs::create_dir_all(&binstub_dir).await?;
 
-    let path_install_start = Instant::now();
-    let path_specs = install_paths(config, &lockfile.path, args)?;
-    let path_count = path_specs.len();
-    let path_install_elapsed = path_install_start.elapsed();
-
-    let git_install_start = Instant::now();
-    let git_specs = install_git_repos(config, &lockfile.git, args)?;
-    let git_count = git_specs.len();
-    let git_install_elapsed = git_install_start.elapsed();
-
     // Phase 1: Downloads (0-40%)
     let gem_count = lockfile.gem_spec_count() as u64;
     progress.start_phase(gem_count, 40);
 
-    let download_start = Instant::now();
+    let path_fetch_start = Instant::now();
+    let path_specs = install_paths(config, &lockfile.path, args)?;
+    let path_count = path_specs.len();
+    let path_fetch_elapsed = path_fetch_start.elapsed();
+
+    let git_fetch_start = Instant::now();
+    let git_specs = install_git_repos(config, &lockfile.git, args)?;
+    let git_count = git_specs.len();
+    let git_fetch_elapsed = git_fetch_start.elapsed();
+
+    let gem_fetch_start = Instant::now();
     let stats = DownloadStats::default();
     let downloaded = download_gems(lockfile.clone(), &config.cache, args, progress, &stats).await?;
     let downloaded_count = downloaded.len();
-    let download_elapsed = download_start.elapsed();
+    let gem_fetch_elapsed = gem_fetch_start.elapsed();
+
+    let fetch_elapsed = path_fetch_elapsed + git_fetch_elapsed + gem_fetch_elapsed;
 
     // Phase 2: Installs (40-80%)
     progress.start_phase(downloaded_count as u64, 40);
 
     let install_start = Instant::now();
     let specs = install_gems(config, downloaded, args, progress)?;
-    let package_count = specs.len();
-    let package_install_elapsed = install_start.elapsed();
-
-    let install_elapsed = package_install_elapsed + git_install_elapsed + path_install_elapsed;
+    let gem_count = specs.len();
+    let install_elapsed = install_start.elapsed();
 
     // Phase 3 (Compiles, 80-100%) - start_phase called inside compile_gems after filtering
     let compile_start = Instant::now();
     let compiled_count = compile_gems(config, specs, args, progress)?;
     let compile_elapsed = compile_start.elapsed();
 
-    let total_elapsed = download_elapsed + install_elapsed + compile_elapsed;
+    let total_elapsed = fetch_elapsed + install_elapsed + compile_elapsed;
+    let total_gems = gem_count + git_count + path_count;
 
     let (cached_count, network_count) = stats.counts();
 
-    println!("Summary:");
+    println!("{} gems installed:", total_gems);
     println!(
-        " - {} fetching {} gem packages: {} cached, {} downloaded",
-        format_duration(download_elapsed),
-        downloaded_count,
+        " - {} fetching {} gems from gem servers ({} cached, {} downloaded), {} from git repos, {} from local paths",
+        format_duration(fetch_elapsed),
+        gem_count,
         cached_count,
         network_count,
-    );
-    println!(
-        " - {} installing {} gems: {} from gem packages, {} from git repos, {} from local paths",
-        format_duration(install_elapsed),
-        package_count + git_count + path_count,
-        package_count,
         git_count,
         path_count,
+    );
+    println!(
+        " - {} unpacking {} gems from gem servers",
+        format_duration(install_elapsed),
+        gem_count,
     );
     if compiled_count > 0 {
         println!(
@@ -416,7 +416,7 @@ fn install_git_repos<'i>(
     git_sources: &Vec<rv_lockfile::datatypes::GitSection<'i>>,
     args: &CiInnerArgs,
 ) -> Result<Vec<GemSpecification>> {
-    let span = info_span!("Downloading and installing git gems");
+    let span = info_span!("Fetching git gems");
     span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name}").unwrap());
     let _guard = span.enter();
 
