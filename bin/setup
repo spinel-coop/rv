@@ -40,10 +40,10 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     fi
 
     set -x
-    if which apt > /dev/null 2>&1; then
-      $SUDO apt update -qq
-      $SUDO apt install -y -qq curl pkg-config git gcc libssl-dev
-    elif which dnf > /dev/null 2>&1; then
+    if apt-get --version > /dev/null 2>&1; then
+      $SUDO apt-get update -qq
+      $SUDO apt-get install -y -qq curl pkg-config git gcc libssl-dev
+    elif dnf --version > /dev/null 2>&1; then
       # Fedora, RHEL, CentOS
       # NOTE: Atomic variants (Silverblue, Kinoite, Aurora, Bazzite, etc.) should use
       # distrobox/toolbox or install these tools via homebrew instead.
