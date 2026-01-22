@@ -1,5 +1,35 @@
 # `rv` changelog
 
+## rv 0.4.2 (22 Jan, 2025)
+
+## Fixed
+
+ - `rv ci` was not compiling all native extensions (#399, @deivid-rodriguez)
+ - `rv ci` was using the wrong Ruby (#345, @case)
+ - `rv ci` was not finding Gemfile properly (#361, @deivid-rodriguez)
+ - `rv ci` was not installing all path gems (#368, #369 @deivid-rodriguez)
+ - `rv ci` had a race condition (#373, @deivid-rodriguez)
+ - `rv ci` was splitting version/platform wrong (#390, @deivid-rodriguez)
+ - Incorrect `.tool-versions` file (#347, @deivid-rodriguez)
+ - `rv ruby pin` should pin normalized versions (#347, @deivid-rodriguez)
+ - `rv ruby pin` didn't handle non-CRuby ruby (#349, @deivid-rodriguez)
+ - `depgraph` was setting the wrong number of workers (#362, @case)
+
+
+## Added
+
+ - Users can use their GitHub auth to get more generous ratelimits (#386, @pboling)
+ - Progress indicators for `rv ci` (#350, #352, #357, #358, #374 @case, @deivid-rodriguez)
+ - Generate gemspecs in Rust instead of shelling out to Ruby (#376, #391, @adamchalmers, @deivid-rodriguez)
+
+## Improved
+
+ - `bin/setup` script works on more platforms (#388, @pboling)
+ - Better smoke tests (#343, #346, #360, #365 @case)
+ - Better error messages in `rv ci` (#363, @deivid-rodriguez)
+ - Nicer `rv ruby pin` output (#354, @kaspth)
+ - Only find rubies that could match the desired version (#356, @deivid-rodriguez)
+
 ## rv 0.4.1 (9 January, 2025)
 
 This is a small release to fix a few bugs in the 0.4.0 release.
