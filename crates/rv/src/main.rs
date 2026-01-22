@@ -16,6 +16,7 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberI
 pub mod commands;
 pub mod config;
 pub mod http_client;
+pub mod output_format;
 pub mod progress;
 
 use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir, cache_prune};
@@ -37,6 +38,7 @@ use crate::commands::shell::setup as shell_setup;
 use crate::commands::shell::{ShellArgs, ShellCommand};
 use crate::commands::tool::ToolArgs;
 use crate::commands::tool::install::install as tool_install;
+use crate::commands::tool::list::list as tool_list;
 
 const STYLES: Styles = Styles::styled()
     .header(AnsiColor::Green.on_default().bold())
@@ -210,6 +212,8 @@ pub enum Error {
     EnvError(#[from] commands::shell::env::Error),
     #[error(transparent)]
     ToolInstallError(#[from] commands::tool::install::Error),
+    #[error(transparent)]
+    ToolListError(#[from] commands::tool::list::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -359,6 +363,7 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
                 gem_server,
                 force,
             } => tool_install(config, gem, gem_server, force).await?,
+            commands::tool::ToolCommand::List { format } => tool_list(config, format)?,
         },
     };
 
