@@ -39,6 +39,7 @@ use crate::commands::shell::{ShellArgs, ShellCommand};
 use crate::commands::tool::ToolArgs;
 use crate::commands::tool::install::install as tool_install;
 use crate::commands::tool::list::list as tool_list;
+use crate::commands::tool::uninstall::uninstall as tool_uninstall;
 
 const STYLES: Styles = Styles::styled()
     .header(AnsiColor::Green.on_default().bold())
@@ -214,6 +215,8 @@ pub enum Error {
     ToolInstallError(#[from] commands::tool::install::Error),
     #[error(transparent)]
     ToolListError(#[from] commands::tool::list::Error),
+    #[error(transparent)]
+    ToolUninstallError(#[from] commands::tool::uninstall::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -364,6 +367,7 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
                 force,
             } => tool_install(config, gem, gem_server, force).await?,
             commands::tool::ToolCommand::List { format } => tool_list(config, format)?,
+            commands::tool::ToolCommand::Uninstall { gem } => tool_uninstall(config, gem)?,
         },
     };
 
