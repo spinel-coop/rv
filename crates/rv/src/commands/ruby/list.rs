@@ -7,13 +7,7 @@ use rv_ruby::{Ruby, version::RubyVersion};
 use serde::Serialize;
 use tracing::{info, warn};
 
-use crate::config::Config;
-
-#[derive(clap::ValueEnum, Clone, Debug, PartialEq, Eq)]
-pub enum OutputFormat {
-    Text,
-    Json,
-}
+use crate::{config::Config, output_format::OutputFormat};
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {

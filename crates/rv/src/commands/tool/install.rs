@@ -96,7 +96,7 @@ pub async fn install(config: &Config, gem: GemName, gem_server: String, force: b
     );
 
     // Check if the tool was already installed.
-    let install_path = super::tool_dir(&args.gem, &version_to_install.version);
+    let install_path = super::tool_dir_for(&args.gem, &version_to_install.version);
     let already_installed = install_path.exists();
     if already_installed {
         if force {

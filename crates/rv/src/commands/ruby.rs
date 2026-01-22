@@ -1,6 +1,6 @@
 use clap::{Args, Subcommand};
 
-use crate::commands::ruby::list::OutputFormat;
+use crate::output_format::OutputFormat;
 use rv_ruby::request::RubyRequest;
 
 pub mod dir;
