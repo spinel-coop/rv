@@ -1,46 +1,46 @@
 # `rv` changelog
 
 ## rv 0.4.2 (22 Jan, 2025)
+## rv 0.4.2 (22 January, 2026)
 
 ## Fixed
 
- - `rv ci` was not compiling all native extensions (#399, @deivid-rodriguez)
- - `rv ci` was using the wrong Ruby (#345, @case)
- - `rv ci` was not finding Gemfile properly (#361, @deivid-rodriguez)
- - `rv ci` was not installing all path gems (#368, #369 @deivid-rodriguez)
- - `rv ci` had a race condition (#373, @deivid-rodriguez)
- - `rv ci` was splitting version/platform wrong (#390, @deivid-rodriguez)
- - Incorrect `.tool-versions` file (#347, @deivid-rodriguez)
- - `rv ruby pin` should pin normalized versions (#347, @deivid-rodriguez)
- - `rv ruby pin` didn't handle non-CRuby ruby (#349, @deivid-rodriguez)
- - `depgraph` was setting the wrong number of workers (#362, @case)
-
+- `rv ci` was not compiling all native extensions (#399, @deivid-rodriguez)
+- `rv ci` was using the wrong Ruby (#345, @case)
+- `rv ci` was not finding Gemfile properly (#361, @deivid-rodriguez)
+- `rv ci` was not installing all path gems (#368, #369 @deivid-rodriguez)
+- `rv ci` had a race condition (#373, @deivid-rodriguez)
+- `rv ci` was splitting version/platform wrong (#390, @deivid-rodriguez)
+- Incorrect `.tool-versions` file (#347, @deivid-rodriguez)
+- `rv ruby pin` should pin normalized versions (#347, @deivid-rodriguez)
+- `rv ruby pin` didn't handle non-CRuby ruby (#349, @deivid-rodriguez)
+- `depgraph` was setting the wrong number of workers (#362, @case)
 
 ## Added
 
- - Users can use their GitHub auth to get more generous ratelimits (#386, @pboling)
- - Progress indicators for `rv ci` (#350, #352, #357, #358, #374 @case, @deivid-rodriguez)
- - Generate gemspecs in Rust instead of shelling out to Ruby (#376, #391, @adamchalmers, @deivid-rodriguez)
+- Users can use their GitHub auth to get more generous ratelimits (#386, @pboling)
+- Progress indicators for `rv ci` (#350, #352, #357, #358, #374 @case, @deivid-rodriguez)
+- Generate gemspecs in Rust instead of shelling out to Ruby (#376, #391, @adamchalmers, @deivid-rodriguez)
 
 ## Improved
 
- - `bin/setup` script works on more platforms (#388, @pboling)
- - Better smoke tests (#343, #346, #360, #365 @case)
- - Better error messages in `rv ci` (#363, @deivid-rodriguez)
- - Nicer `rv ruby pin` output (#354, @kaspth)
- - Only find rubies that could match the desired version (#356, @deivid-rodriguez)
+- `bin/setup` script works on more platforms (#388, @pboling)
+- Better smoke tests (#343, #346, #360, #365 @case)
+- Better error messages in `rv ci` (#363, @deivid-rodriguez)
+- Nicer `rv ruby pin` output (#354, @kaspth)
+- Only find rubies that could match the desired version (#356, @deivid-rodriguez)
 
-## rv 0.4.1 (9 January, 2025)
+## rv 0.4.1 (9 January, 2026)
 
 This is a small release to fix a few bugs in the 0.4.0 release.
 
- - `rv ruby` commands should act on `rv` rubies before rubies from other sources (#333, @deivid-rodriguez)
- - `rv ci` command should not be hidden (#337, @adamchalmers)
- - Improvements to how `rv ruby list` displays active ruby (#339, @deivid-rodriguez)
- - Clearer descriptions for `rv ruby` subcommands (#338, @sstephenson)
- - Tests: Add smoke tests for `rv ci` with popular projects (#331, @case)
+- `rv ruby` commands should act on `rv` rubies before rubies from other sources (#333, @deivid-rodriguez)
+- `rv ci` command should not be hidden (#337, @adamchalmers)
+- Improvements to how `rv ruby list` displays active ruby (#339, @deivid-rodriguez)
+- Clearer descriptions for `rv ruby` subcommands (#338, @sstephenson)
+- Tests: Add smoke tests for `rv ci` with popular projects (#331, @case)
 
-## rv 0.4.0 (6 January, 2025)
+## rv 0.4.0 (6 January, 2026)
 
 Major new command: `rv clean-install`. Similar to `bundle install --frozen`, you can use `rv ci` to install gems that have already been resolved and recorded in your `Gemfile.lock`. If you notice anything wrong when installing your gems, please [let us know](https://github.com/spinel-coop/rv/issues/new)!
 
