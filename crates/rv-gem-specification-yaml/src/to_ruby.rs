@@ -40,7 +40,8 @@ pub fn to_ruby(spec: Specification) -> String {
     use std::fmt::Write;
     let mut ruby_src = format!(
         "# -*- encoding: utf-8 -*-
-# stub: {name} {version} {platform} lib\n"
+# stub: {name} {version} {platform} {}\n",
+        require_paths.join("\0")
     );
     if extensions.is_empty().not() {
         ruby_src.push_str("# stub: ");
@@ -291,6 +292,11 @@ mod tests {
     #[test]
     fn test_bundler() {
         run_test("bundler");
+    }
+
+    #[test]
+    fn test_concurrent_ruby() {
+        run_test("concurrent-ruby");
     }
 
     #[test]
