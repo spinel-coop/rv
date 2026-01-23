@@ -11,9 +11,12 @@ use url::Url;
 use crate::{
     commands::{
         ci::ValidationErr,
-        tool::install::{
-            choosing_ruby_version::ruby_to_use_for,
-            gemserver::{Gemserver, VersionAvailable},
+        tool::{
+            Installed,
+            install::{
+                choosing_ruby_version::ruby_to_use_for,
+                gemserver::{Gemserver, VersionAvailable},
+            },
         },
     },
     config::Config,
@@ -80,7 +83,12 @@ impl InnerArgs {
     }
 }
 
-pub async fn install(config: &Config, gem: GemName, gem_server: String, force: bool) -> Result<()> {
+pub async fn install(
+    config: &Config,
+    gem: GemName,
+    gem_server: String,
+    force: bool,
+) -> Result<Installed> {
     // Check if 'gem' is in 'gem@version' format.
     // If `gem_version` is None, it means "latest". Otherwise it's a specific version.
     let (gem_name, gem_version) = if let Some((name, gem_version)) = gem.split_once('@') {
@@ -149,7 +157,10 @@ pub async fn install(config: &Config, gem: GemName, gem_server: String, force: b
                 version_to_install.version,
                 install_path.cyan(),
             );
-            return Ok(());
+            return Ok(Installed {
+                version: version_to_install.version,
+                dir: install_path,
+            });
         }
     }
 
@@ -219,7 +230,10 @@ pub async fn install(config: &Config, gem: GemName, gem_server: String, force: b
         version_to_install.version,
         install_path.cyan(),
     );
-    Ok(())
+    Ok(Installed {
+        version: version_to_install.version,
+        dir: install_path,
+    })
 }
 
 /// Owns the information needed to create a lockfile.
