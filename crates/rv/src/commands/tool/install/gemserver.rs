@@ -93,6 +93,8 @@ pub enum VersionAvailableParse {
     InvalidRubyVersion(#[from] rv_ruby::version::ParseVersionError),
     #[error(transparent)]
     InvalidVersion(#[from] rv_version::VersionError),
+    #[error("Invalid release: {0}")]
+    InvalidRelease(String),
     #[error("Unknown semver constraint type {0}")]
     UnknownSemverType(String),
     #[error("Unknown metadata key {key} in metadata field: {metadata}")]
@@ -144,13 +146,9 @@ impl VersionAvailable {
         };
         let metadata = parse_metadata(metadata)?;
 
-        let (version, platform) = if let Some((version, platform)) =
-            rv_gem_types::platform::version_platform_split(version)
-        {
-            (version, platform)
-        } else {
-            (version.parse()?, Platform::Ruby)
-        };
+        let (version, platform) = rv_gem_types::platform::version_platform_split(version)
+            .ok_or(VersionAvailableParse::InvalidRelease(version.to_string()))?;
+
         Ok(VersionAvailable {
             version,
             platform,
