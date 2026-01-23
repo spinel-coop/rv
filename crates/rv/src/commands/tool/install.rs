@@ -4,6 +4,7 @@ use owo_colors::OwoColorize;
 use rv_gem_types::Specification as GemSpecification;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_ruby::request::Source;
+use rv_version::Version as GemVersion;
 use tracing::debug;
 use url::Url;
 
@@ -29,6 +30,12 @@ type GemName = String;
 pub enum Error {
     #[error("{0} is not a valid URL")]
     BadUrl(String),
+    #[error("No version {0} available")]
+    NoVersionFound(GemVersion),
+    #[error("The gem does not actually have any versions published")]
+    NoVersionsPublished,
+    #[error(transparent)]
+    VersionError(#[from] rv_version::VersionError),
     #[error(transparent)]
     HttpError(#[from] reqwest::Error),
     #[error(transparent)]
@@ -74,7 +81,22 @@ impl InnerArgs {
 }
 
 pub async fn install(config: &Config, gem: GemName, gem_server: String, force: bool) -> Result<()> {
-    let args = InnerArgs::new(gem, gem_server)?;
+    // Check if 'gem' is in 'gem@version' format.
+    // If `gem_version` is None, it means "latest". Otherwise it's a specific version.
+    let (gem_name, gem_version) = if let Some((name, gem_version)) = gem.split_once('@') {
+        let gem_version = if gem_version == "latest" {
+            None
+        } else {
+            // You don't have to give a version,
+            // but if you give one, it has to parse!
+            Some(gem_version.parse()?)
+        };
+        (name.to_owned(), gem_version)
+    } else {
+        (gem, None)
+    };
+
+    let args = InnerArgs::new(gem_name, gem_server)?;
 
     let gemserver = Gemserver::new(args.gem_server)?;
 
@@ -85,19 +107,34 @@ pub async fn install(config: &Config, gem: GemName, gem_server: String, force: b
     let versions_resp = gemserver.get_versions_for_gem(&args.gem).await?;
     let versions = gemserver::parse_version_from_body(&versions_resp)?;
     debug!("Found {} versions for the gem {}", versions.len(), args.gem);
+    if versions.is_empty() {
+        return Err(Error::NoVersionsPublished);
+    }
     gems_to_deps.insert(args.gem.clone(), versions.clone());
 
     // Let's install the most recent version.
-    // TODO: Allow users to choose a specific version via CLI args.
-    let version_to_install = versions
-        .iter()
-        .max_by_key(|version_available| &version_available.version)
-        .unwrap()
-        .to_owned();
-    debug!(
-        "Selected version {} of gem {}",
-        version_to_install.version, args.gem,
-    );
+    let version_to_install = match gem_version {
+        Some(user_choice) => {
+            let Some(v) = versions
+                .iter()
+                .find(|version_available| version_available.version == user_choice)
+            else {
+                return Err(Error::NoVersionFound(user_choice));
+            };
+            debug!("Selected version {} of gem {}", v.version, args.gem,);
+            v.to_owned()
+        }
+        _ => {
+            let Some(v) = versions
+                .iter()
+                .max_by_key(|version_available| &version_available.version)
+            else {
+                return Err(Error::NoVersionsPublished);
+            };
+            debug!("Selected version {} of gem {}", v.version, args.gem,);
+            v.to_owned()
+        }
+    };
 
     // Check if the tool was already installed.
     let install_path = super::tool_dir_for(&args.gem, &version_to_install.version);

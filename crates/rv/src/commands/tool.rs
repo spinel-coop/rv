@@ -17,7 +17,9 @@ pub struct ToolArgs {
 pub enum ToolCommand {
     #[command(about = "Install a given gem as a tool")]
     Install {
-        /// What to install
+        /// What to install. This can either be gem@version, e.g.
+        /// `mygem@2.18.0`, or a gem name like `mygem`, which is equivalent
+        /// to doing `mygem@latest`.
         gem: String,
         /// What gem server to use.
         #[arg(long, default_value = "https://gem.coop/")]
