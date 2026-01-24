@@ -61,3 +61,40 @@ fn test_tool_install_twice() {
     let stdout = output.normalized_stdout();
     assert!(stdout.contains(&expected_info_message), "{}", stdout);
 }
+
+/// Tests users can explicitly install an older version of a gem.
+#[test]
+fn test_tool_install_non_latest_version() {
+    let mut test = RvTest::new();
+
+    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
+
+    let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
+    let info_endpoint_mock = test
+        .mock_info_endpoint("indirect", &info_endpoint_content)
+        .create();
+
+    let tarball_content =
+        fs_err::read("../rv-gem-package/tests/fixtures/indirect-1.1.0.gem").unwrap();
+    let tarball_mock = test
+        .mock_gem_download("indirect-1.1.0.gem", &tarball_content)
+        .create();
+
+    // Install it, with an explicit version.
+    let output = test.tool_install(&["indirect@1.1.0"]);
+    output.assert_success();
+
+    let tool_home = "/tmp/home/.local/share/rv/tools/indirect@1.1.0";
+    let expected_info_message = format!(
+        "Installed {} version 1.1.0 to {}",
+        "indirect".cyan(),
+        tool_home.cyan()
+    );
+
+    let stdout = output.normalized_stdout();
+    assert!(stdout.contains(&expected_info_message), "{}", stdout);
+
+    releases_mock.assert();
+    info_endpoint_mock.assert();
+    tarball_mock.assert();
+}
