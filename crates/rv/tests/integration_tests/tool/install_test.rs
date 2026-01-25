@@ -1,3 +1,5 @@
+use fs_err as fs;
+
 use crate::common::{RvOutput, RvTest};
 use owo_colors::OwoColorize;
 use rv_cache::rm_rf;
@@ -93,6 +95,43 @@ fn test_tool_install_non_latest_version() {
 
     let stdout = output.normalized_stdout();
     assert!(stdout.contains(&expected_info_message), "{}", stdout);
+
+    releases_mock.assert();
+    info_endpoint_mock.assert();
+    tarball_mock.assert();
+}
+
+#[test]
+fn test_tool_install_writes_ruby_version_file() {
+    let mut test = RvTest::new();
+
+    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
+
+    let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
+    let info_endpoint_mock = test
+        .mock_info_endpoint("indirect", &info_endpoint_content)
+        .create();
+
+    let tarball_content =
+        fs_err::read("../rv-gem-package/tests/fixtures/indirect-1.2.0.gem").unwrap();
+    let tarball_mock = test
+        .mock_gem_download("indirect-1.2.0.gem", &tarball_content)
+        .create();
+
+    let output = test.tool_install(&["indirect"]);
+    output.assert_success();
+
+    let tool_home = test
+        .temp_home()
+        .join(".local/share/rv/tools/indirect@1.2.0");
+    let ruby_version_path = tool_home.join(".ruby-version");
+    assert!(
+        ruby_version_path.exists(),
+        "Expected .ruby-version to exist at {}",
+        ruby_version_path
+    );
+    let ruby_version = fs::read_to_string(ruby_version_path).unwrap();
+    assert_eq!(ruby_version, "ruby-4.0.0\n");
 
     releases_mock.assert();
     info_endpoint_mock.assert();

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fs};
 
 use owo_colors::OwoColorize;
 use rv_gem_types::Specification as GemSpecification;
@@ -61,6 +61,8 @@ pub enum Error {
     NoMatchingRuby {
         requirements: Vec<gemserver::VersionConstraint>,
     },
+    #[error("Could not pin Ruby version for this tool: {0}")]
+    CouldNotPinRubyVersion(std::io::Error),
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -197,7 +199,7 @@ pub async fn install(
     let lockfile_builder = LockfileBuilder::new(&gemserver, versions_needed);
     let lockfile = lockfile_builder.lockfile();
     let mut config_for_install = config.clone();
-    config_for_install.requested_ruby = Some((ruby_to_use.into(), Source::Other));
+    config_for_install.requested_ruby = Some((ruby_to_use.clone().into(), Source::Other));
 
     let gem_name = args.gem.to_owned();
     let must_have_executables =
@@ -223,6 +225,9 @@ pub async fn install(
         &must_have_executables,
     )
     .await?;
+    let pin_path = install_path.join(".ruby-version");
+    fs::write(&pin_path, format!("{ruby_to_use}\n")).map_err(Error::CouldNotPinRubyVersion)?;
+    debug!("Pinned dir {} to {}", pin_path, ruby_to_use);
     let gem_name = args.gem.cyan();
     println!(
         "Installed {} version {} to {}",
