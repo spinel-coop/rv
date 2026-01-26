@@ -114,10 +114,10 @@ mod tests {
     #[test]
     fn test_resolution() {
         let gem_info: HashMap<String, Vec<VersionAvailable>> = serde_json::from_str(include_str!(
-            "../../../../testdata/all_rails_transitive_deps.json"
+            "../../../../testdata/all_nokogiri_transitive_deps.json"
         ))
         .unwrap();
-        let mut out: Vec<_> = solve("rails".to_owned(), "8.1.1".parse().unwrap(), gem_info)
+        let mut out: Vec<_> = solve("nokogiri".to_owned(), "1.19.0".parse().unwrap(), gem_info)
             .unwrap()
             .into_iter()
             .collect();
