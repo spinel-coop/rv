@@ -143,7 +143,8 @@ pub async fn install(
         Some(user_choice) => {
             let Some(v) = releases
                 .iter()
-                .find(|gem_release| gem_release.version == user_choice)
+                .filter(|gem_release| gem_release.version == user_choice)
+                .max()
             else {
                 return Err(Error::NoVersionFound(user_choice));
             };
@@ -151,10 +152,7 @@ pub async fn install(
             v.to_owned()
         }
         _ => {
-            let Some(v) = releases
-                .iter()
-                .max_by_key(|gem_release| &gem_release.version)
-            else {
+            let Some(v) = releases.iter().max() else {
                 return Err(Error::NoReleasesPublished);
             };
             debug!("Selected version {} of gem {}", v, args.gem,);
@@ -203,12 +201,9 @@ pub async fn install(
     // Now, translate the dependency constraint list into a PubGrub system, and resolve
     // (i.e. figure out which version of every gem will be used.)
     debug!("Resolving all dependencies via PubGrub");
-    let versions_needed = pubgrub_bridge::solve(
-        args.gem.clone(),
-        release_to_install.version.clone(),
-        gems_to_deps,
-    )
-    .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
+    let versions_needed =
+        pubgrub_bridge::solve(args.gem.clone(), release_to_install.clone(), gems_to_deps)
+            .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
     debug!("All dependencies resolved");
 
     // Make a Gemfile.lock in-memory, install it via `rv ci`.
@@ -236,7 +231,7 @@ pub async fn install(
     println!(
         "Installed {} version {} to {}",
         gem_name.cyan(),
-        release_to_install.version,
+        release_to_install,
         install_path.cyan(),
     );
     Ok(Installed {

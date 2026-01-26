@@ -63,13 +63,20 @@ pub fn parse_release_from_body(index_body: &str) -> Result<Vec<GemRelease>, GemR
             if line == "---" {
                 return None;
             }
-            Some(GemRelease::parse(line))
+
+            let gem_release = GemRelease::parse(line);
+
+            if gem_release.is_ok() && !gem_release.as_ref().unwrap().platform.is_local() {
+                return None;
+            }
+
+            Some(gem_release)
         })
         .collect()
 }
 
 /// All the information about a release of a gem available on some Gemserver.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct GemRelease {
     pub version: Version,
     pub platform: Platform,
@@ -207,7 +214,22 @@ impl std::fmt::Display for GemRelease {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+impl Ord for GemRelease {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        // Sort by version, then platform
+        self.version
+            .cmp(&other.version)
+            .then_with(|| self.platform.cmp(&other.platform))
+    }
+}
+
+impl PartialOrd for GemRelease {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Dep {
     /// What gem this dependency uses.
     pub gem_name: String,
@@ -221,7 +243,7 @@ impl std::fmt::Debug for Dep {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VersionConstraints {
     pub inner: Vec<VersionConstraint>,
 }
@@ -244,7 +266,7 @@ impl From<VersionConstraints> for Vec<VersionConstraint> {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Default)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde_as]
 pub struct Metadata {
     #[serde_as(as = "serde_with::hex::Hex")]
@@ -263,7 +285,7 @@ impl std::fmt::Debug for Metadata {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VersionConstraint {
     pub constraint_type: SemverConstraint,
     pub version: Version,
@@ -323,5 +345,38 @@ mod tests {
         let actual_parsed_response = parse_release_from_body(resp).unwrap();
         assert_eq!(actual_parsed_response.len(), 2);
         insta::assert_debug_snapshot!(actual_parsed_response);
+    }
+
+    #[test]
+    fn test_sort_version_available() {
+        let resp = "---
+1.19.0-aarch64-linux-gnu racc:~> 1.4|checksum:11a97ecc3c0e7e5edcf395720b10860ef493b768f6aa80c539573530bc933767,ruby:< 4.1.dev&>= 3.2,rubygems:>= 3.3.22
+1.19.0-aarch64-linux-musl racc:~> 1.4|checksum:eb70507f5e01bc23dad9b8dbec2b36ad0e61d227b42d292835020ff754fb7ba9,ruby:< 4.1.dev&>= 3.2,rubygems:>= 3.3.22
+1.19.0-arm-linux-gnu racc:~> 1.4|checksum:572a259026b2c8b7c161fdb6469fa2d0edd2b61cd599db4bbda93289abefbfe5,ruby:< 4.1.dev&>= 3.2,rubygems:>= 3.3.22
+1.19.0-arm-linux-musl racc:~> 1.4|checksum:23ed90922f1a38aed555d3de4d058e90850c731c5b756d191b3dc8055948e73c,ruby:< 4.1.dev&>= 3.2,rubygems:>= 3.3.22
+1.19.0-arm64-darwin racc:~> 1.4|checksum:0811dfd936d5f6dd3f6d32ef790568bf29b2b7bead9ba68866847b33c9cf5810,ruby:< 4.1.dev&>= 3.2
+1.19.0-java racc:~> 1.4|checksum:5f3a70e252be641d8a4099f7fb4cc25c81c632cb594eec9b4b8f2ca8be4374f3,ruby:>= 3.2
+1.19.0-x64-mingw-ucrt racc:~> 1.4|checksum:05d7ed2d95731edc9bef2811522dc396df3e476ef0d9c76793a9fca81cab056b,ruby:< 4.1.dev&>= 3.2
+1.19.0-x86_64-darwin racc:~> 1.4|checksum:1dad56220b603a8edb9750cd95798bffa2b8dd9dd9aa47f664009ee5b43e3067,ruby:< 4.1.dev&>= 3.2
+1.19.0-x86_64-linux-gnu racc:~> 1.4|checksum:f482b95c713d60031d48c44ce14562f8d2ce31e3a9e8dd0ccb131e9e5a68b58c,ruby:< 4.1.dev&>= 3.2,rubygems:>= 3.3.22
+1.19.0-x86_64-linux-musl racc:~> 1.4|checksum:1c4ca6b381622420073ce6043443af1d321e8ed93cc18b08e2666e5bd02ffae4,ruby:< 4.1.dev&>= 3.2,rubygems:>= 3.3.22
+1.19.0 mini_portile2:~> 2.8.2,racc:~> 1.4|checksum:e304d21865f62518e04f2bf59f93bd3a97ca7b07e7f03952946d8e1c05f45695,ruby:>= 3.2";
+
+        let actual_parsed_response = parse_release_from_body(resp).unwrap();
+        assert_eq!(actual_parsed_response.len(), 2);
+
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        let expected_release = "1.19.0-arm64-darwin";
+        #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+        let expected_release = "1.19.0-x86_64-darwin";
+        #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+        let expected_release = "1.19.0-aarch64-linux-gnu";
+        #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+        let expected_release = "1.19.0-x86_64-linux-gnu";
+
+        assert_eq!(
+            actual_parsed_response.iter().max().unwrap().to_string(),
+            expected_release
+        );
     }
 }

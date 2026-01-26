@@ -2,6 +2,5 @@
 source: crates/rv/src/commands/tool/install/pubgrub_bridge.rs
 expression: resolved_rails
 ---
-mini_portile2: 2.8.9
-nokogiri: 1.19.0
+nokogiri: 1.19.0-arm64-darwin
 racc: 1.8.1

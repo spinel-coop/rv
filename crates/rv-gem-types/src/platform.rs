@@ -22,8 +22,9 @@ static OPENBSD_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"openbsd-?(\d+\.\d+
 static SOLARIS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"solaris-?(\d+\.\d+)?").unwrap());
 static PLATFORM_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+_platform)-?(\d+)?").unwrap());
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum Platform {
+    #[default]
     Ruby,
     Current,
     Specific {
@@ -276,6 +277,26 @@ impl Platform {
                     .unwrap_or(Platform::Ruby)
             }
         }
+    }
+}
+
+impl Ord for Platform {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        if self == other {
+            std::cmp::Ordering::Equal
+        } else if matches!(self, Platform::Ruby) || matches!(other, Platform::Current) {
+            std::cmp::Ordering::Less
+        } else if matches!(other, Platform::Ruby) || matches!(self, Platform::Current) {
+            std::cmp::Ordering::Greater
+        } else {
+            self.to_string().cmp(&other.to_string())
+        }
+    }
+}
+
+impl PartialOrd for Platform {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
     }
 }
 
