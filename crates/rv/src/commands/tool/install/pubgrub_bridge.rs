@@ -83,9 +83,7 @@ impl From<VersionConstraints> for Ranges<Version> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::tool::install::{
-        gemserver::VersionConstraint, transitive_dep_query::CachedGemDeps,
-    };
+    use crate::commands::tool::install::gemserver::VersionConstraint;
     use std::str::FromStr;
 
     /// Tests that the conversion from RubyGems requirements to PubGrub ranges is correct.
@@ -115,11 +113,10 @@ mod tests {
 
     #[test]
     fn test_resolution() {
-        let data: CachedGemDeps = serde_json::from_str(include_str!(
+        let gem_info: HashMap<String, Vec<VersionAvailable>> = serde_json::from_str(include_str!(
             "../../../../testdata/all_rails_transitive_deps.json"
         ))
         .unwrap();
-        let gem_info = data.gems_to_deps;
         let mut out: Vec<_> = solve("rails".to_owned(), "8.1.1".parse().unwrap(), gem_info)
             .unwrap()
             .into_iter()
