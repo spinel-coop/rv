@@ -1,4 +1,5 @@
 use camino::Utf8PathBuf;
+use rv_ruby::version::RubyVersion;
 use rv_version::{Version, VersionError};
 use tracing::debug;
 
@@ -26,6 +27,12 @@ pub enum Error {
     NotInstalled,
     #[error(transparent)]
     ExecError(std::io::Error),
+    #[error("No .ruby-version found for this tool")]
+    NoRubyVersion,
+    #[error("Could not read .ruby-version: {0}")]
+    CouldNotReadRubyVersion(std::io::Error),
+    #[error("Invalid version in .ruby-version: {0}")]
+    InvalidRubyVersion(rv_ruby::version::ParseVersionError),
 }
 
 /// A version of a gem, given by the user.
@@ -139,6 +146,15 @@ pub async fn run(
         }
     };
     let gem_home = installed_tool.dir.clone();
+    let ruby_version_path = installed_tool.dir.join(".ruby-version");
+    if !ruby_version_path.exists() {
+        return Err(Error::NoRubyVersion)?;
+    }
+    let ruby_version: RubyVersion = fs::read_to_string(ruby_version_path)
+        .map_err(Error::CouldNotReadRubyVersion)?
+        .parse()
+        .map_err(Error::InvalidRubyVersion)?;
+    debug!("Tool requires Ruby {ruby_version}");
     let file = installed_tool.dir.join("bin").join(executable.name);
     if !file.exists() {
         return Err(Error::ExecutableNotFound {

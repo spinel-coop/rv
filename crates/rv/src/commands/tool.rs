@@ -76,6 +76,8 @@ fn tool_dir() -> Utf8PathBuf {
 /// Describes a successful installation of a tool.
 #[derive(Debug)]
 pub struct Installed {
+    /// Which version was installed.
     pub version: rv_version::Version,
+    /// The dir where the tool/gem was installed.
     pub dir: Utf8PathBuf,
 }
