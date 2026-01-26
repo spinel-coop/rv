@@ -75,7 +75,7 @@ pub fn parse_version_from_body(
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VersionAvailable {
     pub version: Version,
-    pub platform: Option<Platform>,
+    pub platform: Platform,
     pub deps: Vec<Dep>,
     pub metadata: Metadata,
 }
@@ -150,9 +150,9 @@ impl VersionAvailable {
         let (version, platform) = if let Some((version, platform)) =
             rv_gem_types::platform::version_platform_split(version)
         {
-            (version, Some(platform))
+            (version, platform)
         } else {
-            (version.parse()?, None)
+            (version.parse()?, Platform::Ruby)
         };
         Ok(VersionAvailable {
             version,

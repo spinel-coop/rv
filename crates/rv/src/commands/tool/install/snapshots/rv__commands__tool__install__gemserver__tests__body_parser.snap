@@ -18,7 +18,7 @@ expression: actual_parsed_response
                 ),
             ],
         },
-        platform: None,
+        platform: Ruby,
         deps: [
             actionmailer@[= 2.2.2],
             actionpack@[= 2.2.2],
@@ -48,7 +48,7 @@ expression: actual_parsed_response
                 ),
             ],
         },
-        platform: None,
+        platform: Ruby,
         deps: [
             actionmailer@[= 2.3.2],
             actionpack@[= 2.3.2],
