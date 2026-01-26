@@ -220,7 +220,6 @@ pub(crate) async fn install(
     let pin_path = install_path.join(".ruby-version");
     fs::write(&pin_path, format!("{ruby_to_use}\n")).map_err(Error::CouldNotPinRubyVersion)?;
     debug!("Pinned dir {} to {}", pin_path, ruby_to_use);
-    let gem_name = gem_name.cyan();
     println!(
         "Installed {} version {} to {}",
         gem_name.cyan(),
