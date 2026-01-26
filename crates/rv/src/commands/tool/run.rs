@@ -163,7 +163,8 @@ pub async fn run(
         ruby_version.clone(),
         Source::DotRubyVersion(ruby_version_path),
     ));
-    let file = installed_tool.dir.join("bin").join(executable.name);
+    let tool_bin_dir = installed_tool.dir.join("bin");
+    let file = tool_bin_dir.join(executable.name);
     if !file.exists() {
         return Err(Error::ExecutableNotFound {
             exe: target_executable_name.to_owned(),
@@ -176,6 +177,7 @@ pub async fn run(
     let program = Program::Tool {
         set: vec![("GEM_HOME", gem_home.to_string())],
         program: file,
+        extra_paths: vec![tool_bin_dir.into()],
     };
     // TODO: Accept extra args from the `rv tool run -- ` process.
     let args: Vec<String> = Default::default();

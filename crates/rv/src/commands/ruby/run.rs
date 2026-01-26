@@ -1,5 +1,6 @@
 use std::{
     io,
+    path::PathBuf,
     process::{Command, ExitStatus, Output},
 };
 
@@ -73,6 +74,7 @@ pub enum Program {
     Tool {
         program: Utf8PathBuf,
         set: Vec<(&'static str, String)>,
+        extra_paths: Vec<PathBuf>,
     },
 }
 
@@ -94,9 +96,10 @@ pub(crate) fn run_no_install<A: AsRef<std::ffi::OsStr>>(
         Program::Tool {
             program,
             set: extra_set,
+            extra_paths,
         } => {
             let ruby = config.matching_ruby(request).ok_or(Error::NoMatchingRuby)?;
-            let (unset, mut set) = config::env_for(Some(&ruby))?;
+            let (unset, mut set) = config::env_with_path_for(Some(&ruby), extra_paths)?;
             set.extend(extra_set);
 
             ((unset, set), program)
