@@ -73,24 +73,6 @@ pub enum Error {
 
 type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Debug)]
-struct InnerArgs {
-    /// Gemserver to install from.
-    gem_server: Url,
-    /// Gem to install as a tool.
-    gem: GemName,
-}
-
-impl InnerArgs {
-    fn new(gem: GemName, gem_server: String) -> Result<Self> {
-        let out = Self {
-            gem_server: gem_server.parse().map_err(|_| Error::BadUrl(gem_server))?,
-            gem,
-        };
-        Ok(out)
-    }
-}
-
 pub(crate) async fn install(
     global_args: &GlobalArgs,
     gem: GemName,
@@ -114,23 +96,23 @@ pub(crate) async fn install(
         (gem, None)
     };
 
-    let args = InnerArgs::new(gem_name, gem_server)?;
+    let gem_server: Url = gem_server.parse().map_err(|_| Error::BadUrl(gem_server))?;
 
-    let gemserver = Gemserver::new(args.gem_server)?;
+    let gemserver = Gemserver::new(gem_server)?;
 
     // Maps gem names to their dependency lists.
     let mut gems_to_deps: HashMap<GemName, Vec<GemRelease>> = HashMap::new();
 
     // Look up the gem to install.
     let releases_resp = gemserver
-        .get_releases_for_gem(&args.gem)
+        .get_releases_for_gem(&gem_name)
         .await
         .map_err(|e| match e {
             // If the HTTP error was 404, then return a nice error explaining that the gem
             // wasn't found.
             gemserver::Error::Reqwest(e) if e.status() == Some(StatusCode::NOT_FOUND) => {
                 Error::NotFound {
-                    gem_name: args.gem.to_owned(),
+                    gem_name: gem_name.to_owned(),
                     server: gemserver.url.to_string(),
                 }
             }
@@ -139,11 +121,11 @@ pub(crate) async fn install(
         })?;
 
     let releases = gemserver::parse_release_from_body(&releases_resp)?;
-    debug!("Found {} releases for the gem {}", releases.len(), args.gem);
+    debug!("Found {} releases for the gem {}", releases.len(), gem_name);
     if releases.is_empty() {
         return Err(Error::NoReleasesPublished);
     }
-    gems_to_deps.insert(args.gem.clone(), releases.clone());
+    gems_to_deps.insert(gem_name.clone(), releases.clone());
 
     let release_to_install = match gem_version {
         Some(user_choice) => {
@@ -154,7 +136,7 @@ pub(crate) async fn install(
             else {
                 return Err(Error::NoVersionFound(user_choice));
             };
-            debug!("Selected {} {}", args.gem, v.full_name());
+            debug!("Selected {} {}", gem_name, v.full_name());
             v.to_owned()
         }
         _ => {
@@ -164,14 +146,14 @@ pub(crate) async fn install(
             else {
                 return Err(Error::NoReleasesPublished);
             };
-            debug!("Selected {} {}", args.gem, v.full_name());
+            debug!("Selected {} {}", gem_name, v.full_name());
             v.to_owned()
         }
     };
 
     // Check if the tool was already installed.
     let install_path = super::tool_dir_for(
-        &args.gem,
+        &gem_name,
         &release_to_install.version_platform().to_string(),
     );
     let already_installed = install_path.exists();
@@ -181,7 +163,7 @@ pub(crate) async fn install(
         } else {
             println!(
                 "{} {} already installed at {}",
-                args.gem.cyan(),
+                gem_name.cyan(),
                 release_to_install.version_platform(),
                 install_path.cyan(),
             );
@@ -201,7 +183,7 @@ pub(crate) async fn install(
         config,
         &mut transitive_deps,
         release_to_install.clone(),
-        &args.gem,
+        &gem_name,
         &gemserver,
         &ruby_to_use,
     )
@@ -214,7 +196,7 @@ pub(crate) async fn install(
     // (i.e. figure out which version of every gem will be used.)
     debug!("Resolving all dependencies via PubGrub");
     let versions_needed =
-        pubgrub_bridge::solve(args.gem.clone(), release_to_install.clone(), gems_to_deps)
+        pubgrub_bridge::solve(gem_name.clone(), release_to_install.clone(), gems_to_deps)
             .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
     debug!("All dependencies resolved");
 
@@ -238,7 +220,7 @@ pub(crate) async fn install(
     let pin_path = install_path.join(".ruby-version");
     fs::write(&pin_path, format!("{ruby_to_use}\n")).map_err(Error::CouldNotPinRubyVersion)?;
     debug!("Pinned dir {} to {}", pin_path, ruby_to_use);
-    let gem_name = args.gem.cyan();
+    let gem_name = gem_name.cyan();
     println!(
         "Installed {} version {} to {}",
         gem_name.cyan(),
