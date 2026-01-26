@@ -3,7 +3,7 @@ use std::{
     process::{Command, ExitStatus, Output},
 };
 
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
 use rv_ruby::request::RubyRequest;
 use tracing::debug;
 
@@ -38,6 +38,7 @@ pub(crate) enum CaptureOutput {
 /// The ruby's output may be captured, depending on `capture_output`. If you pass
 /// `CaptureOutput::No`, this returns an empty `Output` struct.
 pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
+    program: Program,
     config: &Config,
     version: Option<RubyRequest>,
     no_install: bool,
@@ -64,11 +65,20 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
         )
         .await?
     };
-    run_no_install(config, &request, args, capture_output, cwd, vec![])
+    run_no_install(program, config, &request, args, capture_output, cwd, vec![])
+}
+
+pub enum Program {
+    Ruby,
+    Tool {
+        program: Utf8PathBuf,
+        set: Vec<(&'static str, String)>,
+    },
 }
 
 /// Run, without installing the Ruby version if necessary.
 pub(crate) fn run_no_install<A: AsRef<std::ffi::OsStr>>(
+    program: Program,
     config: &Config,
     request: &RubyRequest,
     args: &[A],
@@ -76,9 +86,23 @@ pub(crate) fn run_no_install<A: AsRef<std::ffi::OsStr>>(
     cwd: Option<&Utf8Path>,
     env: Vec<(&str, &str)>,
 ) -> Result<Output> {
-    let ruby = config.matching_ruby(request).ok_or(Error::NoMatchingRuby)?;
-    let (unset, set) = config::env_for(Some(&ruby))?;
-    let mut cmd = Command::new(ruby.executable_path());
+    let ((unset, set), program) = match program {
+        Program::Ruby => {
+            let ruby = config.matching_ruby(request).ok_or(Error::NoMatchingRuby)?;
+            (config::env_for(Some(&ruby))?, ruby.executable_path())
+        }
+        Program::Tool {
+            program,
+            set: extra_set,
+        } => {
+            let ruby = config.matching_ruby(request).ok_or(Error::NoMatchingRuby)?;
+            let (unset, mut set) = config::env_for(Some(&ruby))?;
+            set.extend(extra_set);
+
+            ((unset, set), program)
+        }
+    };
+    let mut cmd = Command::new(program);
     cmd.args(args);
     for var in unset {
         cmd.env_remove(var);

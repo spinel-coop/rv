@@ -1,8 +1,9 @@
 use camino::Utf8PathBuf;
-use rv_ruby::version::RubyVersion;
+use rv_ruby::request::{RubyRequest, Source};
 use rv_version::{Version, VersionError};
 use tracing::debug;
 
+use crate::commands::ruby::run::Program;
 use crate::commands::tool::{Installed, install as tool_install};
 use crate::config::Config;
 use fs_err as fs;
@@ -32,7 +33,9 @@ pub enum Error {
     #[error("Could not read .ruby-version: {0}")]
     CouldNotReadRubyVersion(std::io::Error),
     #[error("Invalid version in .ruby-version: {0}")]
-    InvalidRubyVersion(rv_ruby::version::ParseVersionError),
+    InvalidRubyVersion(rv_ruby::request::RequestError),
+    #[error(transparent)]
+    RunningTool(#[from] crate::commands::ruby::run::Error),
 }
 
 /// A version of a gem, given by the user.
@@ -150,11 +153,16 @@ pub async fn run(
     if !ruby_version_path.exists() {
         return Err(Error::NoRubyVersion)?;
     }
-    let ruby_version: RubyVersion = fs::read_to_string(ruby_version_path)
+    let ruby_version: RubyRequest = fs::read_to_string(&ruby_version_path)
         .map_err(Error::CouldNotReadRubyVersion)?
         .parse()
         .map_err(Error::InvalidRubyVersion)?;
     debug!("Tool requires Ruby {ruby_version}");
+    let mut config_to_run_tool = config.to_owned();
+    config_to_run_tool.requested_ruby = Some((
+        ruby_version.clone(),
+        Source::DotRubyVersion(ruby_version_path),
+    ));
     let file = installed_tool.dir.join("bin").join(executable.name);
     if !file.exists() {
         return Err(Error::ExecutableNotFound {
@@ -165,16 +173,23 @@ pub async fn run(
     }
 
     // TODO: I've got to add more env here.
-    let mut cmd = std::process::Command::new(file);
-    cmd.env("GEM_HOME", gem_home);
-
-    exec(cmd)
-}
-
-#[cfg(unix)]
-fn exec(mut cmd: std::process::Command) -> Result<(), Error> {
-    use std::os::unix::process::CommandExt;
-    Err(Error::ExecError(cmd.exec()))
+    let program = Program::Tool {
+        set: vec![("GEM_HOME", gem_home.to_string())],
+        program: file,
+    };
+    // TODO: Accept extra args from the `rv tool run -- ` process.
+    let args: Vec<String> = Default::default();
+    crate::commands::ruby::run::run(
+        program,
+        config,
+        Some(ruby_version),
+        no_install,
+        &args,
+        crate::commands::ruby::run::CaptureOutput::No,
+        None, // no cwd.
+    )
+    .await?;
+    Ok(())
 }
 
 /// Iterate over the tools directory, to find the right gem/version pair.
