@@ -193,6 +193,14 @@ const ENV_VARS: [&str; 8] = [
 
 #[allow(clippy::type_complexity)]
 pub fn env_for(ruby: Option<&Ruby>) -> Result<(Vec<&'static str>, Vec<(&'static str, String)>)> {
+    env_with_path_for(ruby, Default::default())
+}
+
+#[allow(clippy::type_complexity)]
+pub fn env_with_path_for(
+    ruby: Option<&Ruby>,
+    extra_paths: Vec<PathBuf>,
+) -> Result<(Vec<&'static str>, Vec<(&'static str, String)>)> {
     let mut unset: Vec<_> = ENV_VARS.into();
     let mut set: Vec<(&'static str, String)> = vec![];
 
@@ -207,6 +215,7 @@ pub fn env_for(ruby: Option<&Ruby>) -> Result<(Vec<&'static str>, Vec<(&'static 
 
     let pathstr = std::env::var("PATH").unwrap_or_else(|_| String::new());
     let mut paths = split_paths(&pathstr).collect::<Vec<_>>();
+    paths.extend(extra_paths);
 
     let old_ruby_paths: Vec<PathBuf> = ["RUBY_ROOT", "GEM_ROOT", "GEM_HOME"]
         .iter()

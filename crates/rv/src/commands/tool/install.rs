@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fs};
 
 use owo_colors::OwoColorize;
 use rv_gem_types::Specification as GemSpecification;
@@ -11,9 +11,12 @@ use url::Url;
 use crate::{
     commands::{
         ci::ValidationErr,
-        tool::install::{
-            choosing_ruby_version::ruby_to_use_for,
-            gemserver::{Gemserver, VersionAvailable},
+        tool::{
+            Installed,
+            install::{
+                choosing_ruby_version::ruby_to_use_for,
+                gemserver::{Gemserver, VersionAvailable},
+            },
         },
     },
     config::Config,
@@ -58,6 +61,8 @@ pub enum Error {
     NoMatchingRuby {
         requirements: Vec<gemserver::VersionConstraint>,
     },
+    #[error("Could not pin Ruby version for this tool: {0}")]
+    CouldNotPinRubyVersion(std::io::Error),
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -80,7 +85,12 @@ impl InnerArgs {
     }
 }
 
-pub async fn install(config: &Config, gem: GemName, gem_server: String, force: bool) -> Result<()> {
+pub async fn install(
+    config: &Config,
+    gem: GemName,
+    gem_server: String,
+    force: bool,
+) -> Result<Installed> {
     // Check if 'gem' is in 'gem@version' format.
     // If `gem_version` is None, it means "latest". Otherwise it's a specific version.
     let (gem_name, gem_version) = if let Some((name, gem_version)) = gem.split_once('@') {
@@ -149,7 +159,10 @@ pub async fn install(config: &Config, gem: GemName, gem_server: String, force: b
                 version_to_install.version,
                 install_path.cyan(),
             );
-            return Ok(());
+            return Ok(Installed {
+                version: version_to_install.version,
+                dir: install_path,
+            });
         }
     }
 
@@ -186,7 +199,7 @@ pub async fn install(config: &Config, gem: GemName, gem_server: String, force: b
     let lockfile_builder = LockfileBuilder::new(&gemserver, versions_needed);
     let lockfile = lockfile_builder.lockfile();
     let mut config_for_install = config.clone();
-    config_for_install.requested_ruby = Some((ruby_to_use.into(), Source::Other));
+    config_for_install.requested_ruby = Some((ruby_to_use.clone().into(), Source::Other));
 
     let gem_name = args.gem.to_owned();
     let must_have_executables =
@@ -212,6 +225,9 @@ pub async fn install(config: &Config, gem: GemName, gem_server: String, force: b
         &must_have_executables,
     )
     .await?;
+    let pin_path = install_path.join(".ruby-version");
+    fs::write(&pin_path, format!("{ruby_to_use}\n")).map_err(Error::CouldNotPinRubyVersion)?;
+    debug!("Pinned dir {} to {}", pin_path, ruby_to_use);
     let gem_name = args.gem.cyan();
     println!(
         "Installed {} version {} to {}",
@@ -219,7 +235,10 @@ pub async fn install(config: &Config, gem: GemName, gem_server: String, force: b
         version_to_install.version,
         install_path.cyan(),
     );
-    Ok(())
+    Ok(Installed {
+        version: version_to_install.version,
+        dir: install_path,
+    })
 }
 
 /// Owns the information needed to create a lockfile.

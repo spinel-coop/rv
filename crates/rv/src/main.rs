@@ -28,7 +28,7 @@ use crate::commands::ruby::install::install as ruby_install;
 use crate::commands::ruby::list::list as ruby_list;
 use crate::commands::ruby::pin::pin as ruby_pin;
 #[cfg(unix)]
-use crate::commands::ruby::run::run as ruby_run;
+use crate::commands::ruby::run::{Program, run as ruby_run};
 use crate::commands::ruby::uninstall::uninstall as ruby_uninstall;
 use crate::commands::ruby::{RubyArgs, RubyCommand};
 use crate::commands::shell::completions::shell_completions;
@@ -39,6 +39,7 @@ use crate::commands::shell::{ShellArgs, ShellCommand};
 use crate::commands::tool::ToolArgs;
 use crate::commands::tool::install::install as tool_install;
 use crate::commands::tool::list::list as tool_list;
+use crate::commands::tool::run::run as tool_run;
 use crate::commands::tool::uninstall::uninstall as tool_uninstall;
 
 const STYLES: Styles = Styles::styled()
@@ -217,6 +218,8 @@ pub enum Error {
     ToolListError(#[from] commands::tool::list::Error),
     #[error(transparent)]
     ToolUninstallError(#[from] commands::tool::uninstall::Error),
+    #[error(transparent)]
+    ToolRunError(#[from] commands::tool::run::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -335,6 +338,7 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
                 no_install,
                 args,
             } => ruby_run(
+                Program::Ruby,
                 config,
                 version,
                 no_install,
@@ -365,9 +369,17 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
                 gem,
                 gem_server,
                 force,
-            } => tool_install(config, gem, gem_server, force).await?,
+            } => tool_install(config, gem, gem_server, force)
+                .await
+                .map(|_| ())?,
             commands::tool::ToolCommand::List { format } => tool_list(config, format)?,
             commands::tool::ToolCommand::Uninstall { gem } => tool_uninstall(config, gem)?,
+            commands::tool::ToolCommand::Run {
+                gem,
+                executable,
+                gem_server,
+                no_install,
+            } => tool_run(config, executable, gem, gem_server, no_install).await?,
         },
     };
 

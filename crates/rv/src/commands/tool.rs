@@ -1,5 +1,6 @@
 pub mod install;
 pub mod list;
+pub mod run;
 pub mod uninstall;
 
 use camino::Utf8PathBuf;
@@ -40,6 +41,26 @@ pub enum ToolCommand {
         /// What to uninstall
         gem: String,
     },
+    #[command(about = "Run a tool (an executable from a gem). Install it if necessary")]
+    Run {
+        /// What to run.
+        /// Runs the executable with this name, from the gem with this name.
+        /// To override the gem, use `--from othergem`.
+        /// By default, uses the latest version of the gem. If you want to set
+        /// a different version, add a suffix like `@1.2.0`, e.g. `nokogiri@1.2.0`.
+        executable: String,
+        /// Which gem to run the executable from.
+        /// If not given, assumes the gem name is the same as the executable name.
+        #[arg(long = "from")]
+        gem: Option<String>,
+        /// What gem server to use, if the tool needs to be installed.
+        #[arg(long, default_value = "https://gem.coop/")]
+        gem_server: String,
+        /// By default, if the tool isn't installed, rv will install it.
+        /// If this flag is given, rv will exit with an error instead of installing.
+        #[arg(long)]
+        no_install: bool,
+    },
 }
 
 /// The directory where this tool can be found.
@@ -50,4 +71,13 @@ fn tool_dir_for(gem_name: &str, gem_version: &rv_version::Version) -> Utf8PathBu
 /// The directory where this tool can be found.
 fn tool_dir() -> Utf8PathBuf {
     rv_dirs::user_state_dir("/".into()).join("tools")
+}
+
+/// Describes a successful installation of a tool.
+#[derive(Debug)]
+pub struct Installed {
+    /// Which version was installed.
+    pub version: rv_version::Version,
+    /// The dir where the tool/gem was installed.
+    pub dir: Utf8PathBuf,
 }

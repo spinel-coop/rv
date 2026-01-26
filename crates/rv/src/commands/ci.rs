@@ -32,6 +32,7 @@ use crate::commands::ci::checksums::ArchiveChecksums;
 use crate::commands::ci::checksums::HashReader;
 use crate::commands::ci::checksums::Hashed;
 use crate::commands::ruby::run::CaptureOutput;
+use crate::commands::ruby::run::Program;
 use crate::config::Config;
 use crate::progress::WorkProgress;
 use std::collections::HashMap;
@@ -697,6 +698,7 @@ fn cache_gemspec_path(
     let gemspec_path = Utf8PathBuf::try_from(path).expect("gemspec path not valid UTF-8");
     // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
     let result = crate::commands::ruby::run::run_no_install(
+        Program::Ruby,
         config,
         &config.ruby_request(),
         &[
@@ -775,6 +777,7 @@ fn find_install_path(
 ) -> Result<Utf8PathBuf> {
     let args = ["-rbundler", "-e", "puts Bundler.bundle_path"];
     let bundle_path = match crate::commands::ruby::run::run_no_install(
+        Program::Ruby,
         config,
         version,
         args.as_slice(),
@@ -1228,6 +1231,7 @@ impl CompileNativeExtResult {
 fn find_exts_dir(config: &Config, version: &RubyRequest) -> Result<Utf8PathBuf> {
     debug!("Finding extensions dir");
     let exts_dir = crate::commands::ruby::run::run_no_install(
+        Program::Ruby,
         config,
         version,
         &[
@@ -1352,6 +1356,7 @@ fn build_rakefile(
     // 1. Run mkrf if needed to create the Rakefile
     if ext_file.to_lowercase().contains("mkrf_conf") {
         output = crate::commands::ruby::run::run_no_install(
+            Program::Ruby,
             config,
             &config.ruby_request(),
             &[ext_file],
@@ -1399,6 +1404,7 @@ fn build_extconf(
 
     // 1. Run the extconf.rb file with the current ruby
     output = crate::commands::ruby::run::run_no_install(
+        Program::Ruby,
         config,
         &config.ruby_request(),
         &[ext_file],
