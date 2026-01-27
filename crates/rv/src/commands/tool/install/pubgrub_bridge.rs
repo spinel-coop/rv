@@ -4,7 +4,7 @@ use pubgrub::{OfflineDependencyProvider, Ranges, SelectedDependencies};
 use rv_lockfile::datatypes::SemverConstraint;
 use rv_version::Version;
 
-use super::gemserver::{GemRelease, VersionConstraints};
+use super::gemserver::{GemRelease, VersionConstraint, VersionConstraints};
 
 pub fn solve(
     gem: String,
@@ -39,36 +39,40 @@ fn all_dependencies(gem_info: HashMap<String, Vec<GemRelease>>) -> DepProvider {
     m
 }
 
+impl From<VersionConstraint> for Ranges<Version> {
+    fn from(constraint: VersionConstraint) -> Self {
+        let v = constraint.version;
+        match constraint.constraint_type {
+            SemverConstraint::Exact => {
+                // It's just one range, this range.
+                Ranges::singleton(v)
+            }
+            SemverConstraint::NotEqual => {
+                // Everything EXCEPT this one range.
+                Ranges::singleton(v).complement()
+            }
+
+            // These 4 are easy:
+            SemverConstraint::GreaterThan => Ranges::strictly_higher_than(v),
+            SemverConstraint::LessThan => Ranges::strictly_lower_than(v),
+            SemverConstraint::GreaterThanOrEqual => Ranges::higher_than(v),
+            SemverConstraint::LessThanOrEqual => Ranges::lower_than(v),
+            // if <1.0, use the given number as the floor and the next minor as not allowed.
+            SemverConstraint::Pessimistic => {
+                let (lower, upper) = v.pessimistic_range();
+                Ranges::intersection(
+                    &Ranges::higher_than(lower),
+                    &Ranges::strictly_lower_than(upper),
+                )
+            }
+        }
+    }
+}
+
 impl From<VersionConstraints> for Ranges<Version> {
     fn from(constraints: VersionConstraints) -> Self {
         // Convert the RubyGems constraints into PubGrub ranges.
-        let ranges = constraints.inner.into_iter().flat_map(|constraint| {
-            let v = constraint.version;
-            match constraint.constraint_type {
-                SemverConstraint::Exact => vec![
-                    // It's just one range, this range.
-                    Ranges::singleton(v),
-                ],
-                SemverConstraint::NotEqual => vec![
-                    // Everything EXCEPT this one range.
-                    Ranges::singleton(v).complement(),
-                ],
-
-                // These 4 are easy:
-                SemverConstraint::GreaterThan => vec![Ranges::strictly_higher_than(v)],
-                SemverConstraint::LessThan => vec![Ranges::strictly_lower_than(v)],
-                SemverConstraint::GreaterThanOrEqual => vec![Ranges::higher_than(v)],
-                SemverConstraint::LessThanOrEqual => vec![Ranges::lower_than(v)],
-                // if <1.0, use the given number as the floor and the next minor as not allowed.
-                SemverConstraint::Pessimistic => {
-                    let (lower, upper) = v.pessimistic_range();
-                    vec![
-                        Ranges::higher_than(lower),
-                        Ranges::strictly_lower_than(upper),
-                    ]
-                }
-            }
-        });
+        let ranges = constraints.inner.into_iter().map(Ranges::from);
 
         // Now, join all those ranges together using &, because that's what multiple RubyGems
         // constraints are actually listed as.
