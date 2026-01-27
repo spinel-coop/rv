@@ -1,6 +1,7 @@
 use std::{collections::HashMap, fs};
 
 use owo_colors::OwoColorize;
+use reqwest::StatusCode;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_ruby::request::Source;
 use rv_version::Version as GemVersion;
@@ -32,6 +33,8 @@ type GemName = String;
 pub enum Error {
     #[error("{0} is not a valid URL")]
     BadUrl(String),
+    #[error("No gem with that name ({gem_name}) exists on the server {server}")]
+    NotFound { gem_name: String, server: String },
     #[error("No version {0} available")]
     NoVersionFound(GemVersion),
     #[error("The gem does not actually have any versions published")]
@@ -115,7 +118,16 @@ pub async fn install(
     let mut gems_to_deps: HashMap<GemName, Vec<VersionAvailable>> = HashMap::new();
 
     // Look up the gem to install.
-    let versions_resp = gemserver.get_versions_for_gem(&args.gem).await?;
+    let versions_resp = match gemserver.get_versions_for_gem(&args.gem).await {
+        Ok(x) => x,
+        Err(gemserver::Error::Reqwest(e)) if e.status() == Some(StatusCode::NOT_FOUND) => {
+            return Err(Error::NotFound {
+                gem_name: args.gem.to_owned(),
+                server: gemserver.url.to_string(),
+            });
+        }
+        Err(e) => return Err(e.into()),
+    };
     let versions = gemserver::parse_version_from_body(&versions_resp)?;
     debug!("Found {} versions for the gem {}", versions.len(), args.gem);
     if versions.is_empty() {
