@@ -3,7 +3,6 @@ use std::str::FromStr;
 use reqwest::Client;
 use rv_gem_types::Platform;
 use rv_lockfile::datatypes::SemverConstraint;
-use rv_ruby::version::ParseVersionError;
 use rv_version::Version;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
@@ -91,7 +90,9 @@ pub enum VersionAvailableParse {
     #[error("Missing a colon in metadata field: {0}")]
     MissingMetadataColon(String),
     #[error(transparent)]
-    ParseVersionError(#[from] ParseVersionError),
+    InvalidRubyVersion(#[from] rv_ruby::version::ParseVersionError),
+    #[error(transparent)]
+    InvalidVersion(#[from] rv_version::VersionError),
     #[error("Unknown semver constraint type {0}")]
     UnknownSemverType(String),
     #[error("Unknown metadata key {key} in metadata field: {metadata}")]
@@ -106,8 +107,6 @@ pub enum VersionAvailableParse {
         source: Box<VersionAvailableParse>,
         metadata: String,
     },
-    #[error(transparent)]
-    InvalidVersion(#[from] rv_version::VersionError),
 }
 
 impl VersionAvailable {
