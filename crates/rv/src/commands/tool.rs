@@ -44,12 +44,6 @@ pub enum ToolCommand {
     #[command(about = "Run a tool provided by a gem, installing it if necessary")]
     #[command(arg_required_else_help = true)]
     Run {
-        /// What to run.
-        /// Runs the executable with this name, from the gem with this name.
-        /// To override the gem, use `--from othergem`.
-        /// By default, uses the latest version of the gem. If you want to set
-        /// a different version, add a suffix like `@1.2.0`, e.g. `nokogiri@1.2.0`.
-        executable: String,
         /// Which gem to run the executable from.
         /// If not given, assumes the gem name is the same as the executable name.
         #[arg(long = "from")]
@@ -61,9 +55,14 @@ pub enum ToolCommand {
         /// If this flag is given, rv will exit with an error instead of installing.
         #[arg(long)]
         no_install: bool,
-
+        /// What to run.
+        /// Runs the executable with this name, from the gem with this name.
+        /// To override the gem, use `--from othergem`.
+        /// By default, uses the latest version of the gem. If you want to set
+        /// a different version, add a suffix like `@1.2.0`, e.g. `nokogiri@1.2.0`.
+        // executable: String,
         /// Arguments passed to the tool you're running.
-        #[arg(last = true, allow_hyphen_values = true)]
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true, num_args = 1..)]
         args: Vec<String>,
     },
 }
