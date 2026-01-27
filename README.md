@@ -55,6 +55,10 @@ See [SHELL INTEGRATION](docs/SHELL_INTEGRATION.md) for more about `.ruby-version
 
 [Spinel.coop](https://spinel.coop) can bring your team an obsession with developer productivity and decades of experience from the core teams of Rails, Hotwire, Bundler, and rbenv. [Book a free call with us](https://savvycal.com/spinel/client) to get started today.
 
+## Community
+
+Join us in [discussions on GitHub](https://github.com/spinel-coop/rv/discussions), or the `#rv` channel in the the [Bundler Slack](https://bundler.slack.com) and the [Spinel Discord](https://discord.gg/5EG2pCad).
+
 ## Future Plans
 
 All-in-one tooling for Ruby developers.
