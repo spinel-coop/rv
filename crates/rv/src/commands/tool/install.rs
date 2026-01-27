@@ -139,7 +139,6 @@ pub async fn install(
     }
     gems_to_deps.insert(args.gem.clone(), versions.clone());
 
-    // Let's install the most recent version.
     let version_to_install = match gem_version {
         Some(user_choice) => {
             let Some(v) = versions
