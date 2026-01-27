@@ -16,7 +16,7 @@ pub struct ToolArgs {
 
 #[derive(Subcommand)]
 pub enum ToolCommand {
-    #[command(about = "Install a given gem as a tool")]
+    #[command(about = "Install a gem as a CLI tool, with its own dedicated environment")]
     Install {
         /// What to install. This can either be gem@version, e.g.
         /// `mygem@2.18.0`, or a gem name like `mygem`, which is equivalent
@@ -36,12 +36,13 @@ pub enum ToolCommand {
         #[arg(long, value_enum, default_value = "text")]
         format: OutputFormat,
     },
-    #[command(about = "Remove tools")]
+    #[command(about = "Remove an installed tool")]
     Uninstall {
         /// What to uninstall
         gem: String,
     },
-    #[command(about = "Run a tool (an executable from a gem). Install it if necessary")]
+    #[command(about = "Run a tool provided by a gem, installing it if necessary")]
+    #[command(arg_required_else_help = true)]
     Run {
         /// What to run.
         /// Runs the executable with this name, from the gem with this name.
