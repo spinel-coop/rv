@@ -68,8 +68,8 @@ pub enum ToolCommand {
 }
 
 /// The directory where this tool can be found.
-fn tool_dir_for(gem_name: &str, gem_version: &rv_version::Version) -> Utf8PathBuf {
-    tool_dir().join(format!("{gem_name}@{gem_version}"))
+fn tool_dir_for(gem_name: &str, gem_release: &str) -> Utf8PathBuf {
+    tool_dir().join(format!("{gem_name}@{gem_release}"))
 }
 
 /// The directory where this tool can be found.

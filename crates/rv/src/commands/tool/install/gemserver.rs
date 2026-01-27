@@ -198,6 +198,15 @@ fn parse_metadata(metadata: &str) -> Result<Metadata, GemReleaseParse> {
     Ok(out)
 }
 
+impl std::fmt::Display for GemRelease {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.platform {
+            Platform::Ruby => write!(f, "{}", self.version),
+            _ => write!(f, "{}-{}", self.version, self.platform),
+        }
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Dep {
     /// What gem this dependency uses.

@@ -147,7 +147,7 @@ pub async fn install(
             else {
                 return Err(Error::NoVersionFound(user_choice));
             };
-            debug!("Selected version {} of gem {}", v.version, args.gem,);
+            debug!("Selected version {} of gem {}", v, args.gem,);
             v.to_owned()
         }
         _ => {
@@ -157,13 +157,13 @@ pub async fn install(
             else {
                 return Err(Error::NoReleasesPublished);
             };
-            debug!("Selected version {} of gem {}", v.version, args.gem,);
+            debug!("Selected version {} of gem {}", v, args.gem,);
             v.to_owned()
         }
     };
 
     // Check if the tool was already installed.
-    let install_path = super::tool_dir_for(&args.gem, &release_to_install.version);
+    let install_path = super::tool_dir_for(&args.gem, &release_to_install.to_string());
     let already_installed = install_path.exists();
     if already_installed {
         if force {
@@ -172,7 +172,7 @@ pub async fn install(
             println!(
                 "{} version {} already installed at {}",
                 args.gem.cyan(),
-                release_to_install.version,
+                release_to_install,
                 install_path.cyan(),
             );
             return Ok(Installed {
