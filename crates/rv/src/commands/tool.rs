@@ -60,6 +60,10 @@ pub enum ToolCommand {
         /// If this flag is given, rv will exit with an error instead of installing.
         #[arg(long)]
         no_install: bool,
+
+        /// Arguments passed to the tool you're running.
+        #[arg(last = true, allow_hyphen_values = true)]
+        args: Vec<String>,
     },
 }
 
