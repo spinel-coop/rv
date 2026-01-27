@@ -1,4 +1,4 @@
-use std::ops::Not;
+use std::{collections::HashSet, ops::Not};
 
 use rv_gem_types::Specification;
 
@@ -22,7 +22,7 @@ pub fn to_ruby(spec: Specification) -> String {
         required_rubygems_version,
         platform,
         specification_version,
-        files: _,
+        files,
         executables,
         extensions,
         dependencies,
@@ -127,6 +127,15 @@ pub fn to_ruby(spec: Specification) -> String {
             ruby_list(&extra_rdoc_files)
         )
         .unwrap();
+    }
+    let files: HashSet<_> = files
+        .into_iter()
+        .filter(|f| !extra_rdoc_files.contains(f))
+        .collect();
+    let mut files: Vec<_> = files.into_iter().collect();
+    files.sort();
+    if !files.is_empty() {
+        writeln!(ruby_src, "  s.files = [{}]", ruby_list(&files)).unwrap();
     }
     if let Some(homepage) = homepage {
         writeln!(ruby_src, "  s.homepage = \"{}\".freeze", homepage).unwrap();
@@ -702,5 +711,10 @@ mod tests {
     #[test]
     fn test_zlib() {
         run_test("zlib");
+    }
+
+    #[test]
+    fn test_css_minify() {
+        run_test("css-minify");
     }
 }

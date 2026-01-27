@@ -1,0 +1,61 @@
+--- !ruby/object:Gem::Specification
+name: cssminify
+version: !ruby/object:Gem::Version
+  version: 1.0.2
+platform: ruby
+authors:
+- Matthias Siegel
+bindir: bin
+cert_chain: []
+date: 2012-06-30 00:00:00.000000000 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: rspec
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '2.7'
+  type: :development
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - "~>"
+      - !ruby/object:Gem::Version
+        version: '2.7'
+description: "    The CSSminify gem provides CSS compression using YUI compressor.
+  Instead of wrapping around the Java or Javascript version of YUI compressor it uses
+  a native Ruby port of the CSS engine. Therefore this gem has no dependencies.\n"
+email: matthias.siegel@gmail.com
+executables: []
+extensions: []
+extra_rdoc_files:
+- CHANGES.md
+- LICENSE.md
+- README.md
+files:
+- CHANGES.md
+- LICENSE.md
+- README.md
+homepage: https://github.com/matthiassiegel/cssminify
+licenses:
+- MIT
+metadata: {}
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 1.8.10
+specification_version: 3
+summary: CSS minification with YUI compressor, but as native Ruby port.
+test_files: []
