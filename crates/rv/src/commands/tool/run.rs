@@ -100,6 +100,7 @@ pub async fn run(
     gem: Option<String>,
     gem_server: String,
     no_install: bool,
+    args: Vec<String>,
 ) -> Result<(), Error> {
     // Parse out the CLI args.
     let executable = WithVersion::parse(&executable)?;
@@ -179,8 +180,6 @@ pub async fn run(
         program: file,
         extra_paths: vec![tool_bin_dir.into()],
     };
-    // TODO: Accept extra args from the `rv tool run -- ` process.
-    let args: Vec<String> = Default::default();
     crate::commands::ruby::run::run(
         program,
         config,

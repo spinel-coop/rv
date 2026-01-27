@@ -379,7 +379,8 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
                 executable,
                 gem_server,
                 no_install,
-            } => tool_run(config, executable, gem, gem_server, no_install).await?,
+                args,
+            } => tool_run(config, executable, gem, gem_server, no_install, args).await?,
         },
     };
 
