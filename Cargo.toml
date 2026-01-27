@@ -18,6 +18,10 @@ resolver = "2"
 anstream = "0.6.19"
 assert_fs = "1.1.3"
 bytesize = "2.3.0"
+cacache = { version = "13.1.0", default-features = false, features = [
+  "tokio-runtime",
+  "mmap",
+] }
 camino = "1.2.2"
 camino-tempfile-ext = "0.3.3"
 clap = "4.5.41"
