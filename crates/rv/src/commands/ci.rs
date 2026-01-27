@@ -21,7 +21,6 @@ use rv_lockfile::datatypes::GitSection;
 use rv_lockfile::datatypes::Spec;
 use rv_ruby::request::RubyRequest;
 use sha2::Digest;
-use std::result::Result as StdResult;
 use tracing::debug;
 use tracing::info;
 use tracing::info_span;
@@ -185,10 +184,10 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         install_path,
         extensions_dir,
     };
-    ci_inner(config, &inner_args).await
+    ci_inner(config, &inner_args).await.map(|_| ())
 }
 
-async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
+async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<InstallStats> {
     // Terminal progress indicator (OSC 9;4) for supported terminals
     let progress = WorkProgress::new();
 
@@ -203,28 +202,28 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
 
     drop(span);
-    let result = ci_inner_work(config, args, &progress, lockfile, &no_validation).await;
+    let result = ci_inner_work(config, args, &progress, lockfile).await;
 
     // On success, clear the progress indicator.
     // On error, set error state but don't clear - this leaves a red/error indicator
     // visible in the terminal tab/titlebar until the user runs another command.
     match &result {
-        Ok(()) => progress.clear(),
+        Ok(_installed) => progress.clear(),
         Err(_) => progress.set_error(),
     }
 
     result
 }
 
-pub async fn install_from_lockfile<F>(
+pub struct InstallStats {
+    pub executables_installed: usize,
+}
+
+pub async fn install_from_lockfile(
     config: &Config,
     lockfile: GemfileDotLock<'_>,
     install_path: Utf8PathBuf,
-    verify_gemspec: &F,
-) -> Result<()>
-where
-    F: Fn(&GemSpecification) -> StdResult<(), ValidationErr> + Send + Sync,
-{
+) -> Result<InstallStats> {
     // We need some Ruby installed, because we need to run Ruby code when installing
     // gems. Ensure Ruby is installed here so we can use it later.
     let ruby_request = config.ruby_request();
@@ -246,29 +245,25 @@ where
     let progress = WorkProgress::new();
 
     // Do the work.
-    let result = ci_inner_work(config, &inner_args, &progress, lockfile, verify_gemspec).await;
+    let result = ci_inner_work(config, &inner_args, &progress, lockfile).await;
 
     // On success, clear the progress indicator.
     // On error, set error state but don't clear - this leaves a red/error indicator
     // visible in the terminal tab/titlebar until the user runs another command.
     match &result {
-        Ok(()) => progress.clear(),
+        Ok(_) => progress.clear(),
         Err(_) => progress.set_error(),
     }
 
     result
 }
 
-async fn ci_inner_work<F>(
+async fn ci_inner_work(
     config: &Config,
     args: &CiInnerArgs,
     progress: &WorkProgress,
     lockfile: GemfileDotLock<'_>,
-    verify_gemspec: &F,
-) -> Result<()>
-where
-    F: Fn(&GemSpecification) -> StdResult<(), ValidationErr> + Send + Sync,
-{
+) -> Result<InstallStats> {
     let binstub_dir = args.install_path.join("bin");
     tokio::fs::create_dir_all(&binstub_dir).await?;
 
@@ -298,8 +293,9 @@ where
     progress.start_phase(downloaded_count as u64, 40);
 
     let install_start = Instant::now();
-    let specs = install_gems(config, downloaded, args, progress, verify_gemspec)?;
+    let specs = install_gems(config, downloaded, args, progress)?;
     let gem_count = specs.len();
+    let executables_installed = specs.iter().map(|spec| spec.executables.len()).sum();
     let install_elapsed = install_start.elapsed();
 
     // Phase 3 (Compiles, 80-100%) - start_phase called inside compile_gems after filtering
@@ -336,7 +332,9 @@ where
     }
     println!(" - {} total", format_duration(total_elapsed));
 
-    Ok(())
+    Ok(InstallStats {
+        executables_installed,
+    })
 }
 
 fn install_paths<'i>(
@@ -364,10 +362,6 @@ fn install_paths<'i>(
         Ok::<_, Error>(path_source_specs)
     })?;
     Ok(path_specs)
-}
-
-fn no_validation(_: &GemSpecification) -> StdResult<(), ValidationErr> {
-    Ok(())
 }
 
 /// Errors that could occur when validating gems from their gemspec.
@@ -807,16 +801,12 @@ pub fn create_rayon_pool(
         .build()
 }
 
-fn install_gems<'i, F>(
+fn install_gems<'i>(
     config: &Config,
     downloaded: Vec<DownloadedRubygems<'i>>,
     args: &CiInnerArgs,
     progress: &WorkProgress,
-    verify_gemspec: &F,
-) -> Result<Vec<GemSpecification>>
-where
-    F: Fn(&GemSpecification) -> StdResult<(), ValidationErr> + Send + Sync,
-{
+) -> Result<Vec<GemSpecification>> {
     use rayon::prelude::*;
 
     debug!("Installing gem packages");
@@ -834,8 +824,7 @@ where
             .into_iter()
             .par_bridge()
             .map(|download| {
-                let result =
-                    install_single_gem(config, download, args, &binstub_dir, verify_gemspec);
+                let result = install_single_gem(config, download, args, &binstub_dir);
                 span.pb_inc(1);
                 progress.complete_one();
                 result
@@ -846,24 +835,17 @@ where
     Ok(specs)
 }
 
-fn install_single_gem<'i, F>(
+fn install_single_gem<'i>(
     config: &Config,
     download: DownloadedRubygems<'i>,
     args: &CiInnerArgs,
     binstub_dir: &Utf8Path,
-    verify_gemspec: &F,
-) -> Result<GemSpecification>
-where
-    F: Fn(&GemSpecification) -> StdResult<(), ValidationErr> + Send + Sync,
-{
+) -> Result<GemSpecification> {
     let gv = download.spec.gem_version;
     // Actually unpack the tarball here.
     let dep_gemspec_res = download.unpack_tarball(config, args.install_path.clone(), args)?;
     debug!("Unpacked tarball {gv}");
     let dep_gemspec = dep_gemspec_res.ok_or(Error::MissingGemspec(gv.to_string()))?;
-    debug!("Verifying gemspec {gv}");
-    verify_gemspec(&dep_gemspec)?;
-    debug!("Verified gemspec {gv}");
     debug!("Installing binstubs for {gv}");
     install_binstub(&dep_gemspec.name, &dep_gemspec.executables, binstub_dir)?;
     debug!("Installed {gv}");

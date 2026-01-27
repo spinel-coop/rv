@@ -1,7 +1,6 @@
 use std::{collections::HashMap, fs};
 
 use owo_colors::OwoColorize;
-use rv_gem_types::Specification as GemSpecification;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_ruby::request::Source;
 use rv_version::Version as GemVersion;
@@ -10,7 +9,7 @@ use url::Url;
 
 use crate::{
     commands::{
-        ci::ValidationErr,
+        ci::InstallStats,
         tool::{
             Installed,
             install::{
@@ -63,6 +62,8 @@ pub enum Error {
     },
     #[error("Could not pin Ruby version for this tool: {0}")]
     CouldNotPinRubyVersion(std::io::Error),
+    #[error("This gem doesn't have any executables to install")]
+    NoExecutables,
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -201,30 +202,18 @@ pub async fn install(
     let mut config_for_install = config.clone();
     config_for_install.requested_ruby = Some((ruby_to_use.clone().into(), Source::Other));
 
-    let gem_name = args.gem.to_owned();
-    let must_have_executables =
-        |gemspec: &GemSpecification| -> std::result::Result<(), ValidationErr> {
-            // Make sure we're only validating the gem being installed as the tool.
-            if gemspec.name != gem_name {
-                return Ok(());
-            }
-            // There's no point installing a gem that doesn't have any executables.
-            if gemspec.executables.is_empty() {
-                Err(ValidationErr::NoExecutable {
-                    gem_name: gem_name.clone(),
-                })
-            } else {
-                Ok(())
-            }
-        };
-
-    crate::commands::ci::install_from_lockfile(
+    let InstallStats {
+        executables_installed,
+    } = crate::commands::ci::install_from_lockfile(
         &config_for_install,
         lockfile,
         install_path.clone(),
-        &must_have_executables,
     )
     .await?;
+    if executables_installed == 0 {
+        fs::remove_dir_all(install_path).unwrap();
+        return Err(Error::NoExecutables);
+    }
     let pin_path = install_path.join(".ruby-version");
     fs::write(&pin_path, format!("{ruby_to_use}\n")).map_err(Error::CouldNotPinRubyVersion)?;
     debug!("Pinned dir {} to {}", pin_path, ruby_to_use);
