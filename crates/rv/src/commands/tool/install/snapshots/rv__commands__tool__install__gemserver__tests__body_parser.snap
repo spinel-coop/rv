@@ -3,7 +3,7 @@ source: crates/rv/src/commands/tool/install/gemserver.rs
 expression: actual_parsed_response
 ---
 [
-    VersionAvailable {
+    GemRelease {
         version: Version {
             version: "2.2.2",
             segments: [
@@ -33,7 +33,7 @@ expression: actual_parsed_response
             rubygems: [],
         },
     },
-    VersionAvailable {
+    GemRelease {
         version: Version {
             version: "2.3.2",
             segments: [

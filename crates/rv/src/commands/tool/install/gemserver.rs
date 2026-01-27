@@ -30,10 +30,10 @@ impl Gemserver {
     }
 
     /// Returns the response body from the server SERVER/info/GEM_NAME.
-    /// You probably want to call [`parse_version_from_body`] on that string.
+    /// You probably want to call [`parse_release_from_body`] on that string.
     /// This function doesn't parse the response, so that the parser doesn't have to copy any strings.
     /// Whoever calls this should own the response, and then the parser will borrow &strs from the response.
-    pub async fn get_versions_for_gem(&self, gem: &str) -> Result<String, Error> {
+    pub async fn get_releases_for_gem(&self, gem: &str) -> Result<String, Error> {
         let mut url = self.url.clone();
         url.set_path(&format!("info/{}", gem));
         let index_body = self
@@ -56,23 +56,21 @@ impl Gemserver {
 
 /// Given a response body from the server SERVER/info/GEM_NAME,
 /// parse it into a list of versions.
-pub fn parse_version_from_body(
-    index_body: &str,
-) -> Result<Vec<VersionAvailable>, VersionAvailableParse> {
+pub fn parse_release_from_body(index_body: &str) -> Result<Vec<GemRelease>, GemReleaseParse> {
     index_body
         .lines()
         .filter_map(|line| {
             if line == "---" {
                 return None;
             }
-            Some(VersionAvailable::parse(line))
+            Some(GemRelease::parse(line))
         })
         .collect()
 }
 
-/// All the information about a versiom of a gem available on some Gemserver.
+/// All the information about a release of a gem available on some Gemserver.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VersionAvailable {
+pub struct GemRelease {
     pub version: Version,
     pub platform: Platform,
     pub deps: Vec<Dep>,
@@ -80,7 +78,7 @@ pub struct VersionAvailable {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum VersionAvailableParse {
+pub enum GemReleaseParse {
     #[error("Missing a space")]
     MissingSpace,
     #[error("Missing a pipe")]
@@ -106,38 +104,33 @@ pub enum VersionAvailableParse {
     },
     #[error("Invalid constraint in metadata field {metadata}: {source}")]
     MetadataConstraintParse {
-        source: Box<VersionAvailableParse>,
+        source: Box<GemReleaseParse>,
         metadata: String,
     },
 }
 
-impl VersionAvailable {
+impl GemRelease {
     /// Parses from a string like this:
     /// 2.2.2 actionmailer:= 2.2.2,actionpack:= 2.2.2,activerecord:= 2.2.2,activeresource:= 2.2.2,activesupport:=
     /// 2.2.2,rake:>= 0.8.3|checksum:84fd0ee92f92088cff81d1a4bcb61306bd4b7440b8634d7ac3d1396571a2133f
-    fn parse(line: &str) -> std::result::Result<Self, VersionAvailableParse> {
-        let (v, rest) = line
-            .split_once(' ')
-            .ok_or(VersionAvailableParse::MissingSpace)?;
+    fn parse(line: &str) -> std::result::Result<Self, GemReleaseParse> {
+        let (v, rest) = line.split_once(' ').ok_or(GemReleaseParse::MissingSpace)?;
         let version = v;
-        let (deps, metadata) = rest
-            .split_once('|')
-            .ok_or(VersionAvailableParse::MissingPipe)?;
+        let (deps, metadata) = rest.split_once('|').ok_or(GemReleaseParse::MissingPipe)?;
 
         let deps: Vec<_> = if deps.is_empty() {
             Default::default()
         } else {
             deps.split(',')
                 .map(|dep| {
-                    let (gem_name, constraints) = dep
-                        .split_once(':')
-                        .ok_or(VersionAvailableParse::MissingColon)?;
+                    let (gem_name, constraints) =
+                        dep.split_once(':').ok_or(GemReleaseParse::MissingColon)?;
 
                     let version_constraint = constraints
                         .split('&')
                         .map(VersionConstraint::from_str)
                         .collect::<std::result::Result<Vec<_>, _>>()?;
-                    Ok::<_, VersionAvailableParse>(Dep {
+                    Ok::<_, GemReleaseParse>(Dep {
                         gem_name: gem_name.to_owned(),
                         version_constraints: version_constraint.into(),
                     })
@@ -147,9 +140,9 @@ impl VersionAvailable {
         let metadata = parse_metadata(metadata)?;
 
         let (version, platform) = rv_gem_types::platform::version_platform_split(version)
-            .ok_or(VersionAvailableParse::InvalidRelease(version.to_string()))?;
+            .ok_or(GemReleaseParse::InvalidRelease(version.to_string()))?;
 
-        Ok(VersionAvailable {
+        Ok(GemRelease {
             version,
             platform,
             deps,
@@ -158,7 +151,7 @@ impl VersionAvailable {
     }
 }
 
-fn parse_metadata(metadata: &str) -> Result<Metadata, VersionAvailableParse> {
+fn parse_metadata(metadata: &str) -> Result<Metadata, GemReleaseParse> {
     let mut out = Metadata::default();
     for md_str in metadata.split(',') {
         if md_str.is_empty() {
@@ -166,21 +159,20 @@ fn parse_metadata(metadata: &str) -> Result<Metadata, VersionAvailableParse> {
         }
         let (k, v) = md_str
             .split_once(':')
-            .ok_or_else(|| VersionAvailableParse::MissingMetadataColon(md_str.to_owned()))?;
+            .ok_or_else(|| GemReleaseParse::MissingMetadataColon(md_str.to_owned()))?;
         match k {
             "checksum" => {
-                out.checksum =
-                    hex::decode(v).map_err(|err| VersionAvailableParse::InvalidChecksum {
-                        source: err,
-                        metadata: md_str.to_owned(),
-                    })?;
+                out.checksum = hex::decode(v).map_err(|err| GemReleaseParse::InvalidChecksum {
+                    source: err,
+                    metadata: md_str.to_owned(),
+                })?;
             }
             "ruby" => {
                 out.ruby = v
                     .split('&')
                     .map(VersionConstraint::from_str)
                     .collect::<Result<Vec<_>, _>>()
-                    .map_err(|err| VersionAvailableParse::MetadataConstraintParse {
+                    .map_err(|err| GemReleaseParse::MetadataConstraintParse {
                         source: Box::new(err),
                         metadata: md_str.to_owned(),
                     })?;
@@ -190,13 +182,13 @@ fn parse_metadata(metadata: &str) -> Result<Metadata, VersionAvailableParse> {
                     .split('&')
                     .map(VersionConstraint::from_str)
                     .collect::<Result<Vec<_>, _>>()
-                    .map_err(|err| VersionAvailableParse::MetadataConstraintParse {
+                    .map_err(|err| GemReleaseParse::MetadataConstraintParse {
                         source: Box::new(err),
                         metadata: md_str.to_owned(),
                     })?;
             }
             _ => {
-                return Err(VersionAvailableParse::UnknownMetadataKey {
+                return Err(GemReleaseParse::UnknownMetadataKey {
                     key: k.to_owned(),
                     metadata: md_str.to_owned(),
                 });
@@ -275,17 +267,17 @@ impl std::fmt::Debug for VersionConstraint {
 }
 
 impl FromStr for VersionConstraint {
-    type Err = VersionAvailableParse;
+    type Err = GemReleaseParse;
 
     fn from_str(constr: &str) -> Result<Self, Self::Err> {
         let (semver_constr, v) = constr
             .split_once(' ')
-            .ok_or(VersionAvailableParse::MissingSpace)?;
-        Ok::<_, VersionAvailableParse>(VersionConstraint {
+            .ok_or(GemReleaseParse::MissingSpace)?;
+        Ok::<_, GemReleaseParse>(VersionConstraint {
             constraint_type: semver_constr
                 .parse()
-                .map_err(VersionAvailableParse::UnknownSemverType)?,
-            version: v.parse().map_err(VersionAvailableParse::InvalidVersion)?,
+                .map_err(GemReleaseParse::UnknownSemverType)?,
+            version: v.parse().map_err(GemReleaseParse::InvalidVersion)?,
         })
     }
 }
@@ -309,7 +301,7 @@ mod tests {
                 "8.1.2 activesupport:= 8.1.2,globalid:>= 0.3.6|checksum:908dab3713b101859536375819f4156b07bdf4c232cc645e7538adb9e302f825,ruby:>= 3.2.0",
             ),
         ] {
-            let actual = VersionAvailable::parse(input).unwrap();
+            let actual = GemRelease::parse(input).unwrap();
             assert_eq!(expected_version, actual.version);
         }
     }
@@ -319,7 +311,7 @@ mod tests {
         let resp = "---
 2.2.2 actionmailer:= 2.2.2,actionpack:= 2.2.2,activerecord:= 2.2.2,activeresource:= 2.2.2,activesupport:= 2.2.2,rake:>= 0.8.3|checksum:84fd0ee92f92088cff81d1a4bcb61306bd4b7440b8634d7ac3d1396571a2133f
 2.3.2 actionmailer:= 2.3.2,actionpack:= 2.3.2,activerecord:= 2.3.2,activeresource:= 2.3.2,activesupport:= 2.3.2,rake:>= 0.8.3|checksum:ac61e0356987df34dbbafb803b98f153a663d3878a31f1db7333b7cd987fd044";
-        let actual_parsed_response = parse_version_from_body(resp).unwrap();
+        let actual_parsed_response = parse_release_from_body(resp).unwrap();
         assert_eq!(actual_parsed_response.len(), 2);
         insta::assert_debug_snapshot!(actual_parsed_response);
     }

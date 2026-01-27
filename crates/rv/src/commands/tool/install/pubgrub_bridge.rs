@@ -4,12 +4,12 @@ use pubgrub::{OfflineDependencyProvider, Ranges, SelectedDependencies};
 use rv_lockfile::datatypes::SemverConstraint;
 use rv_version::Version;
 
-use super::gemserver::{VersionAvailable, VersionConstraints};
+use super::gemserver::{GemRelease, VersionConstraints};
 
 pub fn solve(
     gem: String,
     version: Version,
-    gem_info: HashMap<String, Vec<VersionAvailable>>,
+    gem_info: HashMap<String, Vec<GemRelease>>,
 ) -> Result<SelectedDependencies<DepProvider>, pubgrub::PubGrubError<DepProvider>> {
     let provider = all_dependencies(gem_info);
     pubgrub::resolve(&provider, gem, version)
@@ -21,15 +21,15 @@ pub type DepProvider = OfflineDependencyProvider<String, Ranges<Version>>;
 /// with all the information of a GemServer (which gems are available, what versions that gem has,
 /// and what dependencies that gem-version pair has).
 /// This is really just taking the `gem_info` hashmap and organizing it in a way that PubGrub can understand.
-fn all_dependencies(gem_info: HashMap<String, Vec<VersionAvailable>>) -> DepProvider {
+fn all_dependencies(gem_info: HashMap<String, Vec<GemRelease>>) -> DepProvider {
     let mut m: OfflineDependencyProvider<String, Ranges<Version>> =
         OfflineDependencyProvider::new();
-    for (package, versions_available) in gem_info {
-        for version_available in versions_available {
+    for (package, gem_releases) in gem_info {
+        for gem_release in gem_releases {
             m.add_dependencies(
                 package.clone(),
-                version_available.version,
-                version_available
+                gem_release.version,
+                gem_release
                     .deps
                     .into_iter()
                     .map(|dep| (dep.gem_name, dep.version_constraints.into())),
@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn test_resolution() {
-        let gem_info: HashMap<String, Vec<VersionAvailable>> = serde_json::from_str(include_str!(
+        let gem_info: HashMap<String, Vec<GemRelease>> = serde_json::from_str(include_str!(
             "../../../../testdata/all_nokogiri_transitive_deps.json"
         ))
         .unwrap();
