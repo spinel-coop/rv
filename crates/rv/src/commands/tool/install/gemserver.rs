@@ -66,7 +66,9 @@ pub fn parse_release_from_body(index_body: &str) -> Result<Vec<GemRelease>, GemR
 
             let gem_release = GemRelease::parse(line);
 
-            if gem_release.is_ok() && !gem_release.as_ref().unwrap().platform.is_local() {
+            if let Ok(release) = &gem_release
+                && !release.platform.is_local()
+            {
                 return None;
             }
 
