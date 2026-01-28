@@ -145,38 +145,44 @@ pub async fn install(
         Some(user_choice) => {
             let Some(v) = releases
                 .iter()
-                .filter(|gem_release| gem_release.version == user_choice)
-                .max()
+                .filter(|gem_release| gem_release.version() == &user_choice)
+                .max_by(|x, y| x.version_platform().cmp(y.version_platform()))
             else {
                 return Err(Error::NoVersionFound(user_choice));
             };
-            debug!("Selected version {} of gem {}", v, args.gem,);
+            debug!("Selected {} {}", args.gem, v.full_name());
             v.to_owned()
         }
         _ => {
-            let Some(v) = releases.iter().max() else {
+            let Some(v) = releases
+                .iter()
+                .max_by(|x, y| x.version_platform().cmp(y.version_platform()))
+            else {
                 return Err(Error::NoReleasesPublished);
             };
-            debug!("Selected version {} of gem {}", v, args.gem,);
+            debug!("Selected {} {}", args.gem, v.full_name());
             v.to_owned()
         }
     };
 
     // Check if the tool was already installed.
-    let install_path = super::tool_dir_for(&args.gem, &release_to_install.to_string());
+    let install_path = super::tool_dir_for(
+        &args.gem,
+        &release_to_install.version_platform().to_string(),
+    );
     let already_installed = install_path.exists();
     if already_installed {
         if force {
             debug!("Reinstalling tool");
         } else {
             println!(
-                "{} version {} already installed at {}",
+                "{} {} already installed at {}",
                 args.gem.cyan(),
-                release_to_install,
+                release_to_install.version_platform(),
                 install_path.cyan(),
             );
             return Ok(Installed {
-                version: release_to_install.version,
+                version: release_to_install.version().to_owned(),
                 dir: install_path,
             });
         }
@@ -233,11 +239,11 @@ pub async fn install(
     println!(
         "Installed {} version {} to {}",
         gem_name.cyan(),
-        release_to_install,
+        release_to_install.version_platform(),
         install_path.cyan(),
     );
     Ok(Installed {
-        version: release_to_install.version,
+        version: release_to_install.version().to_owned(),
         dir: install_path,
     })
 }

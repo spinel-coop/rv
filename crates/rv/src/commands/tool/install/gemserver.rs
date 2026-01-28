@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use reqwest::Client;
-use rv_gem_types::Platform;
+use rv_gem_types::{Platform, VersionPlatform};
 use rv_lockfile::datatypes::SemverConstraint;
 use rv_version::Version;
 use serde::{Deserialize, Serialize};
@@ -67,7 +67,7 @@ pub fn parse_release_from_body(index_body: &str) -> Result<Vec<GemRelease>, GemR
             let gem_release = GemRelease::parse(line);
 
             if let Ok(release) = &gem_release
-                && !release.platform.is_local()
+                && !release.platform().is_local()
             {
                 return None;
             }
@@ -78,12 +78,31 @@ pub fn parse_release_from_body(index_body: &str) -> Result<Vec<GemRelease>, GemR
 }
 
 /// All the information about a release of a gem available on some Gemserver.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GemRelease {
-    pub version: Version,
-    pub platform: Platform,
+    pub version_platform: VersionPlatform,
     pub deps: Vec<Dep>,
     pub metadata: Metadata,
+}
+
+impl GemRelease {
+    pub fn version_platform(&self) -> &VersionPlatform {
+        &self.version_platform
+    }
+
+    pub fn version(&self) -> &Version {
+        &self.version_platform.version
+    }
+
+    pub fn platform(&self) -> &Platform {
+        &self.version_platform.platform
+    }
+}
+
+impl From<GemRelease> for VersionPlatform {
+    fn from(value: GemRelease) -> Self {
+        value.version_platform
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -148,15 +167,18 @@ impl GemRelease {
         };
         let metadata = parse_metadata(metadata)?;
 
-        let (version, platform) = rv_gem_types::platform::version_platform_split(version)
-            .ok_or(GemReleaseParse::InvalidRelease(version.to_string()))?;
+        let version_platform = VersionPlatform::from_str(version)
+            .map_err(|_| GemReleaseParse::InvalidRelease(version.to_string()))?;
 
         Ok(GemRelease {
-            version,
-            platform,
+            version_platform,
             deps,
             metadata,
         })
+    }
+
+    pub fn full_name(&self) -> String {
+        self.version_platform().to_string()
     }
 }
 
@@ -205,30 +227,6 @@ fn parse_metadata(metadata: &str) -> Result<Metadata, GemReleaseParse> {
         }
     }
     Ok(out)
-}
-
-impl std::fmt::Display for GemRelease {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.platform {
-            Platform::Ruby => write!(f, "{}", self.version),
-            _ => write!(f, "{}-{}", self.version, self.platform),
-        }
-    }
-}
-
-impl Ord for GemRelease {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // Sort by version, then platform
-        self.version
-            .cmp(&other.version)
-            .then_with(|| self.platform.cmp(&other.platform))
-    }
-}
-
-impl PartialOrd for GemRelease {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
 }
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -335,7 +333,7 @@ mod tests {
             ),
         ] {
             let actual = GemRelease::parse(input).unwrap();
-            assert_eq!(expected_version, actual.version);
+            assert_eq!(&expected_version, actual.version());
         }
     }
 
@@ -377,7 +375,12 @@ mod tests {
         let expected_release = "1.19.0-x86_64-linux-gnu";
 
         assert_eq!(
-            actual_parsed_response.iter().max().unwrap().to_string(),
+            actual_parsed_response
+                .iter()
+                .map(|gr| gr.version_platform())
+                .max()
+                .unwrap()
+                .to_string(),
             expected_release
         );
     }
