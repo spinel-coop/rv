@@ -376,11 +376,10 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
             commands::tool::ToolCommand::Uninstall { gem } => tool_uninstall(config, gem)?,
             commands::tool::ToolCommand::Run {
                 gem,
-                executable,
                 gem_server,
                 no_install,
                 args,
-            } => tool_run(config, executable, gem, gem_server, no_install, args).await?,
+            } => tool_run(config, gem, gem_server, no_install, args).await?,
         },
     };
 
