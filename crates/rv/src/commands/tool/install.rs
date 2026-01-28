@@ -220,32 +220,46 @@ pub async fn install(
     let mut config_for_install = config.clone();
     config_for_install.requested_ruby = Some((ruby_to_use.clone().into(), Source::Other));
 
-    let InstallStats {
-        executables_installed,
-    } = crate::commands::ci::install_from_lockfile(
+    let result = crate::commands::ci::install_from_lockfile(
         &config_for_install,
         lockfile,
         install_path.clone(),
     )
-    .await?;
-    if executables_installed == 0 {
-        fs::remove_dir_all(install_path).unwrap();
-        return Err(Error::NoExecutables);
+    .await;
+
+    match result {
+        Ok(InstallStats {
+            executables_installed: 0,
+        }) => {
+            fs::remove_dir_all(install_path).unwrap();
+            Err(Error::NoExecutables)
+        }
+
+        Err(error) if matches!(error, crate::commands::ci::Error::MissingGemspec(_)) => {
+            fs::remove_dir_all(install_path).unwrap();
+            Err(Error::InstallError(error))
+        }
+
+        Err(error) => Err(Error::InstallError(error)),
+
+        _ => {
+            let pin_path = install_path.join(".ruby-version");
+            fs::write(&pin_path, format!("{ruby_to_use}\n"))
+                .map_err(Error::CouldNotPinRubyVersion)?;
+            debug!("Pinned dir {} to {}", pin_path, ruby_to_use);
+            let gem_name = args.gem.cyan();
+            println!(
+                "Installed {} version {} to {}",
+                gem_name.cyan(),
+                release_to_install.version_platform(),
+                install_path.cyan(),
+            );
+            Ok(Installed {
+                version: release_to_install.version().to_owned(),
+                dir: install_path,
+            })
+        }
     }
-    let pin_path = install_path.join(".ruby-version");
-    fs::write(&pin_path, format!("{ruby_to_use}\n")).map_err(Error::CouldNotPinRubyVersion)?;
-    debug!("Pinned dir {} to {}", pin_path, ruby_to_use);
-    let gem_name = args.gem.cyan();
-    println!(
-        "Installed {} version {} to {}",
-        gem_name.cyan(),
-        release_to_install.version_platform(),
-        install_path.cyan(),
-    );
-    Ok(Installed {
-        version: release_to_install.version().to_owned(),
-        dir: install_path,
-    })
 }
 
 /// Owns the information needed to create a lockfile.
