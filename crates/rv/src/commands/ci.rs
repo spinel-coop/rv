@@ -1549,12 +1549,10 @@ async fn download_gem_source<'i>(
     // Download them all, concurrently.
 
     let gems_to_download = gem_source.specs.into_iter().filter(|spec| {
-        let Some((_version, plat)) =
-            rv_gem_types::platform::version_platform_split(spec.gem_version.version)
-        else {
-            // If we couldn't parse a platform, assume there's no platform, so we should download this.
-            return true;
-        };
+        // Failing to parse a locked spec is most likely because of some manual edition, panicking
+        // in that case seems fine for now, so unwrap the result freely
+        let (_version, plat) =
+            rv_gem_types::platform::version_platform_split(spec.gem_version.version).unwrap();
         plat.is_local()
     });
     let spec_stream = futures_util::stream::iter(gems_to_download);

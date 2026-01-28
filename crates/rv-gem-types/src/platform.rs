@@ -22,8 +22,9 @@ static OPENBSD_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"openbsd-?(\d+\.\d+
 static SOLARIS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"solaris-?(\d+\.\d+)?").unwrap());
 static PLATFORM_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+_platform)-?(\d+)?").unwrap());
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum Platform {
+    #[default]
     Ruby,
     Current,
     Specific {
@@ -279,6 +280,26 @@ impl Platform {
     }
 }
 
+impl Ord for Platform {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        if self == other {
+            std::cmp::Ordering::Equal
+        } else if matches!(self, Platform::Ruby) || matches!(other, Platform::Current) {
+            std::cmp::Ordering::Less
+        } else if matches!(other, Platform::Ruby) || matches!(self, Platform::Current) {
+            std::cmp::Ordering::Greater
+        } else {
+            self.to_string().cmp(&other.to_string())
+        }
+    }
+}
+
+impl PartialOrd for Platform {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl std::fmt::Display for Platform {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -311,7 +332,7 @@ impl FromStr for Platform {
 /// Splits a gem version with a platform suffix, like `1.11.0.rc1-x86_64-linux`,
 /// into its version and platform components.
 pub fn version_platform_split(s: &str) -> Option<(Version, Platform)> {
-    let (v, p) = s.split_once('-')?;
+    let (v, p) = s.split_once('-').unwrap_or((s, "ruby"));
 
     let version = Version::new(v).ok()?;
     let platform = Platform::new(p).ok()?;
@@ -911,6 +932,7 @@ mod tests {
             ("0.5.5-aarch64-linux-gnu", ("0.5.5", "aarch64-linux-gnu")),
             ("2.7.4-aarch64-linux-musl", ("2.7.4", "aarch64-linux-musl")),
             ("1.17.2-arm-linux-gnu", ("1.17.2", "arm-linux-gnu")),
+            ("1.17.2", ("1.17.2", "ruby")),
         ];
 
         for (input, (expected_version, expected_platform)) in test_cases {

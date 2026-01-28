@@ -15,7 +15,7 @@ use crate::{
             Installed,
             install::{
                 choosing_ruby_version::ruby_to_use_for,
-                gemserver::{Gemserver, VersionAvailable},
+                gemserver::{GemRelease, Gemserver},
             },
         },
     },
@@ -37,8 +37,8 @@ pub enum Error {
     NotFound { gem_name: String, server: String },
     #[error("No version {0} available")]
     NoVersionFound(GemVersion),
-    #[error("The gem does not actually have any versions published")]
-    NoVersionsPublished,
+    #[error("The gem does not actually have any releases published")]
+    NoReleasesPublished,
     #[error(transparent)]
     VersionError(#[from] rv_version::VersionError),
     #[error(transparent)]
@@ -46,7 +46,7 @@ pub enum Error {
     #[error(transparent)]
     GemserverError(#[from] gemserver::Error),
     #[error("Could not parse a version from the server: {0}")]
-    VersionAvailableParse(#[from] gemserver::VersionAvailableParse),
+    GemReleaseParse(#[from] gemserver::GemReleaseParse),
     #[error("Could not create the cache dir: {0}")]
     CouldNotCreateCacheDir(std::io::Error),
     #[error("Could not write to the cache: {0}")]
@@ -115,11 +115,11 @@ pub async fn install(
     let gemserver = Gemserver::new(args.gem_server)?;
 
     // Maps gem names to their dependency lists.
-    let mut gems_to_deps: HashMap<GemName, Vec<VersionAvailable>> = HashMap::new();
+    let mut gems_to_deps: HashMap<GemName, Vec<GemRelease>> = HashMap::new();
 
     // Look up the gem to install.
-    let versions_resp = gemserver
-        .get_versions_for_gem(&args.gem)
+    let releases_resp = gemserver
+        .get_releases_for_gem(&args.gem)
         .await
         .map_err(|e| match e {
             // If the HTTP error was 404, then return a nice error explaining that the gem
@@ -134,39 +134,36 @@ pub async fn install(
             other => Error::from(other),
         })?;
 
-    let versions = gemserver::parse_version_from_body(&versions_resp)?;
-    debug!("Found {} versions for the gem {}", versions.len(), args.gem);
-    if versions.is_empty() {
-        return Err(Error::NoVersionsPublished);
+    let releases = gemserver::parse_release_from_body(&releases_resp)?;
+    debug!("Found {} releases for the gem {}", releases.len(), args.gem);
+    if releases.is_empty() {
+        return Err(Error::NoReleasesPublished);
     }
-    gems_to_deps.insert(args.gem.clone(), versions.clone());
+    gems_to_deps.insert(args.gem.clone(), releases.clone());
 
-    // Let's install the most recent version.
-    let version_to_install = match gem_version {
+    let release_to_install = match gem_version {
         Some(user_choice) => {
-            let Some(v) = versions
+            let Some(v) = releases
                 .iter()
-                .find(|version_available| version_available.version == user_choice)
+                .filter(|gem_release| gem_release.version == user_choice)
+                .max()
             else {
                 return Err(Error::NoVersionFound(user_choice));
             };
-            debug!("Selected version {} of gem {}", v.version, args.gem,);
+            debug!("Selected version {} of gem {}", v, args.gem,);
             v.to_owned()
         }
         _ => {
-            let Some(v) = versions
-                .iter()
-                .max_by_key(|version_available| &version_available.version)
-            else {
-                return Err(Error::NoVersionsPublished);
+            let Some(v) = releases.iter().max() else {
+                return Err(Error::NoReleasesPublished);
             };
-            debug!("Selected version {} of gem {}", v.version, args.gem,);
+            debug!("Selected version {} of gem {}", v, args.gem,);
             v.to_owned()
         }
     };
 
     // Check if the tool was already installed.
-    let install_path = super::tool_dir_for(&args.gem, &version_to_install.version);
+    let install_path = super::tool_dir_for(&args.gem, &release_to_install.to_string());
     let already_installed = install_path.exists();
     if already_installed {
         if force {
@@ -175,17 +172,17 @@ pub async fn install(
             println!(
                 "{} version {} already installed at {}",
                 args.gem.cyan(),
-                version_to_install.version,
+                release_to_install,
                 install_path.cyan(),
             );
             return Ok(Installed {
-                version: version_to_install.version,
+                version: release_to_install.version,
                 dir: install_path,
             });
         }
     }
 
-    let ruby_to_use = ruby_to_use_for(config, &version_to_install.metadata.ruby).await?;
+    let ruby_to_use = ruby_to_use_for(config, &release_to_install.metadata.ruby).await?;
     debug!("Selected Ruby {ruby_to_use} for this gem");
 
     debug!("Querying all transitive dependencies");
@@ -193,7 +190,7 @@ pub async fn install(
     transitive_dep_query::query_all_gem_deps(
         config,
         &mut transitive_deps,
-        version_to_install.clone(),
+        release_to_install.clone(),
         &args.gem,
         &gemserver,
         &ruby_to_use,
@@ -206,12 +203,9 @@ pub async fn install(
     // Now, translate the dependency constraint list into a PubGrub system, and resolve
     // (i.e. figure out which version of every gem will be used.)
     debug!("Resolving all dependencies via PubGrub");
-    let versions_needed = pubgrub_bridge::solve(
-        args.gem.clone(),
-        version_to_install.version.clone(),
-        gems_to_deps,
-    )
-    .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
+    let versions_needed =
+        pubgrub_bridge::solve(args.gem.clone(), release_to_install.clone(), gems_to_deps)
+            .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
     debug!("All dependencies resolved");
 
     // Make a Gemfile.lock in-memory, install it via `rv ci`.
@@ -239,11 +233,11 @@ pub async fn install(
     println!(
         "Installed {} version {} to {}",
         gem_name.cyan(),
-        version_to_install.version,
+        release_to_install,
         install_path.cyan(),
     );
     Ok(Installed {
-        version: version_to_install.version,
+        version: release_to_install.version,
         dir: install_path,
     })
 }
