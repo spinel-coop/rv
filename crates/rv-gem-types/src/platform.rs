@@ -1,7 +1,6 @@
 use current_platform::CURRENT_PLATFORM;
 use once_cell::sync::Lazy;
 use regex::Regex;
-use rv_version::Version;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, str::FromStr};
 
@@ -329,19 +328,12 @@ impl FromStr for Platform {
     }
 }
 
-/// Splits a gem version with a platform suffix, like `1.11.0.rc1-x86_64-linux`,
-/// into its version and platform components.
-pub fn version_platform_split(s: &str) -> Option<(Version, Platform)> {
-    let (v, p) = s.split_once('-').unwrap_or((s, "ruby"));
-
-    let version = Version::new(v).ok()?;
-    let platform = Platform::new(p).ok()?;
-
-    Some((version, platform))
-}
-
 #[cfg(test)]
 mod tests {
+    use rv_version::Version;
+
+    use crate::VersionPlatform;
+
     use super::*;
 
     #[test]
@@ -936,7 +928,7 @@ mod tests {
         ];
 
         for (input, (expected_version, expected_platform)) in test_cases {
-            let (version, platform) = version_platform_split(input).unwrap();
+            let VersionPlatform { version, platform } = input.parse().unwrap();
             assert_eq!(version, Version::new(expected_version).unwrap());
             assert_eq!(platform, Platform::new(expected_platform).unwrap());
         }

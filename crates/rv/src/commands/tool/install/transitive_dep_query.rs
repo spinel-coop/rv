@@ -45,7 +45,7 @@ pub(crate) async fn query_all_gem_deps(
         format!(
             "{}_{}_{}.json",
             gemserver.url.host_str().unwrap_or_default(),
-            root.version,
+            root.version(),
             root_gem_name
         ),
     );

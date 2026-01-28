@@ -13,6 +13,7 @@ use rayon::ThreadPoolBuildError;
 use regex::Regex;
 use reqwest::Client;
 use rv_gem_types::Specification as GemSpecification;
+use rv_gem_types::VersionPlatform;
 use rv_lockfile::datatypes::ChecksumAlgorithm;
 use rv_lockfile::datatypes::GemSection;
 use rv_lockfile::datatypes::GemVersion;
@@ -1551,8 +1552,9 @@ async fn download_gem_source<'i>(
     let gems_to_download = gem_source.specs.into_iter().filter(|spec| {
         // Failing to parse a locked spec is most likely because of some manual edition, panicking
         // in that case seems fine for now, so unwrap the result freely
-        let (_version, plat) =
-            rv_gem_types::platform::version_platform_split(spec.gem_version.version).unwrap();
+        let plat = VersionPlatform::from_str(spec.gem_version.version)
+            .unwrap()
+            .platform;
         plat.is_local()
     });
     let spec_stream = futures_util::stream::iter(gems_to_download);
