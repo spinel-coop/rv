@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use url::Url;
 
-use crate::http_client::rv_http_client;
+use crate::{commands::tool::install::GemName, http_client::rv_http_client};
 
 pub struct Gemserver {
     pub url: Url,
@@ -20,7 +20,7 @@ pub enum Error {
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),
     #[error("The requested gem {gem} was not found on the RubyGems server {gem_server}")]
-    GemNotFound { gem: String, gem_server: Url },
+    GemNotFound { gem: GemName, gem_server: Url },
 }
 
 impl Gemserver {
@@ -234,7 +234,7 @@ impl PartialOrd for GemRelease {
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Dep {
     /// What gem this dependency uses.
-    pub gem_name: String,
+    pub gem_name: GemName,
     /// Constraints on what version of the gem can be used.
     pub version_constraints: VersionConstraints,
 }
