@@ -68,7 +68,7 @@ impl From<VersionConstraint> for Ranges<GemRelease> {
             SemverConstraint::LessThan => Ranges::strictly_lower_than(min_v),
             SemverConstraint::GreaterThanOrEqual => Ranges::higher_than(min_v),
             SemverConstraint::LessThanOrEqual => Ranges::lower_than(max_v),
-            // if <1.0, use the given number as the floor and the next minor as not allowed.
+            // This one is weird, but at least it's encapsulated into a `bump` method.
             SemverConstraint::Pessimistic => {
                 let bump_v = GemRelease {
                     version: Version::new(format!("{}.A", v.bump())).unwrap(),
