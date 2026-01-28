@@ -41,7 +41,12 @@ pub enum ToolCommand {
         /// What to uninstall
         gem: String,
     },
-    #[command(about = "Run a tool provided by a gem, installing it if necessary")]
+    /// Run a command provided by a gem, installing it if necessary.
+    ///
+    /// By default, the gem name is assumed to match the command name.
+    ///
+    /// The name of the gem can include an exact version in the format `<package>@<version>`, e.g., `rv tool run rails@8.1.2`. If the command is provided by a different gem, use `--from`.
+    #[command(about = "Run a command from a gem, installing it if necessary")]
     #[command(arg_required_else_help = true)]
     Run {
         /// Which gem to run the executable from.
@@ -55,14 +60,8 @@ pub enum ToolCommand {
         /// If this flag is given, rv will exit with an error instead of installing.
         #[arg(long)]
         no_install: bool,
-        /// What to run.
-        /// Runs the executable with this name, from the gem with this name.
-        /// To override the gem, use `--from othergem`.
-        /// By default, uses the latest version of the gem. If you want to set
-        /// a different version, add a suffix like `@1.2.0`, e.g. `nokogiri@1.2.0`.
-        // executable: String,
-        /// Arguments passed to the tool you're running.
-        #[arg(trailing_var_arg = true, allow_hyphen_values = true, num_args = 1..)]
+        /// Command to run, e.g. `rerun` or `rails@8.0.2 new .`
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true, value_names = ["COMMAND", "ARGS"])]
         args: Vec<String>,
     },
 }
