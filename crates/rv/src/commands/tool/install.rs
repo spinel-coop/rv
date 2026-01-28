@@ -10,7 +10,7 @@ use url::Url;
 
 use crate::{
     commands::{
-        ci::InstallStats,
+        ci::{Error as CiError, InstallStats},
         tool::{
             Installed,
             install::{
@@ -54,7 +54,7 @@ pub enum Error {
     #[error("Could not choose version: {0}")]
     CouldNotChooseVersion(String),
     #[error(transparent)]
-    InstallError(#[from] crate::commands::ci::Error),
+    InstallError(#[from] CiError),
     #[error("rv could not find any Ruby versions to install")]
     NoRubies,
     #[error(
@@ -235,12 +235,14 @@ pub async fn install(
             Err(Error::NoExecutables)
         }
 
-        Err(error) if matches!(error, crate::commands::ci::Error::MissingGemspec(_)) => {
-            fs::remove_dir_all(install_path).unwrap();
-            Err(Error::InstallError(error))
-        }
+        Err(error) => match error {
+            CiError::YamlParsing(_) | CiError::MissingGemspec(_) => {
+                fs::remove_dir_all(install_path).unwrap();
+                Err(Error::InstallError(error))
+            }
 
-        Err(error) => Err(Error::InstallError(error)),
+            error => Err(Error::InstallError(error)),
+        },
 
         _ => {
             let pin_path = install_path.join(".ruby-version");

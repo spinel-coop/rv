@@ -159,6 +159,9 @@ pub enum Error {
     InvalidGemfilePath(String),
     #[error(transparent)]
     ValidationErr(#[from] ValidationErr),
+    #[error("Could not parse YAML metadata inside gem package")]
+    #[diagnostic(transparent)]
+    YamlParsing(#[diagnostic_source] miette::Report),
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -1146,7 +1149,7 @@ impl<'i> DownloadedRubygems<'i> {
         let Some(data_tar_unpacked) = data_tar_unpacked else {
             return Err(Error::NoDataTar);
         };
-        let Some(found_gemspec) = found_gemspec else {
+        if found_gemspec.is_none() {
             return Err(Error::NoMetadata {
                 gem_name: full_name,
             });
@@ -1476,7 +1479,7 @@ where
 
 struct UnpackedMetdata {
     hashed: Hashed,
-    gemspec: Option<GemSpecification>,
+    gemspec: GemSpecification,
 }
 
 /// Given the metadata.gz from a gem, write it to the filesystem under
@@ -1501,17 +1504,9 @@ where
     let mut yaml_contents = String::new();
     let mut unzipper = GzDecoder::new(metadata_gz);
     unzipper.read_to_string(&mut yaml_contents)?;
-    let parsed = match rv_gem_specification_yaml::parse(&yaml_contents) {
-        Ok(parsed) => Some(parsed),
-        Err(e) => {
-            eprintln!("Warning: gem specification at {dst_path} was invalid: {e}");
-            None
-        }
-    };
-    if let Some(spec) = parsed.clone() {
-        let ruby_contents = rv_gem_specification_yaml::to_ruby(spec);
-        std::io::copy(&mut ruby_contents.as_bytes(), &mut dst)?;
-    }
+    let parsed = rv_gem_specification_yaml::parse(&yaml_contents).map_err(Error::YamlParsing)?;
+    let ruby_contents = rv_gem_specification_yaml::to_ruby(parsed.clone());
+    std::io::copy(&mut ruby_contents.as_bytes(), &mut dst)?;
 
     let h = unzipper.into_inner();
     Ok(UnpackedMetdata {
