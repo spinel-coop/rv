@@ -32,6 +32,29 @@ pub(crate) enum CaptureOutput {
     Both,
 }
 
+pub(crate) enum Program {
+    Ruby,
+    Tool {
+        executable_path: Utf8PathBuf,
+        extra_paths: Vec<PathBuf>,
+    },
+}
+
+pub(crate) struct Invocation {
+    pub program: Program,
+
+    pub env: Vec<(&'static str, String)>,
+}
+
+impl Invocation {
+    pub fn ruby(env: Vec<(&'static str, String)>) -> Self {
+        Self {
+            program: Program::Ruby,
+            env,
+        }
+    }
+}
+
 /// Shell out to the given ruby `version`, run it with the given arguments.
 /// If given `version` is `None`, shell out to whatever version is pinned in a version
 /// file, or to the default ruby version if no ruby version is found in version files.
@@ -39,7 +62,7 @@ pub(crate) enum CaptureOutput {
 /// The ruby's output may be captured, depending on `capture_output`. If you pass
 /// `CaptureOutput::No`, this returns an empty `Output` struct.
 pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
-    program: Program,
+    invocation: Invocation,
     config: &Config,
     version: Option<RubyRequest>,
     no_install: bool,
@@ -66,46 +89,30 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
         )
         .await?
     };
-    run_no_install(program, config, &request, args, capture_output, cwd, vec![])
-}
-
-pub enum Program {
-    Ruby,
-    Tool {
-        program: Utf8PathBuf,
-        set: Vec<(&'static str, String)>,
-        extra_paths: Vec<PathBuf>,
-    },
+    run_no_install(invocation, config, &request, args, capture_output, cwd)
 }
 
 /// Run, without installing the Ruby version if necessary.
 pub(crate) fn run_no_install<A: AsRef<std::ffi::OsStr>>(
-    program: Program,
+    invocation: Invocation,
     config: &Config,
     request: &RubyRequest,
     args: &[A],
     capture_output: CaptureOutput,
     cwd: Option<&Utf8Path>,
-    env: Vec<(&str, &str)>,
 ) -> Result<Output> {
-    let ((unset, set), program) = match program {
-        Program::Ruby => {
-            let ruby = config.matching_ruby(request).ok_or(Error::NoMatchingRuby)?;
-            (config::env_for(Some(&ruby))?, ruby.executable_path())
-        }
+    let ruby = config.matching_ruby(request).ok_or(Error::NoMatchingRuby)?;
+    let ((unset, set), executable_path) = match invocation.program {
+        Program::Ruby => (config::env_for(Some(&ruby))?, ruby.executable_path()),
         Program::Tool {
-            program,
-            set: extra_set,
+            executable_path,
             extra_paths,
-        } => {
-            let ruby = config.matching_ruby(request).ok_or(Error::NoMatchingRuby)?;
-            let (unset, mut set) = config::env_with_path_for(Some(&ruby), extra_paths)?;
-            set.extend(extra_set);
-
-            ((unset, set), program)
-        }
+        } => (
+            config::env_with_path_for(Some(&ruby), extra_paths)?,
+            executable_path,
+        ),
     };
-    let mut cmd = Command::new(program);
+    let mut cmd = Command::new(executable_path);
     cmd.args(args);
     for var in unset {
         cmd.env_remove(var);
@@ -113,7 +120,7 @@ pub(crate) fn run_no_install<A: AsRef<std::ffi::OsStr>>(
     for (key, val) in set {
         cmd.env(key, val);
     }
-    for (key, val) in env {
+    for (key, val) in invocation.env {
         cmd.env(key, val);
     }
     if let Some(path) = cwd {

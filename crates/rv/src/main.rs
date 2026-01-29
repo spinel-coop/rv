@@ -28,7 +28,7 @@ use crate::commands::ruby::install::install as ruby_install;
 use crate::commands::ruby::list::list as ruby_list;
 use crate::commands::ruby::pin::pin as ruby_pin;
 #[cfg(unix)]
-use crate::commands::ruby::run::{Program, run as ruby_run};
+use crate::commands::ruby::run::{Invocation, run as ruby_run};
 use crate::commands::ruby::uninstall::uninstall as ruby_uninstall;
 use crate::commands::ruby::{RubyArgs, RubyCommand};
 use crate::commands::shell::completions::shell_completions;
@@ -338,7 +338,7 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
                 no_install,
                 args,
             } => ruby_run(
-                Program::Ruby,
+                Invocation::ruby(vec![]),
                 config,
                 version,
                 no_install,
