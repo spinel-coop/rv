@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "crates/rv",
+  "crates/rvx",
   "crates/rv-core",
   "crates/rv-cache",
   "crates/rv-dirs",

@@ -2401,6 +2401,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rvx"
+version = "0.4.3"
+dependencies = [
+ "anstream",
+ "miette",
+ "rv-core",
+ "tokio",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
