@@ -3,7 +3,7 @@ use rv_ruby::request::{RubyRequest, Source};
 use rv_version::{Version, VersionError};
 use tracing::debug;
 
-use crate::commands::ruby::run::Program;
+use crate::commands::ruby::run::{Invocation, Program};
 use crate::commands::tool::{Installed, install as tool_install};
 use crate::config::Config;
 use fs_err as fs;
@@ -175,13 +175,15 @@ pub async fn run(
     }
 
     // TODO: I've got to add more env here.
-    let program = Program::Tool {
-        set: vec![("GEM_HOME", gem_home.to_string())],
-        program: file,
-        extra_paths: vec![tool_bin_dir.into()],
+    let invocation = Invocation {
+        program: Program::Tool {
+            executable_path: file,
+            extra_paths: vec![tool_bin_dir.into()],
+        },
+        env: vec![("GEM_HOME", gem_home.to_string())],
     };
     crate::commands::ruby::run::run(
-        program,
+        invocation,
         config,
         Some(ruby_version),
         no_install,
