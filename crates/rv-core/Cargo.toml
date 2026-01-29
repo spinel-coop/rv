@@ -1,12 +1,11 @@
 [package]
-name = "rv"
-version = "0.4.3"
+name = "rv-core"
+version = "0.1.0"
 rust-version = "1.90.0"
 edition = "2024"
 repository = "https://github.com/spinel-coop/rv"
 description = "Ruby version management, but fast"
 homepage = "https://spinel.coop/rv"
-default-run = "rv"
 
 [dependencies]
 clap = { workspace = true, features = ["derive", "env"] }
@@ -40,7 +39,6 @@ clap-verbosity-flag = { workspace = true, features = ["tracing"] }
 reqwest = { workspace = true, features = ["stream", "socks"] }
 flate2 = { workspace = true }
 tar = { workspace = true }
-rv-core = { workspace = true }
 rv-cache = { workspace = true, features = ["clap"] }
 rv-version = { workspace = true }
 rv-gem-specification-yaml = { workspace = true }
