@@ -95,6 +95,23 @@ pub async fn install(
     gem_server: String,
     force: bool,
 ) -> Result<Installed> {
+    match install_inner(config, gem, gem_server, force).await {
+        // Print out nice Miette reports, if the inner error type
+        // is actually a Miette report.
+        Err(Error::InstallError(CiError::YamlParsing(e))) => {
+            println!("{e:?}");
+            Err(Error::InstallError(CiError::YamlParsing(e)))
+        }
+        other => other,
+    }
+}
+
+pub async fn install_inner(
+    config: &Config,
+    gem: GemName,
+    gem_server: String,
+    force: bool,
+) -> Result<Installed> {
     // Check if 'gem' is in 'gem@version' format.
     // If `gem_version` is None, it means "latest". Otherwise it's a specific version.
     let (gem_name, gem_version) = if let Some((name, gem_version)) = gem.split_once('@') {
