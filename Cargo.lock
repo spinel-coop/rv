@@ -2151,6 +2151,40 @@ version = "0.4.3"
 dependencies = [
  "anstream",
  "assert_fs",
+ "camino-tempfile-ext",
+ "fs-err",
+ "insta",
+ "miette",
+ "mockito",
+ "pretty_assertions",
+ "rexpect",
+ "rv-core",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "rv-cache"
+version = "0.1.0"
+dependencies = [
+ "assert_fs",
+ "camino",
+ "clap",
+ "fs-err",
+ "rv-dirs",
+ "seahash",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tracing",
+]
+
+[[package]]
+name = "rv-core"
+version = "0.1.0"
+dependencies = [
+ "anstream",
+ "assert_fs",
  "base64",
  "bytes",
  "bytesize",
@@ -2210,22 +2244,6 @@ dependencies = [
  "tracing-oslog",
  "tracing-subscriber",
  "url",
-]
-
-[[package]]
-name = "rv-cache"
-version = "0.1.0"
-dependencies = [
- "assert_fs",
- "camino",
- "clap",
- "fs-err",
- "rv-dirs",
- "seahash",
- "serde",
- "serde_json",
- "tempfile",
- "tracing",
 ]
 
 [[package]]
@@ -2330,6 +2348,16 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "thiserror",
+]
+
+[[package]]
+name = "rvx"
+version = "0.4.3"
+dependencies = [
+ "anstream",
+ "miette",
+ "rv-core",
+ "tokio",
 ]
 
 [[package]]
