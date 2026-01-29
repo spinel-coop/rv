@@ -422,6 +422,34 @@ fn test_mocha_on_bacon_0_2_2_yaml_anchors() {
 }
 
 #[test]
+fn test_bacon_1_2_0_folded_scalar() {
+    // bacon-1.2.0.gem has a description field which uses a multiline quoted scalar with wrong
+    // indentation. That's invalid YAML and our YAML parser correctly rejects it, but parses
+    // succesfully with ruby's YAML parser. See https://matrix.yaml.info/details/QB6E.html. We
+    // support it by fixing the indentation before parsing.
+    let yaml_content = std::fs::read_to_string("tests/fixtures/bacon-1.2.0.gemspec.yaml")
+        .expect("bacon-1.2.0 fixture should exist");
+    let result = parse(&yaml_content);
+
+    match result {
+        Ok(spec) => {
+            assert_eq!(spec.name, "bacon");
+            assert_eq!(spec.version.to_string(), "1.2.0");
+
+            match spec.description {
+                Some(description) => assert_eq!(
+                    description,
+                    "Bacon is a small RSpec clone weighing less than 350 LoC but\nnevertheless providing all essential features.\n\nhttp://github.com/chneukirchen/bacon\n",
+                ),
+                None => panic!("bacon-1.2.0 description field was not parsed"),
+            }
+        }
+        Err(e) => {
+            panic!("bacon-1.2.0 should now parse successfully: {e}");
+        }
+    }
+}
+#[test]
 fn test_yaml_anchors_and_prerelease_field() {
     // This fixture now parses successfully with prerelease field support
     let yaml_content = load_fixture("yaml_anchors_and_prerelease");
