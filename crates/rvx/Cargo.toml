@@ -6,7 +6,6 @@ edition = "2024"
 repository = "https://github.com/spinel-coop/rv"
 description = "Run Ruby gems as executables"
 homepage = "https://spinel.coop/rv"
-default-run = "rvx"
 
 [dependencies]
 rv-core = { workspace = true }
