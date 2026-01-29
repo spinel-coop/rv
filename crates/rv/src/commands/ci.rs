@@ -33,6 +33,7 @@ use crate::commands::ci::checksums::HashReader;
 use crate::commands::ci::checksums::Hashed;
 use crate::commands::ruby::run::CaptureOutput;
 use crate::commands::ruby::run::Invocation;
+use crate::commands::ruby::run::Program;
 use crate::config::Config;
 use crate::progress::WorkProgress;
 use std::collections::HashMap;
@@ -1267,7 +1268,7 @@ fn compile_gem(config: &Config, args: &CiInnerArgs, spec: &GemSpecification) -> 
         } else if RAKE_REGEX.is_match(extension) {
             if !ran_rake
                 && let Ok(outputs) =
-                    build_rakefile(config, extension, &gem_path, &ext_dest, &lib_dest)
+                    build_rakefile(config, extension, gem_home, &gem_path, &ext_dest, &lib_dest)
             {
                 compile_results.push(CompileNativeExtResult {
                     extension: extension.to_string(),
@@ -1323,6 +1324,7 @@ fn compile_gem(config: &Config, args: &CiInnerArgs, spec: &GemSpecification) -> 
 fn build_rakefile(
     config: &Config,
     extension: &str,
+    gem_home: &Utf8PathBuf,
     gem_path: &Utf8PathBuf,
     ext_dest: &Utf8PathBuf,
     lib_dest: &Utf8PathBuf,
@@ -1351,10 +1353,23 @@ fn build_rakefile(
     let sitearchdir = format!("RUBYARCHDIR={}", tmp_dir.path());
     let sitelibdir = format!("RUBYLIBDIR={}", tmp_dir.path());
     let args = vec![sitearchdir, sitelibdir];
-    output = Command::new("rake")
-        .args(&args)
-        .current_dir(&ext_dir)
-        .output()?;
+
+    let rake = Invocation {
+        program: Program::Tool {
+            executable_path: "rake".into(),
+            extra_paths: vec![],
+        },
+        env: vec![("GEM_HOME", gem_home.to_string())],
+    };
+
+    output = crate::commands::ruby::run::run_no_install(
+        rake,
+        config,
+        &config.ruby_request(),
+        &args,
+        CaptureOutput::Both,
+        Some(&ext_dir),
+    )?;
     outputs.push(output);
 
     // 3. Copy the resulting files to ext and lib dirs
