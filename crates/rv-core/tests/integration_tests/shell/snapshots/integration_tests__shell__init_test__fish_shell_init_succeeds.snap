@@ -1,8 +1,0 @@
----
-source: crates/rv/tests/integration_tests/shell/init_test.rs
-expression: output.normalized_stdout()
----
-function _rv_autoload_hook --on-event fish_preexec --description 'Change Ruby version before running every command'
-    /tmp/bin/rv shell env fish | source
-end
-_rv_autoload_hook

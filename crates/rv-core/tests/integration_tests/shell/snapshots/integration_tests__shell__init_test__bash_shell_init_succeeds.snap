@@ -1,9 +1,0 @@
----
-source: crates/rv/tests/integration_tests/shell/init_test.rs
-expression: output.normalized_stdout()
----
-_rv_autoload_hook() {
-    eval "$(/tmp/bin/rv shell env bash)"
-}
-trap '[[ "$BASH_COMMAND" != "$PROMPT_COMMAND" ]] && _rv_autoload_hook' DEBUG
-_rv_autoload_hook
