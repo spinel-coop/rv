@@ -97,8 +97,6 @@ pub enum Error {
     UnknownExtension { filename: String, gemname: String },
     #[error("No gemspec found for downloaded gem {0}")]
     MissingGemspec(String),
-    #[error("Error converting YAML gemspec to Ruby: {0}")]
-    GemspecToRubyError(String),
     #[error("Error evaluating gemspec: {0}")]
     GemspecError(String),
     #[error("rv ci needs a Gemfile, but could not find it")]
@@ -157,8 +155,6 @@ pub enum Error {
         "The gemfile path must be inside a directory with a parent, but it wasn't. Path was {0}"
     )]
     InvalidGemfilePath(String),
-    #[error(transparent)]
-    ValidationErr(#[from] ValidationErr),
     #[error("Could not parse YAML metadata inside gem package")]
     #[diagnostic(transparent)]
     YamlParsing(#[diagnostic_source] miette::Report),
@@ -366,13 +362,6 @@ fn install_paths<'i>(
         Ok::<_, Error>(path_source_specs)
     })?;
     Ok(path_specs)
-}
-
-/// Errors that could occur when validating gems from their gemspec.
-#[derive(thiserror::Error, Debug)]
-pub enum ValidationErr {
-    #[error("The gem {gem_name} doesn't have any executables")]
-    NoExecutable { gem_name: String },
 }
 
 fn install_path(
