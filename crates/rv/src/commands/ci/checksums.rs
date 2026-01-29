@@ -1,5 +1,5 @@
-use super::Error;
-use super::Result;
+use super::UnpackError;
+use super::UnpackResult;
 use std::io::{self, Read};
 
 use bytes::Bytes;
@@ -117,14 +117,14 @@ impl ArchiveChecksums {
         Some(out)
     }
 
-    pub fn validate_data_tar(&self, gem_name: String, hashed: &Hashed) -> Result<()> {
+    pub fn validate_data_tar(&self, gem_name: String, hashed: &Hashed) -> UnpackResult<()> {
         if self.sha256.is_none() && self.sha512.is_none() {
             eprintln!("Checksum file for {gem_name} was empty");
         }
         if let Some(sha256) = &self.sha256
             && hashed.digest_256 != sha256.data_tar_gz
         {
-            return Err(Error::ArchiveChecksumFail {
+            return Err(UnpackError::ArchiveChecksumFail {
                 filename: "data.tar.gz".to_owned(),
                 gem_name,
                 algo: "sha256",
@@ -133,7 +133,7 @@ impl ArchiveChecksums {
         if let Some(sha512) = &self.sha512
             && hashed.digest_512 != sha512.data_tar_gz
         {
-            return Err(Error::ArchiveChecksumFail {
+            return Err(UnpackError::ArchiveChecksumFail {
                 filename: "data.tar.gz".to_owned(),
                 gem_name,
                 algo: "sha512",
@@ -142,14 +142,14 @@ impl ArchiveChecksums {
         Ok(())
     }
 
-    pub fn validate_metadata(&self, gem_name: String, hashed: Hashed) -> Result<()> {
+    pub fn validate_metadata(&self, gem_name: String, hashed: Hashed) -> UnpackResult<()> {
         if self.sha256.is_none() && self.sha512.is_none() {
             eprintln!("Checksum file for {gem_name} was empty");
         }
         if let Some(sha256) = &self.sha256 {
             let expected = &sha256.metadata_gz;
             if hashed.digest_256 != expected {
-                return Err(Error::ArchiveChecksumFail {
+                return Err(UnpackError::ArchiveChecksumFail {
                     filename: "metadata.gz".to_owned(),
                     gem_name,
                     algo: "sha256",
@@ -159,7 +159,7 @@ impl ArchiveChecksums {
         if let Some(sha512) = &self.sha512
             && hashed.digest_512 != sha512.metadata_gz
         {
-            return Err(Error::ArchiveChecksumFail {
+            return Err(UnpackError::ArchiveChecksumFail {
                 filename: "metadata.gz".to_owned(),
                 gem_name,
                 algo: "sha512",

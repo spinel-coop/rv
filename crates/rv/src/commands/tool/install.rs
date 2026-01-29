@@ -10,7 +10,7 @@ use url::Url;
 
 use crate::{
     commands::{
-        ci::{Error as CiError, InstallStats},
+        ci::InstallStats,
         tool::{
             Installed,
             install::{
@@ -54,7 +54,7 @@ pub enum Error {
     #[error("Could not choose version: {0}")]
     CouldNotChooseVersion(String),
     #[error(transparent)]
-    InstallError(#[from] CiError),
+    InstallError(#[from] crate::commands::ci::Error),
     #[error("rv could not find any Ruby versions to install")]
     NoRubies,
     #[error(
@@ -90,23 +90,6 @@ impl InnerArgs {
 }
 
 pub async fn install(
-    config: &Config,
-    gem: GemName,
-    gem_server: String,
-    force: bool,
-) -> Result<Installed> {
-    match install_inner(config, gem, gem_server, force).await {
-        // Print out nice Miette reports, if the inner error type
-        // is actually a Miette report.
-        Err(Error::InstallError(CiError::YamlParsing(e))) => {
-            println!("{e:?}");
-            Err(Error::InstallError(CiError::YamlParsing(e)))
-        }
-        other => other,
-    }
-}
-
-pub async fn install_inner(
     config: &Config,
     gem: GemName,
     gem_server: String,
@@ -237,48 +220,32 @@ pub async fn install_inner(
     let mut config_for_install = config.clone();
     config_for_install.requested_ruby = Some((ruby_to_use.clone().into(), Source::Other));
 
-    let result = crate::commands::ci::install_from_lockfile(
+    let InstallStats {
+        executables_installed,
+    } = crate::commands::ci::install_from_lockfile(
         &config_for_install,
         lockfile,
         install_path.clone(),
     )
-    .await;
-
-    match result {
-        Ok(InstallStats {
-            executables_installed: 0,
-        }) => {
-            fs::remove_dir_all(install_path).unwrap();
-            Err(Error::NoExecutables)
-        }
-
-        Err(error) => match error {
-            CiError::YamlParsing(_) | CiError::MissingGemspec(_) => {
-                fs::remove_dir_all(install_path).unwrap();
-                Err(Error::InstallError(error))
-            }
-
-            error => Err(Error::InstallError(error)),
-        },
-
-        _ => {
-            let pin_path = install_path.join(".ruby-version");
-            fs::write(&pin_path, format!("{ruby_to_use}\n"))
-                .map_err(Error::CouldNotPinRubyVersion)?;
-            debug!("Pinned dir {} to {}", pin_path, ruby_to_use);
-            let gem_name = args.gem.cyan();
-            println!(
-                "Installed {} version {} to {}",
-                gem_name.cyan(),
-                release_to_install.version_platform(),
-                install_path.cyan(),
-            );
-            Ok(Installed {
-                version: release_to_install.version().to_owned(),
-                dir: install_path,
-            })
-        }
+    .await?;
+    if executables_installed == 0 {
+        fs::remove_dir_all(install_path).unwrap();
+        return Err(Error::NoExecutables);
     }
+    let pin_path = install_path.join(".ruby-version");
+    fs::write(&pin_path, format!("{ruby_to_use}\n")).map_err(Error::CouldNotPinRubyVersion)?;
+    debug!("Pinned dir {} to {}", pin_path, ruby_to_use);
+    let gem_name = args.gem.cyan();
+    println!(
+        "Installed {} version {} to {}",
+        gem_name.cyan(),
+        release_to_install.version_platform(),
+        install_path.cyan(),
+    );
+    Ok(Installed {
+        version: release_to_install.version().to_owned(),
+        dir: install_path,
+    })
 }
 
 /// Owns the information needed to create a lockfile.

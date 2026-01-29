@@ -88,6 +88,31 @@ struct CiInnerArgs {
 }
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum UnpackError {
+    #[error("No gemspec found for downloaded gem {0}")]
+    MissingGemspec(String),
+    #[error(transparent)]
+    Io(#[from] io::Error),
+    #[error("File {filename} did not match {algo} checksum in gem {gem_name} archive")]
+    ArchiveChecksumFail {
+        filename: String,
+        gem_name: String,
+        algo: &'static str,
+    },
+    #[error("Checksum for {0} was not valid YAML")]
+    InvalidChecksum(String),
+    #[error("Gem {gem_name} archive did not include metadata.gz")]
+    NoMetadata { gem_name: String },
+    #[error("Gem archive did not include data.tar.gz")]
+    NoDataTar,
+    #[error("Invalid gem archive: {0}")]
+    InvalidGemArchive(String),
+    #[error("Could not parse YAML metadata inside gem package")]
+    #[diagnostic(transparent)]
+    YamlParsing(#[diagnostic_source] miette::Report),
+}
+
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error(transparent)]
     Infallible(#[from] std::convert::Infallible),
@@ -95,8 +120,6 @@ pub enum Error {
     Install(#[from] crate::commands::ruby::install::Error),
     #[error("Cannot build unknown native extension {filename} from gem {gemname}")]
     UnknownExtension { filename: String, gemname: String },
-    #[error("No gemspec found for downloaded gem {0}")]
-    MissingGemspec(String),
     #[error("Error evaluating gemspec: {0}")]
     GemspecError(String),
     #[error("rv ci needs a Gemfile, but could not find it")]
@@ -129,20 +152,6 @@ pub enum Error {
     UrlError(#[from] url::ParseError),
     #[error("Could not read install directory from Bundler")]
     BadBundlePath,
-    #[error("Checksum for {0} was not valid YAML")]
-    InvalidChecksum(String),
-    #[error("Gem {gem_name} archive did not include metadata.gz")]
-    NoMetadata { gem_name: String },
-    #[error("Gem archive did not include data.tar.gz")]
-    NoDataTar,
-    #[error("File {filename} did not match {algo} checksum in gem {gem_name} archive")]
-    ArchiveChecksumFail {
-        filename: String,
-        gem_name: String,
-        algo: &'static str,
-    },
-    #[error("Invalid gem archive: {0}")]
-    InvalidGemArchive(String),
     #[error("File {filename} did not match {algo} locked checksum in gem {gem_name}")]
     LockfileChecksumFail {
         filename: String,
@@ -161,12 +170,12 @@ pub enum Error {
         "The gemfile path must be inside a directory with a parent, but it wasn't. Path was {0}"
     )]
     InvalidGemfilePath(String),
-    #[error("Could not parse YAML metadata inside gem package")]
-    #[diagnostic(transparent)]
-    YamlParsing(#[diagnostic_source] miette::Report),
+    #[error(transparent)]
+    UnpackError(#[from] UnpackError),
 }
 
 type Result<T> = std::result::Result<T, Error>;
+type UnpackResult<T> = std::result::Result<T, UnpackError>;
 
 pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     // We need some Ruby installed, because we need to run Ruby code when installing
@@ -842,9 +851,9 @@ fn install_single_gem<'i>(
 ) -> Result<GemSpecification> {
     let gv = download.spec.gem_version;
     // Actually unpack the tarball here.
-    let dep_gemspec_res = download.unpack_tarball(config, args.install_path.clone(), args)?;
+    let dep_gemspec_res = download.unpack_tarball(config, &args.install_path, args)?;
     debug!("Unpacked tarball {gv}");
-    let dep_gemspec = dep_gemspec_res.ok_or(Error::MissingGemspec(gv.to_string()))?;
+    let dep_gemspec = dep_gemspec_res.ok_or(UnpackError::MissingGemspec(gv.to_string()))?;
     debug!("Installing binstubs for {gv}");
     install_binstub(&dep_gemspec.name, &dep_gemspec.executables, binstub_dir)?;
     debug!("Installed {gv}");
@@ -1071,9 +1080,30 @@ impl<'i> DownloadedRubygems<'i> {
     fn unpack_tarball(
         self,
         config: &Config,
-        bundle_path: Utf8PathBuf,
+        bundle_path: &Utf8PathBuf,
         args: &CiInnerArgs,
     ) -> Result<Option<GemSpecification>> {
+        match self.unpack_tarball_inner(config, bundle_path, args) {
+            Err(error) => {
+                // Print out nice Miette reports
+                if matches!(error, UnpackError::YamlParsing(_)) {
+                    println!("{error:?}");
+                };
+
+                std::fs::remove_dir_all(bundle_path).unwrap();
+
+                Err(Error::UnpackError(error))
+            }
+            Ok(other) => Ok(other),
+        }
+    }
+
+    fn unpack_tarball_inner(
+        self,
+        config: &Config,
+        bundle_path: &Utf8PathBuf,
+        args: &CiInnerArgs,
+    ) -> UnpackResult<Option<GemSpecification>> {
         // Unpack the tarball into DIR/gems/
         // It should contain a metadata zip, and a data zip
         // (and optionally, a checksum zip).
@@ -1100,13 +1130,14 @@ impl<'i> DownloadedRubygems<'i> {
                     let mut contents = GzDecoder::new(entry);
                     let mut str_contents = String::new();
                     let _ = contents.read_to_string(&mut str_contents)?;
-                    let cs = ArchiveChecksums::new(&str_contents)
-                        .ok_or(Error::InvalidChecksum(self.spec.gem_version.to_string()))?;
+                    let cs = ArchiveChecksums::new(&str_contents).ok_or(
+                        UnpackError::InvalidChecksum(self.spec.gem_version.to_string()),
+                    )?;
 
                     // Should not happen in practice, because we break after finding the checksums.
                     // But may as well be defensive here.
                     if checksums.replace(cs).is_some() {
-                        return Err(Error::InvalidGemArchive(
+                        return Err(UnpackError::InvalidGemArchive(
                             "two checksums.yaml.gz files found in the gem archive".to_owned(),
                         ));
                     }
@@ -1114,20 +1145,24 @@ impl<'i> DownloadedRubygems<'i> {
                 "metadata.gz" => {
                     // Unpack the metadata, which stores the gem specs.
                     if found_gemspec.is_some() {
-                        return Err(Error::InvalidGemArchive("two metadata.gz found".to_owned()));
+                        return Err(UnpackError::InvalidGemArchive(
+                            "two metadata.gz found".to_owned(),
+                        ));
                     }
-                    let UnpackedMetdata { hashed, gemspec } =
-                        unpack_metadata(config, &bundle_path, &full_name, HashReader::new(entry))?;
+                    let UnpackedMetadata { hashed, gemspec } =
+                        unpack_metadata(config, bundle_path, &full_name, HashReader::new(entry))?;
                     found_gemspec = Some(gemspec);
                     metadata_hashed = Some(hashed);
                 }
                 "data.tar.gz" => {
                     // Unpack the data archive, which stores all the gems.
                     if data_tar_unpacked.is_some() {
-                        return Err(Error::InvalidGemArchive("two data.tar.gz found".to_owned()));
+                        return Err(UnpackError::InvalidGemArchive(
+                            "two data.tar.gz found".to_owned(),
+                        ));
                     }
                     let unpacked =
-                        unpack_data_tar(&bundle_path, &full_name, HashReader::new(entry))?;
+                        unpack_data_tar(bundle_path, &full_name, HashReader::new(entry))?;
                     data_tar_unpacked = Some(unpacked);
                 }
                 "data.tar.gz.sig" | "metadata.gz.sig" | "checksums.yaml.gz.sig" => {
@@ -1142,10 +1177,10 @@ impl<'i> DownloadedRubygems<'i> {
         }
 
         let Some(data_tar_unpacked) = data_tar_unpacked else {
-            return Err(Error::NoDataTar);
+            return Err(UnpackError::NoDataTar);
         };
         if found_gemspec.is_none() {
-            return Err(Error::NoMetadata {
+            return Err(UnpackError::NoMetadata {
                 gem_name: full_name,
             });
         };
@@ -1456,7 +1491,7 @@ fn unpack_data_tar<R>(
     bundle_path: &Utf8Path,
     nameversion: &str,
     data_tar_gz: HashReader<R>,
-) -> Result<UnpackedData>
+) -> UnpackResult<UnpackedData>
 where
     R: std::io::Read,
 {
@@ -1472,7 +1507,7 @@ where
     Ok(UnpackedData { hashed })
 }
 
-struct UnpackedMetdata {
+struct UnpackedMetadata {
     hashed: Hashed,
     gemspec: GemSpecification,
 }
@@ -1484,7 +1519,7 @@ fn unpack_metadata<R>(
     bundle_path: &Utf8Path,
     nameversion: &str,
     metadata_gz: HashReader<R>,
-) -> Result<UnpackedMetdata>
+) -> UnpackResult<UnpackedMetadata>
 where
     R: Read,
 {
@@ -1499,12 +1534,13 @@ where
     let mut yaml_contents = String::new();
     let mut unzipper = GzDecoder::new(metadata_gz);
     unzipper.read_to_string(&mut yaml_contents)?;
-    let parsed = rv_gem_specification_yaml::parse(&yaml_contents).map_err(Error::YamlParsing)?;
+    let parsed =
+        rv_gem_specification_yaml::parse(&yaml_contents).map_err(UnpackError::YamlParsing)?;
     let ruby_contents = rv_gem_specification_yaml::to_ruby(parsed.clone());
     std::io::copy(&mut ruby_contents.as_bytes(), &mut dst)?;
 
     let h = unzipper.into_inner();
-    Ok(UnpackedMetdata {
+    Ok(UnpackedMetadata {
         hashed: h.finalize(),
         gemspec: parsed,
     })
