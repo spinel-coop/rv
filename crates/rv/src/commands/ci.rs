@@ -135,14 +135,20 @@ pub enum Error {
     NoMetadata { gem_name: String },
     #[error("Gem archive did not include data.tar.gz")]
     NoDataTar,
-    #[error("File {filename} did not match {algo} checksum in gem {gem_name}")]
-    ChecksumFail {
+    #[error("File {filename} did not match {algo} checksum in gem {gem_name} archive")]
+    ArchiveChecksumFail {
         filename: String,
         gem_name: String,
         algo: &'static str,
     },
     #[error("Invalid gem archive: {0}")]
     InvalidGemArchive(String),
+    #[error("File {filename} did not match {algo} locked checksum in gem {gem_name}")]
+    LockfileChecksumFail {
+        filename: String,
+        gem_name: String,
+        algo: &'static str,
+    },
     #[error("Could not write binstub for {dep_name}/{exe_name}: {error}")]
     CouldNotWriteBinstub {
         dep_name: String,
@@ -1615,7 +1621,7 @@ async fn download_gem<'i>(
             KnownChecksumAlgos::Sha256 => {
                 let actual = sha2::Sha256::digest(&contents);
                 if actual[..] != checksum.value {
-                    return Err(Error::ChecksumFail {
+                    return Err(Error::LockfileChecksumFail {
                         filename: url.to_string(),
                         gem_name: spec.gem_version.to_string(),
                         algo: "sha256",

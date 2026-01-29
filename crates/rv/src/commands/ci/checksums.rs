@@ -124,7 +124,7 @@ impl ArchiveChecksums {
         if let Some(sha256) = &self.sha256
             && hashed.digest_256 != sha256.data_tar_gz
         {
-            return Err(Error::ChecksumFail {
+            return Err(Error::ArchiveChecksumFail {
                 filename: "data.tar.gz".to_owned(),
                 gem_name,
                 algo: "sha256",
@@ -133,7 +133,7 @@ impl ArchiveChecksums {
         if let Some(sha512) = &self.sha512
             && hashed.digest_512 != sha512.data_tar_gz
         {
-            return Err(Error::ChecksumFail {
+            return Err(Error::ArchiveChecksumFail {
                 filename: "data.tar.gz".to_owned(),
                 gem_name,
                 algo: "sha512",
@@ -149,7 +149,7 @@ impl ArchiveChecksums {
         if let Some(sha256) = &self.sha256 {
             let expected = &sha256.metadata_gz;
             if hashed.digest_256 != expected {
-                return Err(Error::ChecksumFail {
+                return Err(Error::ArchiveChecksumFail {
                     filename: "metadata.gz".to_owned(),
                     gem_name,
                     algo: "sha256",
@@ -159,7 +159,7 @@ impl ArchiveChecksums {
         if let Some(sha512) = &self.sha512
             && hashed.digest_512 != sha512.metadata_gz
         {
-            return Err(Error::ChecksumFail {
+            return Err(Error::ArchiveChecksumFail {
                 filename: "metadata.gz".to_owned(),
                 gem_name,
                 algo: "sha512",
