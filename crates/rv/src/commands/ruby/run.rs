@@ -88,17 +88,14 @@ pub(crate) fn run_no_install<A: AsRef<std::ffi::OsStr>>(
     cwd: Option<&Utf8Path>,
     env: Vec<(&str, &str)>,
 ) -> Result<Output> {
+    let ruby = config.matching_ruby(request).ok_or(Error::NoMatchingRuby)?;
     let ((unset, set), program) = match program {
-        Program::Ruby => {
-            let ruby = config.matching_ruby(request).ok_or(Error::NoMatchingRuby)?;
-            (config::env_for(Some(&ruby))?, ruby.executable_path())
-        }
+        Program::Ruby => (config::env_for(Some(&ruby))?, ruby.executable_path()),
         Program::Tool {
             program,
             set: extra_set,
             extra_paths,
         } => {
-            let ruby = config.matching_ruby(request).ok_or(Error::NoMatchingRuby)?;
             let (unset, mut set) = config::env_with_path_for(Some(&ruby), extra_paths)?;
             set.extend(extra_set);
 
