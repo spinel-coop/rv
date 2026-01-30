@@ -49,20 +49,7 @@ pub async fn install(
     tarball_path: Option<String>,
 ) -> Result<()> {
     let progress = WorkProgress::new();
-    let result = install_inner(config, install_dir, requested, tarball_path, &progress).await;
 
-    progress.clear();
-
-    result
-}
-
-async fn install_inner(
-    config: &Config,
-    install_dir: Option<String>,
-    requested: Option<RubyRequest>,
-    tarball_path: Option<String>,
-    progress: &WorkProgress,
-) -> Result<()> {
     let requested_range = match requested {
         None => config.ruby_request(),
         Some(version) => version,
@@ -100,7 +87,7 @@ async fn install_inner(
                 config,
                 &install_dir,
                 &selected_version.number(),
-                progress,
+                &progress,
             )
             .await?
         }
@@ -111,6 +98,8 @@ async fn install_inner(
         selected_version.to_string().cyan(),
         install_dir.cyan()
     );
+
+    progress.clear();
 
     Ok(())
 }
