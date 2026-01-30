@@ -32,3 +32,11 @@ jobs:
 
       - name: rv clean-install for ${{ matrix.project }}
         run: bin/smoke-tests/${{ matrix.project }}
+
+      - name: Slack ping if failure
+        if: failure() && secrets.SLACK_ALERTS_WEBHOOK_URL != ''
+        run: |
+          curl -fSs -X POST \
+            -H 'Content-type: application/json' \
+            --data '{"text":"🚨 Smoke test failure: ${{ matrix.project }}\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
+            ${{ secrets.SLACK_ALERTS_WEBHOOK_URL }}
