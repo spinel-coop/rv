@@ -269,15 +269,6 @@ impl WorkProgress {
             let _ = write_progress(ProgressState::Error);
         }
     }
-
-    /// Clear/remove the progress indicator.
-    pub fn clear(&self) {
-        // Stop the refresh thread
-        self.inner.running.store(false, Ordering::SeqCst);
-        if self.enabled {
-            let _ = write_progress(ProgressState::Remove);
-        }
-    }
 }
 
 /// Compute current progress percentage from inner state.
@@ -506,7 +497,7 @@ mod tests {
         assert_eq!(compute_percent(&inner), 80);
 
         // If no compile phase is started (0 native extensions),
-        // progress stays at 80% until clear() is called
+        // progress stays at 80% until progress bar is cleared
     }
 
     #[test]
