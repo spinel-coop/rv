@@ -51,10 +51,7 @@ pub async fn install(
     let progress = WorkProgress::new();
     let result = install_inner(config, install_dir, requested, tarball_path, &progress).await;
 
-    match &result {
-        Ok(()) => progress.clear(),
-        Err(_) => progress.set_error(),
-    }
+    progress.clear();
 
     result
 }

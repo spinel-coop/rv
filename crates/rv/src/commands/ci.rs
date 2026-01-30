@@ -215,13 +215,7 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     drop(span);
     let result = ci_inner_work(config, &inner_args, &progress, lockfile).await;
 
-    // On success, clear the progress indicator.
-    // On error, set error state but don't clear - this leaves a red/error indicator
-    // visible in the terminal tab/titlebar until the user runs another command.
-    match &result {
-        Ok(_installed) => progress.clear(),
-        Err(_) => progress.set_error(),
-    }
+    progress.clear();
 
     result.map(|_| ())
 }
@@ -257,13 +251,7 @@ pub async fn install_from_lockfile(
     // Do the work.
     let result = ci_inner_work(config, &inner_args, &progress, lockfile).await;
 
-    // On success, clear the progress indicator.
-    // On error, set error state but don't clear - this leaves a red/error indicator
-    // visible in the terminal tab/titlebar until the user runs another command.
-    match &result {
-        Ok(_) => progress.clear(),
-        Err(_) => progress.set_error(),
-    }
+    progress.clear();
 
     result
 }
