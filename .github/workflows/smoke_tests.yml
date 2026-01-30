@@ -63,9 +63,13 @@ jobs:
         run: bin/smoke-tests/${{ matrix.project }}
 
       - name: Slack ping if failure
-        if: failure() && secrets.SLACK_ALERTS_WEBHOOK_URL != ''
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_ALERTS_WEBHOOK_URL }}
         run: |
-          curl -fSs -X POST \
-            -H 'Content-type: application/json' \
-            --data '{"text":"🚨 Smoke test failure: ${{ matrix.project }}\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
-            ${{ secrets.SLACK_ALERTS_WEBHOOK_URL }}
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            curl -fSs -X POST \
+              -H 'Content-type: application/json' \
+              --data '{"text":"🚨 Smoke test failure: ${{ matrix.project }}\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
+              "$SLACK_WEBHOOK_URL"
+          fi
