@@ -117,8 +117,6 @@ struct WorkProgressInner {
     running: AtomicBool,
     /// True while a phase transition is in progress (prevents race conditions)
     transitioning: AtomicBool,
-    /// True if error state was set (prevents Drop from clearing it)
-    error_set: AtomicBool,
 }
 
 /// A thread-safe work progress tracker that updates the terminal progress indicator.
@@ -167,7 +165,6 @@ impl WorkProgress {
             phase_percent: AtomicU64::new(0), // Start at 0 so no progress shows initially
             running: AtomicBool::new(true),
             transitioning: AtomicBool::new(false),
-            error_set: AtomicBool::new(false),
         });
 
         // Spawn a background thread to periodically refresh the progress
@@ -267,11 +264,8 @@ impl WorkProgress {
     /// Set error state on the progress indicator.
     ///
     /// This shows a red/error indicator in terminals that support it.
-    /// The error state persists until the terminal is cleared or another
-    /// command updates the progress (Drop will not clear it).
     pub fn set_error(&self) {
         if self.enabled {
-            self.inner.error_set.store(true, Ordering::SeqCst);
             let _ = write_progress(ProgressState::Error);
         }
     }
@@ -317,8 +311,7 @@ impl Drop for WorkProgress {
             let _ = handle.join();
         }
 
-        // Don't clear if error state was set - let the error indicator persist
-        if self.enabled && !self.inner.error_set.load(Ordering::SeqCst) {
+        if self.enabled {
             let _ = write_progress(ProgressState::Remove);
         }
     }
@@ -356,7 +349,6 @@ mod tests {
             phase_percent: AtomicU64::new(0),
             running: AtomicBool::new(true),
             transitioning: AtomicBool::new(false),
-            error_set: AtomicBool::new(false),
         };
         assert_eq!(compute_percent(&inner), 0);
     }
@@ -371,7 +363,6 @@ mod tests {
             phase_percent: AtomicU64::new(40),
             running: AtomicBool::new(true),
             transitioning: AtomicBool::new(false),
-            error_set: AtomicBool::new(false),
         };
         // No items in phase, should return base
         assert_eq!(compute_percent(&inner), 40);
@@ -387,7 +378,6 @@ mod tests {
             phase_percent: AtomicU64::new(40),
             running: AtomicBool::new(true),
             transitioning: AtomicBool::new(false),
-            error_set: AtomicBool::new(false),
         };
         // 50% of 40% phase = 20%
         assert_eq!(compute_percent(&inner), 20);
@@ -403,7 +393,6 @@ mod tests {
             phase_percent: AtomicU64::new(40),
             running: AtomicBool::new(true),
             transitioning: AtomicBool::new(false),
-            error_set: AtomicBool::new(false),
         };
         // 100% of 40% phase = 40%
         assert_eq!(compute_percent(&inner), 40);
@@ -419,7 +408,6 @@ mod tests {
             phase_percent: AtomicU64::new(40),
             running: AtomicBool::new(true),
             transitioning: AtomicBool::new(false),
-            error_set: AtomicBool::new(false),
         };
         // Base 40% + 50% of 40% phase = 40% + 20% = 60%
         assert_eq!(compute_percent(&inner), 60);
@@ -435,7 +423,6 @@ mod tests {
             phase_percent: AtomicU64::new(30), // Would exceed 100%
             running: AtomicBool::new(true),
             transitioning: AtomicBool::new(false),
-            error_set: AtomicBool::new(false),
         };
         // Base 80% + 100% of 30% = 110%, clamped to 100%
         assert_eq!(compute_percent(&inner), 100);
@@ -452,7 +439,6 @@ mod tests {
             phase_percent: AtomicU64::new(0),
             running: AtomicBool::new(true),
             transitioning: AtomicBool::new(false),
-            error_set: AtomicBool::new(false),
         });
 
         // Simulate phase 1: downloads (0-40%)
@@ -514,7 +500,6 @@ mod tests {
             phase_percent: AtomicU64::new(40),
             running: AtomicBool::new(true),
             transitioning: AtomicBool::new(false),
-            error_set: AtomicBool::new(false),
         });
 
         // After installs complete, we're at 80%
@@ -536,7 +521,6 @@ mod tests {
             phase_percent: AtomicU64::new(100), // Single phase uses full 100%
             running: AtomicBool::new(true),
             transitioning: AtomicBool::new(false),
-            error_set: AtomicBool::new(false),
         };
         // 45% of 100% = 45%
         assert_eq!(compute_percent(&inner), 45);
