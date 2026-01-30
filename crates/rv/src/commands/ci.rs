@@ -83,7 +83,6 @@ struct CiInnerArgs {
     pub max_concurrent_requests: usize,
     pub max_concurrent_installs: usize,
     pub validate_checksums: bool,
-    pub lockfile_path: Utf8PathBuf,
     pub install_path: Utf8PathBuf,
     pub extensions_dir: Utf8PathBuf,
 }
@@ -196,14 +195,10 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         max_concurrent_requests: args.max_concurrent_requests,
         max_concurrent_installs: args.max_concurrent_installs,
         validate_checksums: args.validate_checksums,
-        lockfile_path,
         install_path,
         extensions_dir,
     };
-    ci_inner(config, &inner_args).await.map(|_| ())
-}
 
-async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<InstallStats> {
     // Terminal progress indicator (OSC 9;4) for supported terminals
     let progress = WorkProgress::new();
 
@@ -213,12 +208,12 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<InstallStats> {
 
     let lockfile_contents = {
         let _guard = span.enter();
-        tokio::fs::read_to_string(&args.lockfile_path).await?
+        tokio::fs::read_to_string(&lockfile_path).await?
     };
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
 
     drop(span);
-    let result = ci_inner_work(config, args, &progress, lockfile).await;
+    let result = ci_inner_work(config, &inner_args, &progress, lockfile).await;
 
     // On success, clear the progress indicator.
     // On error, set error state but don't clear - this leaves a red/error indicator
@@ -228,7 +223,7 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<InstallStats> {
         Err(_) => progress.set_error(),
     }
 
-    result
+    result.map(|_| ())
 }
 
 pub struct InstallStats {
@@ -252,7 +247,6 @@ pub async fn install_from_lockfile(
         max_concurrent_requests: 10,
         max_concurrent_installs: 20,
         validate_checksums: true,
-        lockfile_path: Default::default(),
         install_path,
         extensions_dir: find_exts_dir(config, &ruby_request)?,
     };
