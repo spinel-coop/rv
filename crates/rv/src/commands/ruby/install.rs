@@ -99,8 +99,6 @@ pub async fn install(
         install_dir.cyan()
     );
 
-    progress.clear();
-
     Ok(())
 }
 

@@ -213,11 +213,10 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
 
     drop(span);
-    let result = ci_inner_work(config, &inner_args, &progress, lockfile).await;
 
-    progress.clear();
-
-    result.map(|_| ())
+    ci_inner_work(config, &inner_args, &progress, lockfile)
+        .await
+        .map(|_| ())
 }
 
 pub struct InstallStats {
@@ -249,11 +248,7 @@ pub async fn install_from_lockfile(
     let progress = WorkProgress::new();
 
     // Do the work.
-    let result = ci_inner_work(config, &inner_args, &progress, lockfile).await;
-
-    progress.clear();
-
-    result
+    ci_inner_work(config, &inner_args, &progress, lockfile).await
 }
 
 async fn ci_inner_work(
