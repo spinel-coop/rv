@@ -238,7 +238,15 @@ async fn main() {
 }
 
 async fn run() -> Result<()> {
-    let cli = Cli::parse();
+    let is_rvx = std::env::args().next().unwrap().ends_with("rvx");
+    let cli = if is_rvx {
+        let mut args = std::env::args().collect::<Vec<String>>();
+        let rvx_args = ["rv", "tool", "run"].map(|s| s.to_string());
+        args.splice(0..1, rvx_args);
+        Cli::parse_from(args)
+    } else {
+        Cli::parse()
+    };
 
     let indicatif_layer = IndicatifLayer::new();
 
