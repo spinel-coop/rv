@@ -849,29 +849,33 @@ fn compile_gems(
     use dep_graph::{DepGraph, Node};
     use rayon::prelude::*;
 
-    let mut nodes = HashMap::new();
-    for spec in &specs {
-        if !spec.extensions.is_empty() {
-            nodes.insert(spec.name.clone(), Node::new(spec.name.clone()));
-        }
-    }
+    let mut nodes: HashMap<String, &GemSpecification> = HashMap::new();
 
-    for spec in &specs {
-        if nodes.contains_key(&spec.name) {
+    let deps: Vec<_> = specs
+        .iter()
+        .map(|spec| {
+            let name = spec.name.clone();
+            let mut node = Node::new(name.clone());
+
+            if !spec.extensions.is_empty() {
+                nodes.insert(name, spec);
+            }
+
             for dep in &spec.dependencies {
-                if nodes.contains_key(&dep.name) && dep.is_runtime() {
-                    nodes.get_mut(&spec.name).unwrap().add_dep(dep.name.clone());
+                if dep.is_runtime() {
+                    node.add_dep(dep.name.clone());
                 }
             }
-        }
-    }
 
-    let deps: Vec<Node<String>> = nodes.values().cloned().collect();
+            node
+        })
+        .collect();
+
     if deps.is_empty() {
         return Ok(0);
     }
 
-    let deps_count = deps.len();
+    let deps_count = nodes.len();
 
     // Phase 3: Compiles (80-100%)
     progress.start_phase(deps_count as u64, 20);
@@ -887,15 +891,16 @@ fn compile_gems(
 
     let graph = DepGraph::new(deps.as_slice());
     graph.into_par_iter().try_for_each(|node| {
-        let spec = specs.iter().find(|s| s.name == *node).unwrap();
-        span.pb_set_message(&spec.name);
-        let compiled_ok = compile_gem(config, args, spec)?;
-        span.pb_inc(1);
-        progress.complete_one();
-        if !compiled_ok {
-            return Err(Error::CompileFailures {
-                gem: spec.full_name(),
-            });
+        if let Some(spec) = nodes.get(&*node) {
+            span.pb_set_message(&spec.name);
+            let compiled_ok = compile_gem(config, args, spec)?;
+            span.pb_inc(1);
+            progress.complete_one();
+            if !compiled_ok {
+                return Err(Error::CompileFailures {
+                    gem: spec.full_name(),
+                });
+            }
         }
         Ok(())
     })?;
