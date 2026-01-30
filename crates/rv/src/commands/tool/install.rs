@@ -33,7 +33,7 @@ type GemName = String;
 pub enum Error {
     #[error("{0} is not a valid URL")]
     BadUrl(String),
-    #[error("No gem with that name ({gem_name}) exists on the server {server}")]
+    #[error("{gem_name} doesn't exist on {server}")]
     NotFound { gem_name: String, server: String },
     #[error("No version {0} available")]
     NoVersionFound(GemVersion),
