@@ -13,7 +13,7 @@ use std::time::Duration;
 const REFRESH_INTERVAL_MS: u64 = 100;
 
 /// Progress state for OSC 9;4 sequences.
-/// See: https://conemu.github.io/en/AnsiEscapeCodes.html#ConEmu_specific_OSC
+/// See: <https://conemu.github.io/en/AnsiEscapeCodes.html#ConEmu_specific_OSC>
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ProgressState {
     /// Remove/clear the progress indicator (state 0)

@@ -96,14 +96,14 @@ impl<'i> WithVersion<'i> {
 /// Run a tool, installing it from a gem if necessary.
 pub async fn run(
     config: &Config,
-    executable: String,
     gem: Option<String>,
     gem_server: String,
     no_install: bool,
     args: Vec<String>,
 ) -> Result<(), Error> {
     // Parse out the CLI args.
-    let executable = WithVersion::parse(&executable)?;
+    let (executable, args) = args.split_first().unwrap();
+    let executable = WithVersion::parse(executable)?;
     let gem = match gem {
         Some(ref gem) => Some(WithVersion::parse(gem)?),
         None => None,
@@ -187,7 +187,7 @@ pub async fn run(
         config,
         Some(ruby_version),
         no_install,
-        &args,
+        args,
         crate::commands::ruby::run::CaptureOutput::No,
         None, // no cwd.
     )
