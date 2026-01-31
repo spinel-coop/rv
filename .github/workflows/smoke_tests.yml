@@ -69,14 +69,16 @@ jobs:
       - name: rv clean-install for ${{ matrix.project }}
         run: bin/smoke-tests/${{ matrix.project }}
 
-      - name: Slack ping if failure
-        if: failure()
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_ALERTS_WEBHOOK_URL }}
-        run: |
-          if [ -n "$SLACK_WEBHOOK_URL" ]; then
-            curl -fSs -X POST \
-              -H 'Content-type: application/json' \
-              --data '{"text":"🚨 Smoke test failure: ${{ matrix.project }}\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
-              "$SLACK_WEBHOOK_URL"
-          fi
+      # **Note:** This could be used in the future, if needed
+      #   See https://github.com/spinel-coop/rv/pull/440 for discussion
+      # - name: Slack ping if failure
+      #   if: failure()
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_ALERTS_WEBHOOK_URL }}
+      #   run: |
+      #     if [ -n "$SLACK_WEBHOOK_URL" ]; then
+      #       curl -fSs -X POST \
+      #         -H 'Content-type: application/json' \
+      #         --data '{"text":"🚨 Smoke test failure: ${{ matrix.project }}\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
+      #         "$SLACK_WEBHOOK_URL"
+      #     fi
