@@ -19,8 +19,8 @@ pub struct Gemserver {
 pub enum Error {
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),
-    #[error("The requested gem {gem} was not found on the RubyGems server {gem_server}")]
-    GemNotFound { gem: GemName, gem_server: Url },
+    #[error("The url {url} unexpectedly returned an empty response")]
+    EmptyResponse { url: Url },
 }
 
 impl Gemserver {
@@ -45,9 +45,8 @@ impl Gemserver {
             .text()
             .await?;
         if index_body.is_empty() {
-            return Err(Error::GemNotFound {
-                gem: gem.to_owned(),
-                gem_server: self.url.to_owned(),
+            return Err(Error::EmptyResponse {
+                url: self.url.to_owned(),
             });
         }
         Ok(index_body)
