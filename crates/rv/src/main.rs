@@ -18,6 +18,7 @@ pub mod config;
 pub mod http_client;
 pub mod output_format;
 pub mod progress;
+pub mod script_metadata;
 
 use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir, cache_prune};
 #[cfg(unix)]
@@ -31,6 +32,8 @@ use crate::commands::ruby::pin::pin as ruby_pin;
 use crate::commands::ruby::run::{Invocation, run as ruby_run};
 use crate::commands::ruby::uninstall::uninstall as ruby_uninstall;
 use crate::commands::ruby::{RubyArgs, RubyCommand};
+#[cfg(unix)]
+use crate::commands::run::{RunArgs, run as script_run};
 use crate::commands::shell::completions::shell_completions;
 use crate::commands::shell::env::env as shell_env;
 use crate::commands::shell::init::init as shell_init;
@@ -136,6 +139,12 @@ enum Commands {
     CleanInstall(CleanInstallArgs),
     #[command(about = "Manage Ruby tools", hide = true)]
     Tool(ToolArgs),
+    #[cfg(unix)]
+    #[command(
+        about = "Run a Ruby script with automatic version detection",
+        dont_delimit_trailing_values = true
+    )]
+    Run(RunArgs),
 }
 
 #[derive(Debug, Copy, Clone, clap::ValueEnum)]
@@ -204,6 +213,9 @@ pub enum Error {
     #[cfg(unix)]
     #[error(transparent)]
     RunError(#[from] commands::ruby::run::Error),
+    #[cfg(unix)]
+    #[error(transparent)]
+    ScriptRunError(#[from] commands::run::Error),
     #[error(transparent)]
     NonUtf8Path(#[from] FromPathBufError),
     #[error(transparent)]
@@ -389,6 +401,8 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
                 args,
             } => tool_run(config, gem, gem_server, no_install, args).await?,
         },
+        #[cfg(unix)]
+        Commands::Run(run_args) => script_run(config, run_args).await?,
     };
 
     Ok(())
