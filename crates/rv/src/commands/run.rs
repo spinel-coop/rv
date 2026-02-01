@@ -37,13 +37,7 @@ pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
     let (script, cmd_args) = args.args.split_first().unwrap();
     let script = Utf8PathBuf::from(script);
     let mut cmd_args = Vec::from(cmd_args);
-
-    let mut ruby_version = if let Some(version) = args.ruby {
-        debug!("Using Ruby version from --ruby flag: {}", version);
-        Some(version)
-    } else {
-        None
-    };
+    let mut ruby_version = None;
 
     let invocation = if script.canonicalize_utf8()?.exists() {
         let content = std::fs::read_to_string(&script)?;
@@ -64,6 +58,11 @@ pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
             },
             env: vec![],
         }
+    };
+
+    if let Some(version) = args.ruby {
+        debug!("Using Ruby version from --ruby flag: {}", version);
+        ruby_version = Some(version)
     };
 
     crate::commands::ruby::run::run(
