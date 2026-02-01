@@ -41,13 +41,13 @@ rv combines several functions that have previously been separate tools:
 
 ### Gem CLI tools
 
-- [ ] `rvx` / `rv exec` / `rv tool run`
-- [ ] `rv tool install`
-- [ ] `rv tool uninstall`
+- [x] `rvx` / `rv exec` / `rv tool run`
+- [x] `rv tool install`
+- [x] `rv tool uninstall`
 
 ### Projects
 
-- [ ] `rv clean-install` / `rv ci`
+- [x] `rv clean-install` / `rv ci`
 - [ ] [`rv init`](#init)
 - [ ] `rv install`
 - [ ] `rv run`
@@ -226,14 +226,6 @@ The `run` command executes commands and files provided by the current project or
 
 3. You can write a Ruby script and then run it with `rv run script.rb`. Scripts can optionally contain their own required ruby versions and rubygems dependencies, as a magic comment with the same structure as `gem.kdl`. If the script has configuration comments setting a required ruby version or depending on gems, rv will install that ruby version and those gems and then run thes cript. If the script does not declare any Ruby or gem dependencies, rv will simply ensure a Ruby is installed and use it to run the script.
 
-### exec
-
-The `exec` command runs commands provided by gems. Contrast with `run`, above, which executes commands provided by the current project or filesystem.
-
-Just like `npm exec`, `uv exec`, and `gem exec`, `rv exec` will: find a package with the given name, install it, and run the executable inside that package with the same name. For example, `rv exec rails new .` will install ruby if needed, install rails if needed, and then run `rails new .`.
-
-Similar to npm and uv, `rv exec rails@latest new .` will check for the newest version of Rails and make sure that is what gets run. Without the `@latest` included at the end of the package name, `exec` will prioritize speed and run an already-installed rails if it exists.
-
 ### shell
 
 The `shell` subcommand handles integration with the user's shell, including automatic ruby version switching and completions for rv commands.
@@ -257,3 +249,11 @@ The `completions` command prints out shell-specific output that can be `eval`ed 
 ### tool
 
 The tool subcommand manages binaries available on the PATH, ensuring that a usable Ruby is installed, the gem and all of its dependencies are installed, and a binary is created and put somewhere in the PATH. The binary needs to ignore the currently chosen ruby version, the current bundle environment, and anything else necessary to ensure that when it is invoked it will run completely independently.
+
+#### tool run / rvx
+
+The `tool run` command runs commands provided by gems. Contrast with `run`, above, which executes commands provided by the current project or filesystem.
+
+Just like `npm exec`, `uvx`, and `gem exec`, `rv exec` will: find a package with the given name, install it, and run the executable inside that package with the same name. For example, `rv exec rails new .` will install ruby if needed, install rails if needed, and then run `rails new .`.
+
+Similar to npm and uv, `rvx rails@latest new .` will check for the newest version of Rails and make sure that is what gets run. Without the `@latest` included at the end of the package name, `exec` will prioritize speed and run an already-installed rails if it exists.
