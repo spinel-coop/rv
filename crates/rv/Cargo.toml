@@ -78,7 +78,7 @@ tempfile = { workspace = true }
 assert_fs = { workspace = true }
 fs-err = { workspace = true }
 camino-tempfile-ext = { workspace = true }
-mockito = "1.4.0"
+mockito = "1.7.1"
 pretty_assertions = { workspace = true }
 rexpect = "0.6.2"
 
