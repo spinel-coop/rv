@@ -10,10 +10,6 @@ use crate::config::Config;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
-    #[error("Script file not found: {0}")]
-    ScriptNotFound(PathBuf),
-    #[error("Script path is not valid UTF-8: {0}")]
-    InvalidUtf8Path(PathBuf),
     #[error(transparent)]
     IoError(#[from] std::io::Error),
     #[error(transparent)]
@@ -41,6 +37,7 @@ pub struct RunArgs {
 pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
     let (script, cmd_args) = args.args.split_first().unwrap();
     let script = Utf8PathBuf::from(script);
+    let mut cmd_args = Vec::from(cmd_args);
 
     let ruby_version = if let Some(version) = args.ruby {
         debug!("Using Ruby version from --ruby flag: {}", version);
@@ -49,12 +46,17 @@ pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
         None
     };
 
-    let invocation = Invocation {
-        program: Program::Tool {
-            executable_path: script,
-            extra_paths: vec![],
-        },
-        env: vec![],
+    let invocation = if script.canonicalize_utf8()?.exists() {
+        cmd_args.insert(0, script.into());
+        Invocation::ruby(vec![])
+    } else {
+        Invocation {
+            program: Program::Tool {
+                executable_path: script,
+                extra_paths: vec![],
+            },
+            env: vec![],
+        }
     };
 
     crate::commands::ruby::run::run(
@@ -62,7 +64,7 @@ pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
         config,
         ruby_version,
         args.no_install,
-        cmd_args,
+        &cmd_args,
         Default::default(),
         Default::default(),
     )
