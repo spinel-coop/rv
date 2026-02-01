@@ -4,7 +4,6 @@ impl RvTest {
     pub fn script_run(&self, script: &str, args: &[&str]) -> RvOutput {
         let mut run_args = vec!["run", script];
         if !args.is_empty() {
-            run_args.push("--");
             run_args.extend(args);
         }
         self.rv(&run_args)
@@ -13,7 +12,6 @@ impl RvTest {
     pub fn script_run_with_ruby(&self, ruby: &str, script: &str, args: &[&str]) -> RvOutput {
         let mut run_args = vec!["run", "--ruby", ruby, script];
         if !args.is_empty() {
-            run_args.push("--");
             run_args.extend(args);
         }
         self.rv(&run_args)
@@ -36,7 +34,7 @@ fn test_run_script_not_found() {
     let output = test.script_run("nonexistent.rb", &[]);
 
     output.assert_failure();
-    assert!(output.stderr().contains("ScriptNotFound"));
+    assert!(output.stderr().contains("No such file or directory"));
 }
 
 #[test]

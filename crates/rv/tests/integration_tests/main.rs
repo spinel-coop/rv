@@ -1,7 +1,7 @@
 mod ci;
 mod common;
 mod ruby;
-mod run_test;
+mod run;
 mod shell;
 mod tool;
 
