@@ -31,6 +31,7 @@ impl RvTest {
 #[test]
 fn test_run_script_not_found() {
     let test = RvTest::new();
+    test.create_ruby_dir("ruby-3.4.1");
     let output = test.script_run("nonexistent.rb", &[]);
 
     output.assert_failure();
