@@ -7,6 +7,7 @@ use tracing::debug;
 
 use crate::commands::ruby::run::{Invocation, Program};
 use crate::config::Config;
+use crate::script_metadata;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -39,7 +40,7 @@ pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
     let script = Utf8PathBuf::from(script);
     let mut cmd_args = Vec::from(cmd_args);
 
-    let ruby_version = if let Some(version) = args.ruby {
+    let mut ruby_version = if let Some(version) = args.ruby {
         debug!("Using Ruby version from --ruby flag: {}", version);
         Some(version)
     } else {
@@ -47,6 +48,14 @@ pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
     };
 
     let invocation = if script.canonicalize_utf8()?.exists() {
+        let content = std::fs::read_to_string(&script)?;
+        if let Some(metadata) = script_metadata::parse(&content) {
+            if let Some(ref version) = metadata.requires_ruby {
+                debug!("Using Ruby version from script metadata: {}", version);
+            }
+            ruby_version = metadata.requires_ruby
+        }
+
         cmd_args.insert(0, script.into());
         Invocation::ruby(vec![])
     } else {
