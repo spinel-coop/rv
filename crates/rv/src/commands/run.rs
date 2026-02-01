@@ -5,6 +5,7 @@ use clap::Args;
 use rv_ruby::request::RubyRequest;
 use tracing::debug;
 
+use crate::commands::ruby::run::{Invocation, Program};
 use crate::config::Config;
 use crate::script_metadata;
 
@@ -24,38 +25,29 @@ type Result<T> = miette::Result<T, Error>;
 
 #[derive(Args)]
 pub struct RunArgs {
-    /// Ruby version to use (overrides script metadata)
+    /// Ruby version to use.
     #[arg(long)]
     pub ruby: Option<RubyRequest>,
 
-    /// Don't install Ruby if missing
+    /// By default, rv will install Ruby if needed.
+    /// If this flag is given, rv will exit with an error instead of installing.
     #[arg(long)]
     pub no_install: bool,
 
-    /// Script file to run
-    pub script: PathBuf,
-
-    /// Arguments to pass to the script
-    #[arg(last = true, allow_hyphen_values = true)]
-    pub args: Vec<String>,
+    /// What to run. Can be a command on your PATH or the path to a Ruby script, e.g. `ruby --yjit` or `myscript.rb arg1 arg2`
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true, value_names = ["COMMAND", "ARGS"])]
+    args: Vec<String>,
 }
 
 pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
-    if !args.script.exists() {
-        return Err(Error::ScriptNotFound(args.script));
-    }
-
-    let script_path = args.script.canonicalize()?;
-    let script_path_utf8: Utf8PathBuf = script_path
-        .clone()
-        .try_into()
-        .map_err(|_| Error::InvalidUtf8Path(script_path.clone()))?;
+    let (script, cmd_args) = args.args.split_first().unwrap();
+    let script = Utf8PathBuf::from(script);
 
     let ruby_version = if let Some(version) = args.ruby {
         debug!("Using Ruby version from --ruby flag: {}", version);
         Some(version)
-    } else {
-        let content = std::fs::read_to_string(&script_path)?;
+    } else if script.exists() {
+        let content = std::fs::read_to_string(&script)?;
         if let Some(metadata) = script_metadata::parse(&content) {
             if let Some(ref version) = metadata.requires_ruby {
                 debug!("Using Ruby version from script metadata: {}", version);
@@ -65,16 +57,24 @@ pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
             debug!("No script metadata found, falling back to config file detection");
             None
         }
+    } else {
+        Some(RubyRequest::default())
     };
 
-    let mut ruby_args: Vec<String> = vec![script_path_utf8.to_string()];
-    ruby_args.extend(args.args);
+    let invocation = Invocation {
+        program: Program::Tool {
+            executable_path: script,
+            extra_paths: vec![],
+        },
+        env: vec![],
+    };
 
     crate::commands::ruby::run::run(
+        invocation,
         config,
         ruby_version,
         args.no_install,
-        &ruby_args,
+        cmd_args,
         Default::default(),
         Default::default(),
     )
