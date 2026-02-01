@@ -1,15 +1,23 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fs};
 
 use owo_colors::OwoColorize;
+use reqwest::StatusCode;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_ruby::request::Source;
+use rv_version::Version as GemVersion;
 use tracing::debug;
 use url::Url;
 
 use crate::{
-    commands::tool::install::{
-        choosing_ruby_version::ruby_to_use_for,
-        gemserver::{Gemserver, VersionAvailable},
+    commands::{
+        ci::InstallStats,
+        tool::{
+            Installed,
+            install::{
+                choosing_ruby_version::ruby_to_use_for,
+                gemserver::{GemRelease, Gemserver},
+            },
+        },
     },
     config::Config,
 };
@@ -25,12 +33,20 @@ type GemName = String;
 pub enum Error {
     #[error("{0} is not a valid URL")]
     BadUrl(String),
+    #[error("{gem_name} doesn't exist on {server}")]
+    NotFound { gem_name: String, server: String },
+    #[error("No version {0} available")]
+    NoVersionFound(GemVersion),
+    #[error("The gem does not actually have any releases published")]
+    NoReleasesPublished,
+    #[error(transparent)]
+    VersionError(#[from] rv_version::VersionError),
     #[error(transparent)]
     HttpError(#[from] reqwest::Error),
     #[error(transparent)]
     GemserverError(#[from] gemserver::Error),
     #[error("Could not parse a version from the server: {0}")]
-    VersionAvailableParse(#[from] gemserver::VersionAvailableParse),
+    GemReleaseParse(#[from] gemserver::GemReleaseParse),
     #[error("Could not create the cache dir: {0}")]
     CouldNotCreateCacheDir(std::io::Error),
     #[error("Could not write to the cache: {0}")]
@@ -47,6 +63,10 @@ pub enum Error {
     NoMatchingRuby {
         requirements: Vec<gemserver::VersionConstraint>,
     },
+    #[error("Could not pin Ruby version for this tool: {0}")]
+    CouldNotPinRubyVersion(std::io::Error),
+    #[error("This gem doesn't have any executables to install")]
+    NoExecutables,
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -69,50 +89,106 @@ impl InnerArgs {
     }
 }
 
-pub async fn install(config: &Config, gem: GemName, gem_server: String, force: bool) -> Result<()> {
-    let args = InnerArgs::new(gem, gem_server)?;
+pub async fn install(
+    config: &Config,
+    gem: GemName,
+    gem_server: String,
+    force: bool,
+) -> Result<Installed> {
+    // Check if 'gem' is in 'gem@version' format.
+    // If `gem_version` is None, it means "latest". Otherwise it's a specific version.
+    let (gem_name, gem_version) = if let Some((name, gem_version)) = gem.split_once('@') {
+        let gem_version = if gem_version == "latest" {
+            None
+        } else {
+            // You don't have to give a version,
+            // but if you give one, it has to parse!
+            Some(gem_version.parse()?)
+        };
+        (name.to_owned(), gem_version)
+    } else {
+        (gem, None)
+    };
+
+    let args = InnerArgs::new(gem_name, gem_server)?;
 
     let gemserver = Gemserver::new(args.gem_server)?;
 
     // Maps gem names to their dependency lists.
-    let mut gems_to_deps: HashMap<GemName, Vec<VersionAvailable>> = HashMap::new();
+    let mut gems_to_deps: HashMap<GemName, Vec<GemRelease>> = HashMap::new();
 
     // Look up the gem to install.
-    let versions_resp = gemserver.get_versions_for_gem(&args.gem).await?;
-    let versions = gemserver::parse_version_from_body(&versions_resp)?;
-    debug!("Found {} versions for the gem {}", versions.len(), args.gem);
-    gems_to_deps.insert(args.gem.clone(), versions.clone());
+    let releases_resp = gemserver
+        .get_releases_for_gem(&args.gem)
+        .await
+        .map_err(|e| match e {
+            // If the HTTP error was 404, then return a nice error explaining that the gem
+            // wasn't found.
+            gemserver::Error::Reqwest(e) if e.status() == Some(StatusCode::NOT_FOUND) => {
+                Error::NotFound {
+                    gem_name: args.gem.to_owned(),
+                    server: gemserver.url.to_string(),
+                }
+            }
+            // Otherwise, keep the error as-is.
+            other => Error::from(other),
+        })?;
 
-    // Let's install the most recent version.
-    // TODO: Allow users to choose a specific version via CLI args.
-    let version_to_install = versions
-        .iter()
-        .max_by_key(|version_available| &version_available.version)
-        .unwrap()
-        .to_owned();
-    debug!(
-        "Selected version {} of gem {}",
-        version_to_install.version, args.gem,
-    );
+    let releases = gemserver::parse_release_from_body(&releases_resp)?;
+    debug!("Found {} releases for the gem {}", releases.len(), args.gem);
+    if releases.is_empty() {
+        return Err(Error::NoReleasesPublished);
+    }
+    gems_to_deps.insert(args.gem.clone(), releases.clone());
+
+    let release_to_install = match gem_version {
+        Some(user_choice) => {
+            let Some(v) = releases
+                .iter()
+                .filter(|gem_release| gem_release.version() == &user_choice)
+                .max_by(|x, y| x.version_platform().cmp(y.version_platform()))
+            else {
+                return Err(Error::NoVersionFound(user_choice));
+            };
+            debug!("Selected {} {}", args.gem, v.full_name());
+            v.to_owned()
+        }
+        _ => {
+            let Some(v) = releases
+                .iter()
+                .max_by(|x, y| x.version_platform().cmp(y.version_platform()))
+            else {
+                return Err(Error::NoReleasesPublished);
+            };
+            debug!("Selected {} {}", args.gem, v.full_name());
+            v.to_owned()
+        }
+    };
 
     // Check if the tool was already installed.
-    let install_path = super::tool_dir_for(&args.gem, &version_to_install.version);
+    let install_path = super::tool_dir_for(
+        &args.gem,
+        &release_to_install.version_platform().to_string(),
+    );
     let already_installed = install_path.exists();
     if already_installed {
         if force {
             debug!("Reinstalling tool");
         } else {
             println!(
-                "{} version {} already installed at {}",
+                "{} {} already installed at {}",
                 args.gem.cyan(),
-                version_to_install.version,
+                release_to_install.version_platform(),
                 install_path.cyan(),
             );
-            return Ok(());
+            return Ok(Installed {
+                version: release_to_install.version().to_owned(),
+                dir: install_path,
+            });
         }
     }
 
-    let ruby_to_use = ruby_to_use_for(config, &version_to_install.metadata.ruby).await?;
+    let ruby_to_use = ruby_to_use_for(config, &release_to_install.metadata.ruby).await?;
     debug!("Selected Ruby {ruby_to_use} for this gem");
 
     debug!("Querying all transitive dependencies");
@@ -120,7 +196,7 @@ pub async fn install(config: &Config, gem: GemName, gem_server: String, force: b
     transitive_dep_query::query_all_gem_deps(
         config,
         &mut transitive_deps,
-        version_to_install.clone(),
+        release_to_install.clone(),
         &args.gem,
         &gemserver,
         &ruby_to_use,
@@ -133,29 +209,43 @@ pub async fn install(config: &Config, gem: GemName, gem_server: String, force: b
     // Now, translate the dependency constraint list into a PubGrub system, and resolve
     // (i.e. figure out which version of every gem will be used.)
     debug!("Resolving all dependencies via PubGrub");
-    let versions_needed = pubgrub_bridge::solve(
-        args.gem.clone(),
-        version_to_install.version.clone(),
-        gems_to_deps,
-    )
-    .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
+    let versions_needed =
+        pubgrub_bridge::solve(args.gem.clone(), release_to_install.clone(), gems_to_deps)
+            .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
     debug!("All dependencies resolved");
 
     // Make a Gemfile.lock in-memory, install it via `rv ci`.
     let lockfile_builder = LockfileBuilder::new(&gemserver, versions_needed);
     let lockfile = lockfile_builder.lockfile();
     let mut config_for_install = config.clone();
-    config_for_install.requested_ruby = Some((ruby_to_use.into(), Source::Other));
-    crate::commands::ci::install_from_lockfile(&config_for_install, lockfile, install_path.clone())
-        .await?;
+    config_for_install.requested_ruby = Some((ruby_to_use.clone().into(), Source::Other));
+
+    let InstallStats {
+        executables_installed,
+    } = crate::commands::ci::install_from_lockfile(
+        &config_for_install,
+        lockfile,
+        install_path.clone(),
+    )
+    .await?;
+    if executables_installed == 0 {
+        fs::remove_dir_all(install_path).unwrap();
+        return Err(Error::NoExecutables);
+    }
+    let pin_path = install_path.join(".ruby-version");
+    fs::write(&pin_path, format!("{ruby_to_use}\n")).map_err(Error::CouldNotPinRubyVersion)?;
+    debug!("Pinned dir {} to {}", pin_path, ruby_to_use);
     let gem_name = args.gem.cyan();
     println!(
         "Installed {} version {} to {}",
         gem_name.cyan(),
-        version_to_install.version,
+        release_to_install.version_platform(),
         install_path.cyan(),
     );
-    Ok(())
+    Ok(Installed {
+        version: release_to_install.version().to_owned(),
+        dir: install_path,
+    })
 }
 
 /// Owns the information needed to create a lockfile.

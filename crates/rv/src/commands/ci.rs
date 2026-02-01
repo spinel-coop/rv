@@ -13,6 +13,7 @@ use rayon::ThreadPoolBuildError;
 use regex::Regex;
 use reqwest::Client;
 use rv_gem_types::Specification as GemSpecification;
+use rv_gem_types::VersionPlatform;
 use rv_lockfile::datatypes::ChecksumAlgorithm;
 use rv_lockfile::datatypes::GemSection;
 use rv_lockfile::datatypes::GemVersion;
@@ -31,6 +32,8 @@ use crate::commands::ci::checksums::ArchiveChecksums;
 use crate::commands::ci::checksums::HashReader;
 use crate::commands::ci::checksums::Hashed;
 use crate::commands::ruby::run::CaptureOutput;
+use crate::commands::ruby::run::Invocation;
+use crate::commands::ruby::run::Program;
 use crate::config::Config;
 use crate::progress::WorkProgress;
 use std::collections::HashMap;
@@ -80,9 +83,33 @@ struct CiInnerArgs {
     pub max_concurrent_requests: usize,
     pub max_concurrent_installs: usize,
     pub validate_checksums: bool,
-    pub lockfile_path: Utf8PathBuf,
     pub install_path: Utf8PathBuf,
     pub extensions_dir: Utf8PathBuf,
+}
+
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum UnpackError {
+    #[error("No gemspec found for downloaded gem {0}")]
+    MissingGemspec(String),
+    #[error(transparent)]
+    Io(#[from] io::Error),
+    #[error("File {filename} did not match {algo} checksum in gem {gem_name} archive")]
+    ArchiveChecksumFail {
+        filename: String,
+        gem_name: String,
+        algo: &'static str,
+    },
+    #[error("Checksum for {0} was not valid YAML")]
+    InvalidChecksum(String),
+    #[error("Gem {gem_name} archive did not include metadata.gz")]
+    NoMetadata { gem_name: String },
+    #[error("Gem archive did not include data.tar.gz")]
+    NoDataTar,
+    #[error("Invalid gem archive: {0}")]
+    InvalidGemArchive(String),
+    #[error("Could not parse YAML metadata inside gem package")]
+    #[diagnostic(transparent)]
+    YamlParsing(#[diagnostic_source] miette::Report),
 }
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -93,10 +120,6 @@ pub enum Error {
     Install(#[from] crate::commands::ruby::install::Error),
     #[error("Cannot build unknown native extension {filename} from gem {gemname}")]
     UnknownExtension { filename: String, gemname: String },
-    #[error("No gemspec found for downloaded gem {0}")]
-    MissingGemspec(String),
-    #[error("Error converting YAML gemspec to Ruby: {0}")]
-    GemspecToRubyError(String),
     #[error("Error evaluating gemspec: {0}")]
     GemspecError(String),
     #[error("rv ci needs a Gemfile, but could not find it")]
@@ -129,20 +152,12 @@ pub enum Error {
     UrlError(#[from] url::ParseError),
     #[error("Could not read install directory from Bundler")]
     BadBundlePath,
-    #[error("Checksum for {0} was not valid YAML")]
-    InvalidChecksum(String),
-    #[error("Gem {gem_name} archive did not include metadata.gz")]
-    NoMetadata { gem_name: String },
-    #[error("Gem archive did not include data.tar.gz")]
-    NoDataTar,
-    #[error("File {filename} did not match {algo} checksum in gem {gem_name}")]
-    ChecksumFail {
+    #[error("File {filename} did not match {algo} locked checksum in gem {gem_name}")]
+    LockfileChecksumFail {
         filename: String,
         gem_name: String,
         algo: &'static str,
     },
-    #[error("Invalid gem archive: {0}")]
-    InvalidGemArchive(String),
     #[error("Could not write binstub for {dep_name}/{exe_name}: {error}")]
     CouldNotWriteBinstub {
         dep_name: String,
@@ -155,9 +170,12 @@ pub enum Error {
         "The gemfile path must be inside a directory with a parent, but it wasn't. Path was {0}"
     )]
     InvalidGemfilePath(String),
+    #[error(transparent)]
+    UnpackError(#[from] UnpackError),
 }
 
 type Result<T> = std::result::Result<T, Error>;
+type UnpackResult<T> = std::result::Result<T, UnpackError>;
 
 pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     // We need some Ruby installed, because we need to run Ruby code when installing
@@ -177,14 +195,10 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         max_concurrent_requests: args.max_concurrent_requests,
         max_concurrent_installs: args.max_concurrent_installs,
         validate_checksums: args.validate_checksums,
-        lockfile_path,
         install_path,
         extensions_dir,
     };
-    ci_inner(config, &inner_args).await
-}
 
-async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
     // Terminal progress indicator (OSC 9;4) for supported terminals
     let progress = WorkProgress::new();
 
@@ -194,29 +208,26 @@ async fn ci_inner(config: &Config, args: &CiInnerArgs) -> Result<()> {
 
     let lockfile_contents = {
         let _guard = span.enter();
-        tokio::fs::read_to_string(&args.lockfile_path).await?
+        tokio::fs::read_to_string(&lockfile_path).await?
     };
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
 
     drop(span);
-    let result = ci_inner_work(config, args, &progress, lockfile).await;
 
-    // On success, clear the progress indicator.
-    // On error, set error state but don't clear - this leaves a red/error indicator
-    // visible in the terminal tab/titlebar until the user runs another command.
-    match &result {
-        Ok(()) => progress.clear(),
-        Err(_) => progress.set_error(),
-    }
+    ci_inner_work(config, &inner_args, &progress, lockfile)
+        .await
+        .map(|_| ())
+}
 
-    result
+pub struct InstallStats {
+    pub executables_installed: usize,
 }
 
 pub async fn install_from_lockfile(
     config: &Config,
     lockfile: GemfileDotLock<'_>,
     install_path: Utf8PathBuf,
-) -> Result<()> {
+) -> Result<InstallStats> {
     // We need some Ruby installed, because we need to run Ruby code when installing
     // gems. Ensure Ruby is installed here so we can use it later.
     let ruby_request = config.ruby_request();
@@ -229,7 +240,6 @@ pub async fn install_from_lockfile(
         max_concurrent_requests: 10,
         max_concurrent_installs: 20,
         validate_checksums: true,
-        lockfile_path: Default::default(),
         install_path,
         extensions_dir: find_exts_dir(config, &ruby_request)?,
     };
@@ -238,17 +248,7 @@ pub async fn install_from_lockfile(
     let progress = WorkProgress::new();
 
     // Do the work.
-    let result = ci_inner_work(config, &inner_args, &progress, lockfile).await;
-
-    // On success, clear the progress indicator.
-    // On error, set error state but don't clear - this leaves a red/error indicator
-    // visible in the terminal tab/titlebar until the user runs another command.
-    match &result {
-        Ok(()) => progress.clear(),
-        Err(_) => progress.set_error(),
-    }
-
-    result
+    ci_inner_work(config, &inner_args, &progress, lockfile).await
 }
 
 async fn ci_inner_work(
@@ -256,64 +256,65 @@ async fn ci_inner_work(
     args: &CiInnerArgs,
     progress: &WorkProgress,
     lockfile: GemfileDotLock<'_>,
-) -> Result<()> {
+) -> Result<InstallStats> {
     let binstub_dir = args.install_path.join("bin");
     tokio::fs::create_dir_all(&binstub_dir).await?;
-
-    let path_install_start = Instant::now();
-    let path_specs = install_paths(config, &lockfile.path, args)?;
-    let path_count = path_specs.len();
-    let path_install_elapsed = path_install_start.elapsed();
-
-    let git_install_start = Instant::now();
-    let git_specs = install_git_repos(config, &lockfile.git, args)?;
-    let git_count = git_specs.len();
-    let git_install_elapsed = git_install_start.elapsed();
 
     // Phase 1: Downloads (0-40%)
     let gem_count = lockfile.gem_spec_count() as u64;
     progress.start_phase(gem_count, 40);
 
-    let download_start = Instant::now();
+    let path_fetch_start = Instant::now();
+    let path_specs = install_paths(config, &lockfile.path, args)?;
+    let path_count = path_specs.len();
+    let path_fetch_elapsed = path_fetch_start.elapsed();
+
+    let git_fetch_start = Instant::now();
+    let git_specs = install_git_repos(config, &lockfile.git, args)?;
+    let git_count = git_specs.len();
+    let git_fetch_elapsed = git_fetch_start.elapsed();
+
+    let gem_fetch_start = Instant::now();
     let stats = DownloadStats::default();
     let downloaded = download_gems(lockfile.clone(), &config.cache, args, progress, &stats).await?;
     let downloaded_count = downloaded.len();
-    let download_elapsed = download_start.elapsed();
+    let gem_fetch_elapsed = gem_fetch_start.elapsed();
+
+    let fetch_elapsed = path_fetch_elapsed + git_fetch_elapsed + gem_fetch_elapsed;
 
     // Phase 2: Installs (40-80%)
     progress.start_phase(downloaded_count as u64, 40);
 
     let install_start = Instant::now();
     let specs = install_gems(config, downloaded, args, progress)?;
-    let package_count = specs.len();
-    let package_install_elapsed = install_start.elapsed();
-
-    let install_elapsed = package_install_elapsed + git_install_elapsed + path_install_elapsed;
+    let gem_count = specs.len();
+    let executables_installed = specs.iter().map(|spec| spec.executables.len()).sum();
+    let install_elapsed = install_start.elapsed();
 
     // Phase 3 (Compiles, 80-100%) - start_phase called inside compile_gems after filtering
     let compile_start = Instant::now();
     let compiled_count = compile_gems(config, specs, args, progress)?;
     let compile_elapsed = compile_start.elapsed();
 
-    let total_elapsed = download_elapsed + install_elapsed + compile_elapsed;
+    let total_elapsed = fetch_elapsed + install_elapsed + compile_elapsed;
+    let total_gems = gem_count + git_count + path_count;
 
     let (cached_count, network_count) = stats.counts();
 
-    println!("Summary:");
+    println!("{} gems installed:", total_gems);
     println!(
-        " - {} fetching {} gem packages: {} cached, {} downloaded",
-        format_duration(download_elapsed),
-        downloaded_count,
+        " - {} fetching {} gems from gem servers ({} cached, {} downloaded), {} from git repos, {} from local paths",
+        format_duration(fetch_elapsed),
+        gem_count,
         cached_count,
         network_count,
-    );
-    println!(
-        " - {} installing {} gems: {} from gem packages, {} from git repos, {} from local paths",
-        format_duration(install_elapsed),
-        package_count + git_count + path_count,
-        package_count,
         git_count,
         path_count,
+    );
+    println!(
+        " - {} unpacking {} gems from gem servers",
+        format_duration(install_elapsed),
+        gem_count,
     );
     if compiled_count > 0 {
         println!(
@@ -324,7 +325,9 @@ async fn ci_inner_work(
     }
     println!(" - {} total", format_duration(total_elapsed));
 
-    Ok(())
+    Ok(InstallStats {
+        executables_installed,
+    })
 }
 
 fn install_paths<'i>(
@@ -416,7 +419,7 @@ fn install_git_repos<'i>(
     git_sources: &Vec<rv_lockfile::datatypes::GitSection<'i>>,
     args: &CiInnerArgs,
 ) -> Result<Vec<GemSpecification>> {
-    let span = info_span!("Downloading and installing git gems");
+    let span = info_span!("Fetching git gems");
     span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name}").unwrap());
     let _guard = span.enter();
 
@@ -675,6 +678,7 @@ fn cache_gemspec_path(
     let gemspec_path = Utf8PathBuf::try_from(path).expect("gemspec path not valid UTF-8");
     // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
     let result = crate::commands::ruby::run::run_no_install(
+        Invocation::ruby(vec![]),
         config,
         &config.ruby_request(),
         &[
@@ -686,7 +690,6 @@ fn cache_gemspec_path(
         ],
         CaptureOutput::Both,
         Some(path_dir),
-        Vec::new(),
     )?;
 
     let error = String::from_utf8(result.stderr).unwrap();
@@ -751,18 +754,14 @@ fn find_install_path(
     version: &RubyRequest,
     gemfile: String,
 ) -> Result<Utf8PathBuf> {
-    let env_path = std::env::var("BUNDLE_PATH");
-    if let Ok(bundle_path) = env_path {
-        return Ok(Utf8PathBuf::from(&bundle_path));
-    }
     let args = ["-rbundler", "-e", "puts Bundler.bundle_path"];
     let bundle_path = match crate::commands::ruby::run::run_no_install(
+        Invocation::ruby(vec![("BUNDLE_GEMFILE", gemfile)]),
         config,
         version,
         args.as_slice(),
         CaptureOutput::Both,
         Some(lockfile_dir),
-        vec![("BUNDLE_GEMFILE", gemfile.as_str())],
     ) {
         Ok(output) => output.stdout,
         Err(_) => Vec::from(".rv"),
@@ -828,9 +827,9 @@ fn install_single_gem<'i>(
 ) -> Result<GemSpecification> {
     let gv = download.spec.gem_version;
     // Actually unpack the tarball here.
-    let dep_gemspec_res = download.unpack_tarball(config, args.install_path.clone(), args)?;
+    let dep_gemspec_res = download.unpack_tarball(config, &args.install_path, args)?;
     debug!("Unpacked tarball {gv}");
-    let dep_gemspec = dep_gemspec_res.ok_or(Error::MissingGemspec(gv.to_string()))?;
+    let dep_gemspec = dep_gemspec_res.ok_or(UnpackError::MissingGemspec(gv.to_string()))?;
     debug!("Installing binstubs for {gv}");
     install_binstub(&dep_gemspec.name, &dep_gemspec.executables, binstub_dir)?;
     debug!("Installed {gv}");
@@ -1057,9 +1056,30 @@ impl<'i> DownloadedRubygems<'i> {
     fn unpack_tarball(
         self,
         config: &Config,
-        bundle_path: Utf8PathBuf,
+        bundle_path: &Utf8PathBuf,
         args: &CiInnerArgs,
     ) -> Result<Option<GemSpecification>> {
+        match self.unpack_tarball_inner(config, bundle_path, args) {
+            Err(error) => {
+                // Print out nice Miette reports
+                if matches!(error, UnpackError::YamlParsing(_)) {
+                    println!("{error:?}");
+                };
+
+                std::fs::remove_dir_all(bundle_path).unwrap();
+
+                Err(Error::UnpackError(error))
+            }
+            Ok(other) => Ok(other),
+        }
+    }
+
+    fn unpack_tarball_inner(
+        self,
+        config: &Config,
+        bundle_path: &Utf8PathBuf,
+        args: &CiInnerArgs,
+    ) -> UnpackResult<Option<GemSpecification>> {
         // Unpack the tarball into DIR/gems/
         // It should contain a metadata zip, and a data zip
         // (and optionally, a checksum zip).
@@ -1086,13 +1106,14 @@ impl<'i> DownloadedRubygems<'i> {
                     let mut contents = GzDecoder::new(entry);
                     let mut str_contents = String::new();
                     let _ = contents.read_to_string(&mut str_contents)?;
-                    let cs = ArchiveChecksums::new(&str_contents)
-                        .ok_or(Error::InvalidChecksum(self.spec.gem_version.to_string()))?;
+                    let cs = ArchiveChecksums::new(&str_contents).ok_or(
+                        UnpackError::InvalidChecksum(self.spec.gem_version.to_string()),
+                    )?;
 
                     // Should not happen in practice, because we break after finding the checksums.
                     // But may as well be defensive here.
                     if checksums.replace(cs).is_some() {
-                        return Err(Error::InvalidGemArchive(
+                        return Err(UnpackError::InvalidGemArchive(
                             "two checksums.yaml.gz files found in the gem archive".to_owned(),
                         ));
                     }
@@ -1100,20 +1121,24 @@ impl<'i> DownloadedRubygems<'i> {
                 "metadata.gz" => {
                     // Unpack the metadata, which stores the gem specs.
                     if found_gemspec.is_some() {
-                        return Err(Error::InvalidGemArchive("two metadata.gz found".to_owned()));
+                        return Err(UnpackError::InvalidGemArchive(
+                            "two metadata.gz found".to_owned(),
+                        ));
                     }
-                    let UnpackedMetdata { hashed, gemspec } =
-                        unpack_metadata(config, &bundle_path, &full_name, HashReader::new(entry))?;
+                    let UnpackedMetadata { hashed, gemspec } =
+                        unpack_metadata(config, bundle_path, &full_name, HashReader::new(entry))?;
                     found_gemspec = Some(gemspec);
                     metadata_hashed = Some(hashed);
                 }
                 "data.tar.gz" => {
                     // Unpack the data archive, which stores all the gems.
                     if data_tar_unpacked.is_some() {
-                        return Err(Error::InvalidGemArchive("two data.tar.gz found".to_owned()));
+                        return Err(UnpackError::InvalidGemArchive(
+                            "two data.tar.gz found".to_owned(),
+                        ));
                     }
                     let unpacked =
-                        unpack_data_tar(&bundle_path, &full_name, HashReader::new(entry))?;
+                        unpack_data_tar(bundle_path, &full_name, HashReader::new(entry))?;
                     data_tar_unpacked = Some(unpacked);
                 }
                 "data.tar.gz.sig" | "metadata.gz.sig" | "checksums.yaml.gz.sig" => {
@@ -1128,10 +1153,10 @@ impl<'i> DownloadedRubygems<'i> {
         }
 
         let Some(data_tar_unpacked) = data_tar_unpacked else {
-            return Err(Error::NoDataTar);
+            return Err(UnpackError::NoDataTar);
         };
-        let Some(found_gemspec) = found_gemspec else {
-            return Err(Error::NoMetadata {
+        if found_gemspec.is_none() {
+            return Err(UnpackError::NoMetadata {
                 gem_name: full_name,
             });
         };
@@ -1198,6 +1223,7 @@ impl CompileNativeExtResult {
 fn find_exts_dir(config: &Config, version: &RubyRequest) -> Result<Utf8PathBuf> {
     debug!("Finding extensions dir");
     let exts_dir = crate::commands::ruby::run::run_no_install(
+        Invocation::ruby(vec![]),
         config,
         version,
         &[
@@ -1206,7 +1232,6 @@ fn find_exts_dir(config: &Config, version: &RubyRequest) -> Result<Utf8PathBuf> 
         ],
         CaptureOutput::Both,
         None,
-        Vec::new(),
     )?
     .stdout;
 
@@ -1253,7 +1278,7 @@ fn compile_gem(config: &Config, args: &CiInnerArgs, spec: &GemSpecification) -> 
         } else if RAKE_REGEX.is_match(extension) {
             if !ran_rake
                 && let Ok(outputs) =
-                    build_rakefile(config, extension, &gem_path, &ext_dest, &lib_dest)
+                    build_rakefile(config, extension, gem_home, &gem_path, &ext_dest, &lib_dest)
             {
                 compile_results.push(CompileNativeExtResult {
                     extension: extension.to_string(),
@@ -1309,6 +1334,7 @@ fn compile_gem(config: &Config, args: &CiInnerArgs, spec: &GemSpecification) -> 
 fn build_rakefile(
     config: &Config,
     extension: &str,
+    gem_home: &Utf8PathBuf,
     gem_path: &Utf8PathBuf,
     ext_dest: &Utf8PathBuf,
     lib_dest: &Utf8PathBuf,
@@ -1322,12 +1348,12 @@ fn build_rakefile(
     // 1. Run mkrf if needed to create the Rakefile
     if ext_file.to_lowercase().contains("mkrf_conf") {
         output = crate::commands::ruby::run::run_no_install(
+            Invocation::ruby(vec![]),
             config,
             &config.ruby_request(),
             &[ext_file],
             CaptureOutput::Both,
             Some(&ext_dir),
-            vec![],
         )?;
         outputs.push(output);
     }
@@ -1337,10 +1363,23 @@ fn build_rakefile(
     let sitearchdir = format!("RUBYARCHDIR={}", tmp_dir.path());
     let sitelibdir = format!("RUBYLIBDIR={}", tmp_dir.path());
     let args = vec![sitearchdir, sitelibdir];
-    output = Command::new("rake")
-        .args(&args)
-        .current_dir(&ext_dir)
-        .output()?;
+
+    let rake = Invocation {
+        program: Program::Tool {
+            executable_path: "rake".into(),
+            extra_paths: vec![],
+        },
+        env: vec![("GEM_HOME", gem_home.to_string())],
+    };
+
+    output = crate::commands::ruby::run::run_no_install(
+        rake,
+        config,
+        &config.ruby_request(),
+        &args,
+        CaptureOutput::Both,
+        Some(&ext_dir),
+    )?;
     outputs.push(output);
 
     // 3. Copy the resulting files to ext and lib dirs
@@ -1369,12 +1408,12 @@ fn build_extconf(
 
     // 1. Run the extconf.rb file with the current ruby
     output = crate::commands::ruby::run::run_no_install(
+        Invocation::ruby(vec![("GEM_HOME", gem_home.to_string())]),
         config,
         &config.ruby_request(),
         &[ext_file],
         CaptureOutput::Both,
         Some(&ext_dir),
-        vec![("GEM_HOME", gem_home.as_str())],
     )?;
     outputs.push(output);
 
@@ -1439,7 +1478,7 @@ fn unpack_data_tar<R>(
     bundle_path: &Utf8Path,
     nameversion: &str,
     data_tar_gz: HashReader<R>,
-) -> Result<UnpackedData>
+) -> UnpackResult<UnpackedData>
 where
     R: std::io::Read,
 {
@@ -1455,9 +1494,9 @@ where
     Ok(UnpackedData { hashed })
 }
 
-struct UnpackedMetdata {
+struct UnpackedMetadata {
     hashed: Hashed,
-    gemspec: Option<GemSpecification>,
+    gemspec: GemSpecification,
 }
 
 /// Given the metadata.gz from a gem, write it to the filesystem under
@@ -1467,7 +1506,7 @@ fn unpack_metadata<R>(
     bundle_path: &Utf8Path,
     nameversion: &str,
     metadata_gz: HashReader<R>,
-) -> Result<UnpackedMetdata>
+) -> UnpackResult<UnpackedMetadata>
 where
     R: Read,
 {
@@ -1482,20 +1521,13 @@ where
     let mut yaml_contents = String::new();
     let mut unzipper = GzDecoder::new(metadata_gz);
     unzipper.read_to_string(&mut yaml_contents)?;
-    let parsed = match rv_gem_specification_yaml::parse(&yaml_contents) {
-        Ok(parsed) => Some(parsed),
-        Err(e) => {
-            eprintln!("Warning: gem specification at {dst_path} was invalid: {e}");
-            None
-        }
-    };
-    if let Some(spec) = parsed.clone() {
-        let ruby_contents = rv_gem_specification_yaml::to_ruby(spec);
-        std::io::copy(&mut ruby_contents.as_bytes(), &mut dst)?;
-    }
+    let parsed =
+        rv_gem_specification_yaml::parse(&yaml_contents).map_err(UnpackError::YamlParsing)?;
+    let ruby_contents = rv_gem_specification_yaml::to_ruby(parsed.clone());
+    std::io::copy(&mut ruby_contents.as_bytes(), &mut dst)?;
 
     let h = unzipper.into_inner();
-    Ok(UnpackedMetdata {
+    Ok(UnpackedMetadata {
         hashed: h.finalize(),
         gemspec: parsed,
     })
@@ -1531,12 +1563,11 @@ async fn download_gem_source<'i>(
     // Download them all, concurrently.
 
     let gems_to_download = gem_source.specs.into_iter().filter(|spec| {
-        let Some((_version, plat)) =
-            rv_gem_types::platform::version_platform_split(spec.gem_version.version)
-        else {
-            // If we couldn't parse a platform, assume there's no platform, so we should download this.
-            return true;
-        };
+        // Failing to parse a locked spec is most likely because of some manual edition, panicking
+        // in that case seems fine for now, so unwrap the result freely
+        let plat = VersionPlatform::from_str(spec.gem_version.version)
+            .unwrap()
+            .platform;
         plat.is_local()
     });
     let spec_stream = futures_util::stream::iter(gems_to_download);
@@ -1613,7 +1644,7 @@ async fn download_gem<'i>(
             KnownChecksumAlgos::Sha256 => {
                 let actual = sha2::Sha256::digest(&contents);
                 if actual[..] != checksum.value {
-                    return Err(Error::ChecksumFail {
+                    return Err(Error::LockfileChecksumFail {
                         filename: url.to_string(),
                         gem_name: spec.gem_version.to_string(),
                         algo: "sha256",

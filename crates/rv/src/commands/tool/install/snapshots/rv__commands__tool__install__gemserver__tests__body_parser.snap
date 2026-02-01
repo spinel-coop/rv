@@ -3,22 +3,24 @@ source: crates/rv/src/commands/tool/install/gemserver.rs
 expression: actual_parsed_response
 ---
 [
-    VersionAvailable {
-        version: Version {
-            version: "2.2.2",
-            segments: [
-                Number(
-                    2,
-                ),
-                Number(
-                    2,
-                ),
-                Number(
-                    2,
-                ),
-            ],
+    GemRelease {
+        version_platform: VersionPlatform {
+            version: Version {
+                version: "2.2.2",
+                segments: [
+                    Number(
+                        2,
+                    ),
+                    Number(
+                        2,
+                    ),
+                    Number(
+                        2,
+                    ),
+                ],
+            },
+            platform: Ruby,
         },
-        platform: None,
         deps: [
             actionmailer@[= 2.2.2],
             actionpack@[= 2.2.2],
@@ -33,22 +35,24 @@ expression: actual_parsed_response
             rubygems: [],
         },
     },
-    VersionAvailable {
-        version: Version {
-            version: "2.3.2",
-            segments: [
-                Number(
-                    2,
-                ),
-                Number(
-                    3,
-                ),
-                Number(
-                    2,
-                ),
-            ],
+    GemRelease {
+        version_platform: VersionPlatform {
+            version: Version {
+                version: "2.3.2",
+                segments: [
+                    Number(
+                        2,
+                    ),
+                    Number(
+                        3,
+                    ),
+                    Number(
+                        2,
+                    ),
+                ],
+            },
+            platform: Ruby,
         },
-        platform: None,
         deps: [
             actionmailer@[= 2.3.2],
             actionpack@[= 2.3.2],

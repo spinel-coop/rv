@@ -1,0 +1,191 @@
+--- !ruby/object:Gem::Specification
+name: concurrent-ruby
+version: !ruby/object:Gem::Version
+  version: 1.3.6
+platform: ruby
+authors:
+- Jerry D'Antonio
+- Petr Chalupa
+- The Ruby Concurrency Team
+autorequire:
+bindir: bin
+cert_chain: []
+date: 2025-12-13 00:00:00.000000000 Z
+dependencies: []
+description: |
+  Modern concurrency tools including agents, futures, promises, thread pools, actors, supervisors, and more.
+  Inspired by Erlang, Clojure, Go, JavaScript, actors, and classic concurrency patterns.
+email: concurrent-ruby@googlegroups.com
+executables: []
+extensions: []
+extra_rdoc_files:
+- README.md
+- LICENSE.txt
+- CHANGELOG.md
+files:
+- CHANGELOG.md
+- Gemfile
+- LICENSE.txt
+- README.md
+- Rakefile
+- ext/concurrent-ruby/ConcurrentRubyService.java
+- ext/concurrent-ruby/com/concurrent_ruby/ext/AtomicReferenceLibrary.java
+- ext/concurrent-ruby/com/concurrent_ruby/ext/JRubyMapBackendLibrary.java
+- ext/concurrent-ruby/com/concurrent_ruby/ext/JavaAtomicBooleanLibrary.java
+- ext/concurrent-ruby/com/concurrent_ruby/ext/JavaAtomicFixnumLibrary.java
+- ext/concurrent-ruby/com/concurrent_ruby/ext/JavaSemaphoreLibrary.java
+- ext/concurrent-ruby/com/concurrent_ruby/ext/SynchronizationLibrary.java
+- ext/concurrent-ruby/com/concurrent_ruby/ext/jsr166e/ConcurrentHashMap.java
+- ext/concurrent-ruby/com/concurrent_ruby/ext/jsr166e/ConcurrentHashMapV8.java
+- ext/concurrent-ruby/com/concurrent_ruby/ext/jsr166e/LongAdder.java
+- ext/concurrent-ruby/com/concurrent_ruby/ext/jsr166e/Striped64.java
+- ext/concurrent-ruby/com/concurrent_ruby/ext/jsr166e/nounsafe/ConcurrentHashMapV8.java
+- ext/concurrent-ruby/com/concurrent_ruby/ext/jsr166e/nounsafe/LongAdder.java
+- ext/concurrent-ruby/com/concurrent_ruby/ext/jsr166e/nounsafe/Striped64.java
+- ext/concurrent-ruby/com/concurrent_ruby/ext/jsr166y/ThreadLocalRandom.java
+- lib/concurrent-ruby/concurrent-ruby.rb
+- lib/concurrent-ruby/concurrent.rb
+- lib/concurrent-ruby/concurrent/agent.rb
+- lib/concurrent-ruby/concurrent/array.rb
+- lib/concurrent-ruby/concurrent/async.rb
+- lib/concurrent-ruby/concurrent/atom.rb
+- lib/concurrent-ruby/concurrent/atomic/atomic_boolean.rb
+- lib/concurrent-ruby/concurrent/atomic/atomic_fixnum.rb
+- lib/concurrent-ruby/concurrent/atomic/atomic_markable_reference.rb
+- lib/concurrent-ruby/concurrent/atomic/atomic_reference.rb
+- lib/concurrent-ruby/concurrent/atomic/count_down_latch.rb
+- lib/concurrent-ruby/concurrent/atomic/cyclic_barrier.rb
+- lib/concurrent-ruby/concurrent/atomic/event.rb
+- lib/concurrent-ruby/concurrent/atomic/fiber_local_var.rb
+- lib/concurrent-ruby/concurrent/atomic/java_count_down_latch.rb
+- lib/concurrent-ruby/concurrent/atomic/locals.rb
+- lib/concurrent-ruby/concurrent/atomic/lock_local_var.rb
+- lib/concurrent-ruby/concurrent/atomic/mutex_atomic_boolean.rb
+- lib/concurrent-ruby/concurrent/atomic/mutex_atomic_fixnum.rb
+- lib/concurrent-ruby/concurrent/atomic/mutex_count_down_latch.rb
+- lib/concurrent-ruby/concurrent/atomic/mutex_semaphore.rb
+- lib/concurrent-ruby/concurrent/atomic/read_write_lock.rb
+- lib/concurrent-ruby/concurrent/atomic/reentrant_read_write_lock.rb
+- lib/concurrent-ruby/concurrent/atomic/semaphore.rb
+- lib/concurrent-ruby/concurrent/atomic/thread_local_var.rb
+- lib/concurrent-ruby/concurrent/atomic_reference/atomic_direct_update.rb
+- lib/concurrent-ruby/concurrent/atomic_reference/mutex_atomic.rb
+- lib/concurrent-ruby/concurrent/atomic_reference/numeric_cas_wrapper.rb
+- lib/concurrent-ruby/concurrent/atomics.rb
+- lib/concurrent-ruby/concurrent/collection/copy_on_notify_observer_set.rb
+- lib/concurrent-ruby/concurrent/collection/copy_on_write_observer_set.rb
+- lib/concurrent-ruby/concurrent/collection/java_non_concurrent_priority_queue.rb
+- lib/concurrent-ruby/concurrent/collection/lock_free_stack.rb
+- lib/concurrent-ruby/concurrent/collection/map/mri_map_backend.rb
+- lib/concurrent-ruby/concurrent/collection/map/non_concurrent_map_backend.rb
+- lib/concurrent-ruby/concurrent/collection/map/synchronized_map_backend.rb
+- lib/concurrent-ruby/concurrent/collection/map/truffleruby_map_backend.rb
+- lib/concurrent-ruby/concurrent/collection/non_concurrent_priority_queue.rb
+- lib/concurrent-ruby/concurrent/collection/ruby_non_concurrent_priority_queue.rb
+- lib/concurrent-ruby/concurrent/collection/ruby_timeout_queue.rb
+- lib/concurrent-ruby/concurrent/collection/timeout_queue.rb
+- lib/concurrent-ruby/concurrent/concern/deprecation.rb
+- lib/concurrent-ruby/concurrent/concern/dereferenceable.rb
+- lib/concurrent-ruby/concurrent/concern/logging.rb
+- lib/concurrent-ruby/concurrent/concern/obligation.rb
+- lib/concurrent-ruby/concurrent/concern/observable.rb
+- lib/concurrent-ruby/concurrent/concurrent_ruby.jar
+- lib/concurrent-ruby/concurrent/configuration.rb
+- lib/concurrent-ruby/concurrent/constants.rb
+- lib/concurrent-ruby/concurrent/dataflow.rb
+- lib/concurrent-ruby/concurrent/delay.rb
+- lib/concurrent-ruby/concurrent/errors.rb
+- lib/concurrent-ruby/concurrent/exchanger.rb
+- lib/concurrent-ruby/concurrent/executor/abstract_executor_service.rb
+- lib/concurrent-ruby/concurrent/executor/cached_thread_pool.rb
+- lib/concurrent-ruby/concurrent/executor/executor_service.rb
+- lib/concurrent-ruby/concurrent/executor/fixed_thread_pool.rb
+- lib/concurrent-ruby/concurrent/executor/immediate_executor.rb
+- lib/concurrent-ruby/concurrent/executor/indirect_immediate_executor.rb
+- lib/concurrent-ruby/concurrent/executor/java_executor_service.rb
+- lib/concurrent-ruby/concurrent/executor/java_single_thread_executor.rb
+- lib/concurrent-ruby/concurrent/executor/java_thread_pool_executor.rb
+- lib/concurrent-ruby/concurrent/executor/ruby_executor_service.rb
+- lib/concurrent-ruby/concurrent/executor/ruby_single_thread_executor.rb
+- lib/concurrent-ruby/concurrent/executor/ruby_thread_pool_executor.rb
+- lib/concurrent-ruby/concurrent/executor/safe_task_executor.rb
+- lib/concurrent-ruby/concurrent/executor/serial_executor_service.rb
+- lib/concurrent-ruby/concurrent/executor/serialized_execution.rb
+- lib/concurrent-ruby/concurrent/executor/serialized_execution_delegator.rb
+- lib/concurrent-ruby/concurrent/executor/simple_executor_service.rb
+- lib/concurrent-ruby/concurrent/executor/single_thread_executor.rb
+- lib/concurrent-ruby/concurrent/executor/thread_pool_executor.rb
+- lib/concurrent-ruby/concurrent/executor/timer_set.rb
+- lib/concurrent-ruby/concurrent/executors.rb
+- lib/concurrent-ruby/concurrent/future.rb
+- lib/concurrent-ruby/concurrent/hash.rb
+- lib/concurrent-ruby/concurrent/immutable_struct.rb
+- lib/concurrent-ruby/concurrent/ivar.rb
+- lib/concurrent-ruby/concurrent/map.rb
+- lib/concurrent-ruby/concurrent/maybe.rb
+- lib/concurrent-ruby/concurrent/mutable_struct.rb
+- lib/concurrent-ruby/concurrent/mvar.rb
+- lib/concurrent-ruby/concurrent/options.rb
+- lib/concurrent-ruby/concurrent/promise.rb
+- lib/concurrent-ruby/concurrent/promises.rb
+- lib/concurrent-ruby/concurrent/re_include.rb
+- lib/concurrent-ruby/concurrent/scheduled_task.rb
+- lib/concurrent-ruby/concurrent/set.rb
+- lib/concurrent-ruby/concurrent/settable_struct.rb
+- lib/concurrent-ruby/concurrent/synchronization.rb
+- lib/concurrent-ruby/concurrent/synchronization/abstract_lockable_object.rb
+- lib/concurrent-ruby/concurrent/synchronization/abstract_object.rb
+- lib/concurrent-ruby/concurrent/synchronization/abstract_struct.rb
+- lib/concurrent-ruby/concurrent/synchronization/condition.rb
+- lib/concurrent-ruby/concurrent/synchronization/full_memory_barrier.rb
+- lib/concurrent-ruby/concurrent/synchronization/jruby_lockable_object.rb
+- lib/concurrent-ruby/concurrent/synchronization/lock.rb
+- lib/concurrent-ruby/concurrent/synchronization/lockable_object.rb
+- lib/concurrent-ruby/concurrent/synchronization/mutex_lockable_object.rb
+- lib/concurrent-ruby/concurrent/synchronization/object.rb
+- lib/concurrent-ruby/concurrent/synchronization/safe_initialization.rb
+- lib/concurrent-ruby/concurrent/synchronization/volatile.rb
+- lib/concurrent-ruby/concurrent/thread_safe/synchronized_delegator.rb
+- lib/concurrent-ruby/concurrent/thread_safe/util.rb
+- lib/concurrent-ruby/concurrent/thread_safe/util/adder.rb
+- lib/concurrent-ruby/concurrent/thread_safe/util/data_structures.rb
+- lib/concurrent-ruby/concurrent/thread_safe/util/power_of_two_tuple.rb
+- lib/concurrent-ruby/concurrent/thread_safe/util/striped64.rb
+- lib/concurrent-ruby/concurrent/thread_safe/util/volatile.rb
+- lib/concurrent-ruby/concurrent/thread_safe/util/xor_shift_random.rb
+- lib/concurrent-ruby/concurrent/timer_task.rb
+- lib/concurrent-ruby/concurrent/tuple.rb
+- lib/concurrent-ruby/concurrent/tvar.rb
+- lib/concurrent-ruby/concurrent/utility/engine.rb
+- lib/concurrent-ruby/concurrent/utility/monotonic_time.rb
+- lib/concurrent-ruby/concurrent/utility/native_extension_loader.rb
+- lib/concurrent-ruby/concurrent/utility/native_integer.rb
+- lib/concurrent-ruby/concurrent/utility/processor_counter.rb
+- lib/concurrent-ruby/concurrent/version.rb
+homepage: http://www.concurrent-ruby.com
+licenses:
+- MIT
+metadata:
+  source_code_uri: https://github.com/ruby-concurrency/concurrent-ruby
+  changelog_uri: https://github.com/ruby-concurrency/concurrent-ruby/blob/master/CHANGELOG.md
+post_install_message:
+rdoc_options: []
+require_paths:
+- lib/concurrent-ruby
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '2.3'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 3.3.27
+signing_key:
+specification_version: 4
+summary: Modern concurrency tools for Ruby. Inspired by Erlang, Clojure, Scala, Haskell,
+  F#, C#, Java, and classic concurrency patterns.
+test_files: []

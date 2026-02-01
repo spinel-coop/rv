@@ -1,4 +1,5 @@
 use crate::common::{RvOutput, RvTest};
+use fs_err as fs;
 
 impl RvTest {
     pub fn tool_uninstall(&mut self, args: &[&str]) -> RvOutput {
@@ -10,36 +11,18 @@ impl RvTest {
 fn test_tool_uninstall() {
     let mut test = RvTest::new();
 
-    // Tool directory should not exist,
-    // because it hasn't been installed yet.
-    let tool_home = "/tmp/home/.local/share/rv/tools/test-gem-uninstalling@1.0.0";
-    let exists = std::fs::exists(tool_home).unwrap();
-    assert!(!exists);
-
-    let _releases_mock = test.mock_releases(["4.0.0"].to_vec());
-
-    let info_endpoint_content = fs_err::read("tests/fixtures/info-test-gem").unwrap();
-    let _info_endpoint_mock = test
-        .mock_info_endpoint("test-gem-uninstalling", &info_endpoint_content)
-        .create();
-
-    let tarball_content =
-        fs_err::read("../rv-gem-package/tests/fixtures/test-gem-1.0.0.gem").unwrap();
-    let _tarball_mock = test
-        .mock_gem_download("test-gem-uninstalling-1.0.0.gem", &tarball_content)
-        .create();
-
-    let output = test.tool_install(&["test-gem-uninstalling"]);
-    output.assert_success();
+    // Create a tools directory with a fake tool in it.
+    // This fakes installing the gem 'test-gem'.
+    let tool_root = &test.temp_home();
+    let tool_home = tool_root.join(".local/share/rv/tools/test-gem@1.0.0");
+    fs::create_dir_all(&tool_home).unwrap();
 
     // Test the dir exists now.
-    let exists = std::fs::exists(tool_home).unwrap();
-    assert!(!exists);
+    assert!(fs::exists(&tool_home).unwrap());
 
-    // Manually remove tool
+    // Run `rv tool uninstall test-gem`
     test.tool_uninstall(&["test-gem"]).assert_success();
 
     // Tool directory should not exist.
-    let exists = std::fs::exists(tool_home).unwrap();
-    assert!(!exists);
+    assert!(!fs::exists(&tool_home).unwrap());
 }

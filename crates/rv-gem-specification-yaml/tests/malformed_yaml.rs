@@ -1,12 +1,5 @@
 use pretty_assertions::assert_matches;
 use rv_gem_specification_yaml::parse;
-use std::fs;
-
-fn load_fixture(name: &str) -> String {
-    let fixture_path = format!("tests/fixtures/{name}.yaml");
-    fs::read_to_string(&fixture_path)
-        .unwrap_or_else(|_| panic!("Failed to read fixture: {fixture_path}"))
-}
 
 #[test]
 fn test_malformed_wrong_root_tag() {
@@ -327,49 +320,4 @@ metadata: "should_be_mapping_not_string"
     // String instead of mapping for metadata causes parse error
     assert!(result.is_err());
     // Verify that we get a meaningful error (specific assertions can be added as needed)
-}
-
-#[test]
-fn test_unsupported_folded_scalar_syntax() {
-    // Current limitation: bacon-1.2.0.gem uses YAML folded scalar syntax with tag (! 'text...')
-    // This is valid YAML but not currently supported by our parser
-    let yaml_content = load_fixture("folded_scalar_syntax");
-    let result = parse(&yaml_content);
-
-    // Currently fails due to folded scalar syntax limitation
-    assert!(result.is_err(), "Folded scalar syntax is not yet supported");
-
-    let error_msg = format!("{:?}", result.unwrap_err());
-    assert!(error_msg.contains("YAML parsing error") || error_msg.contains("parse"));
-}
-
-// Integration tests for real-world failing gems - these document specific parsing limitations
-
-#[test]
-fn test_bacon_1_2_0_folded_scalar() {
-    // bacon-1.2.0.gem fails due to YAML folded scalar syntax with tag (!)
-    // The description field uses: description: ! 'text...' which is valid YAML but unsupported
-    let yaml_content = std::fs::read_to_string("tests/fixtures/bacon-1.2.0.gemspec.yaml")
-        .expect("bacon-1.2.0 fixture should exist");
-    let result = parse(&yaml_content);
-
-    // Should fail with YAML parsing error due to folded scalar syntax
-    assert!(
-        result.is_err(),
-        "bacon-1.2.0 should fail due to folded scalar syntax limitation"
-    );
-
-    let error = result.unwrap_err();
-    let error_msg = format!("{error}");
-    assert!(
-        error_msg.contains("YAML parsing error"),
-        "Expected YAML parsing error, got: {error_msg}"
-    );
-
-    // Check the diagnostic contains information about the folded scalar issue
-    let debug_msg = format!("{error:?}");
-    assert!(
-        debug_msg.contains("invalid indentation in quoted scalar") || debug_msg.contains("line 14"),
-        "Expected folded scalar error details, got: {debug_msg}"
-    );
 }

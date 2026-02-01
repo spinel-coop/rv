@@ -21,6 +21,7 @@ pub fn uninstall(_config: &Config, target_gem_name: String) -> Result<(), Error>
 
     // Walk the tools directory, looking for the named gem.
     let tool_dir_children = fs::read_dir(tool_dir).map_err(Error::CouldNotReadToolDir)?;
+    let mut deleted = 0;
     for child in tool_dir_children {
         match child {
             Ok(child) => {
@@ -42,7 +43,7 @@ pub fn uninstall(_config: &Config, target_gem_name: String) -> Result<(), Error>
                 if gem_name == target_gem_name {
                     fs::remove_dir_all(path).map_err(Error::CouldNotDelete)?;
                     tracing::debug!("Uninstalled tool {target_gem_name}");
-                    return Ok(());
+                    deleted += 1;
                 }
             }
             Err(e) => {
@@ -52,6 +53,6 @@ pub fn uninstall(_config: &Config, target_gem_name: String) -> Result<(), Error>
         }
     }
 
-    tracing::debug!("Could not find tool {target_gem_name}");
+    tracing::debug!("Deleted {deleted} installed tools for {target_gem_name}");
     Ok(())
 }

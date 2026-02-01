@@ -842,7 +842,12 @@ fn get_error_details(
 }
 
 pub fn parse(yaml_str: &str) -> Result<Specification> {
-    parse_winnow(yaml_str).map_err(|e| e.with_source_code(yaml_str.to_string()))
+    // If input string has a line containing only "'", it's (hopefully) one way to detect a wrongly
+    // indented multiline quoted scalar. Correct the indentation so that gemspecs with this issue
+    // still parse fine
+    let amended_yaml_str = yaml_str.replacen("\n'\n", "\n  '\n", 1);
+
+    parse_winnow(&amended_yaml_str).map_err(|e| e.with_source_code(yaml_str.to_string()))
 }
 
 #[cfg(test)]

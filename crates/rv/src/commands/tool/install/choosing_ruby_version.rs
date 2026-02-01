@@ -4,10 +4,7 @@ use rv_ruby::version::RubyVersion;
 use rv_version::VersionError;
 
 use crate::{
-    commands::tool::install::{
-        Error, Result,
-        gemserver::{self, VersionConstraint},
-    },
+    commands::tool::install::{Error, Result, gemserver::VersionConstraint},
     config::Config,
 };
 
@@ -15,7 +12,7 @@ use crate::{
 /// This takes the tool's Ruby version constraints as a parameter.
 pub async fn ruby_to_use_for(
     config: &Config,
-    ruby_constraints: &[gemserver::VersionConstraint],
+    ruby_constraints: &[VersionConstraint],
 ) -> Result<RubyVersion> {
     let installed_rubies = config.rubies();
 
@@ -40,7 +37,7 @@ enum MatchPrereleases {
 /// Find the highest Ruby version that meets these constraints from the available choices.
 fn select_ruby_version_for(
     candidate_rubies: &[rv_ruby::Ruby],
-    ruby_constraints: &[gemserver::VersionConstraint],
+    ruby_constraints: &[VersionConstraint],
     match_prereleases: MatchPrereleases,
 ) -> std::result::Result<RubyVersion, Error> {
     // If the gem can be used with any Ruby version, then we'll use the latest available.
@@ -95,7 +92,7 @@ fn ruby_version_to_gem_version(
 /// Use pubgrub to check if this Ruby version satisfies these Ruby version constraints.
 pub fn does_ruby_version_satisfy(
     ruby_version: &RubyVersion,
-    ruby_constraints: &[gemserver::VersionConstraint],
+    ruby_constraints: &[VersionConstraint],
 ) -> bool {
     let Ok(version) = ruby_version_to_gem_version(ruby_version) else {
         eprintln!(

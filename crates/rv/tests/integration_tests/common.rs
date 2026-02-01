@@ -35,8 +35,6 @@ impl RvTest {
         // Set consistent arch/os for cross-platform testing
         test.env
             .insert("RV_TEST_PLATFORM".into(), "aarch64-apple-darwin".into()); // For mocking current_platform::CURRENT_PLATFORM
-        test.env.insert("RV_TEST_ARCH".into(), "aarch64".into());
-        test.env.insert("RV_TEST_OS".into(), "macos".into());
 
         test.env.insert("RV_TEST_EXE".into(), "/tmp/bin/rv".into());
         test.env.insert("HOME".into(), test.temp_home().into());

@@ -4,7 +4,7 @@
 //! including authentication token retrieval.
 
 /// The recommended GitHub API version header value.
-/// See: https://docs.github.com/en/rest/overview/api-versions
+/// See: <https://docs.github.com/en/rest/overview/api-versions>
 pub const GITHUB_API_VERSION: &str = "2022-11-28";
 
 /// Retrieves a GitHub authentication token from environment variables.
