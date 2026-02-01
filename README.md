@@ -1,10 +1,34 @@
-# `rv`, fast Ruby version and gem management
+# `rv`, a very fast Ruby gem and project manager
 
-Today, `rv` can install Ruby versions in a second or two, removing the compile step and fixing OpenSSL errors forever.
+Manage your projects, including all their Ruby versions and gems, with `rv`.
 
-Soon, you'll be able to manage your entire project and all of its gems, faster and more easily than ever before.
+- Run any command or script that needs ruby with `rv run`.
+- Install gem CLIs in isolated environments with `rv tool install`.
+- Run any gem command immediately, like `rvx rails new myapp`.
+- Install project gems with `rv clean-install`.
 
-**New in 0.4:** Try `rv clean-install` to install your locked gems.
+## Install
+
+```bash
+# Homebrew or Linuxbrew
+brew install rv
+```
+
+Or, visit [releases](https://github.com/spinel-coop/rv/releases) for an installer shell script.
+
+## Quickstart
+
+```bash
+rv run [ruby|irb|myscript.rb] # run any command or script with Ruby available
+rv tool install rerun # install CLI tools into dedicated environments
+rvx rails new . # run any gem CLI directly
+rv clean-install # install project Ruby and gems from Gemfile.lock
+rv ruby pin 4.0.0 # set a project Ruby version
+rv ruby install 4.0.0 # install a Ruby version
+rv shell [zsh|bash|fish|nu] # set up automatic version switching
+```
+
+See [SHELL INTEGRATION](docs/SHELL_INTEGRATION.md) for more about `.ruby-version` and automatic version switching.
 
 ## Install Ruby in under 2 seconds
 
@@ -27,30 +51,6 @@ For details, see [INSTALL_BENCHMARK.md](docs/INSTALL_BENCHMARK.md).
 - **Ruby Versions**: Ruby 3.2, 3.3, 3.4, and 4.0.
 - **Shells**: zsh, bash, fish, nushell. See [SHELL INTEGRATION](docs/SHELL_INTEGRATION.md) for more.
 
-## Install
-
-```bash
-# Homebrew or Linuxbrew
-brew install rv
-```
-
-Or, visit [releases](https://github.com/spinel-coop/rv/releases) for an installer shell script.
-
-## Quickstart
-
-```bash
-rv ruby install 4.0.0 # install Ruby version
-rv ruby run 4.0.0 # run Ruby version
-
-rv shell [zsh|bash|fish|nu] # set up automatic version switching
-rv ruby pin 4.0.0 # set Ruby version
-rv ruby pin # show Ruby version
-
-rv clean-install # install Ruby and gems from Gemfile.lock
-```
-
-See [SHELL INTEGRATION](docs/SHELL_INTEGRATION.md) for more about `.ruby-version` and automatic version switching.
-
 ## From Spinel Cooperative
 
 [Spinel.coop](https://spinel.coop) can bring your team an obsession with developer productivity and decades of experience from the core teams of Rails, Hotwire, Bundler, and rbenv. [Book a free call with us](https://savvycal.com/spinel/client) to get started today.
@@ -59,7 +59,7 @@ See [SHELL INTEGRATION](docs/SHELL_INTEGRATION.md) for more about `.ruby-version
 
 Join us in [discussions on GitHub](https://github.com/spinel-coop/rv/discussions), or the `#rv` channel in the the [Bundler Slack](https://bundler.slack.com) and the [Spinel Discord](https://discord.gg/5EG2pCad).
 
-## Future Plans
+## Plans
 
 All-in-one tooling for Ruby developers.
 
@@ -72,10 +72,7 @@ All-in-one tooling for Ruby developers.
 
 ### Future features
 
-- Run any gem command instantly, like `rvx rails new`.
 - Run any script, installing all needed gems, like `rv run script.rb`.
-- Install gem CLIs with any needed rubies with `rv tool install`.
-- Install precompiled Ruby versions in seconds with `rv ruby install`.
 - Manage project gems with `rv install`, `rv add`, and `rv remove`.
 - Create gems with `rv gem`, and publish them with `rv publish`.
 
