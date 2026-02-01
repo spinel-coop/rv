@@ -44,11 +44,7 @@ pub fn parse(content: &str) -> Option<ScriptMetadata> {
         }
     }
 
-    if found_block {
-        Some(metadata)
-    } else {
-        None
-    }
+    if found_block { Some(metadata) } else { None }
 }
 
 fn parse_key_value(line: &str) -> Option<(&str, &str)> {

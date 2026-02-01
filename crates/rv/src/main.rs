@@ -32,6 +32,8 @@ use crate::commands::ruby::pin::pin as ruby_pin;
 use crate::commands::ruby::run::{Invocation, run as ruby_run};
 use crate::commands::ruby::uninstall::uninstall as ruby_uninstall;
 use crate::commands::ruby::{RubyArgs, RubyCommand};
+#[cfg(unix)]
+use crate::commands::run::{RunArgs, run as script_run};
 use crate::commands::shell::completions::shell_completions;
 use crate::commands::shell::env::env as shell_env;
 use crate::commands::shell::init::init as shell_init;
@@ -42,8 +44,6 @@ use crate::commands::tool::install::install as tool_install;
 use crate::commands::tool::list::list as tool_list;
 use crate::commands::tool::run::run as tool_run;
 use crate::commands::tool::uninstall::uninstall as tool_uninstall;
-#[cfg(unix)]
-use crate::commands::run::{RunArgs, run as script_run};
 
 const STYLES: Styles = Styles::styled()
     .header(AnsiColor::Green.on_default().bold())

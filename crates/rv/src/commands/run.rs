@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use camino::Utf8PathBuf;
 use clap::Args;
 use rv_ruby::request::RubyRequest;
