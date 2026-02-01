@@ -7,7 +7,6 @@ use tracing::debug;
 
 use crate::commands::ruby::run::{Invocation, Program};
 use crate::config::Config;
-use crate::script_metadata;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -34,7 +33,7 @@ pub struct RunArgs {
     #[arg(long)]
     pub no_install: bool,
 
-    /// What to run. Can be a command on your PATH or the path to a Ruby script, e.g. `ruby --yjit` or `myscript.rb arg1 arg2`
+    /// What to run with Ruby available, e.g. `ruby myscript.rb`
     #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true, value_names = ["COMMAND", "ARGS"])]
     args: Vec<String>,
 }
@@ -46,19 +45,8 @@ pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
     let ruby_version = if let Some(version) = args.ruby {
         debug!("Using Ruby version from --ruby flag: {}", version);
         Some(version)
-    } else if script.exists() {
-        let content = std::fs::read_to_string(&script)?;
-        if let Some(metadata) = script_metadata::parse(&content) {
-            if let Some(ref version) = metadata.requires_ruby {
-                debug!("Using Ruby version from script metadata: {}", version);
-            }
-            metadata.requires_ruby
-        } else {
-            debug!("No script metadata found, falling back to config file detection");
-            None
-        }
     } else {
-        Some(RubyRequest::default())
+        None
     };
 
     let invocation = Invocation {
@@ -78,8 +66,7 @@ pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
         Default::default(),
         Default::default(),
     )
-    .await
-    .map(|_| ())?;
+    .await?;
 
     Ok(())
 }
