@@ -32,6 +32,7 @@ pub(crate) enum CaptureOutput {
     Both,
 }
 
+#[derive(Debug)]
 pub(crate) enum Program {
     Ruby,
     Tool {
@@ -40,6 +41,7 @@ pub(crate) enum Program {
     },
 }
 
+#[derive(Debug)]
 pub(crate) struct Invocation {
     pub program: Program,
 

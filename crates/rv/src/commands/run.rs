@@ -39,7 +39,8 @@ pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
     let mut cmd_args = Vec::from(cmd_args);
     let mut ruby_version = None;
 
-    let invocation = if script.canonicalize_utf8()?.exists() {
+    let invocation = if script.canonicalize_utf8().is_ok() {
+        debug!("Found script to run at {script}");
         let content = std::fs::read_to_string(&script)?;
         if let Some(metadata) = script_metadata::parse(&content) {
             if let Some(ref version) = metadata.requires_ruby {
@@ -51,6 +52,7 @@ pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
         cmd_args.insert(0, script.into());
         Invocation::ruby(vec![])
     } else {
+        debug!("Will run command {script}");
         Invocation {
             program: Program::Tool {
                 executable_path: script,
@@ -65,6 +67,7 @@ pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
         ruby_version = Some(version)
     };
 
+    debug!("Calling run with {invocation:?} {cmd_args:?}");
     crate::commands::ruby::run::run(
         invocation,
         config,
