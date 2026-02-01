@@ -41,13 +41,13 @@ rv combines several functions that have previously been separate tools:
 
 ### Gem CLI tools
 
-- [ ] `rvx` / `rv exec` / `rv tool run`
-- [ ] `rv tool install`
-- [ ] `rv tool uninstall`
+- [x] `rvx` / `rv exec` / `rv tool run`
+- [x] `rv tool install`
+- [x] `rv tool uninstall`
 
 ### Projects
 
-- [ ] `rv clean-install` / `rv ci`
+- [x] `rv clean-install` / `rv ci`
 - [ ] [`rv init`](#init)
 - [ ] `rv install`
 - [ ] `rv run`
