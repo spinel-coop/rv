@@ -98,6 +98,8 @@ pub fn to_ruby(spec: Specification) -> String {
         "  s.date = \"{}\"",
         if let Some(date) = date.strip_suffix(" 00:00:00.000000000 Z") {
             date
+        } else if let Some(date) = date.strip_suffix(" 00:00:00 Z") {
+            date
         } else {
             &date
         }
@@ -702,5 +704,10 @@ mod tests {
     #[test]
     fn test_zlib() {
         run_test("zlib");
+    }
+
+    #[test]
+    fn test_lz4_ruby() {
+        run_test("lz4-ruby");
     }
 }
