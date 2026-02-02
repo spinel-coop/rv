@@ -48,7 +48,7 @@ jobs:
           - diaspora
           - discourse
           - fastlane
-          - gitlab
+          # - gitlab  # Disabled until https://gitlab.com/gitlab-org/gitlab/-/issues/522903 is resolved
           - homebrew
           - huginn
           - lobsters
