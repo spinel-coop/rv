@@ -2,25 +2,54 @@
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Get all smoke tests (exclude shared.sh and other non-executable files)
+get_all_tests() {
+    for f in "$DIR/smoke-tests"/*; do
+        if [[ -x "$f" && ! "$f" =~ \.sh$ ]]; then
+            basename "$f"
+        fi
+    done | sort
+}
+
+show_usage() {
+    tests="$(get_all_tests | tr '\n' '|')"
+    echo "USAGE: smoke-test [--all|$tests]"
+    echo ""
+    echo "Options:"
+    echo "  --all    Run all smoke tests in order, stopping on first failure"
+    echo ""
+    echo "Available tests:"
+    get_all_tests | sed 's/^/  /'
+}
+
+run_test() {
+    local name="$1"
+    shift
+    echo ""
+    echo "=========================================="
+    echo "Running smoke test: $name"
+    echo "=========================================="
+    "$DIR/smoke-tests/$name" "$@"
+}
+
 name="${1:-}"
 
 if [[ -z "$name" ]]; then
-  # shellcheck disable=SC2012
-  tests="$(ls "$DIR/smoke-tests" | tr '\n' '|')"
-  echo "USAGE: smoke-test [$tests]"
-  exit 1
+    show_usage
+    exit 1
 fi
 
-shift
-if [[ "$(uname)" == "Darwin" ]]; then
-  if ! docker container inspect rv-smoke-test-diaspora >/dev/null 2>&1; then
-    set -x
-    docker run -it -v .:/src --name "rv-smoke-test-$name" rust:latest "/src/bin/smoke-tests/$name" "$@"
-  else
-    set -x
-    docker start -ia "rv-smoke-test-$name"
-  fi
+if [[ "$name" == "--all" ]]; then
+    echo "Running all smoke tests..."
+    while IFS= read -r test; do
+        run_test "$test"
+    done < <(get_all_tests)
+    echo ""
+    echo "=========================================="
+    echo "All smoke tests passed!"
+    echo "=========================================="
 else
-  set -x
-  exec "$DIR/smoke-tests/$name" "$@"
+    shift
+    run_test "$name" "$@"
 fi

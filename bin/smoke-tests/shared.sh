@@ -6,7 +6,12 @@ macos_docker_reexec() {
     if [[ "$(uname -s)" == "Darwin" ]]; then
         echo "Detected macOS - running via Docker..."
         REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-        exec docker run -it --rm -v "$REPO_ROOT:/src" rust:latest "/src/bin/smoke-tests/$(basename "$0")"
+        # Use -it only if we have a TTY (interactive terminal)
+        if [ -t 0 ]; then
+            exec docker run -it --rm -v "$REPO_ROOT:/src" rust:latest "/src/bin/smoke-tests/$(basename "$0")"
+        else
+            exec docker run --rm -v "$REPO_ROOT:/src" rust:latest "/src/bin/smoke-tests/$(basename "$0")"
+        fi
     fi
 }
 
