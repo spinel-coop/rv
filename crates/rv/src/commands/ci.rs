@@ -1732,6 +1732,56 @@ mod tests {
     use rv_gem_types::Platform;
 
     #[test]
+    fn test_dep_graph() {
+        // Serialized gemspecs (JSON).
+        // I got these by running:
+        // rv ruby run -- -e 'require "rubygems"; puts Gem::Specification.find_by_name("ffi").to_yaml' > crates/rv-gem-specification-yaml/tests/fixtures/ffi-1.17.3.gemspec.yaml
+        let specs = [
+            include_str!(
+                "../../../rv-gem-specification-yaml/tests/fixtures/ffi-compiler-1.3.2.gemspec.yaml"
+            ),
+            include_str!(
+                "../../../rv-gem-specification-yaml/tests/fixtures/llhttp-ffi-0.4.0.gemspec.yaml"
+            ),
+            include_str!(
+                "../../../rv-gem-specification-yaml/tests/fixtures/rake-13.3.1.gemspec.yaml"
+            ),
+            include_str!(
+                "../../../rv-gem-specification-yaml/tests/fixtures/ffi-1.17.3.gemspec.yaml"
+            ),
+        ];
+        let specs: Vec<GemSpecification> = specs
+            .into_iter()
+            .map(|s| rv_gem_specification_yaml::parse(s).unwrap())
+            .collect();
+        let (_nodes, deps) = make_dep_graph(&specs);
+        let dot = depgraph_to_graphviz(deps);
+        insta::assert_snapshot!(dot);
+    }
+
+    /// View the dependency graph as a GraphViz file.
+    fn depgraph_to_graphviz(deps: Vec<dep_graph::Node<String>>) -> String {
+        let mut dot = "digraph G {\n".to_owned();
+        for gem in deps {
+            // Get a stable ordering so that the snapshot doesn't randomly
+            // change order depending on hashset iteration.
+            let mut this_gems_deps: Vec<_> = gem.deps().iter().collect();
+            this_gems_deps.sort();
+
+            // Write edges.
+            for dep in this_gems_deps {
+                dot.push_str(&format!(
+                    "  {} -> {};\n",
+                    gem.id().replace("-", "_"),
+                    dep.replace("-", "_")
+                ));
+            }
+        }
+        dot.push('}');
+        dot
+    }
+
+    #[test]
     fn test_generate_binstub() {
         let gem_name = "rake";
         let exe_name = "rake";
