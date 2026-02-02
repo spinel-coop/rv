@@ -1,0 +1,14 @@
+# Minimal reproduction for transitive dependency bug in parallel compilation
+# See: https://github.com/spinel-coop/rv/issues/452
+#
+# Dependency chain:
+#   llhttp-ffi (has native extension)
+#       -> ffi-compiler (NO extension)
+#           -> ffi (has native extension)
+#
+# Bug: The dependency graph only tracks direct deps between gems with extensions,
+# so the transitive dependency llhttp-ffi -> ffi is missed, causing ffi to
+# potentially compile after llhttp-ffi (which needs ffi to be ready).
+
+source "https://rubygems.org"
+gem "llhttp-ffi", "0.4.0"
