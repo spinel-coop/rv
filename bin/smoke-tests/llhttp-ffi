@@ -1,0 +1,33 @@
+#!/bin/bash
+set -euo pipefail
+
+# Smoke test for transitive native extension dependencies (issue #452, PR #442)
+#
+# Tests the dependency chain:
+#   llhttp-ffi (has extension) -> ffi-compiler (no extension) -> ffi (has extension)
+#
+# The bug was that rv's parallel compilation didn't track transitive dependencies
+# through gems without extensions, causing ffi to potentially compile AFTER
+# llhttp-ffi, which fails because llhttp-ffi needs ffi at compile time.
+
+source "$(dirname "$0")/shared.sh"
+
+macos_docker_reexec
+
+setup_packages \
+    libffi-dev
+
+setup_rv
+
+# Use fixture files instead of cloning a project
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+TEST_DIR=$(mktemp -d)
+
+cp "$REPO_ROOT/crates/rv-lockfile/tests/inputs/Gemfile.llhttp-ffi" "$TEST_DIR/Gemfile"
+cp "$REPO_ROOT/crates/rv-lockfile/tests/inputs/Gemfile.llhttp-ffi.lock" "$TEST_DIR/Gemfile.lock"
+cd "$TEST_DIR"
+
+rv ci
+
+smoke_test_success "llhttp-ffi (transitive deps)"
