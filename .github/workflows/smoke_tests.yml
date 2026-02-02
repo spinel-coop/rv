@@ -51,6 +51,7 @@ jobs:
           # - gitlab  # Disabled until https://gitlab.com/gitlab-org/gitlab/-/issues/522903 is resolved
           - homebrew
           - huginn
+          - llhttp-ffi
           - lobsters
           - mastodon
     steps:
