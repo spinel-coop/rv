@@ -10,8 +10,7 @@ macos_docker_reexec
 setup_packages \
     libyaml-dev \
     libmariadb-dev \
-    libsqlite3-dev \
-    libclang-dev
+    libsqlite3-dev
 
 setup_rv
 

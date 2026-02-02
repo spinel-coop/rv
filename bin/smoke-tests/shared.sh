@@ -27,6 +27,7 @@ setup_packages() {
         git \
         ca-certificates \
         curl \
+        libclang-dev \
         "${packages[@]}"
 }
 
