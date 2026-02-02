@@ -846,30 +846,10 @@ fn compile_gems(
         return Ok(0);
     }
 
-    use dep_graph::{DepGraph, Node};
+    use dep_graph::DepGraph;
     use rayon::prelude::*;
 
-    let mut nodes: HashMap<String, &GemSpecification> = HashMap::new();
-
-    let deps: Vec<_> = specs
-        .iter()
-        .map(|spec| {
-            let name = spec.name.clone();
-            let mut node = Node::new(name.clone());
-
-            if !spec.extensions.is_empty() {
-                nodes.insert(name, spec);
-            }
-
-            for dep in &spec.dependencies {
-                if dep.is_runtime() {
-                    node.add_dep(dep.name.clone());
-                }
-            }
-
-            node
-        })
-        .collect();
+    let (nodes, deps) = make_dep_graph(&specs);
 
     if deps.is_empty() {
         return Ok(0);
@@ -906,6 +886,39 @@ fn compile_gems(
     })?;
 
     Ok(deps_count)
+}
+
+/// Build a dependency graph of all the gems which need compiling,
+/// and dependencies (i.e. which gems must be compiled before other gems)
+fn make_dep_graph(
+    specs: &[GemSpecification],
+) -> (
+    HashMap<String, &GemSpecification>,
+    Vec<dep_graph::Node<String>>,
+) {
+    use dep_graph::Node;
+    let mut nodes: HashMap<String, &GemSpecification> = HashMap::new();
+
+    let deps: Vec<_> = specs
+        .iter()
+        .map(|spec| {
+            let name = spec.name.clone();
+            let mut node = Node::new(name.clone());
+
+            if !spec.extensions.is_empty() {
+                nodes.insert(name, spec);
+            }
+
+            for dep in &spec.dependencies {
+                if dep.is_runtime() {
+                    node.add_dep(dep.name.clone());
+                }
+            }
+
+            node
+        })
+        .collect();
+    (nodes, deps)
 }
 
 fn install_binstub(dep_name: &str, executables: &[String], binstub_dir: &Utf8Path) -> Result<()> {
@@ -1717,6 +1730,56 @@ fn format_duration(duration: Duration) -> String {
 mod tests {
     use super::*;
     use rv_gem_types::Platform;
+
+    #[test]
+    fn test_dep_graph() {
+        // Serialized gemspecs (JSON).
+        // I got these by running:
+        // rv ruby run -- -e 'require "rubygems"; puts Gem::Specification.find_by_name("ffi").to_yaml' > crates/rv-gem-specification-yaml/tests/fixtures/ffi-1.17.3.gemspec.yaml
+        let specs = [
+            include_str!(
+                "../../../rv-gem-specification-yaml/tests/fixtures/ffi-compiler-1.3.2.gemspec.yaml"
+            ),
+            include_str!(
+                "../../../rv-gem-specification-yaml/tests/fixtures/llhttp-ffi-0.4.0.gemspec.yaml"
+            ),
+            include_str!(
+                "../../../rv-gem-specification-yaml/tests/fixtures/rake-13.3.1.gemspec.yaml"
+            ),
+            include_str!(
+                "../../../rv-gem-specification-yaml/tests/fixtures/ffi-1.17.3.gemspec.yaml"
+            ),
+        ];
+        let specs: Vec<GemSpecification> = specs
+            .into_iter()
+            .map(|s| rv_gem_specification_yaml::parse(s).unwrap())
+            .collect();
+        let (_nodes, deps) = make_dep_graph(&specs);
+        let dot = depgraph_to_graphviz(deps);
+        insta::assert_snapshot!(dot);
+    }
+
+    /// View the dependency graph as a GraphViz file.
+    fn depgraph_to_graphviz(deps: Vec<dep_graph::Node<String>>) -> String {
+        let mut dot = "digraph G {\n".to_owned();
+        for gem in deps {
+            // Get a stable ordering so that the snapshot doesn't randomly
+            // change order depending on hashset iteration.
+            let mut this_gems_deps: Vec<_> = gem.deps().iter().collect();
+            this_gems_deps.sort();
+
+            // Write edges.
+            for dep in this_gems_deps {
+                dot.push_str(&format!(
+                    "  {} -> {};\n",
+                    gem.id().replace("-", "_"),
+                    dep.replace("-", "_")
+                ));
+            }
+        }
+        dot.push('}');
+        dot
+    }
 
     #[test]
     fn test_generate_binstub() {
