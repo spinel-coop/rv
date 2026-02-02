@@ -1,0 +1,97 @@
+--- !ruby/object:Gem::Specification
+name: ffi-compiler
+version: !ruby/object:Gem::Version
+  version: 1.3.2
+platform: ruby
+authors:
+- Wayne Meissner
+bindir: bin
+cert_chain: []
+date: 2024-03-14 00:00:00.000000000 Z
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: rake
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+- !ruby/object:Gem::Dependency
+  name: ffi
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 1.15.5
+  type: :runtime
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: 1.15.5
+- !ruby/object:Gem::Dependency
+  name: rspec
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+  type: :development
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+- !ruby/object:Gem::Dependency
+  name: rubygems-tasks
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+  type: :development
+  prerelease: false
+  version_requirements: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: '0'
+description: Ruby FFI library
+email:
+- wmeissner@gmail.com
+- steve@advancedcontrol.com.au
+executables: []
+extensions: []
+extra_rdoc_files: []
+files: []
+homepage: https://github.com/ffi/ffi-compiler
+licenses:
+- Apache-2.0
+metadata: {}
+rdoc_options: []
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '1.9'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 3.5.6
+specification_version: 4
+summary: Ruby FFI Rakefile generator
+test_files: []

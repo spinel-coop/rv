@@ -1,0 +1,10 @@
+---
+source: crates/rv/src/commands/ci.rs
+expression: dot
+---
+digraph G {
+  ffi_compiler -> ffi;
+  ffi_compiler -> rake;
+  llhttp_ffi -> ffi_compiler;
+  llhttp_ffi -> rake;
+}

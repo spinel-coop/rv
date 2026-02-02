@@ -1,0 +1,76 @@
+--- !ruby/object:Gem::Specification
+name: ffi
+version: !ruby/object:Gem::Version
+  version: 1.17.3
+platform: ruby
+authors:
+- Wayne Meissner
+bindir: bin
+cert_chain:
+- |
+  -----BEGIN CERTIFICATE-----
+  MIIEBDCCAmygAwIBAgIBBDANBgkqhkiG9w0BAQsFADAoMSYwJAYDVQQDDB1sYXJz
+  L0RDPWdyZWl6LXJlaW5zZG9yZi9EQz1kZTAeFw0yNTEyMjkyMDMyMzFaFw0yNjEy
+  MjkyMDMyMzFaMCgxJjAkBgNVBAMMHWxhcnMvREM9Z3JlaXotcmVpbnNkb3JmL0RD
+  PWRlMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAwum6Y1KznfpzXOT/
+  mZgJTBbxZuuZF49Fq3K0WA67YBzNlDv95qzSp7V/7Ek3NCcnT7G+2kSuhNo1FhdN
+  eSDO/moYebZNAcu3iqLsuzuULXPLuoU0GsMnVMqV9DZPh7cQHE5EBZ7hlzDBK7k/
+  8nBMvR0mHo77kIkapHc26UzVq/G0nKLfDsIHXVylto3PjzOumjG6GhmFN4r3cP6e
+  SDfl1FSeRYVpt4kmQULz/zdSaOH3AjAq7PM2Z91iGwQvoUXMANH2v89OWjQO/NHe
+  JMNDFsmHK/6Ji4Kk48Z3TyscHQnipAID5GhS1oD21/WePdj7GhmbF5gBzkV5uepd
+  eJQPgWGwrQW/Z2oPjRuJrRofzWfrMWqbOahj9uth6WSxhNexUtbjk6P8emmXOJi5
+  chQPnWX+N3Gj+jjYxqTFdwT7Mj3pv1VHa+aNUbqSPpvJeDyxRIuo9hvzDaBHb/Cg
+  9qRVcm8a96n4t7y2lrX1oookY6bkBaxWOMtWlqIprq8JZXM9AgMBAAGjOTA3MAkG
+  A1UdEwQCMAAwCwYDVR0PBAQDAgSwMB0GA1UdDgQWBBQ4h1tIyvdUWtMI739xMzTR
+  7EfMFzANBgkqhkiG9w0BAQsFAAOCAYEAUVIier9xybHmXNsj801xD+Q7Jz7wpRsf
+  fMHpV2sAzvYcAa7pn+mbu9nf7RUhe5hiaUv88Usk9nRUYYrjBOO5RuD+wYNowpcE
+  kxUiTAP/fgUBdW6hYUJy57CH3xUD6tj1Cg9hxdKy7jItZXbfhX+qPq2BwGaXz7gn
+  nhrALITRmpuPnlsccM94dgSArCInSo2SEc12h2oB6FAnFG1Lre3dmQamI5q1EKp0
+  Yafb2+cPbFcVYUdE50wf+cdeGDOsCGlAmo2OGqXWxTP2hIfyhsFoamD6UGufLoPG
+  Dh6tAEZIuEvLjq93qoNceUQn+xxiiIszjY5mkTu9rVY+/gh5PJzu9IHvyIqBpb2o
+  fdWDISWK+KSLCrqkFtKoliLDTZau73GcYCVOkjca+3cxqABKZ+M8r42Sq8JPxPiv
+  KyLQBzqPeLN9qRDD1bEFHIcgwdY/zQTs4mWRBSmBWa7w+k8nP8aSV1dN/fvhYwY3
+  HCQwtPaMYOznIOcc8shL4zLJpcl8uCqE
+  -----END CERTIFICATE-----
+date: 1980-01-02 00:00:00.000000000 Z
+dependencies: []
+description: Ruby FFI library
+email:
+- wmeissner@gmail.com
+executables: []
+extensions:
+- ext/ffi_c/extconf.rb
+extra_rdoc_files: []
+files: []
+homepage: https://github.com/ffi/ffi/wiki
+licenses:
+- BSD-3-Clause
+metadata:
+  bug_tracker_uri: https://github.com/ffi/ffi/issues
+  changelog_uri: https://github.com/ffi/ffi/blob/master/CHANGELOG.md
+  documentation_uri: https://github.com/ffi/ffi/wiki
+  mailing_list_uri: http://groups.google.com/group/ruby-ffi
+  msys2_mingw_dependencies: libffi
+  rubygems_mfa_required: 'true'
+  source_code_uri: https://github.com/ffi/ffi/
+  wiki_uri: https://github.com/ffi/ffi/wiki
+rdoc_options:
+- "--exclude=ext/ffi_c/.*\\.o$"
+- "--exclude=ffi_c\\.(bundle|so)$"
+require_paths:
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '2.5'
+required_rubygems_version: !ruby/object:Gem::Requirement
+  requirements:
+  - - ">="
+    - !ruby/object:Gem::Version
+      version: '0'
+requirements: []
+rubygems_version: 4.0.3
+specification_version: 4
+summary: Ruby FFI
+test_files: []
