@@ -846,30 +846,10 @@ fn compile_gems(
         return Ok(0);
     }
 
-    use dep_graph::{DepGraph, Node};
+    use dep_graph::DepGraph;
     use rayon::prelude::*;
 
-    let mut nodes: HashMap<String, &GemSpecification> = HashMap::new();
-
-    let deps: Vec<_> = specs
-        .iter()
-        .map(|spec| {
-            let name = spec.name.clone();
-            let mut node = Node::new(name.clone());
-
-            if !spec.extensions.is_empty() {
-                nodes.insert(name, spec);
-            }
-
-            for dep in &spec.dependencies {
-                if dep.is_runtime() {
-                    node.add_dep(dep.name.clone());
-                }
-            }
-
-            node
-        })
-        .collect();
+    let (nodes, deps) = make_dep_graph(&specs);
 
     if deps.is_empty() {
         return Ok(0);
@@ -906,6 +886,39 @@ fn compile_gems(
     })?;
 
     Ok(deps_count)
+}
+
+/// Build a dependency graph of all the gems which need compiling,
+/// and dependencies (i.e. which gems must be compiled before other gems)
+fn make_dep_graph(
+    specs: &[GemSpecification],
+) -> (
+    HashMap<String, &GemSpecification>,
+    Vec<dep_graph::Node<String>>,
+) {
+    use dep_graph::Node;
+    let mut nodes: HashMap<String, &GemSpecification> = HashMap::new();
+
+    let deps: Vec<_> = specs
+        .iter()
+        .map(|spec| {
+            let name = spec.name.clone();
+            let mut node = Node::new(name.clone());
+
+            if !spec.extensions.is_empty() {
+                nodes.insert(name, spec);
+            }
+
+            for dep in &spec.dependencies {
+                if dep.is_runtime() {
+                    node.add_dep(dep.name.clone());
+                }
+            }
+
+            node
+        })
+        .collect();
+    (nodes, deps)
 }
 
 fn install_binstub(dep_name: &str, executables: &[String], binstub_dir: &Utf8Path) -> Result<()> {
