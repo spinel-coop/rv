@@ -53,6 +53,16 @@ impl Invocation {
             env,
         }
     }
+
+    pub fn tool(executable: &str, env: Vec<(&'static str, String)>) -> Self {
+        Self {
+            program: Program::Tool {
+                executable_path: executable.into(),
+                extra_paths: vec![],
+            },
+            env,
+        }
+    }
 }
 
 /// Shell out to the given ruby `version`, run it with the given arguments.
