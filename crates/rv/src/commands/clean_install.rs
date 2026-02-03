@@ -1256,13 +1256,14 @@ end"#
 fn generate_binstub_bat_contents(ruby_path: &str, exe_name: &str) -> String {
     // Strip Windows extended-length path prefix (\\?\) if present.
     // This prefix is added by path canonicalization but isn't understood by cmd.exe.
-    let ruby_path = ruby_path
-        .strip_prefix(r"\\?\")
-        .unwrap_or(ruby_path);
-    // %~dp0 expands to the directory containing the .bat file
+    let ruby_path = ruby_path.strip_prefix(r"\\?\").unwrap_or(ruby_path);
+    // %~dp0 expands to the directory containing the .bat file (e.g., .rv/ruby/3.4.0/bin/)
+    // %~dp0.. is the parent directory where gems are installed (e.g., .rv/ruby/3.4.0/)
+    // Set GEM_HOME so Ruby can find the project's installed gems
     // %* forwards all arguments to the ruby script
-    // Use the full path to rv's Ruby to avoid using a different Ruby from PATH
-    format!("@echo off\r\n\"{ruby_path}\" \"%~dp0{exe_name}\" %*\r\n")
+    format!(
+        "@echo off\r\nset \"GEM_HOME=%~dp0..\"\r\n\"{ruby_path}\" \"%~dp0{exe_name}\" %*\r\n"
+    )
 }
 
 fn write_binstub(
@@ -1905,11 +1906,9 @@ end"#;
         let ruby_path = r"C:\Users\test\.rv\rubies\ruby-3.4.1\bin\ruby.exe";
         let exe_name = "rake";
         let actual = generate_binstub_bat_contents(ruby_path, exe_name);
-        // %~dp0 expands to the directory containing the .bat file
-        // %* forwards all arguments to the ruby script
-        // Uses full path to rv's Ruby to avoid system Ruby PATH conflicts
-        let expected =
-            "@echo off\r\n\"C:\\Users\\test\\.rv\\rubies\\ruby-3.4.1\\bin\\ruby.exe\" \"%~dp0rake\" %*\r\n";
+        // %~dp0 is the .bat file's directory, %~dp0.. is parent (where gems live)
+        // GEM_HOME tells Ruby where to find installed gems
+        let expected = "@echo off\r\nset \"GEM_HOME=%~dp0..\"\r\n\"C:\\Users\\test\\.rv\\rubies\\ruby-3.4.1\\bin\\ruby.exe\" \"%~dp0rake\" %*\r\n";
         assert_eq!(actual, expected);
     }
 
@@ -1920,9 +1919,8 @@ end"#;
         let ruby_path = r"\\?\C:\Users\test\.rv\rubies\ruby-3.4.1\bin\ruby.exe";
         let exe_name = "rspec";
         let actual = generate_binstub_bat_contents(ruby_path, exe_name);
-        // The \\?\ prefix should be stripped
-        let expected =
-            "@echo off\r\n\"C:\\Users\\test\\.rv\\rubies\\ruby-3.4.1\\bin\\ruby.exe\" \"%~dp0rspec\" %*\r\n";
+        // The \\?\ prefix should be stripped, GEM_HOME should be set
+        let expected = "@echo off\r\nset \"GEM_HOME=%~dp0..\"\r\n\"C:\\Users\\test\\.rv\\rubies\\ruby-3.4.1\\bin\\ruby.exe\" \"%~dp0rspec\" %*\r\n";
         assert_eq!(actual, expected);
     }
 
