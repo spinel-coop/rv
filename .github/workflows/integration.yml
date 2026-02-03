@@ -115,8 +115,10 @@ jobs:
           Copy-Item crates\rv-lockfile\tests\inputs\Gemfile.minimal-ruby-project.lock test-project\Gemfile.lock
           Set-Location test-project
           Set-Content -Path .ruby-version -Value "3.4"
-          # Run rv ci - set BUNDLE_PATH so gems/binstubs install to project directory
-          $env:BUNDLE_PATH = ".rv"
+          # Configure Bundler to install gems locally (like real projects often do)
+          New-Item -ItemType Directory -Path .bundle
+          "---", 'BUNDLE_PATH: ".rv"' | Set-Content -Path .bundle\config
+          # Run rv ci to install gems and generate binstubs
           ..\target\release\rv.exe ci
           # Test that the .bat binstub wrapper works
           .\bin\rake.bat --version
