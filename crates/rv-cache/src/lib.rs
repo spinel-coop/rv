@@ -251,18 +251,15 @@ pub trait CleanReporter: Send + Sync {
     fn on_complete(&self);
 }
 
-/// The different kinds of data in the cache are stored in different buckets, which in our case
-/// are subdirectories of the cache root.
-/// Cache structure: `<bucket>-v0/<digest(path)>.ext`
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum CacheBucket {
     /// Ruby interpreters
     Ruby,
     /// Gems
     Gem,
-    /// Git repos for Git gem deps.
+    /// Git repos for Git gem deps
     Git,
-    /// YAML-format gemspec.
+    /// YAML-format gemspecs
     Gemspec,
     /// Getting all transitive dependencies of a gem
     GemDeps,
@@ -281,7 +278,15 @@ impl CacheBucket {
 
     /// Return an iterator over all cache buckets.
     pub fn iter() -> impl Iterator<Item = Self> {
-        [Self::Ruby, Self::Gem].iter().copied()
+        [
+            Self::Ruby,
+            Self::Gem,
+            Self::Git,
+            Self::Gemspec,
+            Self::GemDeps,
+        ]
+        .iter()
+        .copied()
     }
 }
 
