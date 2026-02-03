@@ -74,7 +74,7 @@ jobs:
         run: wsl -d Ubuntu-24.04 -- bash -c "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
 
       - name: Build rv
-        run: wsl -d Ubuntu-24.04 -- bash -c "source ~/.cargo/env && cargo build --release --locked --bin rv"
+        run: wsl -d Ubuntu-24.04 -- bash -c "source ~/.cargo/env && ./bin/build"
 
       - name: Test rv installs and runs ruby
         run: |
@@ -115,13 +115,9 @@ jobs:
           Copy-Item crates\rv-lockfile\tests\inputs\Gemfile.minimal-ruby-project.lock test-project\Gemfile.lock
           Set-Location test-project
           Set-Content -Path .ruby-version -Value "3.4"
-          # Run rv ci to install gems and generate binstubs
+          # Run rv ci - set BUNDLE_PATH so gems/binstubs install to project directory
+          $env:BUNDLE_PATH = ".rv"
           ..\target\release\rv.exe ci
-          # Debug: show what was created
-          Write-Host "Contents of test-project:"
-          Get-ChildItem -Recurse -Name
-          Write-Host "Contents of bin directory:"
-          Get-ChildItem -Path bin -Name -ErrorAction SilentlyContinue
           # Test that the .bat binstub wrapper works
           .\bin\rake.bat --version
           .\bin\rspec.bat --version
