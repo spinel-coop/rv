@@ -109,6 +109,11 @@ jobs:
 
       - name: Test rv ci and binstubs
         run: |
+          # Debug: Show where rv installs rubies
+          Write-Host "=== rv ruby dir ==="
+          .\target\release\rv.exe ruby dir
+          Write-Host "=== rv ruby list ==="
+          .\target\release\rv.exe ruby list
           # Use our minimal fixture (pure Ruby gems only, no native extensions)
           New-Item -ItemType Directory -Path test-project
           Copy-Item crates\rv-lockfile\tests\inputs\Gemfile.minimal-ruby-project test-project\Gemfile
@@ -124,5 +129,20 @@ jobs:
           # Binstubs are in {bundle_path}/bin/ - find the bin directory dynamically
           $binDir = Get-ChildItem -Path .rv -Recurse -Directory -Filter "bin" | Select-Object -First 1 -ExpandProperty FullName
           Write-Host "Found bin directory: $binDir"
+          # Debug: show what's in the .bat file and check if Ruby path exists
+          Write-Host "=== Contents of rake.bat ==="
+          Get-Content "$binDir\rake.bat"
+          Write-Host "=== Checking Ruby path ==="
+          # Extract the Ruby path from the .bat file (second line, between quotes)
+          $batContent = Get-Content "$binDir\rake.bat" -Raw
+          if ($batContent -match '"([^"]+ruby\.exe)"') {
+            $rubyPath = $matches[1]
+            Write-Host "Ruby path in .bat: $rubyPath"
+            Write-Host "Ruby exists: $(Test-Path $rubyPath)"
+            if (Test-Path $rubyPath) {
+              & $rubyPath --version
+            }
+          }
+          Write-Host "=== Running binstubs ==="
           & "$binDir\rake.bat" --version
           & "$binDir\rspec.bat" --version
