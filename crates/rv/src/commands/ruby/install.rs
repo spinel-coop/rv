@@ -115,6 +115,7 @@ async fn download_and_extract_remote_tarball(
     let sri = if let Some(md) = md
         && cacache::exists_sync("cache/ruby-v1", &md.integrity)
     {
+        println!("Ruby {} is already downloaded", version.cyan());
         md.integrity
     } else {
         download_ruby_tarball(&url, version, progress).await?

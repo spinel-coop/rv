@@ -261,11 +261,7 @@ fn test_ruby_install_cached_file_reused() {
     let output2 = test.rv(&["ruby", "install", "3.4.5"]);
     output2.assert_success();
 
-    assert!(
-        output2
-            .stdout()
-            .contains("already exists, skipping download")
-    );
+    assert!(output2.stdout().contains("already downloaded"));
 
     mock.assert();
 }
