@@ -1219,6 +1219,15 @@ end"#
     )
 }
 
+/// Generate the contents of a Windows .bat wrapper for a binstub.
+/// The .bat file invokes ruby with the binstub script.
+#[cfg_attr(not(windows), allow(dead_code))] // Only used on Windows, but tested on all platforms
+fn generate_binstub_bat_contents(exe_name: &str) -> String {
+    // %~dp0 expands to the directory containing the .bat file
+    // %* forwards all arguments to the ruby script
+    format!("@echo off\r\nruby \"%~dp0{exe_name}\" %*\r\n")
+}
+
 fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -> io::Result<()> {
     let binstub_path = binstub_dir.join(exe_name);
     let binstub_contents = generate_binstub_contents(gem_name, exe_name);
@@ -1227,6 +1236,12 @@ fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -> io::
     // determined by file extension, not permissions.
     #[cfg(unix)]
     fs_err::set_permissions(&binstub_path, PermissionsExt::from_mode(0o755))?;
+    // On Windows, create a .bat wrapper so the binstub can be run from the command line.
+    #[cfg(windows)]
+    {
+        let bat_path = binstub_dir.join(format!("{exe_name}.bat"));
+        fs_err::write(&bat_path, generate_binstub_bat_contents(exe_name))?;
+    }
     Ok(())
 }
 
@@ -1832,6 +1847,16 @@ if Gem.respond_to?(:activate_and_load_bin_path)
 else
   load Gem.activate_bin_path('rake', 'rake', version)
 end"#;
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_generate_binstub_bat() {
+        let exe_name = "rake";
+        let actual = generate_binstub_bat_contents(exe_name);
+        // %~dp0 expands to the directory containing the .bat file
+        // %* forwards all arguments to the ruby script
+        let expected = "@echo off\r\nruby \"%~dp0rake\" %*\r\n";
         assert_eq!(actual, expected);
     }
 

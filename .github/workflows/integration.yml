@@ -100,3 +100,15 @@ jobs:
       - name: Test rv installs and runs Ruby (RubyInstaller2)
         run: |
           .\target\release\rv.exe ruby run 3.4.4 -- -e "puts RUBY_DESCRIPTION"
+
+      - name: Test rv ci and binstubs
+        run: |
+          git clone --depth 1 https://github.com/philiph/minimal-ruby-app-template.git test-project
+          cd test-project
+          # Override the pinned Ruby version to use what RubyInstaller2 provides
+          echo "3.4" > .ruby-version
+          # Run rv ci to install gems and generate binstubs
+          ..\target\release\rv.exe ci
+          # Test that the .bat binstub wrapper works
+          .\bin\rake.bat --version
+          .\bin\rspec.bat --version
