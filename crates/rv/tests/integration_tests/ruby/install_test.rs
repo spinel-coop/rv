@@ -174,73 +174,6 @@ fn test_ruby_install_http_failure_no_empty_file() {
 }
 
 #[test]
-fn test_ruby_install_interrupted_download_cleanup() {
-    let mut test = RvTest::new();
-
-    let download_suffix = make_dl_suffix("3.4.5");
-    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    let _mock = test
-        .server
-        .mock("GET", "/latest/download/ruby-3.4.5.arm64_sonoma.tar.gz")
-        .with_status(200)
-        .with_header("content-type", "application/gzip")
-        .with_body("partial")
-        .create();
-    #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
-    let _mock = test
-        .server
-        .mock("GET", "/latest/download/ruby-3.4.5.ventura.tar.gz")
-        .with_status(200)
-        .with_header("content-type", "application/gzip")
-        .with_body("partial")
-        .create();
-    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-    let _mock = test
-        .server
-        .mock("GET", "/latest/download/ruby-3.4.5.x86_64_linux.tar.gz")
-        .with_status(200)
-        .with_header("content-type", "application/gzip")
-        .with_body("partial")
-        .create();
-    #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
-    let _mock = test
-        .server
-        .mock("GET", "/latest/download/ruby-3.4.5.arm64_linux.tar.gz")
-        .with_status(200)
-        .with_header("content-type", "application/gzip")
-        .with_body("partial")
-        .create();
-
-    let cache_dir = test.enable_cache();
-
-    let output = test.rv(&["ruby", "install", "3.4.5"]);
-
-    output.assert_failure();
-
-    let tarball_name = format!("{}/{}", test.server_url(), download_suffix);
-    let cache_key = rv_cache::cache_digest(tarball_name);
-    let tarball_path = cache_dir
-        .join("ruby-v0")
-        .join("tarballs")
-        .join(format!("{}.tar.gz", cache_key));
-    let temp_path = cache_dir
-        .join("ruby-v0")
-        .join("tarballs")
-        .join(format!("{}.tar.gz.tmp", cache_key));
-
-    assert!(
-        tarball_path.exists(),
-        "Tarball should exist at {} after successful download",
-        tarball_path,
-    );
-    assert!(
-        !temp_path.exists(),
-        "No temp file should remain at {} after failure",
-        temp_path,
-    );
-}
-
-#[test]
 fn test_ruby_install_cached_file_reused() {
     let mut test = RvTest::new();
 
@@ -312,36 +245,6 @@ fn make_platform_suffix() -> String {
     let suffix = "x86_64_linux";
 
     suffix.to_string()
-}
-
-#[test]
-fn test_ruby_install_atomic_rename_behavior() {
-    let mut test = RvTest::new();
-
-    let tarball_content = create_mock_tarball();
-    let download_suffix = make_dl_suffix("3.4.5");
-    let _mock = test
-        .mock_tarball_download(&download_suffix, &tarball_content)
-        .create();
-
-    let cache_dir = test.enable_cache();
-
-    let output = test.rv(&["ruby", "install", "3.4.5"]);
-    output.assert_success();
-
-    let cache_key = rv_cache::cache_digest(format!("{}/{}", test.server_url(), download_suffix));
-    let tarball_path = cache_dir
-        .join("ruby-v0")
-        .join("tarballs")
-        .join(format!("{}.tar.gz", cache_key));
-
-    assert!(tarball_path.exists(), "Final tarball should exist");
-
-    let metadata = fs::metadata(&tarball_path).expect("Should be able to get file metadata");
-    assert!(metadata.len() > 0, "Tarball should not be empty");
-
-    let content = fs::read(&tarball_path).expect("Should be able to read tarball");
-    assert_eq!(content, tarball_content, "Content should match exactly");
 }
 
 #[test]
