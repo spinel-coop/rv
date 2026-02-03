@@ -3,6 +3,17 @@ use std::{env, ffi::OsString};
 use camino::{Utf8Path, Utf8PathBuf};
 use etcetera::BaseStrategy;
 
+/// Returns an appropriate user-home directory, or the system temporary directory if the platform
+/// does not have user home directories
+pub fn home_dir() -> Utf8PathBuf {
+    etcetera::home_dir()
+        .ok()
+        .unwrap_or_else(env::temp_dir)
+        .to_string_lossy()
+        .as_ref()
+        .into()
+}
+
 /// Returns an appropriate user-level directory for storing executables.
 ///
 /// This follows, in order:
@@ -13,20 +24,13 @@ use etcetera::BaseStrategy;
 ///
 /// On all platforms.
 ///
-/// Returns `None` if a directory cannot be found, i.e., if `$HOME` cannot be resolved. Does not
-/// check if the directory exists.
-pub fn user_executable_directory(override_variable: Option<&'static str>) -> Option<Utf8PathBuf> {
+/// Does not check if the directory exists.
+pub fn user_executable_directory(override_variable: Option<&'static str>) -> Utf8PathBuf {
     override_variable
         .and_then(env::var_os)
         .and_then(parse_path)
         .or_else(|| env::var_os("XDG_BIN_HOME").and_then(parse_path))
-        .or_else(|| {
-            etcetera::home_dir()
-                .unwrap()
-                .join(".local/bin")
-                .try_into()
-                .ok()
-        })
+        .unwrap_or_else(|| home_dir().join(".local/bin"))
 }
 
 /// Returns an appropriate user-level directory for storing the cache.

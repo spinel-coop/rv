@@ -1,6 +1,6 @@
 use std::{
     env::{self, JoinPathsError, join_paths, split_paths},
-    path::{Path, PathBuf},
+    path::PathBuf,
     str::FromStr,
 };
 
@@ -79,19 +79,16 @@ impl Config {
     }
 }
 
-fn xdg_data_path() -> String {
-    let xdg_data_home =
-        env::var("XDG_DATA_HOME").unwrap_or(shellexpand::tilde("~/.local/share").into());
-    let path_buf = Path::new(&xdg_data_home).join("rv/rubies");
-    path_buf.to_str().unwrap().to_owned()
+fn xdg_data_path() -> Utf8PathBuf {
+    rv_dirs::user_state_dir("/".into()).join("rubies")
 }
 
-fn legacy_default_data_path() -> String {
-    shellexpand::tilde("~/.data/rv/rubies").into()
+fn legacy_default_data_path() -> Utf8PathBuf {
+    rv_dirs::home_dir().join(".data/rv/.rubies")
 }
 
-fn legacy_default_path() -> String {
-    shellexpand::tilde("~/.rubies").into()
+fn legacy_default_path() -> Utf8PathBuf {
+    rv_dirs::home_dir().join(".rubies")
 }
 
 /// Default Ruby installation directories
@@ -237,11 +234,10 @@ pub fn env_with_path_for(
         insert("RUBY_ROOT", ruby.path.to_string());
         insert("RUBY_ENGINE", ruby.version.engine.name().into());
         insert("RUBY_VERSION", ruby.version.number());
-        if let Some(gem_home) = ruby.gem_home() {
-            paths.insert(0, gem_home.join("bin").into());
-            gem_paths.insert(0, gem_home.clone());
-            insert("GEM_HOME", gem_home.into_string());
-        }
+        let gem_home = ruby.gem_home();
+        paths.insert(0, gem_home.join("bin").into());
+        gem_paths.insert(0, gem_home.clone());
+        insert("GEM_HOME", gem_home.into_string());
         if let Some(gem_root) = ruby.gem_root() {
             paths.insert(0, gem_root.join("bin").into());
             gem_paths.insert(0, gem_root.clone());

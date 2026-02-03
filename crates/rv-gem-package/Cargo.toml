@@ -20,6 +20,7 @@ path = "examples/verify_gems.rs"
 
 [dev-dependencies]
 insta = { workspace = true }
+rv-dirs = { workspace = true }
 
 [lints]
 workspace = true

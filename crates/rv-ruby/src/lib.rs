@@ -7,8 +7,10 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use rv_cache::{CacheKey, CacheKeyHasher};
 use serde::{Deserialize, Serialize};
-use std::env::consts::{ARCH, OS};
-use std::env::{self, home_dir};
+use std::env::{
+    self,
+    consts::{ARCH, OS},
+};
 use std::process::{Command, ExitStatus};
 use tracing::instrument;
 
@@ -117,28 +119,21 @@ impl Ruby {
         self.gem_root.clone()
     }
 
-    pub fn gem_home(&self) -> Option<Utf8PathBuf> {
-        if let Some(home) = home_dir() {
-            let legacy_path = home
-                .join(".gem")
-                .join(self.version.engine.name())
-                .join(self.version.number());
-            if legacy_path.exists() {
-                Some(legacy_path.to_str().map(Utf8PathBuf::from)?)
-            } else {
-                Some(
-                    home.join(".local")
-                        .join("share")
-                        .join("rv")
-                        .join("gems")
-                        .join(self.version.engine.name())
-                        .join(self.version.number())
-                        .to_str()
-                        .map(Utf8PathBuf::from)?,
-                )
-            }
+    pub fn gem_home(&self) -> Utf8PathBuf {
+        let home = rv_dirs::home_dir();
+        let legacy_path = home
+            .join(".gem")
+            .join(self.version.engine.name())
+            .join(self.version.number());
+        if legacy_path.exists() {
+            legacy_path
         } else {
-            None
+            home.join(".local")
+                .join("share")
+                .join("rv")
+                .join("gems")
+                .join(self.version.engine.name())
+                .join(self.version.number())
         }
     }
 
