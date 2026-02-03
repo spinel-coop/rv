@@ -1,5 +1,6 @@
 use anstream::println;
 use bytesize::ByteSize;
+use cacache::Integrity;
 use camino::{Utf8Path, Utf8PathBuf};
 use core::panic;
 use futures_util::StreamExt;
@@ -18,6 +19,8 @@ use crate::progress::WorkProgress;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
+    #[error(transparent)]
+    CacacheError(#[from] cacache::Error),
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),
     #[error(transparent)]
@@ -77,21 +80,8 @@ pub async fn install(
         },
     };
 
-    match tarball_path {
-        Some(tarball_path) => {
-            extract_local_ruby_tarball(tarball_path, &install_dir, &selected_version.number())
-                .await?
-        }
-        None => {
-            download_and_extract_remote_tarball(
-                config,
-                &install_dir,
-                &selected_version.number(),
-                &progress,
-            )
-            .await?
-        }
-    }
+    download_and_extract_remote_tarball(&install_dir, &selected_version.number(), &progress)
+        .await?;
 
     println!(
         "Installed Ruby version {} to {}",
@@ -104,47 +94,23 @@ pub async fn install(
 
 // downloads and extracts a remote ruby tarball
 async fn download_and_extract_remote_tarball(
-    config: &Config,
     install_dir: &Utf8PathBuf,
     version: &str,
     progress: &WorkProgress,
 ) -> Result<()> {
     let url = ruby_url(version)?;
-    let tarball_path = tarball_path(config, &url);
-
-    let new_dir = tarball_path.parent().unwrap();
-    if !new_dir.exists() {
-        fs_err::create_dir_all(new_dir)?;
-    }
-
-    if valid_tarball_exists(&tarball_path) {
-        println!(
-            "Tarball {} already exists, skipping download.",
-            tarball_path.cyan()
-        );
+    let md = cacache::metadata_sync("cache/ruby-v1", &url)?;
+    let sri = if let Some(md) = md
+        && cacache::exists_sync("cache/ruby-v1", &md.integrity)
+    {
+        md.integrity
     } else {
-        download_ruby_tarball(&url, &tarball_path, version, progress).await?;
-    }
+        download_ruby_tarball(&url, version, progress).await?
+    };
 
-    extract_ruby_tarball(&tarball_path, install_dir, version)?;
-
-    Ok(())
-}
-
-// extract a local ruby tarball
-async fn extract_local_ruby_tarball(
-    tarball_path: String,
-    install_dir: &Utf8PathBuf,
-    version: &str,
-) -> Result<()> {
-    extract_ruby_tarball(Utf8Path::new(&tarball_path), install_dir, version)?;
+    extract_ruby_tarball(sri, install_dir, version)?;
 
     Ok(())
-}
-
-/// Does a usable tarball already exist at this path?
-fn valid_tarball_exists(path: &Utf8Path) -> bool {
-    fs_err::metadata(path).is_ok_and(|m| m.is_file() && m.len() > 0)
 }
 
 fn ruby_url(version: &str) -> Result<String> {
@@ -156,34 +122,16 @@ fn ruby_url(version: &str) -> Result<String> {
     Ok(format!("{download_base}/ruby-{version}.{arch}.tar.gz"))
 }
 
-fn tarball_path(config: &Config, url: impl AsRef<str>) -> Utf8PathBuf {
-    let cache_key = rv_cache::cache_digest(url.as_ref());
-    config
-        .cache
-        .shard(rv_cache::CacheBucket::Ruby, "tarballs")
-        .into_path_buf()
-        .join(format!("{cache_key}.tar.gz"))
-}
-
-fn temp_tarball_path(tarball_path: &Utf8PathBuf) -> Utf8PathBuf {
-    let mut temp_path = tarball_path.clone();
-    let ext = tarball_path.extension().unwrap();
-    temp_path.set_extension(format!("{ext}.tmp"));
-    temp_path
-}
-
-/// Write the file from this HTTP `response` to the given `path`.
-/// While the stream is being handled, it'll be written to the given `temp_path`.
-/// Then once the download finishes, the file will be renamed to `path`.
 async fn write_to_filesystem(
     response: reqwest::Response,
-    temp_path: &Utf8Path,
-    path: &Utf8Path,
     total_size: u64,
     progress: &WorkProgress,
     span: &tracing::Span,
-) -> Result<()> {
-    let mut file = tokio::fs::File::create(&temp_path).await?;
+) -> Result<Integrity> {
+    let mut file = cacache::WriteOpts::new()
+        .size(total_size.try_into().unwrap())
+        .open("cache/ruby-v1", response.url())
+        .await?;
     let mut stream = response.bytes_stream();
     let mut downloaded: u64 = 0;
 
@@ -206,17 +154,14 @@ async fn write_to_filesystem(
             span.pb_set_message(&format!("({})", ByteSize(downloaded)));
         }
     }
-    file.sync_all().await?;
-    tokio::fs::rename(temp_path, path).await?;
-    Ok(())
+    Ok(file.commit().await?)
 }
 
 async fn download_ruby_tarball(
     url: &str,
-    tarball_path: &Utf8PathBuf,
     version: &str,
     progress: &WorkProgress,
-) -> Result<()> {
+) -> Result<Integrity> {
     debug!("Downloading tarball from {url}");
     // Build the request with optional GitHub authentication
     let client = reqwest::Client::new();
@@ -258,30 +203,10 @@ async fn download_ruby_tarball(
     let _guard = span.enter();
 
     // Write the tarball bytes to the filesystem.
-    let temp_path = temp_tarball_path(tarball_path);
-    if let Err(e) = write_to_filesystem(
-        response,
-        &temp_path,
-        tarball_path,
-        total_size,
-        progress,
-        &span,
-    )
-    .await
-    {
-        // Clean up the temporary file if there was any error.
-        tokio::fs::remove_file(temp_path).await?;
-        return Err(e);
-    }
-
-    Ok(())
+    write_to_filesystem(response, total_size, progress, &span).await
 }
 
-fn extract_ruby_tarball(
-    tarball_path: &Utf8Path,
-    rubies_dir: &Utf8Path,
-    version: &str,
-) -> Result<()> {
+fn extract_ruby_tarball(sri: Integrity, rubies_dir: &Utf8Path, version: &str) -> Result<()> {
     let span = info_span!("Installing Ruby", version = version);
     span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name}").unwrap());
     let _guard = span.enter();
@@ -289,7 +214,7 @@ fn extract_ruby_tarball(
     if !rubies_dir.exists() {
         fs_err::create_dir_all(rubies_dir)?;
     }
-    let tarball = fs_err::File::open(tarball_path)?;
+    let tarball = cacache::SyncReader::open_hash("cache/ruby-v1", sri)?;
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
     for e in archive.entries()? {
         let mut entry = e?;

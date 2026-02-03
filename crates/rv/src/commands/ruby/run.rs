@@ -90,14 +90,7 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
         // None means it'll install in whatever default ruby location it chooses.
         debug!("Ruby not found, so installing {request}");
         let install_dir = None;
-        let tarball_path = None;
-        crate::commands::ruby::install::install(
-            config,
-            install_dir,
-            Some(request.clone()),
-            tarball_path,
-        )
-        .await?
+        crate::commands::ruby::install::install(config, install_dir, Some(request.clone())).await?
     };
     run_no_install(invocation, config, &request, args, capture_output, cwd)
 }

@@ -28,12 +28,11 @@ fn test_ruby_install_no_specific_version() {
             .contains("Installed Ruby version ruby-3.4.5 to /tmp/home/.local/share/rv/rubies")
     );
 
-    let cache_key = rv_cache::cache_digest(format!("{}/{}", test.server_url(), download_suffix));
-    let tarball_path = cache_dir
-        .join("ruby-v0")
-        .join("tarballs")
-        .join(format!("{}.tar.gz", cache_key));
-    assert!(tarball_path.exists(), "Tarball should be cached");
+    let cache_exists = fs_err::exists(cache_dir.join(
+        "ruby-v1/content-v2/sha256/2e/b6/2bcd0ffe04cd0eaa29e38e03fd354b02ad75392bb64b26edf4917bfd5934",
+    ))
+    .unwrap();
+    assert!(cache_exists);
 }
 
 #[test]
