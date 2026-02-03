@@ -2,40 +2,25 @@
 set -euo pipefail
 
 # Smoke test for Discourse - https://github.com/discourse/discourse
-# On macOS, you can run this script via Docker:
-# $ docker run -it --rm -v .:/src ubuntu:latest /src/bin/smoke-tests/discourse
 
-# Use sudo if available (needed in GHA), skip if not (Docker runs as root)
-SUDO=""
-if command -v sudo &> /dev/null; then
-    SUDO="sudo"
-fi
+source "$(dirname "$0")/shared.sh"
 
-export DEBIAN_FRONTEND=noninteractive
-$SUDO apt-get update
-$SUDO apt-get install -y --no-install-recommends \
-    build-essential \
-    git \
-    ca-certificates \
-    curl \
-    pkg-config \
+macos_docker_reexec
+
+setup_packages \
     libyaml-dev \
     libpq-dev \
     libxml2-dev \
     libxslt-dev \
     zlib1g-dev \
-    libsqlite3-dev
+    libsqlite3-dev \
+    pkg-config
 
-# Install rv from latest release
-echo ""
-echo "Installing rv..."
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/spinel-coop/rv/releases/latest/download/rv-installer.sh | sh
-source "$HOME/.cargo/env"
+setup_rv
 
 [[ -d discourse ]] || git clone --depth 1 https://github.com/discourse/discourse.git
 cd discourse
 
 rv ci
 
-echo ""
-echo "Success: discourse smoke test passed"
+smoke_test_success "discourse"

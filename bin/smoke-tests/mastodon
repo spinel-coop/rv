@@ -2,22 +2,12 @@
 set -euo pipefail
 
 # Smoke test for Mastodon - https://github.com/mastodon/mastodon
-# On macOS, you can run this script via Docker:
-# $ docker run -it --rm -v .:/src ubuntu:latest /src/bin/smoke-tests/mastodon
 
-# Use sudo if available (needed in GHA), skip if not (Docker runs as root)
-SUDO=""
-if command -v sudo &> /dev/null; then
-    SUDO="sudo"
-fi
+source "$(dirname "$0")/shared.sh"
 
-export DEBIAN_FRONTEND=noninteractive
-$SUDO apt-get update
-$SUDO apt-get install -y --no-install-recommends \
-    build-essential \
-    git \
-    ca-certificates \
-    curl \
+macos_docker_reexec
+
+setup_packages \
     libyaml-dev \
     libpq-dev \
     libicu-dev \
@@ -27,16 +17,11 @@ $SUDO apt-get install -y --no-install-recommends \
     zlib1g-dev \
     libpam0g-dev
 
-# Install rv from latest release
-echo ""
-echo "Installing rv..."
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/spinel-coop/rv/releases/latest/download/rv-installer.sh | sh
-source "$HOME/.cargo/env"
+setup_rv
 
 [[ -d mastodon ]] || git clone --depth 1 https://github.com/mastodon/mastodon.git
 cd mastodon
 
 rv ci
 
-echo ""
-echo "Success: mastodon smoke test passed"
+smoke_test_success "mastodon"

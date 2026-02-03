@@ -1,6 +1,13 @@
 name: Smoke Tests
 
 on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".gitignore"
   schedule:
     - cron: "0 10 * * *" # Nightly, 10:00 UTC / 02:00 Pacific
   workflow_dispatch:
@@ -11,8 +18,28 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  build:
+    name: Build rv
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build rv
+        run: bin/build
+
+      - name: Upload rv binary
+        uses: actions/upload-artifact@v5
+        with:
+          name: rv-binary
+          path: target/release/rv
+
   smoke-test:
     name: ${{ matrix.project }}
+    needs: build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -21,14 +48,44 @@ jobs:
           - diaspora
           - discourse
           - fastlane
-          - gitlab
+          # - gitlab  # Disabled until https://gitlab.com/gitlab-org/gitlab/-/issues/522903 is resolved
           - homebrew
           - huginn
+          - llhttp-ffi
           - lobsters
           - mastodon
     steps:
       - name: Check out repo
         uses: actions/checkout@v6
 
+      - name: Download rv binary
+        uses: actions/download-artifact@v5
+        with:
+          name: rv-binary
+          path: ~/bin
+
+      - name: Add rv to PATH
+        run: chmod +x ~/bin/rv && echo "$HOME/bin" >> $GITHUB_PATH
+
       - name: rv clean-install for ${{ matrix.project }}
         run: bin/smoke-tests/${{ matrix.project }}
+
+      - name: Get previous workflow status
+        if: always()
+        run: |
+          OLD_STATUS=$(curl -sS \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/smoke_tests.yml/runs?branch=main&status=completed&per_page=1" \
+            | jq -r '.workflow_runs[0].conclusion')
+          echo "OLD_STATUS=$OLD_STATUS" >> $GITHUB_ENV
+
+      - name: Slack ping on new failure
+        if: failure() && env.OLD_STATUS == 'success'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_ALERTS_WEBHOOK_URL }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            curl -fSs -X POST \
+              -H 'Content-type: application/json' \
+              --data '{"text":"🚨 Smoke test failure: ${{ matrix.project }}\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
+              "$SLACK_WEBHOOK_URL"
+          fi

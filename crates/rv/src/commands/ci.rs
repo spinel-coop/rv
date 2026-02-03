@@ -33,7 +33,6 @@ use crate::commands::ci::checksums::HashReader;
 use crate::commands::ci::checksums::Hashed;
 use crate::commands::ruby::run::CaptureOutput;
 use crate::commands::ruby::run::Invocation;
-use crate::commands::ruby::run::Program;
 use crate::config::Config;
 use crate::progress::WorkProgress;
 use std::collections::HashMap;
@@ -43,7 +42,6 @@ use std::io::Write;
 use std::ops::Not;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
-use std::process::Command;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
@@ -1382,13 +1380,7 @@ fn build_rakefile(
     let sitelibdir = format!("RUBYLIBDIR={}", tmp_dir.path());
     let args = vec![sitearchdir, sitelibdir];
 
-    let rake = Invocation {
-        program: Program::Tool {
-            executable_path: "rake".into(),
-            extra_paths: vec![],
-        },
-        env: vec![("GEM_HOME", gem_home.to_string())],
-    };
+    let rake = Invocation::tool("rake", vec![("GEM_HOME", gem_home.to_string())]);
 
     output = crate::commands::ruby::run::run_no_install(
         rake,
@@ -1443,36 +1435,62 @@ fn build_extconf(
     }
 
     // 3. Run make clean / make / make install / make clean
+    //
+    // Use run_no_install with Invocation::tool to ensure Ruby is in PATH.
+    // This is needed for gems that use rb-sys (Rust-based extensions) because
+    // their Cargo build scripts call `ruby` to query RbConfig.
     let tmp_dir = camino_tempfile::tempdir_in(gem_path)?;
     let sitearchdir = format!("sitearchdir={}", tmp_dir.path());
     let sitelibdir = format!("sitelibdir={}", tmp_dir.path());
-    let args = vec!["DESTDIR=''", &sitearchdir, &sitelibdir];
+    let destdir = "DESTDIR=''".to_string();
+    let base_args = vec![destdir.as_str(), sitearchdir.as_str(), sitelibdir.as_str()];
+    let make_env = vec![("GEM_HOME", gem_home.to_string())];
 
-    Command::new("make")
-        .args([vec!["clean"], args.clone()].concat())
-        .current_dir(&ext_dir)
-        .output()?;
+    // make clean (ignore failures)
+    let _ = crate::commands::ruby::run::run_no_install(
+        Invocation::tool("make", make_env.clone()),
+        config,
+        &config.ruby_request(),
+        &[&["clean"], base_args.as_slice()].concat(),
+        CaptureOutput::Both,
+        Some(&ext_dir),
+    );
 
-    output = Command::new("make")
-        .args(&args)
-        .current_dir(&ext_dir)
-        .output()?;
+    // make
+    output = crate::commands::ruby::run::run_no_install(
+        Invocation::tool("make", make_env.clone()),
+        config,
+        &config.ruby_request(),
+        &base_args,
+        CaptureOutput::Both,
+        Some(&ext_dir),
+    )?;
     let success = output.status.success();
     outputs.push(output);
     if !success {
         return Ok(outputs);
     }
 
-    output = Command::new("make")
-        .args([vec!["install"], args.clone()].concat())
-        .current_dir(&ext_dir)
-        .output()?;
+    // make install
+    output = crate::commands::ruby::run::run_no_install(
+        Invocation::tool("make", make_env.clone()),
+        config,
+        &config.ruby_request(),
+        &[&["install"], base_args.as_slice()].concat(),
+        CaptureOutput::Both,
+        Some(&ext_dir),
+    )?;
     outputs.push(output);
 
-    Command::new("make")
-        .args([vec!["clean"], args.clone()].concat())
-        .current_dir(&ext_dir)
-        .output()?;
+    // make clean (ignore failures)
+    let _ = crate::commands::ruby::run::run_no_install(
+        Invocation::tool("make", make_env),
+        config,
+        &config.ruby_request(),
+        &[&["clean"], base_args.as_slice()].concat(),
+        CaptureOutput::Both,
+        Some(&ext_dir),
+    );
 
     // 4. Copy the resulting files to ext and lib dirs
     copy_dir(&tmp_dir, lib_dest)?;
