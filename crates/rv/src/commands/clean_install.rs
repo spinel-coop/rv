@@ -40,6 +40,7 @@ use std::io;
 use std::io::Read;
 use std::io::Write;
 use std::ops::Not;
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -1222,7 +1223,11 @@ fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -> io::
     let binstub_path = binstub_dir.join(exe_name);
     let binstub_contents = generate_binstub_contents(gem_name, exe_name);
     fs_err::write(&binstub_path, binstub_contents)?;
-    fs_err::set_permissions(binstub_path, PermissionsExt::from_mode(0o755))
+    // On Unix, make the binstub executable. On Windows, executability is
+    // determined by file extension, not permissions.
+    #[cfg(unix)]
+    fs_err::set_permissions(&binstub_path, PermissionsExt::from_mode(0o755))?;
+    Ok(())
 }
 
 struct CompileNativeExtResult {
