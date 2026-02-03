@@ -103,10 +103,12 @@ jobs:
 
       - name: Test rv ci and binstubs
         run: |
-          git clone --depth 1 https://github.com/philiph/minimal-ruby-app-template.git test-project
-          cd test-project
-          # Override the pinned Ruby version to use what RubyInstaller2 provides
-          echo "3.4" > .ruby-version
+          # Use our minimal fixture (pure Ruby gems only, no native extensions)
+          New-Item -ItemType Directory -Path test-project
+          Copy-Item crates\rv-lockfile\tests\inputs\Gemfile.minimal-ruby-project test-project\Gemfile
+          Copy-Item crates\rv-lockfile\tests\inputs\Gemfile.minimal-ruby-project.lock test-project\Gemfile.lock
+          Set-Location test-project
+          Set-Content -Path .ruby-version -Value "3.4"
           # Run rv ci to install gems and generate binstubs
           ..\target\release\rv.exe ci
           # Test that the .bat binstub wrapper works

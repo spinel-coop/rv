@@ -200,3 +200,25 @@ fn test_gem_spec_count_single_source() {
     assert_eq!(lockfile.gem.len(), 1);
     assert_eq!(lockfile.gem_spec_count(), 33);
 }
+
+#[test]
+fn test_parse_minimal_ruby_project() {
+    // This fixture is also used by the Windows CI integration test.
+    // It contains only pure-Ruby gems (no native extensions).
+    let input = include_str!("../tests/inputs/Gemfile.minimal-ruby-project.lock");
+    let lockfile = must_parse(input);
+
+    // Should have rake, rspec, and rspec's dependencies (7 gems total)
+    assert_eq!(lockfile.gem_spec_count(), 7);
+    assert_eq!(lockfile.dependencies.len(), 2); // rake and rspec
+
+    // Verify key gems are present
+    let gem_names: Vec<&str> = lockfile
+        .gem
+        .iter()
+        .flat_map(|g| g.specs.iter().map(|s| s.gem_version.name))
+        .collect();
+    assert!(gem_names.contains(&"rake"), "should contain rake");
+    assert!(gem_names.contains(&"rspec"), "should contain rspec");
+    assert!(gem_names.contains(&"rspec-core"), "should contain rspec-core");
+}
