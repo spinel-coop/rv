@@ -1254,6 +1254,11 @@ end"#
 /// Uses the full path to rv's Ruby executable to avoid conflicts with system Ruby.
 #[cfg_attr(not(windows), allow(dead_code))] // Only used on Windows, but tested on all platforms
 fn generate_binstub_bat_contents(ruby_path: &str, exe_name: &str) -> String {
+    // Strip Windows extended-length path prefix (\\?\) if present.
+    // This prefix is added by path canonicalization but isn't understood by cmd.exe.
+    let ruby_path = ruby_path
+        .strip_prefix(r"\\?\")
+        .unwrap_or(ruby_path);
     // %~dp0 expands to the directory containing the .bat file
     // %* forwards all arguments to the ruby script
     // Use the full path to rv's Ruby to avoid using a different Ruby from PATH
@@ -1905,6 +1910,19 @@ end"#;
         // Uses full path to rv's Ruby to avoid system Ruby PATH conflicts
         let expected =
             "@echo off\r\n\"C:\\Users\\test\\.rv\\rubies\\ruby-3.4.1\\bin\\ruby.exe\" \"%~dp0rake\" %*\r\n";
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_generate_binstub_bat_strips_extended_path_prefix() {
+        // Windows extended-length path prefix (\\?\) is added by canonicalize()
+        // but isn't understood by cmd.exe, so we strip it
+        let ruby_path = r"\\?\C:\Users\test\.rv\rubies\ruby-3.4.1\bin\ruby.exe";
+        let exe_name = "rspec";
+        let actual = generate_binstub_bat_contents(ruby_path, exe_name);
+        // The \\?\ prefix should be stripped
+        let expected =
+            "@echo off\r\n\"C:\\Users\\test\\.rv\\rubies\\ruby-3.4.1\\bin\\ruby.exe\" \"%~dp0rspec\" %*\r\n";
         assert_eq!(actual, expected);
     }
 
