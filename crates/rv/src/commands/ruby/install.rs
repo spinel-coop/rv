@@ -123,7 +123,7 @@ async fn download_and_extract_remote_tarball(
             tarball_path.cyan()
         );
     } else {
-        download_ruby_tarball(config, &url, &tarball_path, version, progress).await?;
+        download_ruby_tarball(&url, &tarball_path, version, progress).await?;
     }
 
     extract_ruby_tarball(&tarball_path, install_dir, version)?;
@@ -165,13 +165,11 @@ fn tarball_path(config: &Config, url: impl AsRef<str>) -> Utf8PathBuf {
         .join(format!("{cache_key}.tar.gz"))
 }
 
-fn temp_tarball_path(config: &Config, url: impl AsRef<str>) -> Utf8PathBuf {
-    let cache_key = rv_cache::cache_digest(url.as_ref());
-    config
-        .cache
-        .shard(rv_cache::CacheBucket::Ruby, "tarballs")
-        .into_path_buf()
-        .join(format!("{cache_key}.tar.gz.tmp"))
+fn temp_tarball_path(tarball_path: &Utf8PathBuf) -> Utf8PathBuf {
+    let mut temp_path = tarball_path.clone();
+    let ext = tarball_path.extension().unwrap();
+    temp_path.set_extension(format!("{ext}.tmp"));
+    temp_path
 }
 
 /// Write the file from this HTTP `response` to the given `path`.
@@ -214,7 +212,6 @@ async fn write_to_filesystem(
 }
 
 async fn download_ruby_tarball(
-    config: &Config,
     url: &str,
     tarball_path: &Utf8PathBuf,
     version: &str,
@@ -261,7 +258,7 @@ async fn download_ruby_tarball(
     let _guard = span.enter();
 
     // Write the tarball bytes to the filesystem.
-    let temp_path = temp_tarball_path(config, url);
+    let temp_path = temp_tarball_path(tarball_path);
     if let Err(e) = write_to_filesystem(
         response,
         &temp_path,
