@@ -28,9 +28,9 @@ use tracing::info_span;
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 use url::Url;
 
-use crate::commands::ci::checksums::ArchiveChecksums;
-use crate::commands::ci::checksums::HashReader;
-use crate::commands::ci::checksums::Hashed;
+use crate::commands::clean_install::checksums::ArchiveChecksums;
+use crate::commands::clean_install::checksums::HashReader;
+use crate::commands::clean_install::checksums::Hashed;
 use crate::commands::ruby::run::CaptureOutput;
 use crate::commands::ruby::run::Invocation;
 use crate::config::Config;

@@ -10,7 +10,7 @@ use url::Url;
 
 use crate::{
     commands::{
-        ci::InstallStats,
+        clean_install::InstallStats,
         tool::{
             Installed,
             install::{
@@ -54,7 +54,7 @@ pub enum Error {
     #[error("Could not choose version: {0}")]
     CouldNotChooseVersion(String),
     #[error(transparent)]
-    InstallError(#[from] crate::commands::ci::Error),
+    InstallError(#[from] crate::commands::clean_install::Error),
     #[error("rv could not find any Ruby versions to install")]
     NoRubies,
     #[error(
@@ -222,7 +222,7 @@ pub async fn install(
 
     let InstallStats {
         executables_installed,
-    } = crate::commands::ci::install_from_lockfile(
+    } = crate::commands::clean_install::install_from_lockfile(
         &config_for_install,
         lockfile,
         install_path.clone(),
