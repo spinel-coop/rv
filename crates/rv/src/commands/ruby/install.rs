@@ -80,8 +80,19 @@ pub async fn install(
         },
     };
 
-    download_and_extract_remote_tarball(&install_dir, &selected_version.number(), &progress)
+    if let Some(tarball_path) = tarball_path {
+        let reader = fs_err::OpenOptions::new().read(true).open(tarball_path)?;
+        extract_ruby_tarball(reader, &install_dir, &selected_version.number())?;
+    } else {
+        let cache = config.cache.bucket(rv_cache::CacheBucket::Ruby);
+        download_and_extract_remote_tarball(
+            &cache,
+            &install_dir,
+            &selected_version.number(),
+            &progress,
+        )
         .await?;
+    }
 
     println!(
         "Installed Ruby version {} to {}",
@@ -94,12 +105,13 @@ pub async fn install(
 
 // downloads and extracts a remote ruby tarball
 async fn download_and_extract_remote_tarball(
+    cache: &Utf8PathBuf,
     install_dir: &Utf8PathBuf,
     version: &str,
     progress: &WorkProgress,
 ) -> Result<()> {
     let url = ruby_url(version)?;
-    let md = cacache::metadata_sync("cache/ruby-v1", &url)?;
+    let md = cacache::metadata_sync(cache, &url)?;
     let sri = if let Some(md) = md
         && cacache::exists_sync("cache/ruby-v1", &md.integrity)
     {
@@ -108,7 +120,8 @@ async fn download_and_extract_remote_tarball(
         download_ruby_tarball(&url, version, progress).await?
     };
 
-    extract_ruby_tarball(sri, install_dir, version)?;
+    let reader = cacache::SyncReader::open_hash("cache/ruby-v1", sri)?;
+    extract_ruby_tarball(reader, install_dir, version)?;
 
     Ok(())
 }
@@ -206,7 +219,11 @@ async fn download_ruby_tarball(
     write_to_filesystem(response, total_size, progress, &span).await
 }
 
-fn extract_ruby_tarball(sri: Integrity, rubies_dir: &Utf8Path, version: &str) -> Result<()> {
+fn extract_ruby_tarball<A: std::io::Read>(
+    reader: A,
+    rubies_dir: &Utf8Path,
+    version: &str,
+) -> Result<()> {
     let span = info_span!("Installing Ruby", version = version);
     span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name}").unwrap());
     let _guard = span.enter();
@@ -214,8 +231,8 @@ fn extract_ruby_tarball(sri: Integrity, rubies_dir: &Utf8Path, version: &str) ->
     if !rubies_dir.exists() {
         fs_err::create_dir_all(rubies_dir)?;
     }
-    let tarball = cacache::SyncReader::open_hash("cache/ruby-v1", sri)?;
-    let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
+
+    let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(reader));
     for e in archive.entries()? {
         let mut entry = e?;
         let entry_path = entry.path()?;

@@ -180,7 +180,7 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
     // gems. Ensure Ruby is installed here so we can use it later.
     let ruby_request = config.ruby_request();
     if config.matching_ruby(&ruby_request).is_none() {
-        crate::ruby_install(config, None, Some(ruby_request.clone())).await?;
+        crate::ruby_install(config, None, Some(ruby_request.clone()), None).await?;
     }
 
     // Now that it's installed, we can use Ruby to query various directories
@@ -230,7 +230,7 @@ pub async fn install_from_lockfile(
     // gems. Ensure Ruby is installed here so we can use it later.
     let ruby_request = config.ruby_request();
     if config.matching_ruby(&ruby_request).is_none() {
-        crate::ruby_install(config, None, Some(ruby_request.clone())).await?;
+        crate::ruby_install(config, None, Some(ruby_request.clone()), None).await?;
     }
 
     let inner_args = CiInnerArgs {
