@@ -40,8 +40,6 @@ use std::io;
 use std::io::Read;
 use std::io::Write;
 use std::ops::Not;
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -207,7 +205,9 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
 
     let lockfile_contents = {
         let _guard = span.enter();
-        tokio::fs::read_to_string(&lockfile_path).await?
+        let raw_contents = tokio::fs::read_to_string(&lockfile_path).await?;
+        // Normalize Windows line endings (CRLF) to Unix (LF) for the parser
+        rv_lockfile::normalize_line_endings(&raw_contents).into_owned()
     };
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
 
@@ -1235,7 +1235,10 @@ fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -> io::
     // On Unix, make the binstub executable. On Windows, executability is
     // determined by file extension, not permissions.
     #[cfg(unix)]
-    fs_err::set_permissions(&binstub_path, PermissionsExt::from_mode(0o755))?;
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs_err::set_permissions(&binstub_path, PermissionsExt::from_mode(0o755))?;
+    }
     // On Windows, create a .bat wrapper so the binstub can be run from the command line.
     #[cfg(windows)]
     {

@@ -140,6 +140,49 @@ fn must_parse(input: &str) -> crate::datatypes::GemfileDotLock<'_> {
 }
 
 #[test]
+fn test_parse_with_crlf_line_endings() {
+    // Take an existing fixture with Unix line endings
+    let input_lf = include_str!("../tests/inputs/Gemfile.faker.lock");
+    assert!(
+        !input_lf.contains("\r\n"),
+        "fixture should have Unix line endings"
+    );
+
+    // Convert to Windows line endings (CRLF)
+    let input_crlf = input_lf.replace('\n', "\r\n");
+    assert!(
+        input_crlf.contains("\r\n"),
+        "converted string should have Windows line endings"
+    );
+
+    // Normalize the CRLF input back to LF
+    let normalized = crate::normalize_line_endings(&input_crlf);
+
+    // Both should parse identically
+    let output_lf = must_parse(input_lf);
+    let output_normalized = must_parse(&normalized);
+
+    assert_eq!(
+        output_lf.gem_spec_count(),
+        output_normalized.gem_spec_count(),
+        "gem spec count should match"
+    );
+    assert_eq!(
+        output_lf.ruby_version, output_normalized.ruby_version,
+        "ruby version should match"
+    );
+    assert_eq!(
+        output_lf.bundled_with, output_normalized.bundled_with,
+        "bundled_with should match"
+    );
+    assert_eq!(
+        output_lf.dependencies.len(),
+        output_normalized.dependencies.len(),
+        "dependencies count should match"
+    );
+}
+
+#[test]
 fn test_gem_spec_count_multiple_sources() {
     let input = include_str!("../tests/inputs/Gemfile.twosources.lock");
     let lockfile = must_parse(input);

@@ -164,4 +164,46 @@ mod tests {
         let _ = serde_json::to_string(&env_json)
             .expect("Serializing the Nushell env changes to JSON should always succeed");
     }
+
+    #[test]
+    fn fish_var_escape_handles_special_chars() {
+        // Typical Unix path passes through unchanged
+        assert_eq!(
+            fish_var_escape("/home/user/.rubies/ruby-3.4.1/bin".to_owned()),
+            "/home/user/.rubies/ruby-3.4.1/bin"
+        );
+
+        // Backslashes in paths are escaped (rare on Unix, but possible)
+        assert_eq!(
+            fish_var_escape("/path/with\\backslash".to_owned()),
+            "/path/with\\\\backslash"
+        );
+
+        // Double quotes in directory names are escaped
+        assert_eq!(
+            fish_var_escape("/home/user/\"My Projects\"/bin".to_owned()),
+            "/home/user/\\\"My Projects\\\"/bin"
+        );
+    }
+
+    #[test]
+    fn powershell_escape_handles_special_chars() {
+        // Typical Windows path passes through unchanged
+        assert_eq!(
+            powershell_escape("C:\\Users\\eric\\.rubies\\ruby-3.4.1\\bin"),
+            "C:\\Users\\eric\\.rubies\\ruby-3.4.1\\bin"
+        );
+
+        // Dollar signs are escaped (prevents PowerShell variable expansion)
+        assert_eq!(powershell_escape("$HOME/.rubies"), "`$HOME/.rubies");
+
+        // Double quotes in paths are escaped
+        assert_eq!(
+            powershell_escape("C:\\Users\\eric\\\"My Projects\""),
+            "C:\\Users\\eric\\`\"My Projects`\""
+        );
+
+        // Backticks are escaped (PowerShell escape character)
+        assert_eq!(powershell_escape("path`with`ticks"), "path``with``ticks");
+    }
 }

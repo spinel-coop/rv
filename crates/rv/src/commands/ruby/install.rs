@@ -392,9 +392,10 @@ fn extract_7z(archive_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> 
     // Extract 7z archive to rubies_dir
     sevenz_rust2::decompress_file(archive_path.as_std_path(), rubies_dir.as_std_path())?;
 
-    // RubyInstaller2 extracts to: rubyinstaller-{version}-1-x64/
+    // RubyInstaller2 extracts to: rubyinstaller-{version}-1-{arch}/
     // We need to rename it to: ruby-{version}/
-    let extracted_dir = rubies_dir.join(format!("rubyinstaller-{version}-1-x64"));
+    let (arch, _) = platform_info()?;
+    let extracted_dir = rubies_dir.join(format!("rubyinstaller-{version}-1-{arch}"));
     let target_dir = rubies_dir.join(format!("ruby-{version}"));
 
     if extracted_dir.exists() {

@@ -11,6 +11,7 @@ miette = { workspace = true }
 winnow = { workspace = true }
 serde = { workspace = true, optional = true, features = ["derive"] }
 hex = "0.4.3"
+line-ending = "1.5"
 
 [dev-dependencies]
 insta = { workspace = true, features = ["yaml"] }
