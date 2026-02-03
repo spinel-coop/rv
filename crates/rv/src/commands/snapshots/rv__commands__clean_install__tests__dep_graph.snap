@@ -1,5 +1,5 @@
 ---
-source: crates/rv/src/commands/ci.rs
+source: crates/rv/src/commands/clean_install.rs
 expression: dot
 ---
 digraph G {

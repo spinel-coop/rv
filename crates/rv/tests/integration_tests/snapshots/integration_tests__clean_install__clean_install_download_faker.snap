@@ -1,5 +1,5 @@
 ---
-source: crates/rv/tests/integration_tests/ci.rs
+source: crates/rv/tests/integration_tests/clean_install.rs
 expression: files_sorted
 ---
 ./Gemfile

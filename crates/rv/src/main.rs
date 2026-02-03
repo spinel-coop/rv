@@ -22,7 +22,7 @@ pub mod script_metadata;
 
 use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir, cache_prune};
 #[cfg(unix)]
-use crate::commands::ci::{CleanInstallArgs, ci};
+use crate::commands::clean_install::{CleanInstallArgs, ci};
 use crate::commands::ruby::dir::dir as ruby_dir;
 use crate::commands::ruby::find::find as ruby_find;
 use crate::commands::ruby::install::install as ruby_install;
@@ -209,7 +209,7 @@ pub enum Error {
     UninstallError(#[from] commands::ruby::uninstall::Error),
     #[cfg(unix)]
     #[error(transparent)]
-    CiError(#[from] commands::ci::Error),
+    CiError(#[from] commands::clean_install::Error),
     #[cfg(unix)]
     #[error(transparent)]
     RunError(#[from] commands::ruby::run::Error),

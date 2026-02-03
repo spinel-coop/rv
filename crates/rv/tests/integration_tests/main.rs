@@ -1,4 +1,4 @@
-mod ci;
+mod clean_install;
 mod common;
 mod ruby;
 mod run;
