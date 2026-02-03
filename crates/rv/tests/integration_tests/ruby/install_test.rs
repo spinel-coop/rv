@@ -28,11 +28,13 @@ fn test_ruby_install_no_specific_version() {
             .contains("Installed Ruby version ruby-3.4.5 to /tmp/home/.local/share/rv/rubies")
     );
 
-    let cache_exists = fs_err::exists(cache_dir.join(
-        "ruby-v1/content-v2/sha256/2e/b6/2bcd0ffe04cd0eaa29e38e03fd354b02ad75392bb64b26edf4917bfd5934",
-    ))
-    .unwrap();
-    assert!(cache_exists);
+    let ruby_cache = cache_dir.join("ruby-v1");
+    let key = [test.server_url(), download_suffix].join("/");
+    let md = cacache::metadata_sync(&ruby_cache, key);
+    assert!(
+        cacache::exists_sync(&ruby_cache, &md.unwrap().unwrap().integrity),
+        "Tarball cache not found"
+    );
 }
 
 #[test]
@@ -60,12 +62,13 @@ fn test_ruby_install_incomplete_request() {
             .contains("Installed Ruby version ruby-4.0.0 to /tmp/home/.local/share/rv/rubies")
     );
 
-    let cache_key = rv_cache::cache_digest(format!("{}/{}", test.server_url(), download_suffix));
-    let tarball_path = cache_dir
-        .join("ruby-v0")
-        .join("tarballs")
-        .join(format!("{}.tar.gz", cache_key));
-    assert!(tarball_path.exists(), "Tarball should be cached");
+    let ruby_cache = cache_dir.join("ruby-v1");
+    let key = [test.server_url(), download_suffix].join("/");
+    let md = cacache::metadata_sync(&ruby_cache, key);
+    assert!(
+        cacache::exists_sync(&ruby_cache, &md.unwrap().unwrap().integrity),
+        "Tarball cache not found"
+    );
 }
 
 #[test]
@@ -84,23 +87,10 @@ fn test_ruby_install_successful_download() {
 
     output.assert_success();
 
-    let cache_key = rv_cache::cache_digest(format!("{}/{}", test.server_url(), download_suffix));
-    let tarball_path = cache_dir
-        .join("ruby-v0")
-        .join("tarballs")
-        .join(format!("{}.tar.gz", cache_key));
-    assert!(tarball_path.exists(), "Tarball should be cached");
-
-    let temp_path = cache_dir
-        .join("ruby-v0")
-        .join("tarballs")
-        .join(format!("{}.tar.gz.tmp", cache_key));
-    assert!(
-        !temp_path.exists(),
-        "Temp file should not exist after successful download"
-    );
-
-    let cached_content = fs::read(&tarball_path).expect("Should be able to read cached tarball");
+    let ruby_cache = cache_dir.join("ruby-v1");
+    let key = [test.server_url(), download_suffix].join("/");
+    let cached_content =
+        cacache::read_sync(&ruby_cache, key).expect("Should be able to read cached tarball");
     assert_eq!(
         cached_content, tarball_content,
         "Cached content should match downloaded content"
