@@ -36,7 +36,7 @@ pub fn user_cache_dir(root: &Utf8Path) -> Utf8PathBuf {
     let cache_path = etcetera::base_strategy::choose_base_strategy()
         .ok()
         .map(|dirs| dirs.cache_dir().join("rv"))
-        .unwrap_or_else(|| env::temp_dir().join("rv"));
+        .unwrap_or_else(|| env::temp_dir().join(".cache/rv"));
 
     root.join(cache_path.to_string_lossy().as_ref())
 }
@@ -48,7 +48,7 @@ pub fn user_state_dir(root: &Utf8Path) -> Utf8PathBuf {
     let data_path = etcetera::base_strategy::choose_base_strategy()
         .ok()
         .map(|dirs| dirs.data_dir().join("rv"))
-        .unwrap_or_else(|| env::temp_dir().join("rv"));
+        .unwrap_or_else(|| env::temp_dir().join(".local/share/rv"));
 
     root.join(data_path.to_string_lossy().as_ref())
 }
