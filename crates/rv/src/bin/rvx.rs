@@ -6,6 +6,8 @@ use std::{
 };
 
 /// Spawns a command exec style.
+/// On Unix, replaces the current process with the child.
+/// On Windows, spawns the child, waits, and exits with the same code.
 fn exec_spawn(cmd: &mut Command) -> std::io::Result<Infallible> {
     #[cfg(unix)]
     {
@@ -15,7 +17,13 @@ fn exec_spawn(cmd: &mut Command) -> std::io::Result<Infallible> {
     }
     #[cfg(windows)]
     {
-        rv_windows::spawn_child(cmd, false)
+        use std::process::Stdio;
+
+        cmd.stdin(Stdio::inherit());
+        let status = cmd.status()?;
+
+        #[allow(clippy::exit)]
+        std::process::exit(status.code().unwrap_or(1))
     }
 }
 
