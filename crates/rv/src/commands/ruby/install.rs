@@ -113,15 +113,15 @@ async fn download_and_extract_remote_tarball(
     let url = ruby_url(version)?;
     let md = cacache::metadata_sync(cache, &url)?;
     let sri = if let Some(md) = md
-        && cacache::exists_sync("cache/ruby-v1", &md.integrity)
+        && cacache::exists_sync(cache, &md.integrity)
     {
         println!("Ruby {} is already downloaded", version.cyan());
         md.integrity
     } else {
-        download_ruby_tarball(&url, version, progress).await?
+        download_ruby_tarball(cache, &url, version, progress).await?
     };
 
-    let reader = cacache::SyncReader::open_hash("cache/ruby-v1", sri)?;
+    let reader = cacache::SyncReader::open_hash(cache, sri)?;
     extract_ruby_tarball(reader, install_dir, version)?;
 
     Ok(())
@@ -137,6 +137,7 @@ fn ruby_url(version: &str) -> Result<String> {
 }
 
 async fn write_to_filesystem(
+    cache: &Utf8PathBuf,
     response: reqwest::Response,
     total_size: u64,
     progress: &WorkProgress,
@@ -144,7 +145,7 @@ async fn write_to_filesystem(
 ) -> Result<Integrity> {
     let mut file = cacache::WriteOpts::new()
         .size(total_size.try_into().unwrap())
-        .open("cache/ruby-v1", response.url())
+        .open(cache, response.url())
         .await?;
     let mut stream = response.bytes_stream();
     let mut downloaded: u64 = 0;
@@ -172,6 +173,7 @@ async fn write_to_filesystem(
 }
 
 async fn download_ruby_tarball(
+    cache: &Utf8PathBuf,
     url: &str,
     version: &str,
     progress: &WorkProgress,
@@ -217,7 +219,7 @@ async fn download_ruby_tarball(
     let _guard = span.enter();
 
     // Write the tarball bytes to the filesystem.
-    write_to_filesystem(response, total_size, progress, &span).await
+    write_to_filesystem(cache, response, total_size, progress, &span).await
 }
 
 fn extract_ruby_tarball<A: std::io::Read>(
