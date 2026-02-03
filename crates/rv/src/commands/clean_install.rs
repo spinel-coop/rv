@@ -1261,9 +1261,7 @@ fn generate_binstub_bat_contents(ruby_path: &str, exe_name: &str) -> String {
     // %~dp0.. is the parent directory where gems are installed (e.g., .rv/ruby/3.4.0/)
     // Set GEM_HOME so Ruby can find the project's installed gems
     // %* forwards all arguments to the ruby script
-    format!(
-        "@echo off\r\nset \"GEM_HOME=%~dp0..\"\r\n\"{ruby_path}\" \"%~dp0{exe_name}\" %*\r\n"
-    )
+    format!("@echo off\r\nset \"GEM_HOME=%~dp0..\"\r\n\"{ruby_path}\" \"%~dp0{exe_name}\" %*\r\n")
 }
 
 fn write_binstub(

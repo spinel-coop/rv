@@ -220,5 +220,8 @@ fn test_parse_minimal_ruby_project() {
         .collect();
     assert!(gem_names.contains(&"rake"), "should contain rake");
     assert!(gem_names.contains(&"rspec"), "should contain rspec");
-    assert!(gem_names.contains(&"rspec-core"), "should contain rspec-core");
+    assert!(
+        gem_names.contains(&"rspec-core"),
+        "should contain rspec-core"
+    );
 }
