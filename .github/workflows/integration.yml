@@ -74,7 +74,7 @@ jobs:
         run: wsl -d Ubuntu-24.04 -- bash -c "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
 
       - name: Build rv
-        run: wsl -d Ubuntu-24.04 -- bash -c "source ~/.cargo/env && ./bin/build"
+        run: wsl -d Ubuntu-24.04 -- bash -c "source ~/.cargo/env && cargo build --release --locked --bin rv"
 
       - name: Test rv installs and runs ruby
         run: |
