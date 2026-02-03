@@ -118,8 +118,16 @@ jobs:
           # Configure Bundler to install gems locally (like real projects often do)
           New-Item -ItemType Directory -Path .bundle
           "---", 'BUNDLE_PATH: ".rv"' | Set-Content -Path .bundle\config
+          # Debug: verify config and check what Bundler sees
+          Write-Host "Contents of .bundle/config:"
+          Get-Content .bundle\config
+          Write-Host "Bundler.bundle_path returns:"
+          ..\target\release\rv.exe ruby run 3.4 -- -rbundler -e "puts Bundler.bundle_path"
           # Run rv ci to install gems and generate binstubs
           ..\target\release\rv.exe ci
+          # Debug: show directory structure
+          Write-Host "Directory structure after rv ci:"
+          Get-ChildItem -Recurse -Depth 2 | Select-Object FullName
           # Test that the .bat binstub wrapper works
           .\bin\rake.bat --version
           .\bin\rspec.bat --version
