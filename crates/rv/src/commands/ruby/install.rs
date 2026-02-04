@@ -80,18 +80,15 @@ pub async fn install(
         },
     };
 
+    let version = selected_version.number();
     if let Some(tarball_path) = tarball_path {
         let reader = fs_err::OpenOptions::new().read(true).open(tarball_path)?;
-        extract_ruby_tarball(reader, &install_dir, &selected_version.number())?;
+        extract_ruby_tarball(reader, &install_dir, &version)?;
     } else {
         let cache = config.cache.bucket(rv_cache::CacheBucket::Ruby);
-        download_and_extract_remote_tarball(
-            &cache,
-            &install_dir,
-            &selected_version.number(),
-            &progress,
-        )
-        .await?;
+        let mut reader = download_remote_tarball(&cache, &version, &progress).await?;
+        extract_ruby_tarball(&mut reader, &install_dir, &version)?;
+        reader.check()?;
     }
 
     println!(
@@ -103,13 +100,11 @@ pub async fn install(
     Ok(())
 }
 
-// downloads and extracts a remote ruby tarball
-async fn download_and_extract_remote_tarball(
+async fn download_remote_tarball(
     cache: &Utf8PathBuf,
-    install_dir: &Utf8PathBuf,
     version: &str,
     progress: &WorkProgress,
-) -> Result<()> {
+) -> Result<cacache::SyncReader> {
     let url = ruby_url(version)?;
     let md = cacache::metadata_sync(cache, &url)?;
     let sri = if let Some(md) = md
@@ -121,10 +116,7 @@ async fn download_and_extract_remote_tarball(
         download_ruby_tarball(cache, &url, version, progress).await?
     };
 
-    let reader = cacache::SyncReader::open_hash(cache, sri)?;
-    extract_ruby_tarball(reader, install_dir, version)?;
-
-    Ok(())
+    Ok(cacache::SyncReader::open_hash(cache, sri)?)
 }
 
 fn ruby_url(version: &str) -> Result<String> {
@@ -224,15 +216,15 @@ async fn download_ruby_tarball(
 
 fn extract_ruby_tarball<A: std::io::Read>(
     reader: A,
-    rubies_dir: &Utf8Path,
+    install_dir: &Utf8Path,
     version: &str,
 ) -> Result<()> {
     let span = info_span!("Installing Ruby", version = version);
     span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name}").unwrap());
     let _guard = span.enter();
 
-    if !rubies_dir.exists() {
-        fs_err::create_dir_all(rubies_dir)?;
+    if !install_dir.exists() {
+        fs_err::create_dir_all(install_dir)?;
     }
 
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(reader));
@@ -247,7 +239,7 @@ fn extract_ruby_tarball<A: std::io::Read>(
                 &format!("ruby-{version}"),
             )
             .replace('@', "-");
-        let dst = rubies_dir.join(path);
+        let dst = install_dir.join(path);
         entry.unpack(dst)?;
     }
 
