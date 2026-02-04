@@ -28,6 +28,10 @@ pub enum RubyCommand {
         /// Show only installed Ruby versions
         #[arg(long)]
         installed_only: bool,
+
+        /// Show all available Ruby versions, including outdated ones
+        #[arg(long)]
+        list_all: bool,
     },
 
     #[command(about = "Show or set the Ruby version for the current project")]

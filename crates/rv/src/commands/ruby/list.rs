@@ -54,7 +54,12 @@ impl JsonRubyEntry {
 }
 
 /// Lists the available and installed rubies.
-pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -> Result<()> {
+pub async fn list(
+    config: &Config,
+    format: OutputFormat,
+    installed_only: bool,
+    list_all: bool,
+) -> Result<()> {
     let installed_rubies = config.rubies();
 
     if installed_only && installed_rubies.is_empty() && format == OutputFormat::Text {
@@ -78,7 +83,11 @@ pub async fn list(config: &Config, format: OutputFormat, installed_only: bool) -
     if !installed_only {
         let remote_rubies = config.remote_rubies().await;
 
-        let selected_remote_rubies = latest_patch_version(&remote_rubies);
+        let selected_remote_rubies = if list_all {
+            remote_rubies.clone()
+        } else {
+            latest_patch_version(&remote_rubies)
+        };
 
         active_ruby = active_ruby.or_else(|| requested.find_match_in(&selected_remote_rubies));
 
@@ -222,7 +231,9 @@ mod tests {
     #[tokio::test]
     async fn test_list() {
         let config = test_config().unwrap();
-        list(&config, OutputFormat::Text, false).await.unwrap();
+        list(&config, OutputFormat::Text, false, false)
+            .await
+            .unwrap();
     }
 
     fn ruby(version: &str) -> Ruby {
