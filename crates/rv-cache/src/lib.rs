@@ -151,11 +151,6 @@ impl Cache {
         self.root.join(cache_bucket.to_str())
     }
 
-    /// Compute a shard in the cache.
-    pub fn shard(&self, cache_bucket: CacheBucket, dir: impl AsRef<Utf8Path>) -> CacheShard {
-        CacheShard(self.bucket(cache_bucket).join(dir.as_ref()))
-    }
-
     /// Compute an entry in the cache.
     pub fn entry(
         &self,

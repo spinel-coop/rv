@@ -32,10 +32,7 @@ pub(crate) async fn query_all_gem_deps(
 ) -> Result<()> {
     // First, let's check the cache.
     // 0. Initialize the cache.
-    let cached_gemspecs_dir = config
-        .cache
-        .shard(rv_cache::CacheBucket::GemDeps, "gemdeps")
-        .into_path_buf();
+    let cached_gemspecs_dir = config.cache.bucket(rv_cache::CacheBucket::GemDeps);
     fs_err::create_dir_all(&cached_gemspecs_dir).map_err(Error::CouldNotCreateCacheDir)?;
 
     // 1. Try to read from the disk cache.

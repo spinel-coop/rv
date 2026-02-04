@@ -200,12 +200,9 @@ async fn download_ruby_tarball(
         });
     }
 
-    // Get Content-Length for progress tracking
+    // Track download progress
     let total_size = response.content_length().unwrap_or(0);
-
-    // Set up progress tracking
     progress.start_phase(total_size, 100);
-
     let span = info_span!("Downloading Ruby", version = version);
     span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name} {msg}").unwrap());
     let _guard = span.enter();

@@ -360,10 +360,7 @@ fn install_path(
     config: &Config,
     args: &CiInnerArgs,
 ) -> Result<Vec<GemSpecification>> {
-    let cached_gemspecs_dir = config
-        .cache
-        .shard(rv_cache::CacheBucket::Gemspec, "gemspecs")
-        .into_path_buf();
+    let cached_gemspecs_dir = config.cache.bucket(rv_cache::CacheBucket::Gemspec);
     fs_err::create_dir_all(&cached_gemspecs_dir)?;
 
     let path_key = rv_cache::cache_digest(path_section.remote);
@@ -524,10 +521,7 @@ fn install_git_repo(
 
     debug!("Installed repo {}", &repo_name);
 
-    let cached_gemspecs_dir = config
-        .cache
-        .shard(rv_cache::CacheBucket::Gemspec, "gemspecs")
-        .into_path_buf();
+    let cached_gemspecs_dir = config.cache.bucket(rv_cache::CacheBucket::Gemspec);
     fs_err::create_dir_all(&cached_gemspecs_dir)?;
 
     let mut git_specs = Vec::new();
@@ -577,9 +571,7 @@ fn download_git_repos<'i>(
     debug!("Downloading git gems");
 
     // Download git repos to this dir.
-    let git_clone_dir = cache
-        .shard(rv_cache::CacheBucket::Git, "gits")
-        .into_path_buf();
+    let git_clone_dir = cache.bucket(rv_cache::CacheBucket::Git);
     fs_err::create_dir_all(&git_clone_dir)?;
 
     let pool = create_rayon_pool(args.max_concurrent_installs).unwrap();
@@ -1646,8 +1638,7 @@ async fn download_gem<'i>(
     let url = url_for_spec(remote, &spec)?;
     let cache_key = rv_cache::cache_digest(url.as_ref());
     let cache_path = cache
-        .shard(rv_cache::CacheBucket::Gem, "gems")
-        .into_path_buf()
+        .bucket(rv_cache::CacheBucket::Gem)
         .join(format!("{cache_key}.gem"));
 
     let contents = if cache_path.exists() {
