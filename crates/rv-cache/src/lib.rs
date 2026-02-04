@@ -146,19 +146,13 @@ impl Cache {
         &self.root
     }
 
+    pub fn ruby(&self) -> Utf8PathBuf {
+        self.bucket(CacheBucket::Ruby)
+    }
+
     /// The folder for a specific cache bucket
     pub fn bucket(&self, cache_bucket: CacheBucket) -> Utf8PathBuf {
         self.root.join(cache_bucket.to_str())
-    }
-
-    /// Compute an entry in the cache.
-    pub fn entry(
-        &self,
-        cache_bucket: CacheBucket,
-        dir: impl AsRef<Utf8Path>,
-        file: impl AsRef<Utf8Path>,
-    ) -> CacheEntry {
-        CacheEntry::new(self.bucket(cache_bucket).join(dir), file)
     }
 
     /// Returns `true` if the [`Cache`] is temporary.
@@ -330,13 +324,13 @@ mod tests {
 
     #[test]
     fn test_cache_bucket_display() {
-        assert_eq!(CacheBucket::Ruby.to_string(), "ruby-v0");
+        assert_eq!(CacheBucket::Ruby.to_string(), "ruby-v1");
     }
 
     #[test]
     fn test_cache_bucket_iteration() {
         let buckets: Vec<_> = CacheBucket::iter().collect();
-        assert_eq!(buckets.len(), 2);
+        assert_eq!(buckets.len(), 5);
         assert!(buckets.contains(&CacheBucket::Ruby));
     }
 
@@ -393,18 +387,7 @@ mod tests {
 
         assert_eq!(
             cache.bucket(CacheBucket::Ruby).as_str(),
-            "/test/cache/ruby-v0"
-        );
-    }
-
-    #[test]
-    fn test_cache_entry_operations() {
-        let cache = Cache::from_path("/test/cache");
-
-        let entry = cache.entry(CacheBucket::Ruby, "interpreters", "ruby-3.3.0.json");
-        assert_eq!(
-            entry.path().as_str(),
-            "/test/cache/ruby-v0/interpreters/ruby-3.3.0.json"
+            "/test/cache/ruby-v1"
         );
     }
 
@@ -484,7 +467,7 @@ mod tests {
         let cache = Cache::from_path(&cache_path_utf8).init().unwrap();
 
         // Create a valid bucket directory
-        let valid_bucket = cache_path.join("ruby-v0");
+        let valid_bucket = cache_path.join("ruby-v1");
         fs_err::create_dir(&valid_bucket).unwrap();
         fs_err::write(valid_bucket.join("test.json"), "{}").unwrap();
 

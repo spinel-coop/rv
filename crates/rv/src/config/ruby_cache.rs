@@ -12,22 +12,20 @@ impl Config {
     /// Get cached Ruby information for a specific Ruby installation if valid
     fn get_cached_ruby(&self, ruby_path: &Utf8Path) -> Result<Ruby> {
         // Use path-based cache key for lookup (since we don't have Ruby info yet)
+        let cache = self.cache.bucket(rv_cache::CacheBucket::Ruby);
         let cache_key = self.ruby_path_cache_key(ruby_path)?;
-        let cache_entry = self
-            .cache
-            .entry(rv_cache::CacheBucket::Ruby, "interpreters", &cache_key);
 
         // Try to read and deserialize cached data
-        match fs_err::read_to_string(cache_entry.path()) {
+        match cacache::read_sync(&cache, &cache_key) {
             Ok(content) => {
-                match serde_json::from_str::<Ruby>(&content) {
+                match serde_json::from_slice::<Ruby>(&content) {
                     Ok(cached_ruby) => {
                         // Verify cached Ruby installation still exists and is valid
                         if cached_ruby.is_valid() {
                             Ok(cached_ruby)
                         } else {
                             // Ruby is no longer valid, remove cache entry
-                            let _ = fs_err::remove_file(cache_entry.path());
+                            cacache::remove_sync(&cache, &cache_key).unwrap();
                             Err(Error::RubyCacheMiss {
                                 ruby_path: ruby_path.to_path_buf(),
                             }
@@ -36,7 +34,7 @@ impl Config {
                     }
                     Err(_) => {
                         // Invalid cache file, remove it
-                        let _ = fs_err::remove_file(cache_entry.path());
+                        cacache::remove_sync(&cache, &cache_key).unwrap();
                         Err(Error::RubyCacheMiss {
                             ruby_path: ruby_path.to_path_buf(),
                         }
@@ -53,20 +51,12 @@ impl Config {
 
     /// Cache Ruby information for a specific Ruby installation
     fn cache_ruby(&self, ruby: &Ruby) -> Result<()> {
-        // Use both path-based key (for lookup) and instance-based key (for comprehensive caching)
+        let cache = self.cache.bucket(rv_cache::CacheBucket::Ruby);
         let cache_key = self.ruby_path_cache_key(&ruby.path)?;
-        let cache_entry = self
-            .cache
-            .entry(rv_cache::CacheBucket::Ruby, "interpreters", &cache_key);
-
-        // Ensure cache directory exists
-        if let Some(parent) = cache_entry.path().parent() {
-            fs_err::create_dir_all(parent).into_diagnostic()?;
-        }
 
         // Serialize and write Ruby information to cache
         let json_data = serde_json::to_string(ruby).into_diagnostic()?;
-        fs_err::write(cache_entry.path(), json_data).into_diagnostic()?;
+        cacache::write_sync(cache, cache_key, json_data).into_diagnostic()?;
 
         Ok(())
     }

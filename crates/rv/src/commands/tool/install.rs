@@ -50,7 +50,7 @@ pub enum Error {
     #[error("Could not create the cache dir: {0}")]
     CouldNotCreateCacheDir(std::io::Error),
     #[error("Could not write to the cache: {0}")]
-    CouldNotWriteToCache(std::io::Error),
+    CouldNotWriteToCache(cacache::Error),
     #[error("Could not choose version: {0}")]
     CouldNotChooseVersion(String),
     #[error(transparent)]

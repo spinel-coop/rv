@@ -6,7 +6,6 @@ use std::{
 use super::Config;
 use camino::Utf8PathBuf;
 use current_platform::CURRENT_PLATFORM;
-use fs_err as fs;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -56,13 +55,10 @@ impl Config {
                     "Could not fetch or re-validate available Ruby versions: {}",
                     e
                 );
-                let cache_entry = self.cache.entry(
-                    rv_cache::CacheBucket::Ruby,
-                    "releases",
-                    "available_rubies.json",
-                );
-                if let Ok(content) = fs::read_to_string(cache_entry.path())
-                    && let Ok(cached_data) = serde_json::from_str::<CachedRelease>(&content)
+                let cache = self.cache.bucket(rv_cache::CacheBucket::Ruby);
+                let key = "releases/available_rubies.json";
+                if let Ok(content) = cacache::read_sync(cache, key)
+                    && let Ok(cached_data) = serde_json::from_slice::<CachedRelease>(&content)
                 {
                     warn!("Displaying stale list of available rubies from cache.");
                     cached_data.release
@@ -99,11 +95,8 @@ impl Config {
 
 /// Fetches available rubies
 async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Release> {
-    let cache_entry = cache.entry(
-        rv_cache::CacheBucket::Ruby,
-        "releases",
-        "available_rubies.json",
-    );
+    let cache = cache.bucket(rv_cache::CacheBucket::Ruby);
+    let key = "releases/available_rubies.json";
     let client = reqwest::Client::new();
 
     let url = std::env::var("RV_LIST_URL").unwrap_or_else(|_| {
@@ -119,12 +112,11 @@ async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Release> {
     }
 
     // 1. Try to read from the disk cache.
-    let cached_data: Option<CachedRelease> =
-        if let Ok(content) = fs::read_to_string(cache_entry.path()) {
-            serde_json::from_str(&content).ok()
-        } else {
-            None
-        };
+    let cached_data: Option<CachedRelease> = if let Ok(content) = cacache::read_sync(&cache, key) {
+        serde_json::from_slice(&content).ok()
+    } else {
+        None
+    };
 
     // 2. If we have fresh cached data, use it immediately.
     if let Some(cache) = &cached_data {
@@ -176,7 +168,7 @@ async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Release> {
                 .unwrap_or(Duration::from_secs(60));
 
             stale_cache.expires_at = SystemTime::now() + max_age.max(MINIMUM_CACHE_TTL);
-            fs::write(cache_entry.path(), serde_json::to_string(&stale_cache)?)?;
+            let _ = cacache::write_sync(&cache, key, serde_json::to_string(&stale_cache)?);
             Ok(stale_cache.release)
         }
         reqwest::StatusCode::OK => {
@@ -202,10 +194,7 @@ async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Release> {
                 release: release.clone(),
             };
 
-            if let Some(parent) = cache_entry.path().parent() {
-                fs::create_dir_all(parent)?;
-            }
-            fs::write(cache_entry.path(), serde_json::to_string(&new_cache_entry)?)?;
+            let _ = cacache::write_sync(cache, key, serde_json::to_string(&new_cache_entry)?);
 
             Ok(release)
         }
