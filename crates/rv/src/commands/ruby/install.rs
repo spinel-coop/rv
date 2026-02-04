@@ -2,6 +2,7 @@ use anstream::println;
 use bytesize::ByteSize;
 use camino::{Utf8Path, Utf8PathBuf};
 use core::panic;
+use current_platform::CURRENT_PLATFORM;
 use futures_util::StreamExt;
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
@@ -10,7 +11,6 @@ use tokio::io::AsyncWriteExt;
 use tracing::{debug, info_span};
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 
-use rv_gem_types::Platform;
 use rv_ruby::{request::RubyRequest, version::RubyVersion};
 
 use crate::config::Config;
@@ -24,6 +24,10 @@ pub enum Error {
     IoError(#[from] std::io::Error),
     #[error(transparent)]
     StripPrefixError(#[from] std::path::StripPrefixError),
+    #[error(transparent)]
+    ZipError(#[from] zip::result::ZipError),
+    #[error(transparent)]
+    SevenZipError(#[from] sevenz_rust2::Error),
     #[error("no matching ruby version found")]
     NoMatchingRuby,
     #[error("Download from URL {url} failed with status code {status}. Response body was {body}")]
@@ -34,7 +38,7 @@ pub enum Error {
     },
     #[error("Could not get latest Ruby release")]
     GetLatestReleaseFailed { error: super::list::Error },
-    #[error("Failed to unpack tarball path {0}")]
+    #[error("Failed to unpack archive path {0}")]
     InvalidTarballPath(PathBuf),
     #[error(transparent)]
     UnsupportedPlatform(#[from] rv_gem_types::platform::PlatformError),
@@ -79,7 +83,7 @@ pub async fn install(
 
     match tarball_path {
         Some(tarball_path) => {
-            extract_local_ruby_tarball(tarball_path, &install_dir, &selected_version.number())
+            extract_local_ruby_archive(tarball_path, &install_dir, &selected_version.number())
                 .await?
         }
         None => {
@@ -102,7 +106,7 @@ pub async fn install(
     Ok(())
 }
 
-// downloads and extracts a remote ruby tarball
+// downloads and extracts a remote ruby archive (tarball or zip)
 async fn download_and_extract_remote_tarball(
     config: &Config,
     install_dir: &Utf8PathBuf,
@@ -110,68 +114,99 @@ async fn download_and_extract_remote_tarball(
     progress: &WorkProgress,
 ) -> Result<()> {
     let url = ruby_url(version)?;
-    let tarball_path = tarball_path(config, &url);
+    let archive_path = archive_cache_path(config, &url)?;
 
-    let new_dir = tarball_path.parent().unwrap();
-    if !new_dir.exists() {
-        fs_err::create_dir_all(new_dir)?;
+    let cache_dir = archive_path.parent().unwrap();
+    if !cache_dir.exists() {
+        fs_err::create_dir_all(cache_dir)?;
     }
 
-    if valid_tarball_exists(&tarball_path) {
+    if valid_archive_exists(&archive_path) {
         println!(
-            "Tarball {} already exists, skipping download.",
-            tarball_path.cyan()
+            "Archive {} already exists, skipping download.",
+            archive_path.cyan()
         );
     } else {
-        download_ruby_tarball(config, &url, &tarball_path, version, progress).await?;
+        download_ruby_archive(config, &url, &archive_path, version, progress).await?;
     }
 
-    extract_ruby_tarball(&tarball_path, install_dir, version)?;
+    extract_ruby_archive(&archive_path, install_dir, version)?;
 
     Ok(())
 }
 
-// extract a local ruby tarball
-async fn extract_local_ruby_tarball(
-    tarball_path: String,
+// extract a local ruby archive (tarball or zip)
+async fn extract_local_ruby_archive(
+    archive_path: String,
     install_dir: &Utf8PathBuf,
     version: &str,
 ) -> Result<()> {
-    extract_ruby_tarball(Utf8Path::new(&tarball_path), install_dir, version)?;
+    extract_ruby_archive(Utf8Path::new(&archive_path), install_dir, version)?;
 
     Ok(())
 }
 
-/// Does a usable tarball already exist at this path?
-fn valid_tarball_exists(path: &Utf8Path) -> bool {
+/// Does a usable archive already exist at this path?
+fn valid_archive_exists(path: &Utf8Path) -> bool {
     fs_err::metadata(path).is_ok_and(|m| m.is_file() && m.len() > 0)
 }
 
-fn ruby_url(version: &str) -> Result<String> {
-    let arch = Platform::local_precompiled_ruby_arch()?;
+/// Returns (arch_string, file_extension) for the current platform
+fn platform_info() -> Result<(&'static str, &'static str)> {
+    match CURRENT_PLATFORM {
+        "aarch64-apple-darwin" => Ok(("arm64_sonoma", "tar.gz")),
+        "x86_64-apple-darwin" => Ok(("ventura", "tar.gz")),
+        "x86_64-unknown-linux-gnu" => Ok(("x86_64_linux", "tar.gz")),
+        "aarch64-unknown-linux-gnu" => Ok(("arm64_linux", "tar.gz")),
+        "x86_64-pc-windows-msvc" => Ok(("x64", "7z")),
+        other => Err(rv_gem_types::platform::PlatformError::UnsupportedPlatform {
+            platform: other.to_string(),
+        }
+        .into()),
+    }
+}
 
+fn ruby_url(version: &str) -> Result<String> {
+    let (arch, ext) = platform_info()?;
+
+    // Windows uses RubyInstaller2 directly
+    if cfg!(target_os = "windows") {
+        let download_base = std::env::var("RV_INSTALL_URL").unwrap_or_else(|_| {
+            format!(
+                "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-{version}-1"
+            )
+        });
+        // RubyInstaller2 URL pattern: rubyinstaller-{version}-1-x64.7z
+        return Ok(format!(
+            "{download_base}/rubyinstaller-{version}-1-{arch}.{ext}"
+        ));
+    }
+
+    // macOS/Linux use rv-ruby
     let download_base = std::env::var("RV_INSTALL_URL")
         .unwrap_or("https://github.com/spinel-coop/rv-ruby/releases/latest/download".to_owned());
 
-    Ok(format!("{download_base}/ruby-{version}.{arch}.tar.gz"))
+    Ok(format!("{download_base}/ruby-{version}.{arch}.{ext}"))
 }
 
-fn tarball_path(config: &Config, url: impl AsRef<str>) -> Utf8PathBuf {
+fn archive_cache_path(config: &Config, url: impl AsRef<str>) -> Result<Utf8PathBuf> {
+    let (_, ext) = platform_info()?;
     let cache_key = rv_cache::cache_digest(url.as_ref());
-    config
+    Ok(config
         .cache
         .shard(rv_cache::CacheBucket::Ruby, "tarballs")
         .into_path_buf()
-        .join(format!("{cache_key}.tar.gz"))
+        .join(format!("{cache_key}.{ext}")))
 }
 
-fn temp_tarball_path(config: &Config, url: impl AsRef<str>) -> Utf8PathBuf {
+fn temp_archive_path(config: &Config, url: impl AsRef<str>) -> Result<Utf8PathBuf> {
+    let (_, ext) = platform_info()?;
     let cache_key = rv_cache::cache_digest(url.as_ref());
-    config
+    Ok(config
         .cache
         .shard(rv_cache::CacheBucket::Ruby, "tarballs")
         .into_path_buf()
-        .join(format!("{cache_key}.tar.gz.tmp"))
+        .join(format!("{cache_key}.{ext}.tmp")))
 }
 
 /// Write the file from this HTTP `response` to the given `path`.
@@ -213,14 +248,14 @@ async fn write_to_filesystem(
     Ok(())
 }
 
-async fn download_ruby_tarball(
+async fn download_ruby_archive(
     config: &Config,
     url: &str,
-    tarball_path: &Utf8PathBuf,
+    archive_path: &Utf8PathBuf,
     version: &str,
     progress: &WorkProgress,
 ) -> Result<()> {
-    debug!("Downloading tarball from {url}");
+    debug!("Downloading archive from {url}");
     // Build the request with optional GitHub authentication
     let client = reqwest::Client::new();
     let mut request_builder = client.get(url);
@@ -229,13 +264,13 @@ async fn download_ruby_tarball(
     // Check GITHUB_TOKEN first (GitHub Actions), then GH_TOKEN (GitHub CLI/general use)
     if crate::config::github::is_github_url(url) {
         if let Some(token) = crate::config::github::github_token() {
-            debug!("Using authenticated GitHub request for tarball download");
+            debug!("Using authenticated GitHub request for archive download");
             request_builder = request_builder.header("Authorization", format!("Bearer {}", token));
         } else {
-            debug!("No GitHub token found, using unauthenticated request for tarball download");
+            debug!("No GitHub token found, using unauthenticated request for archive download");
         }
     }
-    // Start downloading the tarball.
+    // Start downloading the archive.
     let response = request_builder.send().await?;
     if !response.status().is_success() {
         let status = response.status();
@@ -260,12 +295,12 @@ async fn download_ruby_tarball(
     span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name} {msg}").unwrap());
     let _guard = span.enter();
 
-    // Write the tarball bytes to the filesystem.
-    let temp_path = temp_tarball_path(config, url);
+    // Write the archive bytes to the filesystem.
+    let temp_path = temp_archive_path(config, url)?;
     if let Err(e) = write_to_filesystem(
         response,
         &temp_path,
-        tarball_path,
+        archive_path,
         total_size,
         progress,
         &span,
@@ -280,8 +315,8 @@ async fn download_ruby_tarball(
     Ok(())
 }
 
-fn extract_ruby_tarball(
-    tarball_path: &Utf8Path,
+fn extract_ruby_archive(
+    archive_path: &Utf8Path,
     rubies_dir: &Utf8Path,
     version: &str,
 ) -> Result<()> {
@@ -292,6 +327,17 @@ fn extract_ruby_tarball(
     if !rubies_dir.exists() {
         fs_err::create_dir_all(rubies_dir)?;
     }
+
+    // Determine archive type by extension
+    let extension = archive_path.extension().unwrap_or("");
+    match extension {
+        "zip" => extract_zip(archive_path, rubies_dir, version),
+        "7z" => extract_7z(archive_path, rubies_dir, version),
+        _ => extract_tarball(archive_path, rubies_dir, version),
+    }
+}
+
+fn extract_tarball(tarball_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> Result<()> {
     let tarball = fs_err::File::open(tarball_path)?;
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
     for e in archive.entries()? {
@@ -308,6 +354,175 @@ fn extract_ruby_tarball(
         let dst = rubies_dir.join(path);
         entry.unpack(dst)?;
     }
+    Ok(())
+}
+
+fn extract_zip(zip_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> Result<()> {
+    let file = fs_err::File::open(zip_path)?;
+    let mut archive = zip::ZipArchive::new(file)?;
+
+    for i in 0..archive.len() {
+        let mut entry = archive.by_index(i)?;
+        let entry_path = entry.name().to_string();
+
+        // Normalize path: repackage RubyInstaller format to rv format
+        let path = entry_path
+            .replace(
+                &format!("rubyinstaller-{version}"),
+                &format!("ruby-{version}"),
+            )
+            .replace('\\', "/"); // Normalize Windows path separators
+
+        let dst = rubies_dir.join(&path);
+
+        if entry.is_dir() {
+            fs_err::create_dir_all(&dst)?;
+        } else {
+            if let Some(parent) = dst.parent() {
+                fs_err::create_dir_all(parent)?;
+            }
+            let mut outfile = fs_err::File::create(&dst)?;
+            std::io::copy(&mut entry, &mut outfile)?;
+        }
+    }
+    Ok(())
+}
+
+fn extract_7z(archive_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> Result<()> {
+    // Extract 7z archive to rubies_dir
+    sevenz_rust2::decompress_file(archive_path.as_std_path(), rubies_dir.as_std_path())?;
+
+    // RubyInstaller2 extracts to: rubyinstaller-{version}-1-{arch}/
+    // We need to rename it to: ruby-{version}/
+    let (arch, _) = platform_info()?;
+    let extracted_dir = rubies_dir.join(format!("rubyinstaller-{version}-1-{arch}"));
+    let target_dir = rubies_dir.join(format!("ruby-{version}"));
+
+    if extracted_dir.exists() {
+        fs_err::rename(&extracted_dir, &target_dir)?;
+    }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use assert_fs::TempDir;
+    use assert_fs::prelude::*;
+    use std::io::Write as _;
+
+    #[test]
+    fn test_platform_info_returns_valid_result() {
+        let result = platform_info();
+
+        match result {
+            Ok((arch, ext)) => {
+                assert!(!arch.is_empty(), "arch should not be empty");
+                assert!(
+                    ext == "tar.gz" || ext == "zip" || ext == "7z",
+                    "extension should be tar.gz, zip, or 7z, got: {ext}"
+                );
+            }
+            Err(Error::UnsupportedPlatform(_)) => {
+                // Acceptable - means we're on an unsupported platform
+            }
+            Err(e) => {
+                unreachable!("Unexpected error: {e:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_extract_zip_creates_correct_structure() {
+        let temp_dir = TempDir::new().unwrap();
+        let rubies_dir = temp_dir.child("rubies");
+        rubies_dir.create_dir_all().unwrap();
+
+        let zip_path = temp_dir.child("test-ruby.zip");
+        {
+            let file = std::fs::File::create(zip_path.path()).unwrap();
+            let mut zip = zip::ZipWriter::new(file);
+
+            let options: zip::write::SimpleFileOptions = Default::default();
+            zip.add_directory::<_, ()>("rubyinstaller-3.4.1/", options)
+                .unwrap();
+            zip.add_directory::<_, ()>("rubyinstaller-3.4.1/bin/", options)
+                .unwrap();
+
+            zip.start_file("rubyinstaller-3.4.1/bin/ruby.exe", options)
+                .unwrap();
+            zip.write_all(b"fake ruby executable").unwrap();
+
+            zip.finish().unwrap();
+        }
+
+        let rubies_path = Utf8Path::from_path(rubies_dir.path()).unwrap();
+        let zip_utf8_path = Utf8Path::from_path(zip_path.path()).unwrap();
+        extract_zip(zip_utf8_path, rubies_path, "3.4.1").unwrap();
+
+        let ruby_dir = rubies_dir.child("ruby-3.4.1");
+        assert!(ruby_dir.exists(), "ruby-3.4.1 directory should exist");
+
+        let bin_dir = ruby_dir.child("bin");
+        assert!(bin_dir.exists(), "bin directory should exist");
+
+        let ruby_exe = bin_dir.child("ruby.exe");
+        assert!(ruby_exe.exists(), "ruby.exe should exist");
+
+        let content = std::fs::read_to_string(ruby_exe.path()).unwrap();
+        assert_eq!(content, "fake ruby executable");
+    }
+
+    #[test]
+    fn test_extract_ruby_archive_delegates_to_zip_extractor() {
+        let temp_dir = TempDir::new().unwrap();
+        let rubies_dir = temp_dir.child("rubies");
+        rubies_dir.create_dir_all().unwrap();
+
+        let zip_path = temp_dir.child("test.zip");
+        {
+            let file = std::fs::File::create(zip_path.path()).unwrap();
+            let mut zip = zip::ZipWriter::new(file);
+            let options: zip::write::SimpleFileOptions = Default::default();
+            zip.add_directory::<_, ()>("rubyinstaller-3.4.1/", options)
+                .unwrap();
+            zip.finish().unwrap();
+        }
+
+        let rubies_path = Utf8Path::from_path(rubies_dir.path()).unwrap();
+        let zip_utf8_path = Utf8Path::from_path(zip_path.path()).unwrap();
+
+        let result = extract_ruby_archive(zip_utf8_path, rubies_path, "3.4.1");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_valid_archive_exists_returns_false_for_missing_file() {
+        let temp_dir = TempDir::new().unwrap();
+        let missing = temp_dir.child("missing.tar.gz");
+        assert!(!valid_archive_exists(
+            Utf8Path::from_path(missing.path()).unwrap()
+        ));
+    }
+
+    #[test]
+    fn test_valid_archive_exists_returns_false_for_empty_file() {
+        let temp_dir = TempDir::new().unwrap();
+        let empty = temp_dir.child("empty.tar.gz");
+        empty.touch().unwrap();
+        assert!(!valid_archive_exists(
+            Utf8Path::from_path(empty.path()).unwrap()
+        ));
+    }
+
+    #[test]
+    fn test_valid_archive_exists_returns_true_for_file_with_content() {
+        let temp_dir = TempDir::new().unwrap();
+        let valid = temp_dir.child("valid.tar.gz");
+        valid.write_binary(b"some content").unwrap();
+        assert!(valid_archive_exists(
+            Utf8Path::from_path(valid.path()).unwrap()
+        ));
+    }
 }

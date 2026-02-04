@@ -14,6 +14,13 @@ use tracing::instrument;
 
 use crate::version::RubyVersion;
 
+/// Returns the Ruby executable name for the current platform.
+/// On Windows, Ruby is distributed as `ruby.exe` (from RubyInstaller2).
+/// On Unix systems (macOS, Linux), it's just `ruby`.
+fn ruby_executable_name() -> &'static str {
+    if cfg!(windows) { "ruby.exe" } else { "ruby" }
+}
+
 static RUBY_DESCRIPTION_REGEX: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"ruby (?<version>[^ ]+) \((?<date>\d\d\d\d-\d\d-\d\d) (?<source>\S+) (?<revision>[0-9a-f]+)\) (?<prism>\+PRISM )?\[(?<arch>\w+)-(?<os>\w+)\]").unwrap()
 });
@@ -70,7 +77,7 @@ impl Ruby {
         }
 
         // Check for Ruby executable
-        let ruby_bin = dir.join("bin").join("ruby");
+        let ruby_bin = dir.join("bin").join(ruby_executable_name());
         if !ruby_bin.exists() {
             return Err(RubyError::NoRubyExecutable);
         }
@@ -99,7 +106,7 @@ impl Ruby {
 
     /// Get the path to the Ruby executable for display purposes
     pub fn executable_path(&self) -> Utf8PathBuf {
-        self.bin_path().join("ruby")
+        self.bin_path().join(ruby_executable_name())
     }
 
     pub fn bin_path(&self) -> Utf8PathBuf {

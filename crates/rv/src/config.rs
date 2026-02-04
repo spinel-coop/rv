@@ -151,7 +151,9 @@ pub fn find_requested_ruby(
 
         let lockfile = project_dir.join("Gemfile.lock");
         if lockfile.exists() {
-            let lockfile_contents = std::fs::read_to_string(&lockfile)?;
+            let raw_contents = std::fs::read_to_string(&lockfile)?;
+            // Normalize Windows line endings (CRLF) to Unix (LF) for the parser
+            let lockfile_contents = rv_lockfile::normalize_line_endings(&raw_contents);
             let lockfile_ruby = rv_lockfile::parse(&lockfile_contents)
                 .map_err(Error::CouldNotParseGemfileLock)?
                 .ruby_version;

@@ -6,8 +6,26 @@ mod parser;
 #[cfg(test)]
 mod tests;
 
+use std::borrow::Cow;
+
 use miette::{Diagnostic, SourceSpan};
 pub use parser::parse;
+
+/// Normalize line endings in a lockfile string.
+///
+/// Converts Windows-style line endings (`\r\n`) to Unix-style (`\n`).
+/// This should be called before passing the string to [`parse`], as the parser
+/// expects Unix line endings.
+///
+/// Returns a [`Cow::Borrowed`] if no conversion is needed (the string already
+/// uses Unix line endings), or a [`Cow::Owned`] with the normalized string.
+pub fn normalize_line_endings(contents: &str) -> Cow<'_, str> {
+    if contents.contains("\r\n") {
+        Cow::Owned(line_ending::LineEnding::normalize(contents))
+    } else {
+        Cow::Borrowed(contents)
+    }
+}
 
 #[derive(Debug, thiserror::Error, Diagnostic)]
 #[error("Could not parse")]

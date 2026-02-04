@@ -40,7 +40,6 @@ use std::io;
 use std::io::Read;
 use std::io::Write;
 use std::ops::Not;
-use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -83,6 +82,8 @@ struct CiInnerArgs {
     pub validate_checksums: bool,
     pub install_path: Utf8PathBuf,
     pub extensions_dir: Utf8PathBuf,
+    /// Full path to the Ruby executable, used for Windows .bat binstub wrappers
+    pub ruby_executable_path: Utf8PathBuf,
 }
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -185,6 +186,9 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
 
     // Now that it's installed, we can use Ruby to query various directories
     // we'll need to know later.
+    let ruby = config
+        .matching_ruby(&ruby_request)
+        .expect("Ruby should be installed after the check above");
     let extensions_dir = find_exts_dir(config, &ruby_request)?;
     let (lockfile_dir, lockfile_path, gemfile_name) = find_manifest_paths(&args.gemfile)?;
     let install_path = find_install_path(config, &lockfile_dir, &ruby_request, gemfile_name)?;
@@ -195,6 +199,7 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         validate_checksums: args.validate_checksums,
         install_path,
         extensions_dir,
+        ruby_executable_path: ruby.executable_path(),
     };
 
     // Terminal progress indicator (OSC 9;4) for supported terminals
@@ -206,7 +211,9 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
 
     let lockfile_contents = {
         let _guard = span.enter();
-        tokio::fs::read_to_string(&lockfile_path).await?
+        let raw_contents = tokio::fs::read_to_string(&lockfile_path).await?;
+        // Normalize Windows line endings (CRLF) to Unix (LF) for the parser
+        rv_lockfile::normalize_line_endings(&raw_contents).into_owned()
     };
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
 
@@ -233,6 +240,9 @@ pub async fn install_from_lockfile(
         crate::ruby_install(config, None, Some(ruby_request.clone()), None).await?;
     }
 
+    let ruby = config
+        .matching_ruby(&ruby_request)
+        .expect("Ruby should be installed after the check above");
     let inner_args = CiInnerArgs {
         skip_compile_extensions: false,
         max_concurrent_requests: 10,
@@ -240,6 +250,7 @@ pub async fn install_from_lockfile(
         validate_checksums: true,
         install_path,
         extensions_dir: find_exts_dir(config, &ruby_request)?,
+        ruby_executable_path: ruby.executable_path(),
     };
 
     // Terminal progress indicator (OSC 9;4) for supported terminals
@@ -405,7 +416,12 @@ fn install_path(
 
             // pass the executable names to generate binstubs
             let binstub_dir = args.install_path.join("bin");
-            install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir)?;
+            install_binstub(
+                &dep_gemspec.name,
+                &dep_gemspec.executables,
+                &binstub_dir,
+                &args.ruby_executable_path,
+            )?;
         }
     }
 
@@ -561,7 +577,12 @@ fn install_git_repo(
 
             // pass the executable names to generate binstubs
             let binstub_dir = args.install_path.join("bin");
-            install_binstub(&dep_gemspec.name, &dep_gemspec.executables, &binstub_dir)?;
+            install_binstub(
+                &dep_gemspec.name,
+                &dep_gemspec.executables,
+                &binstub_dir,
+                &args.ruby_executable_path,
+            )?;
         }
     }
 
@@ -829,7 +850,12 @@ fn install_single_gem<'i>(
     debug!("Unpacked tarball {gv}");
     let dep_gemspec = dep_gemspec_res.ok_or(UnpackError::MissingGemspec(gv.to_string()))?;
     debug!("Installing binstubs for {gv}");
-    install_binstub(&dep_gemspec.name, &dep_gemspec.executables, binstub_dir)?;
+    install_binstub(
+        &dep_gemspec.name,
+        &dep_gemspec.executables,
+        binstub_dir,
+        &args.ruby_executable_path,
+    )?;
     debug!("Installed {gv}");
     Ok(dep_gemspec)
 }
@@ -919,10 +945,15 @@ fn make_dep_graph(
     (nodes, deps)
 }
 
-fn install_binstub(dep_name: &str, executables: &[String], binstub_dir: &Utf8Path) -> Result<()> {
+fn install_binstub(
+    dep_name: &str,
+    executables: &[String],
+    binstub_dir: &Utf8Path,
+    ruby_executable_path: &Utf8Path,
+) -> Result<()> {
     for exe_name in executables {
         debug!("Creating binstub {dep_name}-{exe_name}");
-        if let Err(error) = write_binstub(dep_name, exe_name, binstub_dir) {
+        if let Err(error) = write_binstub(dep_name, exe_name, binstub_dir, ruby_executable_path) {
             return Err(Error::CouldNotWriteBinstub {
                 dep_name: dep_name.to_owned(),
                 exe_name: exe_name.to_owned(),
@@ -1218,11 +1249,49 @@ end"#
     )
 }
 
-fn write_binstub(gem_name: &str, exe_name: &str, binstub_dir: &Utf8Path) -> io::Result<()> {
+/// Generate the contents of a Windows .bat wrapper for a binstub.
+/// The .bat file invokes ruby with the binstub script.
+/// Uses the full path to rv's Ruby executable to avoid conflicts with system Ruby.
+#[cfg_attr(not(windows), allow(dead_code))] // Only used on Windows, but tested on all platforms
+fn generate_binstub_bat_contents(ruby_path: &str, exe_name: &str) -> String {
+    // Strip Windows extended-length path prefix (\\?\) if present.
+    // This prefix is added by path canonicalization but isn't understood by cmd.exe.
+    let ruby_path = ruby_path.strip_prefix(r"\\?\").unwrap_or(ruby_path);
+    // %~dp0 expands to the directory containing the .bat file (e.g., .rv/ruby/3.4.0/bin/)
+    // %~dp0.. is the parent directory where gems are installed (e.g., .rv/ruby/3.4.0/)
+    // Set GEM_HOME so Ruby can find the project's installed gems
+    // %* forwards all arguments to the ruby script
+    format!("@echo off\r\nset \"GEM_HOME=%~dp0..\"\r\n\"{ruby_path}\" \"%~dp0{exe_name}\" %*\r\n")
+}
+
+fn write_binstub(
+    gem_name: &str,
+    exe_name: &str,
+    binstub_dir: &Utf8Path,
+    ruby_executable_path: &Utf8Path,
+) -> io::Result<()> {
     let binstub_path = binstub_dir.join(exe_name);
     let binstub_contents = generate_binstub_contents(gem_name, exe_name);
     fs_err::write(&binstub_path, binstub_contents)?;
-    fs_err::set_permissions(binstub_path, PermissionsExt::from_mode(0o755))
+    // On Unix, make the binstub executable. On Windows, executability is
+    // determined by file extension, not permissions.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs_err::set_permissions(&binstub_path, PermissionsExt::from_mode(0o755))?;
+    }
+    // Silence unused variable warning on Unix
+    let _ = ruby_executable_path;
+    // On Windows, create a .bat wrapper so the binstub can be run from the command line.
+    #[cfg(windows)]
+    {
+        let bat_path = binstub_dir.join(format!("{exe_name}.bat"));
+        fs_err::write(
+            &bat_path,
+            generate_binstub_bat_contents(ruby_executable_path.as_str(), exe_name),
+        )?;
+    }
+    Ok(())
 }
 
 struct CompileNativeExtResult {
@@ -1827,6 +1896,29 @@ if Gem.respond_to?(:activate_and_load_bin_path)
 else
   load Gem.activate_bin_path('rake', 'rake', version)
 end"#;
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_generate_binstub_bat() {
+        let ruby_path = r"C:\Users\test\.rv\rubies\ruby-3.4.1\bin\ruby.exe";
+        let exe_name = "rake";
+        let actual = generate_binstub_bat_contents(ruby_path, exe_name);
+        // %~dp0 is the .bat file's directory, %~dp0.. is parent (where gems live)
+        // GEM_HOME tells Ruby where to find installed gems
+        let expected = "@echo off\r\nset \"GEM_HOME=%~dp0..\"\r\n\"C:\\Users\\test\\.rv\\rubies\\ruby-3.4.1\\bin\\ruby.exe\" \"%~dp0rake\" %*\r\n";
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_generate_binstub_bat_strips_extended_path_prefix() {
+        // Windows extended-length path prefix (\\?\) is added by canonicalize()
+        // but isn't understood by cmd.exe, so we strip it
+        let ruby_path = r"\\?\C:\Users\test\.rv\rubies\ruby-3.4.1\bin\ruby.exe";
+        let exe_name = "rspec";
+        let actual = generate_binstub_bat_contents(ruby_path, exe_name);
+        // The \\?\ prefix should be stripped, GEM_HOME should be set
+        let expected = "@echo off\r\nset \"GEM_HOME=%~dp0..\"\r\n\"C:\\Users\\test\\.rv\\rubies\\ruby-3.4.1\\bin\\ruby.exe\" \"%~dp0rspec\" %*\r\n";
         assert_eq!(actual, expected);
     }
 

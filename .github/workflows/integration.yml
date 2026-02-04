@@ -56,3 +56,74 @@ jobs:
           ./target/release/rv --version
           ./target/release/rv --help
           ./target/release/rv ruby run 3.4.7 -- -e 'puts RUBY_DESCRIPTION'
+
+  wsl-windows:
+    name: Run on WSL (Windows)
+    runs-on: windows-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Install WSL Ubuntu
+        run: wsl --install -d Ubuntu-24.04 --no-launch
+
+      - name: Install dependencies
+        run: wsl -d Ubuntu-24.04 -u root -- bash -c "apt-get update && apt-get install -y build-essential curl"
+
+      - name: Install Rust
+        run: wsl -d Ubuntu-24.04 -- bash -c "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
+
+      - name: Build rv
+        run: wsl -d Ubuntu-24.04 -- bash -c "source ~/.cargo/env && cargo build --release --locked --bin rv"
+
+      - name: Test rv installs and runs ruby
+        run: |
+          wsl -d Ubuntu-24.04 -- ./target/release/rv --version
+          wsl -d Ubuntu-24.04 -- ./target/release/rv --help
+          wsl -d Ubuntu-24.04 -- ./target/release/rv ruby run 3.4.7 -- -e 'puts RUBY_DESCRIPTION'
+
+  native-windows:
+    name: Run on Native Windows
+    runs-on: windows-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build rv
+        run: cargo build --release --locked --bin rv
+
+      - name: Test rv runs
+        run: |
+          .\target\release\rv.exe --version
+          .\target\release\rv.exe --help
+
+      - name: Test rv installs and runs Ruby (RubyInstaller2)
+        run: |
+          .\target\release\rv.exe ruby run 3.4.4 -- -e "puts RUBY_DESCRIPTION"
+
+      - name: Test rv ci and binstubs
+        run: |
+          # Set up a minimal test project with pure Ruby gems (no native extensions)
+          New-Item -ItemType Directory -Path test-project | Out-Null
+          Copy-Item crates\rv-lockfile\tests\inputs\Gemfile.minimal-ruby-project test-project\Gemfile
+          Copy-Item crates\rv-lockfile\tests\inputs\Gemfile.minimal-ruby-project.lock test-project\Gemfile.lock
+          Set-Location test-project
+          Set-Content -Path .ruby-version -Value "3.4"
+          # Configure Bundler to install gems locally (like real projects often do)
+          New-Item -ItemType Directory -Path .bundle | Out-Null
+          "---", 'BUNDLE_PATH: ".rv"' | Set-Content -Path .bundle\config
+          # Run rv ci to install gems and generate binstubs
+          Write-Host "`$ rv ci"
+          ..\target\release\rv.exe ci
+          # Test that the .bat binstub wrappers work
+          $binDir = Get-ChildItem -Path .rv -Recurse -Directory -Filter "bin" | Select-Object -First 1 -ExpandProperty FullName
+          Write-Host "`n`$ $binDir\rake.bat --version"
+          & "$binDir\rake.bat" --version
+          Write-Host "`n`$ $binDir\rspec.bat --version"
+          & "$binDir\rspec.bat" --version

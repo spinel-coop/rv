@@ -49,6 +49,17 @@ pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
             println!("{}", serialized);
             Ok(())
         }
+        Shell::PowerShell => {
+            // PowerShell uses $env:VAR for environment variables
+            // Use backticks to escape special characters (following uv's pattern)
+            for var in unset {
+                println!("Remove-Item Env:\\{var} -ErrorAction SilentlyContinue");
+            }
+            for (var, val) in set {
+                println!("$env:{var} = \"{}\"", powershell_escape(&val));
+            }
+            Ok(())
+        }
     }
 }
 
@@ -68,7 +79,7 @@ fn nu_env(unset: Vec<&str>, set: Vec<(&str, String)>) -> serde_json::Value {
     serde_json::Value::Object(env_changes)
 }
 
-// From uv's crates/uv-shell/src/lib.rs
+// Credit to uv's crates/uv-shell/src/lib.rs
 // Assumes strings will be outputed as "str", so escapes any \ or " character
 fn fish_var_escape(s: String) -> String {
     let mut escaped = String::with_capacity(s.len());
@@ -78,6 +89,21 @@ fn fish_var_escape(s: String) -> String {
             _ => {}
         }
         escaped.push(c)
+    }
+    escaped
+}
+
+// Credit to uv's crates/uv-shell/src/lib.rs (backtick_escape)
+// PowerShell uses backticks for escaping special characters
+fn powershell_escape(s: &str) -> String {
+    let mut escaped = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            // Escape double quotes, backticks, dollar signs, and unicode quotes
+            '"' | '`' | '$' | '\u{201C}' | '\u{201D}' | '\u{201E}' => escaped.push('`'),
+            _ => {}
+        }
+        escaped.push(c);
     }
     escaped
 }
@@ -137,5 +163,47 @@ mod tests {
         assert_eq!(env_json, expected);
         let _ = serde_json::to_string(&env_json)
             .expect("Serializing the Nushell env changes to JSON should always succeed");
+    }
+
+    #[test]
+    fn fish_var_escape_handles_special_chars() {
+        // Typical Unix path passes through unchanged
+        assert_eq!(
+            fish_var_escape("/home/user/.rubies/ruby-3.4.1/bin".to_owned()),
+            "/home/user/.rubies/ruby-3.4.1/bin"
+        );
+
+        // Backslashes in paths are escaped (rare on Unix, but possible)
+        assert_eq!(
+            fish_var_escape("/path/with\\backslash".to_owned()),
+            "/path/with\\\\backslash"
+        );
+
+        // Double quotes in directory names are escaped
+        assert_eq!(
+            fish_var_escape("/home/user/\"My Projects\"/bin".to_owned()),
+            "/home/user/\\\"My Projects\\\"/bin"
+        );
+    }
+
+    #[test]
+    fn powershell_escape_handles_special_chars() {
+        // Typical Windows path passes through unchanged
+        assert_eq!(
+            powershell_escape("C:\\Users\\eric\\.rubies\\ruby-3.4.1\\bin"),
+            "C:\\Users\\eric\\.rubies\\ruby-3.4.1\\bin"
+        );
+
+        // Dollar signs are escaped (prevents PowerShell variable expansion)
+        assert_eq!(powershell_escape("$HOME/.rubies"), "`$HOME/.rubies");
+
+        // Double quotes in paths are escaped
+        assert_eq!(
+            powershell_escape("C:\\Users\\eric\\\"My Projects\""),
+            "C:\\Users\\eric\\`\"My Projects`\""
+        );
+
+        // Backticks are escaped (PowerShell escape character)
+        assert_eq!(powershell_escape("path`with`ticks"), "path``with``ticks");
     }
 }

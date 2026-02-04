@@ -8,7 +8,6 @@ pub mod find;
 pub mod install;
 pub mod list;
 pub mod pin;
-#[cfg(unix)]
 pub mod run;
 pub mod uninstall;
 
@@ -68,7 +67,6 @@ pub enum RubyCommand {
         version: RubyRequest,
     },
 
-    #[cfg(unix)]
     #[command(
         about = "Run Ruby with arguments, using the pinned version or a specific version",
         dont_delimit_trailing_values = true

@@ -65,5 +65,25 @@ pub fn init(config: &Config, shell: Shell) -> Result<()> {
             );
             Ok(())
         }
+        Shell::PowerShell => {
+            // PowerShell doesn't have a preexec hook, so we use the prompt function
+            // which runs after each command (before displaying the next prompt).
+            // This pattern matches Python's virtualenv activate.ps1.
+            print!(
+                concat!(
+                    "if (Test-Path Function:\\__rv_original_prompt) {{\n",
+                    "    Remove-Item Function:\\__rv_original_prompt\n",
+                    "}}\n",
+                    "Copy-Item Function:\\prompt Function:\\__rv_original_prompt\n",
+                    "function global:prompt {{\n",
+                    "    Invoke-Expression (& '{}' shell env powershell)\n",
+                    "    __rv_original_prompt\n",
+                    "}}\n",
+                    "Invoke-Expression (& '{}' shell env powershell)\n",
+                ),
+                config.current_exe, config.current_exe
+            );
+            Ok(())
+        }
     }
 }

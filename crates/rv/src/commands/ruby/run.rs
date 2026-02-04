@@ -152,8 +152,22 @@ pub(crate) fn run_no_install<A: AsRef<std::ffi::OsStr>>(
     }
 }
 
+/// Spawns a command exec style.
+/// On Unix, replaces the current process with the child.
+/// On Windows, spawns the child, waits, and exits with the same code.
 #[cfg(unix)]
 fn exec(mut cmd: Command) -> Result<()> {
     use std::os::unix::process::CommandExt;
     Err(cmd.exec().into())
+}
+
+#[cfg(windows)]
+fn exec(mut cmd: Command) -> Result<()> {
+    use std::process::Stdio;
+
+    cmd.stdin(Stdio::inherit());
+    let status = cmd.status()?;
+
+    #[allow(clippy::exit)]
+    std::process::exit(status.code().unwrap_or(1))
 }

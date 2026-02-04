@@ -140,6 +140,49 @@ fn must_parse(input: &str) -> crate::datatypes::GemfileDotLock<'_> {
 }
 
 #[test]
+fn test_parse_with_crlf_line_endings() {
+    // Take an existing fixture with Unix line endings
+    let input_lf = include_str!("../tests/inputs/Gemfile.faker.lock");
+    assert!(
+        !input_lf.contains("\r\n"),
+        "fixture should have Unix line endings"
+    );
+
+    // Convert to Windows line endings (CRLF)
+    let input_crlf = input_lf.replace('\n', "\r\n");
+    assert!(
+        input_crlf.contains("\r\n"),
+        "converted string should have Windows line endings"
+    );
+
+    // Normalize the CRLF input back to LF
+    let normalized = crate::normalize_line_endings(&input_crlf);
+
+    // Both should parse identically
+    let output_lf = must_parse(input_lf);
+    let output_normalized = must_parse(&normalized);
+
+    assert_eq!(
+        output_lf.gem_spec_count(),
+        output_normalized.gem_spec_count(),
+        "gem spec count should match"
+    );
+    assert_eq!(
+        output_lf.ruby_version, output_normalized.ruby_version,
+        "ruby version should match"
+    );
+    assert_eq!(
+        output_lf.bundled_with, output_normalized.bundled_with,
+        "bundled_with should match"
+    );
+    assert_eq!(
+        output_lf.dependencies.len(),
+        output_normalized.dependencies.len(),
+        "dependencies count should match"
+    );
+}
+
+#[test]
 fn test_gem_spec_count_multiple_sources() {
     let input = include_str!("../tests/inputs/Gemfile.twosources.lock");
     let lockfile = must_parse(input);
@@ -156,4 +199,29 @@ fn test_gem_spec_count_single_source() {
 
     assert_eq!(lockfile.gem.len(), 1);
     assert_eq!(lockfile.gem_spec_count(), 33);
+}
+
+#[test]
+fn test_parse_minimal_ruby_project() {
+    // This fixture is also used by the Windows CI integration test.
+    // It contains only pure-Ruby gems (no native extensions).
+    let input = include_str!("../tests/inputs/Gemfile.minimal-ruby-project.lock");
+    let lockfile = must_parse(input);
+
+    // Should have rake, rspec, and rspec's dependencies (7 gems total)
+    assert_eq!(lockfile.gem_spec_count(), 7);
+    assert_eq!(lockfile.dependencies.len(), 2); // rake and rspec
+
+    // Verify key gems are present
+    let gem_names: Vec<&str> = lockfile
+        .gem
+        .iter()
+        .flat_map(|g| g.specs.iter().map(|s| s.gem_version.name))
+        .collect();
+    assert!(gem_names.contains(&"rake"), "should contain rake");
+    assert!(gem_names.contains(&"rspec"), "should contain rspec");
+    assert!(
+        gem_names.contains(&"rspec-core"),
+        "should contain rspec-core"
+    );
 }
