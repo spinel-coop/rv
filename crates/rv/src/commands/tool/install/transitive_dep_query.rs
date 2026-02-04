@@ -31,27 +31,18 @@ pub(crate) async fn query_all_gem_deps(
     ruby_to_use: &RubyVersion,
 ) -> Result<()> {
     // First, let's check the cache.
-    // 0. Initialize the cache.
-    let cached_gemspecs_dir = config.cache.bucket(rv_cache::CacheBucket::GemDeps);
-    fs_err::create_dir_all(&cached_gemspecs_dir).map_err(Error::CouldNotCreateCacheDir)?;
-
-    // 1. Try to read from the disk cache.
-    let cache_entry = config.cache.entry(
-        rv_cache::CacheBucket::GemDeps,
-        "gemdeps",
-        format!(
-            "{}_{}_{}.json",
-            gemserver.url.host_str().unwrap_or_default(),
-            root.version(),
-            root_gem_name
-        ),
+    let cache = config.cache.bucket(rv_cache::CacheBucket::GemDeps);
+    let key = format!(
+        "{}_{}_{}.json",
+        gemserver.url.host_str().unwrap_or_default(),
+        root.version(),
+        root_gem_name
     );
-    let cached_data: Option<CachedGemDeps> =
-        if let Ok(content) = fs_err::read_to_string(cache_entry.path()) {
-            serde_json::from_str(&content).ok()
-        } else {
-            None
-        };
+    let cached_data: Option<CachedGemDeps> = if let Ok(content) = cacache::read_sync(&cache, &key) {
+        serde_json::from_slice(&content).ok()
+    } else {
+        None
+    };
 
     // 2. If we have fresh cached data, use it immediately.
     if let Some(cache) = &cached_data {
@@ -74,11 +65,9 @@ pub(crate) async fn query_all_gem_deps(
         gems_to_deps: gems_to_deps.clone(),
     };
 
-    if let Some(parent) = cache_entry.path().parent() {
-        fs_err::create_dir_all(parent).map_err(Error::CouldNotCreateCacheDir)?;
-    }
-    fs_err::write(
-        cache_entry.path(),
+    cacache::write_sync(
+        cache,
+        key,
         serde_json::to_string(&new_cache_entry).expect("serialization should not fail"),
     )
     .map_err(Error::CouldNotWriteToCache)?;
