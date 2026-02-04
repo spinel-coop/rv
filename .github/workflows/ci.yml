@@ -58,6 +58,7 @@ jobs:
 
   build:
     name: Build
+    needs: lint-and-fmt
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -77,6 +78,7 @@ jobs:
 
   manage-external-rubies:
     name: External Ruby management
+    needs: lint-and-fmt
     runs-on: ubuntu-latest
     strategy:
       matrix:
