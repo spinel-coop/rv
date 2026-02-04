@@ -194,7 +194,7 @@ fn archive_cache_path(config: &Config, url: impl AsRef<str>) -> Result<Utf8PathB
     let cache_key = rv_cache::cache_digest(url.as_ref());
     Ok(config
         .cache
-        .shard(rv_cache::CacheBucket::Ruby, "archives")
+        .shard(rv_cache::CacheBucket::Ruby, "tarballs")
         .into_path_buf()
         .join(format!("{cache_key}.{ext}")))
 }
@@ -204,7 +204,7 @@ fn temp_archive_path(config: &Config, url: impl AsRef<str>) -> Result<Utf8PathBu
     let cache_key = rv_cache::cache_digest(url.as_ref());
     Ok(config
         .cache
-        .shard(rv_cache::CacheBucket::Ruby, "archives")
+        .shard(rv_cache::CacheBucket::Ruby, "tarballs")
         .into_path_buf()
         .join(format!("{cache_key}.{ext}.tmp")))
 }
