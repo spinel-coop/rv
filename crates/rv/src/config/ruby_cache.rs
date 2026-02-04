@@ -1,3 +1,5 @@
+use std::time::UNIX_EPOCH;
+
 use camino::Utf8Path;
 use miette::{IntoDiagnostic, Result};
 use rayon::prelude::*;
@@ -67,7 +69,17 @@ impl Config {
 
         bin.try_exists()
             .and_then(|_| rv_cache::Timestamp::from_path(bin.as_std_path()))
-            .map(|timestamp| rv_cache::cache_digest((path, timestamp)))
+            .map(|timestamp| {
+                format!(
+                    "{}@{}",
+                    path,
+                    timestamp
+                        .system_time()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs()
+                )
+            })
             .map_err(|_| Error::RubyCacheMiss {
                 ruby_path: path.into(),
             })

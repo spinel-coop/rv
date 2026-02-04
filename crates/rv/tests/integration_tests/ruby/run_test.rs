@@ -1,5 +1,4 @@
 use crate::common::{RvOutput, RvTest};
-use std::fs;
 
 #[derive(Debug, Default)]
 pub struct RunOptions {
@@ -58,13 +57,10 @@ fn test_ruby_run_interpreter_cache() {
 
     output.assert_success();
 
-    let interpreters_dir = cache_dir.join("ruby-v0").join("interpreters");
-    assert!(interpreters_dir.exists());
-
+    let ruby_cache = cache_dir.join("ruby-v1");
     // it should cache a single version, not both versions
     assert_eq!(
-        fs::read_dir(&interpreters_dir)
-            .unwrap()
+        cacache::index::ls(ruby_cache.as_std_path())
             .collect::<Vec<_>>()
             .len(),
         1
