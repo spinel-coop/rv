@@ -15,8 +15,27 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run linters
+        run: ./bin/lint
+
   alpine-linux:
     name: Run on Alpine Linux
+    needs: lint
     runs-on: ubuntu-latest
     container:
       image: rust:alpine
@@ -38,6 +57,7 @@ jobs:
 
   arch-linux:
     name: Run on Arch Linux
+    needs: lint
     runs-on: ubuntu-latest
     container:
       image: archlinux:base-devel
@@ -59,6 +79,7 @@ jobs:
 
   wsl-windows:
     name: Run on WSL (Windows)
+    needs: lint
     runs-on: windows-latest
     steps:
       - name: Check out repo
@@ -84,6 +105,7 @@ jobs:
 
   native-windows:
     name: Run on Native Windows
+    needs: lint
     runs-on: windows-latest
     steps:
       - name: Check out repo

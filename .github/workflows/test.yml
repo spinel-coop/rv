@@ -15,8 +15,27 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run linters
+        run: ./bin/lint
+
   run-tests:
     name: Run tests
+    needs: lint
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
