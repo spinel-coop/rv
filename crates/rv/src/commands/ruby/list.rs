@@ -1,3 +1,4 @@
+use clap::Args;
 use std::collections::BTreeMap;
 use std::io;
 
@@ -53,16 +54,28 @@ impl JsonRubyEntry {
     }
 }
 
+#[derive(Args)]
+#[group(required = false, multiple = false)]
+pub struct VersionFilter {
+    /// List all versions (Including outdated)
+    #[arg(long, help_heading = "Filter Options")]
+    all: bool,
+
+    /// List only installed versions
+    #[arg(long, help_heading = "Filter Options")]
+    installed_only: bool,
+}
+
 /// Lists the available and installed rubies.
 pub async fn list(
     config: &Config,
     format: OutputFormat,
-    installed_only: bool,
-    list_all: bool,
+    version_filter: VersionFilter,
 ) -> Result<()> {
     let installed_rubies = config.rubies();
 
-    if installed_only && installed_rubies.is_empty() && format == OutputFormat::Text {
+    if version_filter.installed_only && installed_rubies.is_empty() && format == OutputFormat::Text
+    {
         warn!("No Ruby installations found.");
         info!("Try installing Ruby with 'rv ruby install <version>'");
         return Ok(());
@@ -73,6 +86,7 @@ pub async fn list(
 
     // Might have multiple installed rubies with the same version (e.g., "ruby-3.2.0" and "mruby-3.2.0").
     let mut rubies_map: BTreeMap<String, Vec<JsonRubyEntry>> = BTreeMap::new();
+
     for ruby in installed_rubies {
         rubies_map
             .entry(ruby.display_name())
@@ -80,10 +94,10 @@ pub async fn list(
             .push(JsonRubyEntry::installed(ruby, &active_ruby));
     }
 
-    if !installed_only {
+    if !version_filter.installed_only {
         let remote_rubies = config.remote_rubies().await;
 
-        let selected_remote_rubies = if list_all {
+        let selected_remote_rubies = if version_filter.all {
             remote_rubies.clone()
         } else {
             latest_patch_version(&remote_rubies)
@@ -231,7 +245,11 @@ mod tests {
     #[tokio::test]
     async fn test_list() {
         let config = test_config().unwrap();
-        list(&config, OutputFormat::Text, false, false)
+        let version_filter = VersionFilter {
+            all: false,
+            installed_only: false,
+        };
+        list(&config, OutputFormat::Text, version_filter)
             .await
             .unwrap();
     }

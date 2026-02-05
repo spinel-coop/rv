@@ -331,9 +331,8 @@ async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
             RubyCommand::Find { version } => ruby_find(config, version)?,
             RubyCommand::List {
                 format,
-                installed_only,
-                list_all,
-            } => ruby_list(config, format, installed_only, list_all).await?,
+                version_filter,
+            } => ruby_list(config, format, version_filter).await?,
             RubyCommand::Pin { version } => ruby_pin(config, version)?,
             RubyCommand::Dir => ruby_dir(config),
             RubyCommand::Install {

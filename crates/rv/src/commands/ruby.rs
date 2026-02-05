@@ -19,19 +19,14 @@ pub struct RubyArgs {
 
 #[derive(Subcommand)]
 pub enum RubyCommand {
-    #[command(about = "List all installed Ruby versions")]
+    #[command(about = "List all installed and available Ruby versions")]
     List {
         /// Output format for the Ruby list
         #[arg(long, value_enum, default_value = "text")]
         format: OutputFormat,
 
-        /// Show only installed Ruby versions
-        #[arg(long)]
-        installed_only: bool,
-
-        /// Show all available Ruby versions, including outdated ones
-        #[arg(long)]
-        list_all: bool,
+        #[command(flatten)]
+        version_filter: list::VersionFilter,
     },
 
     #[command(about = "Show or set the Ruby version for the current project")]
