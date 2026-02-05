@@ -60,15 +60,6 @@ fn test_clean_install_gemfile_arg() {
     output.assert_success();
     releases_mock.assert();
 
-    // Test failing to implicitly find a Gemfile
-    let output = test.ci(&[]);
-    output.assert_failure();
-    assert_eq!(
-        output.normalized_stderr(),
-        "Error: CiError(MissingImplicitGemfile)\n",
-    );
-    releases_mock.assert();
-
     let project_dir = test.temp_root().join("project");
     std::fs::create_dir_all(project_dir.as_path()).unwrap();
 

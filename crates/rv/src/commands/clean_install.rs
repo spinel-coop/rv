@@ -121,8 +121,6 @@ pub enum Error {
     UnknownExtension { filename: String, gemname: String },
     #[error("Error evaluating gemspec: {0}")]
     GemspecError(String),
-    #[error("rv ci needs a Gemfile, but could not find it")]
-    MissingImplicitGemfile,
     #[error("Gemfile \"{0}\" does not exist")]
     MissingGemfile(String),
     #[error("A {lockfile_name} file was not found in {lockfile_dir}")]
@@ -736,12 +734,8 @@ fn find_manifest_paths(
         .map_or("Gemfile".to_string(), |g| g.to_string());
     let gemfile_path = Utf8PathBuf::from(gemfile_name.clone());
 
-    if !gemfile_path.exists() {
-        if gemfile.is_none() {
-            return Err(Error::MissingImplicitGemfile);
-        } else {
-            return Err(Error::MissingGemfile(gemfile_name));
-        }
+    if !gemfile_path.exists() && gemfile.is_some() {
+        return Err(Error::MissingGemfile(gemfile_name));
     }
 
     let lockfile_dir = gemfile_path
