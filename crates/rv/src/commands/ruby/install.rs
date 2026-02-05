@@ -6,6 +6,7 @@ use current_platform::CURRENT_PLATFORM;
 use futures_util::StreamExt;
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
+use reqwest::StatusCode;
 use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, info_span};
@@ -274,6 +275,9 @@ async fn download_ruby_archive(
     let response = request_builder.send().await?;
     if !response.status().is_success() {
         let status = response.status();
+        if status == StatusCode::NOT_FOUND {
+            return Err(Error::NoMatchingRuby);
+        }
         let body = response
             .text()
             .await
