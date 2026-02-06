@@ -750,7 +750,7 @@ fn find_manifest_paths(
         .ok_or(Error::InvalidGemfilePath(gemfile_name.clone()))?
         .to_string();
 
-    let lockfile_path = Utf8PathBuf::from(format!("{}.lock", gemfile_path));
+    let lockfile_path = gemfile_path.with_added_extension("lock");
 
     if !lockfile_path.exists() {
         let lockfile_name = lockfile_path.file_name().unwrap().to_string();
