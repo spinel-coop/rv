@@ -121,10 +121,10 @@ pub enum Error {
     UnknownExtension { filename: String, gemname: String },
     #[error("Error evaluating gemspec: {0}")]
     GemspecError(String),
-    #[error("rv ci needs a Gemfile, but could not find it")]
-    MissingImplicitGemfile,
     #[error("Gemfile \"{0}\" does not exist")]
     MissingGemfile(String),
+    #[error("A Gemfile.lock file was not found")]
+    MissingImplicitLockfile,
     #[error("A {lockfile_name} file was not found in {lockfile_dir}")]
     MissingLockfile {
         lockfile_name: String,
@@ -190,8 +190,8 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         .matching_ruby(&ruby_request)
         .expect("Ruby should be installed after the check above");
     let extensions_dir = find_exts_dir(config, &ruby_request)?;
-    let (lockfile_dir, lockfile_path, gemfile_name) = find_manifest_paths(&args.gemfile)?;
-    let install_path = find_install_path(config, &lockfile_dir, &ruby_request, gemfile_name)?;
+    let (lockfile_dir, lockfile_path) = find_manifest_paths(&args.gemfile)?;
+    let install_path = find_install_path(config, &lockfile_dir, &ruby_request)?;
     let inner_args = CiInnerArgs {
         skip_compile_extensions: args.skip_compile_extensions,
         max_concurrent_requests: args.max_concurrent_requests,
@@ -728,54 +728,52 @@ fn cache_gemspec_path(
     Ok(dep_gemspec)
 }
 
-fn find_manifest_paths(
-    gemfile: &Option<Utf8PathBuf>,
-) -> Result<(Utf8PathBuf, Utf8PathBuf, String)> {
-    let gemfile_name = gemfile
-        .clone()
-        .map_or("Gemfile".to_string(), |g| g.to_string());
-    let gemfile_path = Utf8PathBuf::from(gemfile_name.clone());
+fn find_manifest_paths(gemfile: &Option<Utf8PathBuf>) -> Result<(Utf8PathBuf, Utf8PathBuf)> {
+    let Some(gemfile) = gemfile else {
+        let lockfile_path = Utf8PathBuf::from("Gemfile.lock")
+            .canonicalize_utf8()
+            .map_err(|_| Error::MissingImplicitLockfile)?;
+        let lockfile_dir = lockfile_path.parent().unwrap();
 
-    if !gemfile_path.exists() {
-        if gemfile.is_none() {
-            return Err(Error::MissingImplicitGemfile);
-        } else {
-            return Err(Error::MissingGemfile(gemfile_name));
-        }
-    }
+        debug!("found Gemfile.lock file in {}", lockfile_dir);
+        return Ok((lockfile_dir.into(), lockfile_path));
+    };
+
+    let gemfile_path = gemfile
+        .canonicalize_utf8()
+        .map_err(|_| Error::MissingGemfile(gemfile.to_string()))?;
 
     let lockfile_dir = gemfile_path
-        .canonicalize_utf8()?
         .parent()
-        .ok_or(Error::InvalidGemfilePath(gemfile_name.clone()))?
-        .to_string();
+        .ok_or(Error::InvalidGemfilePath(gemfile.to_string()))?;
 
-    let lockfile_path = Utf8PathBuf::from(format!("{}.lock", gemfile_path));
+    let lockfile_path = gemfile_path.with_added_extension("lock");
 
-    if !lockfile_path.exists() {
-        let lockfile_name = lockfile_path.file_name().unwrap().to_string();
-
-        return Err(Error::MissingLockfile {
-            lockfile_dir,
-            lockfile_name,
-        });
-    }
+    let lockfile_path = lockfile_path
+        .canonicalize_utf8()
+        .map_err(|_| Error::MissingLockfile {
+            lockfile_dir: lockfile_dir.to_string(),
+            lockfile_name: lockfile_path.file_name().unwrap().to_string(),
+        })?;
 
     debug!("found lockfile_path {}", lockfile_path);
-    Ok((lockfile_dir.into(), lockfile_path, gemfile_name))
+    Ok((lockfile_dir.into(), lockfile_path))
 }
 
 /// Which path should `ci` install gems under?
-/// Uses Bundler's `bundle_path`.
+/// Uses Bundler's `configured_path.path`.
 fn find_install_path(
     config: &Config,
     lockfile_dir: &Utf8Path,
     version: &RubyRequest,
-    gemfile: String,
 ) -> Result<Utf8PathBuf> {
-    let args = ["-rbundler", "-e", "puts Bundler.bundle_path"];
+    let args = [
+        "-rbundler",
+        "-e",
+        "puts Bundler.configured_bundle_path.path",
+    ];
     let bundle_path = match crate::commands::ruby::run::run_no_install(
-        Invocation::ruby(vec![("BUNDLE_GEMFILE", gemfile)]),
+        Invocation::ruby(vec![]),
         config,
         version,
         args.as_slice(),
@@ -791,9 +789,10 @@ fn find_install_path(
     }
     let bundle_path = String::from_utf8(bundle_path)
         .map(|s| Utf8PathBuf::from(s.trim()))
-        .map_err(|_| Error::BadBundlePath);
-    debug!("found install path {:?}", bundle_path);
-    bundle_path
+        .map_err(|_| Error::BadBundlePath)?;
+    let install_path = lockfile_dir.join(bundle_path);
+    debug!("found install path {:?}", install_path);
+    Ok(install_path)
 }
 
 pub fn create_rayon_pool(
