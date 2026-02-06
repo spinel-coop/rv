@@ -37,14 +37,18 @@ fn test_clean_install_input_validation() {
     let releases_mock = test.mock_releases(["4.0.0"].to_vec());
 
     // Test missing a lockfile fails
-    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.empty");
     let output = test.ci(&[]);
     output.assert_failure();
-    let expected_err = format!(
-        "Error: CiError(MissingLockfile {{ lockfile_name: \"Gemfile.lock\", lockfile_dir: \"{}\" }})\n",
-        test.temp_root()
+    assert_eq!(
+        output.normalized_stderr(),
+        "Error: CiError(MissingImplicitLockfile)\n",
     );
-    assert_eq!(output.normalized_stderr(), expected_err);
+    releases_mock.assert();
+
+    // Test using only a lockfile works
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.empty.lock");
+    let output = test.ci(&[]);
+    output.assert_success();
     releases_mock.assert();
 
     // Let rv infer installation path from Gemfile argument. This test would install real gems to
@@ -69,17 +73,6 @@ fn test_clean_install_input_validation() {
     // Test passing an explicit Gemfile works
     let output = test.ci(&["--gemfile", "Gemfile.empty"]);
     output.assert_success();
-    releases_mock.assert();
-
-    // Test failing to implicitly find a Gemfile
-    let gemfile_path = test.cwd.join("Gemfile");
-    fs_err::remove_file(gemfile_path).unwrap();
-    let output = test.ci(&[]);
-    output.assert_failure();
-    assert_eq!(
-        output.normalized_stderr(),
-        "Error: CiError(MissingImplicitGemfile)\n",
-    );
     releases_mock.assert();
 
     let project_dir = test.temp_root().join("project");
