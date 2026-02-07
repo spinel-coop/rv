@@ -97,8 +97,8 @@ impl Cli {
         } else {
             self.ruby_dir
                 .iter()
-                .map(|path: &Utf8PathBuf| root.join(path))
-                .collect()
+                .map(|path: &Utf8PathBuf| Ok(root.join(path.canonicalize_utf8()?)))
+                .collect::<Result<Vec<_>>>()?
         };
         let ruby_dirs: IndexSet<Utf8PathBuf> = ruby_dirs.into_iter().collect();
         let cache = self.cache_args.to_cache()?;
