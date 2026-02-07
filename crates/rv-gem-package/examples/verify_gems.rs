@@ -147,11 +147,7 @@ fn find_gem_files(dir: &Path) -> Result<Vec<PathBuf>> {
 
 /// Get default gem cache paths from ~/.gem/ruby/*/cache/
 fn get_default_gem_cache_paths() -> Result<Vec<PathBuf>> {
-    let home_dir = env::var("HOME")
-        .or_else(|_| env::var("USERPROFILE"))
-        .map_err(|_| miette!("Could not determine home directory"))?;
-
-    let gem_dir = Path::new(&home_dir).join(".gem").join("ruby");
+    let gem_dir = rv_dirs::home_dir().join(".gem").join("ruby");
 
     if !gem_dir.exists() {
         return Ok(vec![]);
@@ -177,7 +173,7 @@ fn get_default_gem_cache_paths() -> Result<Vec<PathBuf>> {
 
     // If no cache directories found, provide a helpful message
     if cache_paths.is_empty() {
-        eprintln!("No gem cache directories found in {}", gem_dir.display());
+        eprintln!("No gem cache directories found in {}", gem_dir);
         eprintln!("You can specify paths manually as command line arguments.");
         eprintln!(
             "Example: {} /path/to/gems /another/path",

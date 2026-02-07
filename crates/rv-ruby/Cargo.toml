@@ -8,6 +8,7 @@ camino = { workspace = true, features = ["serde1"] }
 once_cell.workspace = true
 regex.workspace = true
 rv-cache = { workspace = true }
+rv-dirs = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_with = { workspace = true }
 thiserror = { workspace = true }

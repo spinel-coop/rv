@@ -1,6 +1,6 @@
 use std::{
     env::{self, JoinPathsError, join_paths, split_paths},
-    path::{Path, PathBuf},
+    path::PathBuf,
     str::FromStr,
 };
 
@@ -27,7 +27,7 @@ pub enum Error {
     #[error(transparent)]
     RequestError(#[from] RequestError),
     #[error(transparent)]
-    EnvError(#[from] std::env::VarError),
+    EnvError(#[from] env::VarError),
     #[error(transparent)]
     JoinPathsError(#[from] JoinPathsError),
     #[error("Tried to parse ruby version from Gemfile.lock, but that file was invalid: {0}")]
@@ -79,19 +79,16 @@ impl Config {
     }
 }
 
-fn xdg_data_path() -> String {
-    let xdg_data_home =
-        env::var("XDG_DATA_HOME").unwrap_or(shellexpand::tilde("~/.local/share").into());
-    let path_buf = Path::new(&xdg_data_home).join("rv/rubies");
-    path_buf.to_str().unwrap().to_owned()
+fn xdg_data_path() -> Utf8PathBuf {
+    rv_dirs::user_state_dir("/".into()).join("rubies")
 }
 
-fn legacy_default_data_path() -> String {
-    shellexpand::tilde("~/.data/rv/rubies").into()
+fn legacy_default_data_path() -> Utf8PathBuf {
+    rv_dirs::home_dir().join(".data/rv/.rubies")
 }
 
-fn legacy_default_path() -> String {
-    shellexpand::tilde("~/.rubies").into()
+fn legacy_default_path() -> Utf8PathBuf {
+    rv_dirs::home_dir().join(".rubies")
 }
 
 /// Default Ruby installation directories
@@ -215,18 +212,18 @@ pub fn env_with_path_for(
         set.push((var, val));
     };
 
-    let pathstr = std::env::var("PATH").unwrap_or_else(|_| String::new());
+    let pathstr = env::var("PATH").unwrap_or_else(|_| String::new());
     let mut paths = split_paths(&pathstr).collect::<Vec<_>>();
     paths.extend(extra_paths);
 
     let old_ruby_paths: Vec<PathBuf> = ["RUBY_ROOT", "GEM_ROOT", "GEM_HOME"]
         .iter()
-        .filter_map(|var| std::env::var(var).ok())
+        .filter_map(|var| env::var(var).ok())
         .map(|p| std::path::Path::new(&p).join("bin"))
         .collect();
 
     let old_gem_paths: Vec<PathBuf> =
-        std::env::var("GEM_PATH").map_or_else(|_| vec![], |p| split_paths(&p).collect::<Vec<_>>());
+        env::var("GEM_PATH").map_or_else(|_| vec![], |p| split_paths(&p).collect::<Vec<_>>());
 
     // Remove old Ruby and Gem paths from PATH
     paths.retain(|p| !old_ruby_paths.contains(p) && !old_gem_paths.contains(p));
@@ -237,11 +234,10 @@ pub fn env_with_path_for(
         insert("RUBY_ROOT", ruby.path.to_string());
         insert("RUBY_ENGINE", ruby.version.engine.name().into());
         insert("RUBY_VERSION", ruby.version.number());
-        if let Some(gem_home) = ruby.gem_home() {
-            paths.insert(0, gem_home.join("bin").into());
-            gem_paths.insert(0, gem_home.clone());
-            insert("GEM_HOME", gem_home.into_string());
-        }
+        let gem_home = ruby.gem_home();
+        paths.insert(0, gem_home.join("bin").into());
+        gem_paths.insert(0, gem_home.clone());
+        insert("GEM_HOME", gem_home.into_string());
         if let Some(gem_root) = ruby.gem_root() {
             paths.insert(0, gem_root.join("bin").into());
             gem_paths.insert(0, gem_root.clone());
@@ -255,7 +251,7 @@ pub fn env_with_path_for(
         // Set MANPATH so `man ruby`, `man irb`, etc. work correctly.
         // A trailing colon means "also search system man directories".
         if let Some(man_path) = ruby.man_path() {
-            let existing = std::env::var("MANPATH").unwrap_or_default();
+            let existing = env::var("MANPATH").unwrap_or_default();
             insert("MANPATH", format!("{}:{}", man_path, existing));
         }
     }
