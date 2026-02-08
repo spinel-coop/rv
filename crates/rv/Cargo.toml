@@ -44,6 +44,7 @@ rv-cache = { workspace = true, features = ["clap"] }
 rv-version = { workspace = true }
 rv-gem-specification-yaml = { workspace = true }
 rv-gem-types = { workspace = true }
+rv-platform = { workspace = true }
 rv-ruby = { workspace = true }
 rv-dirs = { workspace = true }
 rv-lockfile = { workspace = true }

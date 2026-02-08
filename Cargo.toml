@@ -7,6 +7,7 @@ members = [
   "crates/rv-gem-package",
   "crates/rv-gem-specification-yaml",
   "crates/rv-gem-types",
+  "crates/rv-platform",
   "crates/rv-ruby",
   "crates/rv-version",
   "fuzz",
@@ -74,6 +75,7 @@ rv-dirs = { version = "0.1.0", path = "crates/rv-dirs" }
 rv-lockfile = { version = "0.1.0", path = "crates/rv-lockfile" }
 rv-gem-specification-yaml = { version = "0.1.0", path = "crates/rv-gem-specification-yaml" }
 rv-gem-types = { version = "0.1.0", path = "crates/rv-gem-types" }
+rv-platform = { version = "0.1.0", path = "crates/rv-platform" }
 rv-ruby = { version = "0.1.0", path = "crates/rv-ruby" }
 rv-version = { version = "0.1.0", path = "crates/rv-version" }
 dep-graph = { version = "0.2.1-rv", path = "crates/dep-graph" }

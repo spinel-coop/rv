@@ -1,0 +1,261 @@
+use current_platform::CURRENT_PLATFORM;
+
+/// Error returned when the current platform is not supported by rv.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("rv does not (yet) support your platform ({platform}). Sorry :(")]
+pub struct UnsupportedPlatformError {
+    pub platform: String,
+}
+
+/// Represents the host platforms that rv supports.
+///
+/// Using an enum with no wildcard fallback ensures the compiler enforces
+/// exhaustive handling. Adding a new platform variant (e.g., `WindowsAarch64`)
+/// will produce compiler errors at every call site until all methods handle it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HostPlatform {
+    MacosAarch64,
+    MacosX86_64,
+    LinuxX86_64,
+    LinuxAarch64,
+    WindowsX86_64,
+}
+
+impl HostPlatform {
+    /// Detect the current host platform.
+    ///
+    /// Checks the `RV_TEST_PLATFORM` env var first (for testing), then falls
+    /// back to the compile-time `CURRENT_PLATFORM`.
+    pub fn current() -> Result<Self, UnsupportedPlatformError> {
+        let platform =
+            std::env::var("RV_TEST_PLATFORM").unwrap_or_else(|_| CURRENT_PLATFORM.to_string());
+        Self::from_target_triple(&platform)
+    }
+
+    /// Parse a Rust target triple into a `HostPlatform`.
+    pub fn from_target_triple(triple: &str) -> Result<Self, UnsupportedPlatformError> {
+        match triple {
+            "aarch64-apple-darwin" => Ok(Self::MacosAarch64),
+            "x86_64-apple-darwin" => Ok(Self::MacosX86_64),
+            "x86_64-unknown-linux-gnu" => Ok(Self::LinuxX86_64),
+            "aarch64-unknown-linux-gnu" => Ok(Self::LinuxAarch64),
+            "x86_64-pc-windows-msvc" => Ok(Self::WindowsX86_64),
+            other => Err(UnsupportedPlatformError {
+                platform: other.to_string(),
+            }),
+        }
+    }
+
+    /// The normalized OS name used for filtering ruby releases.
+    pub fn os(&self) -> &'static str {
+        match self {
+            Self::MacosAarch64 | Self::MacosX86_64 => "macos",
+            Self::LinuxX86_64 | Self::LinuxAarch64 => "linux",
+            Self::WindowsX86_64 => "windows",
+        }
+    }
+
+    /// The normalized architecture name used for filtering ruby releases.
+    pub fn arch(&self) -> &'static str {
+        match self {
+            Self::MacosAarch64 | Self::LinuxAarch64 => "aarch64",
+            Self::MacosX86_64 | Self::LinuxX86_64 | Self::WindowsX86_64 => "x86_64",
+        }
+    }
+
+    /// The architecture string used in ruby release asset filenames.
+    ///
+    /// For example, `ruby-3.4.5.arm64_sonoma.tar.gz` has arch str `"arm64_sonoma"`.
+    pub fn ruby_arch_str(&self) -> &'static str {
+        match self {
+            Self::MacosAarch64 => "arm64_sonoma",
+            Self::MacosX86_64 => "ventura",
+            Self::LinuxX86_64 => "x86_64_linux",
+            Self::LinuxAarch64 => "arm64_linux",
+            Self::WindowsX86_64 => "x64",
+        }
+    }
+
+    /// The archive file extension for this platform's ruby downloads.
+    pub fn archive_ext(&self) -> &'static str {
+        match self {
+            Self::MacosAarch64 | Self::MacosX86_64 | Self::LinuxX86_64 | Self::LinuxAarch64 => {
+                "tar.gz"
+            }
+            Self::WindowsX86_64 => "7z",
+        }
+    }
+
+    /// Whether this is a Windows platform.
+    pub fn is_windows(&self) -> bool {
+        matches!(self, Self::WindowsX86_64)
+    }
+
+    /// Parse from a ruby release asset arch string (e.g., `"arm64_sonoma"`, `"x64"`).
+    pub fn from_ruby_arch_str(s: &str) -> Result<Self, UnsupportedPlatformError> {
+        match s {
+            "arm64_sonoma" => Ok(Self::MacosAarch64),
+            "ventura" | "sequoia" => Ok(Self::MacosX86_64),
+            "x86_64_linux" => Ok(Self::LinuxX86_64),
+            "arm64_linux" => Ok(Self::LinuxAarch64),
+            "x64" => Ok(Self::WindowsX86_64),
+            other => Err(UnsupportedPlatformError {
+                platform: other.to_string(),
+            }),
+        }
+    }
+
+    /// All supported platforms.
+    pub fn all() -> &'static [Self] {
+        &[
+            Self::MacosAarch64,
+            Self::MacosX86_64,
+            Self::LinuxX86_64,
+            Self::LinuxAarch64,
+            Self::WindowsX86_64,
+        ]
+    }
+
+    /// The Rust target triple for this platform.
+    pub fn target_triple(&self) -> &'static str {
+        match self {
+            Self::MacosAarch64 => "aarch64-apple-darwin",
+            Self::MacosX86_64 => "x86_64-apple-darwin",
+            Self::LinuxX86_64 => "x86_64-unknown-linux-gnu",
+            Self::LinuxAarch64 => "aarch64-unknown-linux-gnu",
+            Self::WindowsX86_64 => "x86_64-pc-windows-msvc",
+        }
+    }
+
+    /// The full archive suffix for this platform (e.g., `".arm64_sonoma.tar.gz"`).
+    pub fn archive_suffix(&self) -> String {
+        format!(".{}.{}", self.ruby_arch_str(), self.archive_ext())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_target_triple_all_platforms() {
+        let cases = [
+            ("aarch64-apple-darwin", HostPlatform::MacosAarch64),
+            ("x86_64-apple-darwin", HostPlatform::MacosX86_64),
+            ("x86_64-unknown-linux-gnu", HostPlatform::LinuxX86_64),
+            ("aarch64-unknown-linux-gnu", HostPlatform::LinuxAarch64),
+            ("x86_64-pc-windows-msvc", HostPlatform::WindowsX86_64),
+        ];
+        for (triple, expected) in cases {
+            assert_eq!(
+                HostPlatform::from_target_triple(triple).unwrap(),
+                expected,
+                "Failed for triple: {triple}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_from_target_triple_unknown_returns_error() {
+        let err = HostPlatform::from_target_triple("sparc-sun-solaris").unwrap_err();
+        assert_eq!(err.platform, "sparc-sun-solaris");
+    }
+
+    #[test]
+    fn test_current_respects_rv_test_platform() {
+        // SAFETY: Single-threaded test context.
+        unsafe { std::env::set_var("RV_TEST_PLATFORM", "x86_64-pc-windows-msvc") };
+        let hp = HostPlatform::current().unwrap();
+        unsafe { std::env::remove_var("RV_TEST_PLATFORM") };
+
+        assert_eq!(hp, HostPlatform::WindowsX86_64);
+    }
+
+    #[test]
+    fn test_round_trip_target_triple() {
+        for hp in HostPlatform::all() {
+            let round_tripped = HostPlatform::from_target_triple(hp.target_triple()).unwrap();
+            assert_eq!(*hp, round_tripped);
+        }
+    }
+
+    #[test]
+    fn test_os() {
+        assert_eq!(HostPlatform::MacosAarch64.os(), "macos");
+        assert_eq!(HostPlatform::MacosX86_64.os(), "macos");
+        assert_eq!(HostPlatform::LinuxX86_64.os(), "linux");
+        assert_eq!(HostPlatform::LinuxAarch64.os(), "linux");
+        assert_eq!(HostPlatform::WindowsX86_64.os(), "windows");
+    }
+
+    #[test]
+    fn test_arch() {
+        assert_eq!(HostPlatform::MacosAarch64.arch(), "aarch64");
+        assert_eq!(HostPlatform::MacosX86_64.arch(), "x86_64");
+        assert_eq!(HostPlatform::LinuxX86_64.arch(), "x86_64");
+        assert_eq!(HostPlatform::LinuxAarch64.arch(), "aarch64");
+        assert_eq!(HostPlatform::WindowsX86_64.arch(), "x86_64");
+    }
+
+    #[test]
+    fn test_ruby_arch_str() {
+        assert_eq!(HostPlatform::MacosAarch64.ruby_arch_str(), "arm64_sonoma");
+        assert_eq!(HostPlatform::MacosX86_64.ruby_arch_str(), "ventura");
+        assert_eq!(HostPlatform::LinuxX86_64.ruby_arch_str(), "x86_64_linux");
+        assert_eq!(HostPlatform::LinuxAarch64.ruby_arch_str(), "arm64_linux");
+        assert_eq!(HostPlatform::WindowsX86_64.ruby_arch_str(), "x64");
+    }
+
+    #[test]
+    fn test_archive_ext() {
+        assert_eq!(HostPlatform::MacosAarch64.archive_ext(), "tar.gz");
+        assert_eq!(HostPlatform::LinuxX86_64.archive_ext(), "tar.gz");
+        assert_eq!(HostPlatform::WindowsX86_64.archive_ext(), "7z");
+    }
+
+    #[test]
+    fn test_is_windows() {
+        assert!(!HostPlatform::MacosAarch64.is_windows());
+        assert!(!HostPlatform::LinuxX86_64.is_windows());
+        assert!(HostPlatform::WindowsX86_64.is_windows());
+    }
+
+    #[test]
+    fn test_from_ruby_arch_str() {
+        let cases = [
+            ("arm64_sonoma", HostPlatform::MacosAarch64),
+            ("ventura", HostPlatform::MacosX86_64),
+            ("sequoia", HostPlatform::MacosX86_64),
+            ("x86_64_linux", HostPlatform::LinuxX86_64),
+            ("arm64_linux", HostPlatform::LinuxAarch64),
+            ("x64", HostPlatform::WindowsX86_64),
+        ];
+        for (arch_str, expected) in cases {
+            assert_eq!(
+                HostPlatform::from_ruby_arch_str(arch_str).unwrap(),
+                expected,
+                "Failed for arch_str: {arch_str}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_from_ruby_arch_str_unknown_returns_error() {
+        let err = HostPlatform::from_ruby_arch_str("unknown_platform").unwrap_err();
+        assert_eq!(err.platform, "unknown_platform");
+    }
+
+    #[test]
+    fn test_all_returns_five_variants() {
+        assert_eq!(HostPlatform::all().len(), 5);
+    }
+
+    #[test]
+    fn test_archive_suffix() {
+        assert_eq!(
+            HostPlatform::MacosAarch64.archive_suffix(),
+            ".arm64_sonoma.tar.gz"
+        );
+        assert_eq!(HostPlatform::WindowsX86_64.archive_suffix(), ".x64.7z");
+    }
+}
