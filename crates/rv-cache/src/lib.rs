@@ -343,7 +343,8 @@ mod tests {
     #[test]
     fn test_cache_entry_creation() {
         let entry = CacheEntry::new("/base/path", "file.json");
-        assert_eq!(entry.path().as_str(), "/base/path/file.json");
+        let expected = Utf8PathBuf::from("/base/path").join("file.json");
+        assert_eq!(entry.path(), expected);
         assert_eq!(entry.dir().as_str(), "/base/path");
     }
 
@@ -351,7 +352,8 @@ mod tests {
     fn test_cache_entry_with_file() {
         let entry = CacheEntry::new("/base/path", "file.json");
         let new_entry = entry.with_file("other.json");
-        assert_eq!(new_entry.path().as_str(), "/base/path/other.json");
+        let expected = Utf8PathBuf::from("/base/path").join("other.json");
+        assert_eq!(new_entry.path(), expected);
     }
 
     #[test]
@@ -366,10 +368,12 @@ mod tests {
         let shard = CacheShard(("/base/cache").into());
 
         let entry = shard.entry("file.json");
-        assert_eq!(entry.path().as_str(), "/base/cache/file.json");
+        let expected_entry = Utf8PathBuf::from("/base/cache").join("file.json");
+        assert_eq!(entry.path(), expected_entry);
 
         let sub_shard = shard.shard("subdir");
-        assert_eq!(sub_shard.as_ref().as_str(), "/base/cache/subdir");
+        let expected_shard = Utf8PathBuf::from("/base/cache").join("subdir");
+        assert_eq!(sub_shard.as_ref(), expected_shard);
     }
 
     #[test]
@@ -390,11 +394,8 @@ mod tests {
     #[test]
     fn test_cache_bucket_paths() {
         let cache = Cache::from_path("/test/cache");
-
-        assert_eq!(
-            cache.bucket(CacheBucket::Ruby).as_str(),
-            "/test/cache/ruby-v0"
-        );
+        let expected = Utf8PathBuf::from("/test/cache").join("ruby-v0");
+        assert_eq!(cache.bucket(CacheBucket::Ruby), expected);
     }
 
     #[test]
@@ -402,10 +403,11 @@ mod tests {
         let cache = Cache::from_path("/test/cache");
 
         let entry = cache.entry(CacheBucket::Ruby, "interpreters", "ruby-3.3.0.json");
-        assert_eq!(
-            entry.path().as_str(),
-            "/test/cache/ruby-v0/interpreters/ruby-3.3.0.json"
-        );
+        let expected = Utf8PathBuf::from("/test/cache")
+            .join("ruby-v0")
+            .join("interpreters")
+            .join("ruby-3.3.0.json");
+        assert_eq!(entry.path(), expected);
     }
 
     #[test]
