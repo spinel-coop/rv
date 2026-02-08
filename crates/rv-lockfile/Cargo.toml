@@ -12,11 +12,14 @@ winnow = { workspace = true }
 serde = { workspace = true, optional = true, features = ["derive"] }
 hex = "0.4.3"
 line-ending = "1.5"
+camino = { workspace = true }
+rv-gem-types = { workspace = true }
 
 [dev-dependencies]
 insta = { workspace = true, features = ["yaml"] }
 criterion = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
+tempfile = { workspace = true }
 
 [features]
 # Derive Serde de/serialize traits on the various datatypes the parser outputs.

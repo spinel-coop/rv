@@ -72,6 +72,10 @@ pub struct CleanInstallArgs {
     /// Don't compile the extensions in native gems.
     #[arg(long, hide = true, default_value = "false")]
     pub skip_compile_extensions: bool,
+
+    /// Force installation of gems, whatever is installed or not.
+    #[arg(long, default_value = "false")]
+    pub force: bool,
 }
 
 #[derive(Debug)]
@@ -84,6 +88,8 @@ struct CiInnerArgs {
     pub extensions_dir: Utf8PathBuf,
     /// Full path to the Ruby executable, used for Windows .bat binstub wrappers
     pub ruby_executable_path: Utf8PathBuf,
+    /// Will install already installed gems
+    pub force: bool,
 }
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -200,6 +206,7 @@ pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
         install_path,
         extensions_dir,
         ruby_executable_path: ruby.executable_path(),
+        force: args.force,
     };
 
     // Terminal progress indicator (OSC 9;4) for supported terminals
@@ -251,6 +258,7 @@ pub async fn install_from_lockfile(
         install_path,
         extensions_dir: find_exts_dir(config, &ruby_request)?,
         ruby_executable_path: ruby.executable_path(),
+        force: true,
     };
 
     // Terminal progress indicator (OSC 9;4) for supported terminals
@@ -264,10 +272,31 @@ async fn ci_inner_work(
     config: &Config,
     args: &CiInnerArgs,
     progress: &WorkProgress,
-    lockfile: GemfileDotLock<'_>,
+    mut lockfile: GemfileDotLock<'_>,
 ) -> Result<InstallStats> {
     let binstub_dir = args.install_path.join("bin");
     tokio::fs::create_dir_all(&binstub_dir).await?;
+
+    if !args.force {
+        let original_count = lockfile.platform_specific_spec_count();
+        lockfile.discard_installed_gems(&args.install_path);
+        let filtered_count = lockfile.platform_specific_spec_count();
+
+        let already_installed = original_count.saturating_sub(filtered_count);
+
+        if already_installed > 0 {
+            println!(
+                "{} gems already installed, skipping installation. Use --force if you want to install this gems again.",
+                already_installed
+            );
+        }
+
+        if filtered_count == 0 {
+            return Ok(InstallStats {
+                executables_installed: 0,
+            });
+        }
+    }
 
     // Phase 1: Downloads (0-40%)
     let gem_count = lockfile.gem_spec_count() as u64;
