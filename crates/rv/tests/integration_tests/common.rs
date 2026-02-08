@@ -68,6 +68,15 @@ impl RvTest {
             ),
         );
 
+        // Override the rubies directory so rv looks in the test temp dir.
+        // On Windows, etcetera resolves data_dir via the Win32 SHGetKnownFolderPath
+        // API which returns the real %APPDATA% path, ignoring our test HOME env var.
+        // RUBIES_PATH forces rv to use our temp dir instead.
+        let rubies_dir = test.temp_home().join(".local/share/rv/rubies");
+        std::fs::create_dir_all(&rubies_dir).expect("Failed to create rubies directory");
+        test.env
+            .insert("RUBIES_PATH".into(), rubies_dir.as_str().into());
+
         // Disable caching for tests by default
         test.env.insert("RV_NO_CACHE".into(), "true".into());
 
@@ -156,7 +165,19 @@ impl RvTest {
     pub fn command<S: AsRef<std::ffi::OsStr>>(&self, program: S) -> Command {
         let mut cmd = Command::new(program);
         cmd.current_dir(&self.cwd);
-        cmd.env_clear().envs(&self.env);
+        cmd.env_clear();
+
+        // On Windows, preserve essential system env vars. Without SystemRoot,
+        // Winsock can't initialize (error 10106) and all HTTP requests fail.
+        // Without COMSPEC, .cmd batch scripts can't be executed.
+        #[cfg(windows)]
+        for var in ["SystemRoot", "COMSPEC"] {
+            if let Ok(val) = std::env::var(var) {
+                cmd.env(var, val);
+            }
+        }
+
+        cmd.envs(&self.env);
         cmd
     }
 
@@ -470,6 +491,11 @@ impl RvOutput {
     pub fn normalized_stdout(&self) -> String {
         let mut output = self.stdout();
 
+        // Normalize CRLF to LF before any other processing
+        if cfg!(windows) {
+            output = output.replace("\r\n", "\n");
+        }
+
         // Replace Windows path separators with forward slashes
         if cfg!(windows) {
             output = output.replace('\\', "/");
@@ -494,11 +520,52 @@ impl RvOutput {
     pub fn normalized_stderr(&self) -> String {
         let mut output = self.stderr();
 
+        // Normalize CRLF to LF before any other processing
+        if cfg!(windows) {
+            output = output.replace("\r\n", "\n");
+        }
+
         // Replace Windows path separators with forward slashes
         if cfg!(windows) {
             output = output.replace('\\', "/");
         }
 
         output
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(unix)]
+    use std::os::unix::process::ExitStatusExt;
+    #[cfg(windows)]
+    use std::os::windows::process::ExitStatusExt;
+
+    fn fake_output(stdout: &str) -> RvOutput {
+        RvOutput {
+            output: std::process::Output {
+                status: std::process::ExitStatus::from_raw(0),
+                stdout: stdout.as_bytes().to_vec(),
+                stderr: Vec::new(),
+            },
+            test_root: "/private/var/folders/abc123".into(),
+        }
+    }
+
+    #[test]
+    fn test_normalized_stdout_replaces_test_root() {
+        let out = fake_output("ruby at /private/var/folders/abc123/home/.local/share/rv\n");
+        assert_eq!(
+            out.normalized_stdout(),
+            "ruby at /tmp/home/.local/share/rv\n"
+        );
+    }
+
+    #[test]
+    fn test_normalized_stdout_preserves_other_content() {
+        let out = fake_output("hello world\n");
+        assert_eq!(out.normalized_stdout(), "hello world\n");
     }
 }
