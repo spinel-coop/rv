@@ -159,7 +159,7 @@ impl Config {
 mod tests {
     use super::*;
     use assert_fs::TempDir;
-    use camino::Utf8PathBuf;
+    use camino::{Utf8Path, Utf8PathBuf};
     use indexmap::indexset;
     use rv_cache::Cache;
     use std::fs;
@@ -220,6 +220,25 @@ mod tests {
         assert_eq!(rubies2.len(), 0);
     }
 
+    /// Create a mock ruby executable in the given bin directory.
+    /// On Unix: `bin/ruby` (bash script). On Windows: `bin/ruby.cmd` (batch script).
+    fn create_mock_ruby_executable(bin_dir: &Utf8Path) {
+        #[cfg(unix)]
+        {
+            let ruby_exe = bin_dir.join("ruby");
+            fs::write(&ruby_exe, "#!/bin/bash\necho test").unwrap();
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(&ruby_exe).unwrap().permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&ruby_exe, perms).unwrap();
+        }
+        #[cfg(windows)]
+        {
+            let ruby_cmd = bin_dir.join("ruby.cmd");
+            fs::write(&ruby_cmd, "@echo off\r\necho test\r\n").unwrap();
+        }
+    }
+
     #[test]
     fn test_cache_key_generation() {
         let (config, _temp_dir) = create_test_config();
@@ -229,16 +248,7 @@ mod tests {
         let ruby_path = ruby_dir.join("ruby-3.1.0");
         let bin_dir = ruby_path.join("bin");
         fs::create_dir_all(&bin_dir).unwrap();
-        let ruby_exe = bin_dir.join("ruby");
-        fs::write(&ruby_exe, "#!/bin/bash\necho test").unwrap();
-
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = fs::metadata(&ruby_exe).unwrap().permissions();
-            perms.set_mode(0o755);
-            fs::set_permissions(&ruby_exe, perms).unwrap();
-        }
+        create_mock_ruby_executable(&bin_dir);
 
         // Should generate a cache key successfully
         let cache_key = config.ruby_path_cache_key(&ruby_path).unwrap();
@@ -273,16 +283,7 @@ mod tests {
         let ruby_path = ruby_dir.join("ruby-3.1.0");
         let bin_dir = ruby_path.join("bin");
         fs::create_dir_all(&bin_dir).unwrap();
-        let ruby_exe = bin_dir.join("ruby");
-        fs::write(&ruby_exe, "#!/bin/bash\necho test").unwrap();
-
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = fs::metadata(&ruby_exe).unwrap().permissions();
-            perms.set_mode(0o755);
-            fs::set_permissions(&ruby_exe, perms).unwrap();
-        }
+        create_mock_ruby_executable(&bin_dir);
 
         // Should return cache miss for uncached Ruby
         let result = config.get_cached_ruby(&ruby_path);

@@ -353,28 +353,43 @@ impl RvTest {
             "ruby"
         };
 
-        // Create a mock ruby executable that outputs the expected format for rv-ruby
-        let ruby_exe = bin_dir.join("ruby");
-        let mock_script = format!(
-            r#"#!/bin/bash
-
-echo "{engine}"
-echo "{version}"
-echo "aarch64-darwin23"
-echo "aarch64"
-echo "darwin23"
-echo ""
-"#
-        );
-        std::fs::write(&ruby_exe, mock_script).expect("Failed to create ruby executable");
-
-        // Make it executable on Unix systems
+        // Create a mock ruby executable that outputs the expected format for rv-ruby.
+        // On Unix, this is a bash script at `bin/ruby`.
+        // On Windows, this is a batch script at `bin/ruby.cmd` (since we can't create
+        // a real .exe from tests, and rv-ruby checks for .cmd as a fallback).
         #[cfg(unix)]
         {
+            let ruby_exe = bin_dir.join("ruby");
+            let mock_script = format!(
+                "#!/bin/bash\n\
+                 echo \"{engine}\"\n\
+                 echo \"{version}\"\n\
+                 echo \"aarch64-darwin23\"\n\
+                 echo \"aarch64\"\n\
+                 echo \"darwin23\"\n\
+                 echo \"\"\n"
+            );
+            std::fs::write(&ruby_exe, mock_script).expect("Failed to create ruby executable");
+
             use std::os::unix::fs::PermissionsExt;
             let mut perms = std::fs::metadata(&ruby_exe).unwrap().permissions();
             perms.set_mode(0o755);
             std::fs::set_permissions(&ruby_exe, perms).unwrap();
+        }
+
+        #[cfg(windows)]
+        {
+            let ruby_cmd = bin_dir.join("ruby.cmd");
+            let mock_script = format!(
+                "@echo off\r\n\
+                 echo {engine}\r\n\
+                 echo {version}\r\n\
+                 echo aarch64-darwin23\r\n\
+                 echo aarch64\r\n\
+                 echo darwin23\r\n\
+                 echo.\r\n"
+            );
+            std::fs::write(&ruby_cmd, mock_script).expect("Failed to create ruby executable");
         }
 
         ruby_dir
