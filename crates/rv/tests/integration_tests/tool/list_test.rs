@@ -1,4 +1,5 @@
 use crate::common::{RvOutput, RvTest};
+#[cfg(unix)]
 use rv_cache::rm_rf;
 
 impl RvTest {
@@ -7,6 +8,9 @@ impl RvTest {
     }
 }
 
+// This test calls tool_install() which downloads real Ruby binaries and is
+// gated to Unix. See install_test.rs for details.
+#[cfg(unix)]
 #[test]
 fn test_tool_list() {
     let mut test = RvTest::new();

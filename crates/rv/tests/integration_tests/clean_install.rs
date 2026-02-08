@@ -1,5 +1,10 @@
 use crate::common::{RvOutput, RvTest};
 
+// ci() removes RV_TEST_PLATFORM so the subprocess detects native platform and
+// downloads real Ruby binaries from GitHub. On Windows, this triggers the
+// RubyInstaller2 flow which has a completely different download/install path.
+// These tests are gated to Unix until dedicated Windows CI test setup exists.
+#[cfg(unix)]
 impl RvTest {
     pub fn ci(&mut self, args: &[&str]) -> RvOutput {
         self.env.remove("RV_INSTALL_URL");
@@ -11,6 +16,7 @@ impl RvTest {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn test_clean_install_download_test_gem() {
     let mut test = RvTest::new();
@@ -34,6 +40,7 @@ fn test_clean_install_download_test_gem() {
     mock.assert();
 }
 
+#[cfg(unix)]
 #[test]
 fn test_clean_install_input_validation() {
     let mut test = RvTest::new();
@@ -125,6 +132,7 @@ fn test_clean_install_input_validation() {
     releases_mock.assert();
 }
 
+#[cfg(unix)]
 #[test]
 fn test_clean_install_respects_ruby() {
     let mut test = RvTest::new();
@@ -186,6 +194,7 @@ fn test_clean_install_native_linux_x86_64() {
     insta::assert_snapshot!(files_sorted);
 }
 
+#[cfg(unix)]
 #[test]
 fn test_clean_install_download_faker() {
     let mut test = RvTest::new();
@@ -207,6 +216,7 @@ fn test_clean_install_download_faker() {
     insta::assert_snapshot!(files_sorted);
 }
 
+#[cfg(unix)]
 #[test]
 fn test_clean_install_evaluates_local_gemspecs_in_the_right_cwd() {
     use indoc::formatdoc;
@@ -252,6 +262,7 @@ fn test_clean_install_evaluates_local_gemspecs_in_the_right_cwd() {
     assert_eq!(output.normalized_stderr(), "");
 }
 
+#[cfg(unix)]
 #[test]
 fn test_clean_install_fails_if_evaluating_a_path_gemspec_fails() {
     use indoc::formatdoc;
@@ -294,6 +305,7 @@ fn test_clean_install_fails_if_evaluating_a_path_gemspec_fails() {
     );
 }
 
+#[cfg(unix)]
 fn find_all_files_in_dir(cwd: &std::path::Path) -> String {
     let test_dir_contents = std::process::Command::new("find")
         .args([".", "-type", "f"])

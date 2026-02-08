@@ -1,9 +1,17 @@
+#[cfg(unix)]
 use fs_err as fs;
 
 use crate::common::{RvOutput, RvTest};
+#[cfg(unix)]
 use owo_colors::OwoColorize;
+#[cfg(unix)]
 use rv_cache::rm_rf;
 
+// tool_install() removes RV_TEST_PLATFORM so the subprocess detects native
+// platform and downloads real Ruby binaries from GitHub. On Windows, this
+// triggers the RubyInstaller2 flow which has a completely different download
+// path. These tests are gated to Unix until dedicated Windows CI setup exists.
+#[cfg(unix)]
 impl RvTest {
     pub fn tool_install(&mut self, args: &[&str]) -> RvOutput {
         self.env.remove("RV_INSTALL_URL");
@@ -19,6 +27,7 @@ impl RvTest {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn test_tool_install_twice() {
     let mut test = RvTest::new();
@@ -69,6 +78,7 @@ fn test_tool_install_twice() {
 }
 
 /// Tests users can explicitly install an older version of a gem.
+#[cfg(unix)]
 #[test]
 fn test_tool_install_non_latest_version() {
     let mut test = RvTest::new();
@@ -105,6 +115,7 @@ fn test_tool_install_non_latest_version() {
     tarball_mock.assert();
 }
 
+#[cfg(unix)]
 #[test]
 fn test_tool_install_writes_ruby_version_file() {
     let mut test = RvTest::new();

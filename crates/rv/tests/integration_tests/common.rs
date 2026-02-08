@@ -476,7 +476,17 @@ impl RvOutput {
         }
 
         // Remove test root from paths
-        output.replace(&self.test_root, "/tmp")
+        output = output.replace(&self.test_root, "/tmp");
+
+        // Normalize Windows Ruby executable names so snapshots match across platforms.
+        // On Windows, create_ruby_dir() creates ruby.cmd (since we can't create ELF/Mach-O
+        // executables from tests), so list output shows bin/ruby.cmd instead of bin/ruby.
+        if cfg!(windows) {
+            output = output.replace("/ruby.cmd", "/ruby");
+            output = output.replace("/ruby.exe", "/ruby");
+        }
+
+        output
     }
 
     /// Normalize stderr for cross-platform snapshot testing
