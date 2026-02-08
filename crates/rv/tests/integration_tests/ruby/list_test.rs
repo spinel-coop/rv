@@ -222,6 +222,32 @@ fn test_ruby_list_without_updating_versions() {
     assert_eq!(output.normalized_stdout(), "");
 }
 
+/// Verifies that Windows sees rubies from the RubyInstaller2 endpoint.
+/// This is the test that would have caught the original bug: `rv ruby list`
+/// on Windows returned "No rubies found" because it only queried rv-ruby
+/// (which has zero Windows assets).
+#[test]
+fn test_ruby_list_windows_platform_finds_rubies() {
+    let mut test = RvTest::new();
+    test.set_platform(HostPlatform::WindowsX86_64);
+
+    let mock = test.mock_windows_releases(["3.4.4", "3.3.7"].to_vec());
+    let output = test.rv(&["ruby", "list"]);
+
+    mock.assert();
+    output.assert_success();
+
+    let stdout = output.normalized_stdout();
+    assert!(
+        stdout.contains("ruby-3.4.4"),
+        "Windows should see ruby-3.4.4, got: {stdout}",
+    );
+    assert!(
+        stdout.contains("ruby-3.3.7"),
+        "Windows should see ruby-3.3.7, got: {stdout}",
+    );
+}
+
 /// Verifies that each non-Windows platform sees only its own rubies when
 /// the release contains assets for all platforms. Windows uses a different
 /// fetch path (RubyInstaller2) and is tested separately.

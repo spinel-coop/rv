@@ -59,6 +59,14 @@ impl RvTest {
             "RV_INSTALL_URL".into(),
             format!("{}/{}", test.server.url(), "latest/download"),
         );
+        test.env.insert(
+            "RV_WINDOWS_LIST_URL".into(),
+            format!(
+                "{}/{}",
+                test.server.url(),
+                "repos/oneclick/rubyinstaller2/releases"
+            ),
+        );
 
         // Disable caching for tests by default
         test.env.insert("RV_NO_CACHE".into(), "true".into());
@@ -193,24 +201,30 @@ impl RvTest {
             .create()
     }
 
-    /// Mocks the /releases API endpoint with assets for ALL platforms per version.
-    /// Used by multi-platform list tests to verify per-platform filtering.
+    /// Mocks the rv-ruby /releases endpoint with assets for all NON-WINDOWS platforms.
+    ///
+    /// Windows uses a separate endpoint (RubyInstaller2), so Windows assets
+    /// should NOT appear in the rv-ruby release. Use `mock_windows_releases()`
+    /// to mock the Windows endpoint.
     pub fn mock_releases_all_platforms(&mut self, versions: Vec<&str>) -> Mock {
         use indoc::formatdoc;
 
         let assets: Vec<String> = versions
             .into_iter()
             .flat_map(|v| {
-                HostPlatform::all().iter().map(move |hp| {
-                    let suffix = hp.archive_suffix();
-                    formatdoc!(
-                        r#"
+                HostPlatform::all()
+                    .iter()
+                    .filter(|hp| !hp.is_windows())
+                    .map(move |hp| {
+                        let suffix = hp.archive_suffix();
+                        formatdoc!(
+                            r#"
             {{
                 "name": "ruby-{v}{suffix}",
                 "browser_download_url": "http://..."
             }}"#
-                    )
-                })
+                        )
+                    })
             })
             .collect();
 
@@ -226,6 +240,42 @@ impl RvTest {
 
         self.server
             .mock("GET", "/repos/spinel-coop/rv-ruby/releases/latest")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(body)
+            .create()
+    }
+
+    /// Mocks the RubyInstaller2 /releases endpoint for Windows.
+    ///
+    /// Returns an array of releases (one per version), each with a
+    /// `rubyinstaller-{v}-1-x64.7z` asset. This matches the real
+    /// RubyInstaller2 release structure.
+    pub fn mock_windows_releases(&mut self, versions: Vec<&str>) -> Mock {
+        use indoc::formatdoc;
+
+        let releases: Vec<String> = versions
+            .iter()
+            .map(|v| {
+                formatdoc!(
+                    r#"
+            {{
+                "name": "RubyInstaller-{v}-1",
+                "assets": [
+                    {{
+                        "name": "rubyinstaller-{v}-1-x64.7z",
+                        "browser_download_url": "http://..."
+                    }}
+                ]
+            }}"#
+                )
+            })
+            .collect();
+
+        let body = format!("[{}]", releases.join(",\n"));
+
+        self.server
+            .mock("GET", "/repos/oneclick/rubyinstaller2/releases")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(body)
