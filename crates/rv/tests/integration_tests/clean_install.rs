@@ -3,6 +3,10 @@ use crate::common::{RvOutput, RvTest};
 impl RvTest {
     pub fn ci(&mut self, args: &[&str]) -> RvOutput {
         self.env.remove("RV_INSTALL_URL");
+        // Remove RV_TEST_PLATFORM so the subprocess uses its compile-time native
+        // platform. This is necessary because ci tests download real Ruby binaries
+        // from GitHub, and those binaries must match the host architecture.
+        self.env.remove("RV_TEST_PLATFORM");
         self.rv(&[&["ci"], args].concat())
     }
 }
@@ -11,7 +15,7 @@ impl RvTest {
 fn test_clean_install_download_test_gem() {
     let mut test = RvTest::new();
 
-    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
+    let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
 
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testsource");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testsource.lock");
@@ -34,7 +38,7 @@ fn test_clean_install_download_test_gem() {
 fn test_clean_install_input_validation() {
     let mut test = RvTest::new();
 
-    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
+    let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
 
     // Test missing a lockfile fails
     let output = test.ci(&[]);
@@ -148,7 +152,7 @@ fn test_clean_install_respects_ruby() {
 #[test]
 fn test_clean_install_native_macos_aarch64() {
     let mut test = RvTest::new();
-    let mock = test.mock_releases(["4.0.0"].to_vec());
+    let mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
 
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative.lock");
@@ -167,7 +171,7 @@ fn test_clean_install_native_macos_aarch64() {
 #[test]
 fn test_clean_install_native_linux_x86_64() {
     let mut test = RvTest::new();
-    let mock = test.mock_releases(["4.0.0"].to_vec());
+    let mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
 
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative.lock");
@@ -185,7 +189,7 @@ fn test_clean_install_native_linux_x86_64() {
 #[test]
 fn test_clean_install_download_faker() {
     let mut test = RvTest::new();
-    let mock = test.mock_releases(["4.0.0"].to_vec());
+    let mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
 
     // https://github.com/faker-ruby/faker/blob/2f8b18b112fb3b7d2750321a8e574518cfac0d53/Gemfile
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.faker");
@@ -208,7 +212,7 @@ fn test_clean_install_evaluates_local_gemspecs_in_the_right_cwd() {
     use indoc::formatdoc;
 
     let mut test = RvTest::new();
-    let mock = test.mock_releases(["4.0.0"].to_vec());
+    let mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
 
     let project_dir = test.temp_root().join("project");
     std::fs::create_dir_all(project_dir.as_path()).unwrap();
@@ -253,7 +257,7 @@ fn test_clean_install_fails_if_evaluating_a_path_gemspec_fails() {
     use indoc::formatdoc;
 
     let mut test = RvTest::new();
-    let mock = test.mock_releases(["4.0.0"].to_vec());
+    let mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
 
     let project_dir = test.temp_root().join("project");
     std::fs::create_dir_all(project_dir.as_path()).unwrap();

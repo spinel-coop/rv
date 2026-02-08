@@ -11,7 +11,7 @@ impl RvTest {
 fn test_tool_list() {
     let mut test = RvTest::new();
 
-    let _releases_mock = test.mock_releases(["4.0.0"].to_vec());
+    let _releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
 
     let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
     let _info_endpoint_mock = test

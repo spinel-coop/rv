@@ -7,6 +7,10 @@ use rv_cache::rm_rf;
 impl RvTest {
     pub fn tool_install(&mut self, args: &[&str]) -> RvOutput {
         self.env.remove("RV_INSTALL_URL");
+        // Remove RV_TEST_PLATFORM so the subprocess uses its compile-time native
+        // platform. This is necessary because tool install downloads real Ruby
+        // binaries from GitHub, and those binaries must match the host architecture.
+        self.env.remove("RV_TEST_PLATFORM");
         self.rv(&[
             &["tool", "install", "--gem-server", &self.server_url()],
             args,
@@ -19,7 +23,7 @@ impl RvTest {
 fn test_tool_install_twice() {
     let mut test = RvTest::new();
 
-    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
+    let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
 
     let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
     let info_endpoint_mock = test
@@ -69,7 +73,7 @@ fn test_tool_install_twice() {
 fn test_tool_install_non_latest_version() {
     let mut test = RvTest::new();
 
-    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
+    let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
 
     let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
     let info_endpoint_mock = test
@@ -105,7 +109,7 @@ fn test_tool_install_non_latest_version() {
 fn test_tool_install_writes_ruby_version_file() {
     let mut test = RvTest::new();
 
-    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
+    let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
 
     let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
     let info_endpoint_mock = test
