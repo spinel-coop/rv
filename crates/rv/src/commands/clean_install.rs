@@ -302,7 +302,7 @@ async fn ci_inner_work(
 
     // Phase 3 (Compiles, 80-100%) - start_phase called inside compile_gems after filtering
     let compile_start = Instant::now();
-    let compiled_count = compile_gems(config, specs, args, progress)?;
+    let gems_compiled = compile_gems(config, specs, args, progress)?;
     let compile_elapsed = compile_start.elapsed();
 
     let total_elapsed = fetch_elapsed + install_elapsed + compile_elapsed;
@@ -325,11 +325,12 @@ async fn ci_inner_work(
         format_duration(install_elapsed),
         gem_count,
     );
-    if compiled_count > 0 {
+    if gems_compiled.total > 0 {
         println!(
-            " - {} compiling {} native extensions",
+            " - {} compiling {} native extensions ({} cached)",
             format_duration(compile_elapsed),
-            compiled_count,
+            gems_compiled.total,
+            gems_compiled.cached,
         );
     }
     println!(" - {} total", format_duration(total_elapsed));
@@ -859,14 +860,20 @@ fn install_single_gem<'i>(
     Ok(dep_gemspec)
 }
 
+#[derive(Default)]
+struct GemsCompiled {
+    total: usize,
+    cached: usize,
+}
+
 fn compile_gems(
     config: &Config,
     specs: Vec<GemSpecification>,
     args: &CiInnerArgs,
     progress: &WorkProgress,
-) -> Result<usize> {
+) -> Result<GemsCompiled> {
     if args.skip_compile_extensions {
-        return Ok(0);
+        return Ok(Default::default());
     }
 
     use dep_graph::DepGraph;
@@ -875,7 +882,7 @@ fn compile_gems(
     let (nodes, deps) = make_dep_graph(&specs);
 
     if deps.is_empty() {
-        return Ok(0);
+        return Ok(Default::default());
     }
 
     let deps_count = nodes.len();
@@ -893,22 +900,35 @@ fn compile_gems(
     let _guard = span.enter();
 
     let graph = DepGraph::new(deps.as_slice());
-    graph.into_par_iter().try_for_each(|node| {
-        if let Some(spec) = nodes.get(&*node) {
-            span.pb_set_message(&spec.name);
-            let compiled_ok = compile_gem(config, args, spec)?;
-            span.pb_inc(1);
-            progress.complete_one();
-            if !compiled_ok {
-                return Err(Error::CompileFailures {
-                    gem: spec.full_name(),
-                });
-            }
-        }
-        Ok(())
-    })?;
+    let total_cached_deps = graph
+        .into_par_iter()
+        .try_fold(
+            || 0,
+            |mut count, node| {
+                if let Some(spec) = nodes.get(&*node) {
+                    span.pb_set_message(&spec.name);
+                    let compile_stats = compile_gem(config, args, spec)?;
+                    let compiled_ok = compile_stats.ok;
+                    span.pb_inc(1);
+                    progress.complete_one();
+                    if !compiled_ok {
+                        return Err(Error::CompileFailures {
+                            gem: spec.full_name(),
+                        });
+                    }
+                    if compile_stats.is_cached {
+                        count += 1;
+                    }
+                }
+                Ok(count)
+            },
+        )
+        .try_reduce(|| 0, |a, b| Ok(a + b))?;
 
-    Ok(deps_count)
+    Ok(GemsCompiled {
+        total: deps_count,
+        cached: total_cached_deps,
+    })
 }
 
 /// Build a dependency graph of all the gems which need compiling,
@@ -1329,7 +1349,16 @@ fn find_exts_dir(config: &Config, version: &RubyRequest) -> Result<Utf8PathBuf> 
 static EXTCONF_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)extconf").unwrap());
 static RAKE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)rakefile|mkrf_conf").unwrap());
 
-fn compile_gem(config: &Config, args: &CiInnerArgs, spec: &GemSpecification) -> Result<bool> {
+struct CompileStats {
+    ok: bool,
+    is_cached: bool,
+}
+
+fn compile_gem(
+    config: &Config,
+    args: &CiInnerArgs,
+    spec: &GemSpecification,
+) -> Result<CompileStats> {
     let mut compile_results = Vec::with_capacity(spec.extensions.len());
 
     let gem_home = &args.install_path;
@@ -1344,7 +1373,10 @@ fn compile_gem(config: &Config, args: &CiInnerArgs, spec: &GemSpecification) -> 
 
     if std::fs::exists(ext_dest.join("gem.build_complete"))? {
         debug!("native extensions for {} already built", spec.full_name());
-        return Ok(true);
+        return Ok(CompileStats {
+            ok: true,
+            is_cached: true,
+        });
     }
     debug!("compiling native extensions for {}", spec.full_name());
 
@@ -1412,7 +1444,10 @@ fn compile_gem(config: &Config, args: &CiInnerArgs, spec: &GemSpecification) -> 
     }
 
     let all_ok = compile_results.iter().all(|res| res.success());
-    Ok(all_ok)
+    Ok(CompileStats {
+        ok: all_ok,
+        is_cached: false,
+    })
 }
 
 fn build_rakefile(
