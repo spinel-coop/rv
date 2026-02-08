@@ -1,0 +1,13 @@
+---
+source: crates/rv/tests/integration_tests/shell/env_test.rs
+expression: output.normalized_stdout()
+---
+Remove-Item Env:\RUBYOPT -ErrorAction SilentlyContinue
+Remove-Item Env:\GEM_ROOT -ErrorAction SilentlyContinue
+$env:RUBY_ROOT = "/tmp/home/.local/share/rv/rubies/ruby-3.3.5"
+$env:RUBY_ENGINE = "ruby"
+$env:RUBY_VERSION = "3.3.5"
+$env:GEM_HOME = "/tmp/home/.gem/ruby/3.3.5"
+$env:GEM_PATH = "/tmp/home/.gem/ruby/3.3.5"
+$env:MANPATH = "/tmp/home/.local/share/rv/rubies/ruby-3.3.5/share/man:"
+$env:PATH = "/tmp/home/.gem/ruby/3.3.5/bin:/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin:/tmp/bin"

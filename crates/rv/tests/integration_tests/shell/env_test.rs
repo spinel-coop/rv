@@ -41,6 +41,15 @@ fn test_nushell_env_succeeds() {
 }
 
 #[test]
+fn test_powershell_env_succeeds() {
+    let test = RvTest::new();
+    let output = test.rv(&["shell", "env", "powershell"]);
+
+    assert_snapshot!(output.normalized_stdout());
+    assert!(output.success());
+}
+
+#[test]
 fn test_shell_env_with_path() {
     let mut test = RvTest::new();
     test.env.insert("PATH".into(), "/tmp/bin".into());
@@ -127,6 +136,22 @@ fn test_shell_env_with_ruby_and_legacy_gem_path() {
     );
 
     let output = test.rv(&["shell", "env", "zsh"]);
+    output.assert_success();
+
+    assert_snapshot!(output.normalized_stdout());
+}
+
+#[test]
+fn test_powershell_env_with_ruby() {
+    let mut test = RvTest::new();
+    test.create_ruby_dir("ruby-3.3.5");
+
+    // Ensure the legacy path is present.
+    create_dir_all(test.legacy_gem_path("3.3.5")).unwrap();
+
+    test.env.insert("PATH".into(), "/tmp/bin".into());
+
+    let output = test.rv(&["shell", "env", "powershell"]);
     output.assert_success();
 
     assert_snapshot!(output.normalized_stdout());

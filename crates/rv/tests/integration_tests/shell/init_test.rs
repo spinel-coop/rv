@@ -93,6 +93,15 @@ fn test_nu_shell_init_succeeds() {
 }
 
 #[test]
+fn test_powershell_shell_init_succeeds() {
+    let test = RvTest::new();
+    let output = test.rv(&["shell", "init", "powershell"]);
+    output.assert_success();
+
+    assert_snapshot!(output.normalized_stdout());
+}
+
+#[test]
 fn test_shell_init_fails_without_shell() {
     let test = RvTest::new();
     let output = test.rv(&["shell", "init"]);
