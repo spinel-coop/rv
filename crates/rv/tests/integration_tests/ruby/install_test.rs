@@ -278,9 +278,9 @@ fn make_tarball_file_name(version: &str) -> String {
     format!("ruby-{version}.{suffix}.tar.gz")
 }
 
-/// Returns the ruby arch string matching the default test platform (aarch64-apple-darwin).
+/// Returns the ruby arch string matching the default test platform (`MacosAarch64`).
 ///
-/// Uses `from_target_triple()` with the same hardcoded value as `RvTest::new()`,
+/// Uses `HostPlatform::MacosAarch64` to match the hardcoded default in `RvTest::new()`,
 /// NOT `HostPlatform::current()`, because the test process doesn't have
 /// `RV_TEST_PLATFORM` set — only the subprocess does.
 fn make_platform_suffix() -> String {
