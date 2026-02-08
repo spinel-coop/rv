@@ -1354,6 +1354,12 @@ struct CompileStats {
     is_cached: bool,
 }
 
+/// rv writes a file here when it finishes compiling a native gem.
+/// You can check if this path exists to see if it's previously been compiled.
+fn cached_compile_path(ext_dest: &Utf8Path) -> Utf8PathBuf {
+    ext_dest.join("gem.build_complete")
+}
+
 fn compile_gem(
     config: &Config,
     args: &CiInnerArgs,
@@ -1371,7 +1377,9 @@ fn compile_gem(
         .join(spec.full_name());
     let mut ran_rake = false;
 
-    if std::fs::exists(ext_dest.join("gem.build_complete"))? {
+    let build_complete_path = cached_compile_path(&ext_dest);
+    debug!("Checking for {}", build_complete_path);
+    if std::fs::exists(&build_complete_path)? {
         debug!("native extensions for {} already built", spec.full_name());
         return Ok(CompileStats {
             ok: true,
@@ -1500,7 +1508,7 @@ fn build_rakefile(
     copy_dir(&tmp_dir, ext_dest)?;
 
     // 4. Mark the gem as built
-    fs_err::write(ext_dest.join("gem.build_complete"), "")?;
+    fs_err::write(cached_compile_path(ext_dest), "")?;
 
     Ok(outputs)
 }
@@ -1600,7 +1608,7 @@ fn build_extconf(
     copy_dir(&tmp_dir, ext_dest)?;
 
     // 5. Mark the gem as built
-    fs_err::write(ext_dest.join("gem.build_complete"), "")?;
+    fs_err::write(cached_compile_path(ext_dest), "")?;
 
     Ok(outputs)
 }
