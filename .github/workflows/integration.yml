@@ -71,11 +71,31 @@ jobs:
       - name: Build rv
         run: ./bin/build
 
-      - name: Test rv installs and runs ruby
+      - name: Run basic rv commands
         run: |
           ./target/release/rv --version
           ./target/release/rv --help
-          ./target/release/rv ruby run 3.4.7 -- -e 'puts RUBY_DESCRIPTION'
+
+      - name: Run rv ruby run (install Ruby)
+        run: ./bin/integration-tests/unix/ruby-run.sh ./target/release/rv
+
+      - name: Run rv ruby list
+        run: ./bin/integration-tests/unix/ruby-list.sh ./target/release/rv
+
+      - name: Run rv ruby find
+        run: ./bin/integration-tests/unix/ruby-find.sh ./target/release/rv
+
+      - name: Run rv ruby pin
+        run: ./bin/integration-tests/unix/ruby-pin.sh ./target/release/rv
+
+      - name: Run rv shell env
+        run: ./bin/integration-tests/unix/shell-env.sh ./target/release/rv
+
+      - name: Run rv cache dir
+        run: ./bin/integration-tests/unix/cache-dir.sh ./target/release/rv
+
+      - name: Run rv ruby uninstall
+        run: ./bin/integration-tests/unix/ruby-uninstall.sh ./target/release/rv
 
   macos:
     name: Run on macOS
@@ -94,11 +114,31 @@ jobs:
       - name: Build rv
         run: ./bin/build
 
-      - name: Test rv installs and runs ruby
+      - name: Run basic rv commands
         run: |
           ./target/release/rv --version
           ./target/release/rv --help
-          ./target/release/rv ruby run 3.4.7 -- -e 'puts RUBY_DESCRIPTION'
+
+      - name: Run rv ruby run (install Ruby)
+        run: ./bin/integration-tests/unix/ruby-run.sh ./target/release/rv
+
+      - name: Run rv ruby list
+        run: ./bin/integration-tests/unix/ruby-list.sh ./target/release/rv
+
+      - name: Run rv ruby find
+        run: ./bin/integration-tests/unix/ruby-find.sh ./target/release/rv
+
+      - name: Run rv ruby pin
+        run: ./bin/integration-tests/unix/ruby-pin.sh ./target/release/rv
+
+      - name: Run rv shell env
+        run: ./bin/integration-tests/unix/shell-env.sh ./target/release/rv
+
+      - name: Run rv cache dir
+        run: ./bin/integration-tests/unix/cache-dir.sh ./target/release/rv
+
+      - name: Run rv ruby uninstall
+        run: ./bin/integration-tests/unix/ruby-uninstall.sh ./target/release/rv
 
   wsl-windows:
     name: Run on WSL (Windows)
@@ -120,11 +160,31 @@ jobs:
       - name: Build rv
         run: wsl -d Ubuntu-24.04 -- bash -c "source ~/.cargo/env && cargo build --release --locked --bin rv"
 
-      - name: Test rv installs and runs ruby
+      - name: Run basic rv commands
         run: |
           wsl -d Ubuntu-24.04 -- ./target/release/rv --version
           wsl -d Ubuntu-24.04 -- ./target/release/rv --help
-          wsl -d Ubuntu-24.04 -- ./target/release/rv ruby run 3.4.7 -- -e 'puts RUBY_DESCRIPTION'
+
+      - name: Run rv ruby run (install Ruby)
+        run: wsl -d Ubuntu-24.04 -- ./bin/integration-tests/unix/ruby-run.sh ./target/release/rv
+
+      - name: Run rv ruby list
+        run: wsl -d Ubuntu-24.04 -- ./bin/integration-tests/unix/ruby-list.sh ./target/release/rv
+
+      - name: Run rv ruby find
+        run: wsl -d Ubuntu-24.04 -- ./bin/integration-tests/unix/ruby-find.sh ./target/release/rv
+
+      - name: Run rv ruby pin
+        run: wsl -d Ubuntu-24.04 -- ./bin/integration-tests/unix/ruby-pin.sh ./target/release/rv
+
+      - name: Run rv shell env
+        run: wsl -d Ubuntu-24.04 -- ./bin/integration-tests/unix/shell-env.sh ./target/release/rv
+
+      - name: Run rv cache dir
+        run: wsl -d Ubuntu-24.04 -- ./bin/integration-tests/unix/cache-dir.sh ./target/release/rv
+
+      - name: Run rv ruby uninstall
+        run: wsl -d Ubuntu-24.04 -- ./bin/integration-tests/unix/ruby-uninstall.sh ./target/release/rv
 
   native-windows:
     name: Run on Native Windows
@@ -143,7 +203,12 @@ jobs:
       - name: Build rv
         run: cargo build --release --locked --bin rv
 
-      - name: Run rv ruby run (install Ruby 3.4.4)
+      - name: Run basic rv commands
+        run: |
+          .\target\release\rv.exe --version
+          .\target\release\rv.exe --help
+
+      - name: Run rv ruby run (install Ruby)
         run: .\bin\integration-tests\windows\ruby-run.ps1 .\target\release\rv.exe
 
       - name: Run rv ruby list

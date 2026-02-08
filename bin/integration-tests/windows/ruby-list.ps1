@@ -6,10 +6,10 @@
 
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
+. "$PSScriptRoot\_config.ps1"
+
 $RV = $args[0]
 if (-not $RV) { throw "Usage: ruby-list.ps1 <rv-binary-path>" }
-
-$RUBY_VERSION = "3.4.4"
 
 Write-Host "=== rv ruby list --installed-only ==="
 $list = & $RV ruby list --installed-only | Out-String

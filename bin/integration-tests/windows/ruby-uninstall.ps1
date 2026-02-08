@@ -6,10 +6,10 @@
 
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
+. "$PSScriptRoot\_config.ps1"
+
 $RV = $args[0]
 if (-not $RV) { throw "Usage: ruby-uninstall.ps1 <rv-binary-path>" }
-
-$RUBY_VERSION = "3.4.4"
 
 Write-Host "=== rv ruby uninstall $RUBY_VERSION ==="
 & $RV ruby uninstall $RUBY_VERSION

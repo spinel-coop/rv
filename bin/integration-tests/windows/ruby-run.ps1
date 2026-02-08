@@ -6,10 +6,10 @@
 
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
+. "$PSScriptRoot\_config.ps1"
+
 $RV = $args[0]
 if (-not $RV) { throw "Usage: ruby-run.ps1 <rv-binary-path>" }
-
-$RUBY_VERSION = "3.4.4"
 
 Write-Host "=== rv ruby run $RUBY_VERSION (install + execute) ==="
 $output = & $RV ruby run $RUBY_VERSION -- -e "puts RUBY_DESCRIPTION" | Out-String

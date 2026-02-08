@@ -6,10 +6,10 @@
 
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
+. "$PSScriptRoot\_config.ps1"
+
 $RV = $args[0]
 if (-not $RV) { throw "Usage: ruby-find.ps1 <rv-binary-path>" }
-
-$RUBY_VERSION = "3.4.4"
 
 Write-Host "=== rv ruby find $RUBY_VERSION ==="
 $find = & $RV ruby find $RUBY_VERSION | Out-String
