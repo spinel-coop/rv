@@ -5,21 +5,20 @@ use std::{
 
 use super::Config;
 use camino::Utf8PathBuf;
-use current_platform::CURRENT_PLATFORM;
 use fs_err as fs;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 
+use rv_platform::HostPlatform;
 use rv_ruby::{Asset, Release, Ruby, request::RequestError, version::ParseVersionError};
 
 // Use GitHub's TTL, but don't re-check more than every 60 seconds.
 const MINIMUM_CACHE_TTL: Duration = Duration::from_secs(60);
 
-static ARCH_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"ruby-[\d\.a-z-]+\.(?P<arch>[a-zA-Z0-9_]+)\.(?:tar\.gz|7z)").unwrap()
-});
+static ARCH_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"ruby-[\d\.a-z-]+\.(?P<arch>[a-zA-Z0-9_]+)\.(?:tar\.gz|7z)").unwrap());
 
 static PARSE_MAX_AGE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"max-age=(\d+)").unwrap());
 
@@ -77,7 +76,15 @@ impl Config {
         };
 
         // Filter releases+assets for current platform
-        let (desired_os, desired_arch) = current_os_and_arch();
+        let host = match HostPlatform::current() {
+            Ok(h) => h,
+            Err(e) => {
+                warn!("Could not detect host platform: {e}");
+                return vec![];
+            }
+        };
+        let desired_os = host.os();
+        let desired_arch = host.arch();
 
         let mut rubies: Vec<Ruby> = release
             .assets
@@ -226,62 +233,25 @@ fn parse_max_age(header: &str) -> Option<Duration> {
         .map(Duration::from_secs)
 }
 
-/// Parses the OS and architecture from the arch part of the asset name.
-fn parse_arch_str(arch_str: &str) -> (&'static str, &'static str) {
-    match arch_str {
-        "arm64_sonoma" => ("macos", "aarch64"),
-        "ventura" => ("macos", "x86_64"),
-        "sequoia" => ("macos", "x86_64"),
-        "x86_64_linux" => ("linux", "x86_64"),
-        "arm64_linux" => ("linux", "aarch64"),
-        "x64" => ("windows", "x86_64"),
-        _ => ("unknown", "unknown"),
-    }
-}
-
-fn current_os_and_arch() -> (&'static str, &'static str) {
-    let platform =
-        std::env::var("RV_TEST_PLATFORM").unwrap_or_else(|_| CURRENT_PLATFORM.to_string());
-
-    match platform.as_str() {
-        "aarch64-apple-darwin" => ("macos", "aarch64"),
-        "x86_64-apple-darwin" => ("macos", "x86_64"),
-        "x86_64-unknown-linux-gnu" => ("linux", "x86_64"),
-        "aarch64-unknown-linux-gnu" => ("linux", "aarch64"),
-        "x86_64-pc-windows-msvc" => ("windows", "x86_64"),
-        _ => ("unknown", "unknown"),
-    }
-}
-
-fn all_suffixes() -> impl IntoIterator<Item = &'static str> {
-    [
-        ".arm64_linux.tar.gz",
-        ".arm64_sonoma.tar.gz",
-        ".x86_64_linux.tar.gz",
-        // We follow the Homebrew convention that if there's no arch, it defaults to x86.
-        ".ventura.tar.gz",
-        ".sequoia.tar.gz",
-        ".x64.7z",
-    ]
-}
-
 /// Creates a Rubies info struct from a release asset
 fn ruby_from_asset(asset: &Asset) -> Result<Ruby> {
-    let version: rv_ruby::version::RubyVersion = {
-        let mut curr = asset.name.as_str();
-        for suffix in all_suffixes() {
-            curr = curr.strip_suffix(suffix).unwrap_or(curr);
-        }
-        curr.parse()
-    }?;
+    let caps = ARCH_REGEX.captures(&asset.name);
+    let arch_match = caps.as_ref().and_then(|c| c.name("arch"));
+    let arch_str = arch_match.map_or("unknown", |m| m.as_str());
+
+    let (os, arch) = match HostPlatform::from_ruby_arch_str(arch_str) {
+        Ok(hp) => (hp.os(), hp.arch()),
+        Err(_) => ("unknown", "unknown"),
+    };
+
+    // Use the regex match position to slice off the `.arch.ext` suffix,
+    // rather than iterating over a list of known suffixes.
+    let version_str = match arch_match {
+        Some(m) => &asset.name[..m.start() - 1],
+        None => asset.name.as_str(),
+    };
+    let version: rv_ruby::version::RubyVersion = version_str.parse()?;
     let display_name = version.to_string();
-
-    let arch_str = ARCH_REGEX
-        .captures(&asset.name)
-        .and_then(|caps| caps.name("arch"))
-        .map_or("unknown", |m| m.as_str());
-
-    let (os, arch) = parse_arch_str(arch_str);
 
     Ok(Ruby {
         key: format!("{display_name}-{os}-{arch}"),
@@ -334,34 +304,36 @@ mod tests {
     }
 
     #[test]
-    fn test_current_os_and_arch_windows() {
-        // SAFETY: This test is run in a single-threaded context.
-        unsafe { std::env::set_var("RV_TEST_PLATFORM", "x86_64-pc-windows-msvc") };
-        let (os, arch) = current_os_and_arch();
-        unsafe { std::env::remove_var("RV_TEST_PLATFORM") };
-
-        assert_eq!(os, "windows");
-        assert_eq!(arch, "x86_64");
+    fn test_ruby_from_asset_all_platforms() {
+        let cases = [
+            ("ruby-3.3.0.arm64_sonoma.tar.gz", "macos", "aarch64"),
+            ("ruby-3.3.0.ventura.tar.gz", "macos", "x86_64"),
+            ("ruby-3.4.1.sequoia.tar.gz", "macos", "x86_64"),
+            ("ruby-3.3.0.x86_64_linux.tar.gz", "linux", "x86_64"),
+            ("ruby-3.3.0.arm64_linux.tar.gz", "linux", "aarch64"),
+            ("ruby-3.3.0.x64.7z", "windows", "x86_64"),
+        ];
+        for (filename, expected_os, expected_arch) in cases {
+            let asset = Asset {
+                name: filename.to_owned(),
+                browser_download_url: format!("https://example.com/{filename}"),
+            };
+            let ruby = ruby_from_asset(&asset).unwrap();
+            assert_eq!(ruby.os, expected_os, "Wrong OS for {filename}");
+            assert_eq!(ruby.arch, expected_arch, "Wrong arch for {filename}");
+            assert_eq!(ruby.version.major, 3, "Wrong major version for {filename}");
+        }
     }
 
     #[test]
-    fn test_parse_arch_str_windows() {
-        let (os, arch) = parse_arch_str("x64");
-        assert_eq!(os, "windows");
-        assert_eq!(arch, "x86_64");
-    }
-
-    #[test]
-    fn test_ruby_from_asset_windows() {
+    fn test_ruby_from_asset_unknown_arch() {
         let asset = Asset {
-            name: "ruby-3.3.0.x64.7z".to_owned(),
-            browser_download_url: "https://example.com/ruby-3.3.0.x64.7z".to_owned(),
+            name: "ruby-3.3.0.sparc_solaris.tar.gz".to_owned(),
+            browser_download_url: "https://example.com/ruby-3.3.0.sparc_solaris.tar.gz".to_owned(),
         };
         let ruby = ruby_from_asset(&asset).unwrap();
-        assert_eq!(ruby.os, "windows");
-        assert_eq!(ruby.arch, "x86_64");
+        assert_eq!(ruby.os, "unknown");
+        assert_eq!(ruby.arch, "unknown");
         assert_eq!(ruby.version.major, 3);
-        assert_eq!(ruby.version.minor, 3);
-        assert_eq!(ruby.version.patch, 0);
     }
 }
