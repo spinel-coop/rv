@@ -43,6 +43,13 @@ impl RvTest {
 
         test.env.insert("RV_TEST_EXE".into(), "/tmp/bin/rv".into());
         test.env.insert("HOME".into(), test.temp_home().into());
+        // On Windows, set APPDATA and USERPROFILE so that the Win32
+        // SHGetKnownFolderPath API (used by the `etcetera` crate for data_dir)
+        // resolves to our test home dir instead of the real user profile.
+        // This is the same approach used by uv (Astral's Python package manager).
+        test.env.insert("APPDATA".into(), test.temp_home().into());
+        test.env
+            .insert("USERPROFILE".into(), test.temp_home().into());
         test.env
             .insert("BUNDLE_PATH".into(), test.cwd.join("app").into());
 
@@ -84,7 +91,9 @@ impl RvTest {
     }
 
     pub fn temp_root(&self) -> Utf8PathBuf {
-        self.temp_dir.path().canonicalize_utf8().unwrap()
+        // Use dunce::canonicalize to avoid Windows 8.3 short paths (e.g. RUNNER~1)
+        // and \\?\ UNC prefix that std::fs::canonicalize produces on Windows.
+        Utf8PathBuf::try_from(dunce::canonicalize(self.temp_dir.path()).unwrap()).unwrap()
     }
 
     pub fn enable_cache(&mut self) -> Utf8PathBuf {
@@ -171,7 +180,7 @@ impl RvTest {
         // Winsock can't initialize (error 10106) and all HTTP requests fail.
         // Without COMSPEC, .cmd batch scripts can't be executed.
         #[cfg(windows)]
-        for var in ["SystemRoot", "COMSPEC"] {
+        for var in ["SystemRoot", "SYSTEMDRIVE", "COMSPEC"] {
             if let Ok(val) = std::env::var(var) {
                 cmd.env(var, val);
             }
@@ -501,8 +510,12 @@ impl RvOutput {
             output = output.replace('\\', "/");
         }
 
-        // Remove test root from paths
+        // Remove test root from paths. On Windows, also match the forward-slash
+        // version since we already converted backslashes above.
         output = output.replace(&self.test_root, "/tmp");
+        if cfg!(windows) {
+            output = output.replace(&self.test_root.replace('\\', "/"), "/tmp");
+        }
 
         // Normalize Windows Ruby executable names so snapshots match across platforms.
         // On Windows, create_ruby_dir() creates ruby.cmd (since we can't create ELF/Mach-O

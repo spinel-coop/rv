@@ -29,7 +29,7 @@ fn ruby_executable_names() -> &'static [&'static str] {
 
 /// Find the Ruby executable in a directory's `bin/` subdirectory.
 /// Returns the first matching executable name from [`ruby_executable_names`].
-fn find_ruby_executable(dir: &Utf8Path) -> Option<Utf8PathBuf> {
+pub fn find_ruby_executable(dir: &Utf8Path) -> Option<Utf8PathBuf> {
     let bin_dir = dir.join("bin");
     for name in ruby_executable_names() {
         let path = bin_dir.join(name);

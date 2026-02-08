@@ -73,10 +73,11 @@ impl Config {
 
     /// Generate a cache key for a specific Ruby installation path (used for cache lookup)
     fn ruby_path_cache_key(&self, path: &Utf8Path) -> Result<String, Error> {
-        let bin = path.join("bin").join("ruby");
+        let bin = rv_ruby::find_ruby_executable(path).ok_or_else(|| Error::RubyCacheMiss {
+            ruby_path: path.into(),
+        })?;
 
-        bin.try_exists()
-            .and_then(|_| rv_cache::Timestamp::from_path(bin.as_std_path()))
+        rv_cache::Timestamp::from_path(bin.as_std_path())
             .map(|timestamp| rv_cache::cache_digest((path, timestamp)))
             .map_err(|_| Error::RubyCacheMiss {
                 ruby_path: path.into(),

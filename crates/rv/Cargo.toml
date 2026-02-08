@@ -78,6 +78,7 @@ tabled = "0.20.0"
 insta = { workspace = true }
 tempfile = { workspace = true }
 assert_fs = { workspace = true }
+dunce = "1"
 fs-err = { workspace = true }
 camino-tempfile-ext = { workspace = true }
 mockito = "1.7.1"
