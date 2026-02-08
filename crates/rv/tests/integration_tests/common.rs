@@ -2,6 +2,7 @@ use camino::Utf8PathBuf;
 use camino_tempfile_ext::camino_tempfile::Utf8TempDir;
 use mockito::Mock;
 use rexpect::{reader::Options, session::PtyReplSession};
+use rv_platform::HostPlatform;
 use std::{collections::HashMap, process::Command};
 
 pub struct Shell {
@@ -16,25 +17,29 @@ pub struct RvTest {
     pub env: HashMap<String, String>,
     // For mocking the releases json from Github API
     pub server: mockito::ServerGuard,
+    /// The platform the subprocess sees via `RV_TEST_PLATFORM`.
+    pub platform: HostPlatform,
 }
 
 impl RvTest {
     pub fn new() -> Self {
         let temp_dir = Utf8TempDir::new().expect("Failed to create temporary directory");
         let cwd = temp_dir.path().into();
+        let platform = HostPlatform::MacosAarch64;
 
         let mut test = Self {
             temp_dir,
             cwd,
             env: HashMap::new(),
             server: mockito::Server::new(),
+            platform,
         };
 
         test.env
             .insert("RV_ROOT_DIR".into(), test.temp_root().as_str().into());
         // Set consistent arch/os for cross-platform testing
         test.env
-            .insert("RV_TEST_PLATFORM".into(), "aarch64-apple-darwin".into()); // For mocking current_platform::CURRENT_PLATFORM
+            .insert("RV_TEST_PLATFORM".into(), platform.target_triple().into());
 
         test.env.insert("RV_TEST_EXE".into(), "/tmp/bin/rv".into());
         test.env.insert("HOME".into(), test.temp_home().into());
@@ -73,6 +78,12 @@ impl RvTest {
             .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
         cache_dir
+    }
+
+    pub fn set_platform(&mut self, platform: HostPlatform) {
+        self.platform = platform;
+        self.env
+            .insert("RV_TEST_PLATFORM".into(), platform.target_triple().into());
     }
 
     pub fn temp_home(&self) -> Utf8PathBuf {
@@ -136,16 +147,29 @@ impl RvTest {
 
     /// Mocks the /releases API endpoint. Returns the mock handle
     /// so that tests can optionally assert it was called.
+    ///
+    /// Assets use the archive suffix for `self.platform`, so the mocked
+    /// response matches whatever platform the subprocess is configured for.
     pub fn mock_releases(&mut self, versions: Vec<&str>) -> Mock {
+        self.mock_releases_for_platform(versions, self.platform)
+    }
+
+    /// Mocks the /releases API endpoint with assets for a specific platform.
+    pub fn mock_releases_for_platform(
+        &mut self,
+        versions: Vec<&str>,
+        platform: HostPlatform,
+    ) -> Mock {
         use indoc::formatdoc;
 
+        let suffix = platform.archive_suffix();
         let assets = versions
             .into_iter()
             .map(|v| {
                 formatdoc!(
                     r#"
             {{
-                "name": "ruby-{v}.arm64_sonoma.tar.gz",
+                "name": "ruby-{v}{suffix}",
                 "browser_download_url": "http://..."
             }}"#
                 )
@@ -158,6 +182,45 @@ impl RvTest {
             {{
                 "name": "latest",
                 "assets": [{assets}]
+            }}"#
+        );
+
+        self.server
+            .mock("GET", "/repos/spinel-coop/rv-ruby/releases/latest")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(body)
+            .create()
+    }
+
+    /// Mocks the /releases API endpoint with assets for ALL platforms per version.
+    /// Used by multi-platform list tests to verify per-platform filtering.
+    pub fn mock_releases_all_platforms(&mut self, versions: Vec<&str>) -> Mock {
+        use indoc::formatdoc;
+
+        let assets: Vec<String> = versions
+            .into_iter()
+            .flat_map(|v| {
+                HostPlatform::all().iter().map(move |hp| {
+                    let suffix = hp.archive_suffix();
+                    formatdoc!(
+                        r#"
+            {{
+                "name": "ruby-{v}{suffix}",
+                "browser_download_url": "http://..."
+            }}"#
+                    )
+                })
+            })
+            .collect();
+
+        let assets_str = assets.join(",\n    ");
+
+        let body = formatdoc!(
+            r#"
+            {{
+                "name": "latest",
+                "assets": [{assets_str}]
             }}"#
         );
 
