@@ -1,0 +1,13 @@
+---
+source: crates/rv/tests/integration_tests/shell/init_test.rs
+expression: output.normalized_stdout()
+---
+if (Test-Path Function:\__rv_original_prompt) {
+    Remove-Item Function:\__rv_original_prompt
+}
+Copy-Item Function:\prompt Function:\__rv_original_prompt
+function global:prompt {
+    Invoke-Expression (& '/tmp/bin/rv' shell env powershell)
+    __rv_original_prompt
+}
+Invoke-Expression (& '/tmp/bin/rv' shell env powershell)

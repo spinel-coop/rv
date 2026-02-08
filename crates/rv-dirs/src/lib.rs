@@ -207,8 +207,9 @@ mod test {
 
         // This is typically only a drive (that is, letter and colon) but we
         // allow anything, including a path to the test fixtures...
+        let context_utf8 = Utf8Path::from_path(context.path()).unwrap();
         assert_eq!(
-            locate_system_config_windows(context.path()).unwrap(),
+            locate_system_config_windows(context_utf8).unwrap(),
             context
                 .child("ProgramData")
                 .child("rv")
@@ -218,7 +219,8 @@ mod test {
 
         // This does not have a `ProgramData` child, so contains no config.
         let context = assert_fs::TempDir::new()?;
-        assert_eq!(locate_system_config_windows(context.path()), None);
+        let context_utf8 = Utf8Path::from_path(context.path()).unwrap();
+        assert_eq!(locate_system_config_windows(context_utf8), None);
 
         Ok(())
     }

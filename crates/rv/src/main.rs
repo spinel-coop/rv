@@ -59,7 +59,14 @@ const STYLES: Styles = Styles::styled()
 #[command(disable_help_flag = true)]
 struct Cli {
     /// Ruby directories to search for installations
-    #[arg(long = "ruby-dir", env = "RUBIES_PATH", value_delimiter = ':')]
+    #[cfg_attr(
+        not(windows),
+        arg(long = "ruby-dir", env = "RUBIES_PATH", value_delimiter = ':')
+    )]
+    #[cfg_attr(
+        windows,
+        arg(long = "ruby-dir", env = "RUBIES_PATH", value_delimiter = ';')
+    )]
     ruby_dir: Vec<Utf8PathBuf>,
 
     #[command(flatten)]

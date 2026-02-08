@@ -372,6 +372,8 @@ mod tests {
         let expected_release = "1.19.0-aarch64-linux-gnu";
         #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
         let expected_release = "1.19.0-x86_64-linux-gnu";
+        #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+        let expected_release = "1.19.0-x64-mingw-ucrt";
 
         assert_eq!(
             actual_parsed_response

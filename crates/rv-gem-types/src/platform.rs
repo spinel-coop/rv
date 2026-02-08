@@ -59,25 +59,23 @@ impl Platform {
             .replace("-pc", "")
             .replace("-apple", "")
             // rubygems uses arm64 in macOS instead of aarch64
-            .replace("aarch64-darwin", "arm64-darwin");
+            .replace("aarch64-darwin", "arm64-darwin")
+            // Rust targets Windows as `x86_64-pc-windows-msvc` (→ `x86_64-windows-msvc`
+            // after vendor stripping above). RubyGems uses `x64-mingw-ucrt` for modern
+            // Windows Ruby (RubyInstaller 3.1.0+, which switched from mingw32 to UCRT).
+            // See: https://rubyinstaller.org/2021/12/31/rubyinstaller-3.1.0-1-released.html
+            .replace("x86_64-windows-msvc", "x64-mingw-ucrt");
 
         Self::new(rubygems_platform).expect("Could not parse current platform")
     }
 
     pub fn local_precompiled_ruby_arch() -> Result<String, PlatformError> {
-        let result = match CURRENT_PLATFORM {
-            "aarch64-apple-darwin" => "arm64_sonoma",
-            "x86_64-apple-darwin" => "ventura",
-            "x86_64-unknown-linux-gnu" => "x86_64_linux",
-            "aarch64-unknown-linux-gnu" => "arm64_linux",
-            other => {
-                return Err(PlatformError::UnsupportedPlatform {
-                    platform: other.to_string(),
-                });
-            }
-        };
-
-        Ok(result.to_string())
+        use rv_platform::HostPlatform;
+        HostPlatform::current()
+            .map(|hp| hp.ruby_arch_str().to_string())
+            .map_err(|e| PlatformError::UnsupportedPlatform {
+                platform: e.platform,
+            })
     }
 
     pub fn ruby() -> Self {

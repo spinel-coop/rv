@@ -249,7 +249,9 @@ pub fn env_with_path_for(
         }
 
         // Set MANPATH so `man ruby`, `man irb`, etc. work correctly.
+        // MANPATH is a Unix concept — Windows has no man page system.
         // A trailing colon means "also search system man directories".
+        #[cfg(not(windows))]
         if let Some(man_path) = ruby.man_path() {
             let existing = env::var("MANPATH").unwrap_or_default();
             insert("MANPATH", format!("{}:{}", man_path, existing));

@@ -1931,6 +1931,8 @@ end"#;
         let expected = ("linux", "x86_64");
         #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
         let expected = ("linux", "aarch64");
+        #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+        let expected = ("mingw", "x64");
         let actual = Platform::local();
         let Platform::Specific {
             cpu: actual_cpu,
@@ -2062,6 +2064,10 @@ SHA512:
         let expected_version = "24.1.0.0-aarch64-linux";
         #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
         let expected_version = "24.1.0.0-x86_64-linux";
+        // No Windows-specific libv8-node variant in the fixture, so the generic
+        // (ruby platform) variant is selected.
+        #[cfg(target_os = "windows")]
+        let expected_version = "24.1.0.0";
 
         assert_eq!(
             libv8.gem_version.version, expected_version,

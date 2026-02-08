@@ -1,0 +1,13 @@
+---
+source: crates/rv/tests/integration_tests/shell/env_test.rs
+expression: output.normalized_stdout()
+---
+Remove-Item Env:\RUBY_ROOT -ErrorAction SilentlyContinue
+Remove-Item Env:\RUBY_ENGINE -ErrorAction SilentlyContinue
+Remove-Item Env:\RUBY_VERSION -ErrorAction SilentlyContinue
+Remove-Item Env:\RUBYOPT -ErrorAction SilentlyContinue
+Remove-Item Env:\GEM_ROOT -ErrorAction SilentlyContinue
+Remove-Item Env:\GEM_HOME -ErrorAction SilentlyContinue
+Remove-Item Env:\GEM_PATH -ErrorAction SilentlyContinue
+Remove-Item Env:\MANPATH -ErrorAction SilentlyContinue
+$env:PATH = ""

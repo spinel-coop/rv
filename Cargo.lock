@@ -2315,6 +2315,7 @@ dependencies = [
  "rv-gem-specification-yaml",
  "rv-gem-types",
  "rv-lockfile",
+ "rv-platform",
  "rv-ruby",
  "rv-version",
  "saphyr",
@@ -2416,6 +2417,7 @@ dependencies = [
  "insta",
  "once_cell",
  "regex",
+ "rv-platform",
  "rv-version",
  "serde",
  "thiserror",
@@ -2434,6 +2436,14 @@ dependencies = [
  "serde",
  "thiserror",
  "winnow",
+]
+
+[[package]]
+name = "rv-platform"
+version = "0.1.0"
+dependencies = [
+ "current_platform",
+ "thiserror",
 ]
 
 [[package]]

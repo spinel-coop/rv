@@ -44,6 +44,7 @@ rv-cache = { workspace = true, features = ["clap"] }
 rv-version = { workspace = true }
 rv-gem-specification-yaml = { workspace = true }
 rv-gem-types = { workspace = true }
+rv-platform = { workspace = true }
 rv-ruby = { workspace = true }
 rv-dirs = { workspace = true }
 rv-lockfile = { workspace = true }
@@ -81,6 +82,7 @@ fs-err = { workspace = true }
 camino-tempfile-ext = { workspace = true }
 mockito = "1.7.1"
 pretty_assertions = { workspace = true }
+[target.'cfg(unix)'.dev-dependencies]
 rexpect = "0.6.3"
 
 [lints]

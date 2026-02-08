@@ -1,9 +1,10 @@
 use camino::Utf8PathBuf;
 use camino_tempfile_ext::camino_tempfile::Utf8TempDir;
 use mockito::Mock;
-use rexpect::{reader::Options, session::PtyReplSession};
+use rv_platform::HostPlatform;
 use std::{collections::HashMap, process::Command};
 
+#[cfg(unix)]
 pub struct Shell {
     pub name: &'static str,
     pub startup_flag: &'static str,
@@ -16,25 +17,29 @@ pub struct RvTest {
     pub env: HashMap<String, String>,
     // For mocking the releases json from Github API
     pub server: mockito::ServerGuard,
+    /// The platform the subprocess sees via `RV_TEST_PLATFORM`.
+    pub platform: HostPlatform,
 }
 
 impl RvTest {
     pub fn new() -> Self {
         let temp_dir = Utf8TempDir::new().expect("Failed to create temporary directory");
         let cwd = temp_dir.path().into();
+        let platform = HostPlatform::MacosAarch64;
 
         let mut test = Self {
             temp_dir,
             cwd,
             env: HashMap::new(),
             server: mockito::Server::new(),
+            platform,
         };
 
         test.env
             .insert("RV_ROOT_DIR".into(), test.temp_root().as_str().into());
         // Set consistent arch/os for cross-platform testing
         test.env
-            .insert("RV_TEST_PLATFORM".into(), "aarch64-apple-darwin".into()); // For mocking current_platform::CURRENT_PLATFORM
+            .insert("RV_TEST_PLATFORM".into(), platform.target_triple().into());
 
         test.env.insert("RV_TEST_EXE".into(), "/tmp/bin/rv".into());
         test.env.insert("HOME".into(), test.temp_home().into());
@@ -53,6 +58,14 @@ impl RvTest {
         test.env.insert(
             "RV_INSTALL_URL".into(),
             format!("{}/{}", test.server.url(), "latest/download"),
+        );
+        test.env.insert(
+            "RV_WINDOWS_LIST_URL".into(),
+            format!(
+                "{}/{}",
+                test.server.url(),
+                "repos/oneclick/rubyinstaller2/releases"
+            ),
         );
 
         // Disable caching for tests by default
@@ -75,6 +88,12 @@ impl RvTest {
         cache_dir
     }
 
+    pub fn set_platform(&mut self, platform: HostPlatform) {
+        self.platform = platform;
+        self.env
+            .insert("RV_TEST_PLATFORM".into(), platform.target_triple().into());
+    }
+
     pub fn temp_home(&self) -> Utf8PathBuf {
         self.temp_root().join("home")
     }
@@ -95,7 +114,14 @@ impl RvTest {
         self.command(env!("CARGO_BIN_EXE_rv"))
     }
 
-    pub fn make_session(&self, shell: Shell) -> Result<PtyReplSession, Box<dyn std::error::Error>> {
+    #[cfg(unix)]
+    pub fn make_session(
+        &self,
+        shell: Shell,
+    ) -> Result<rexpect::session::PtyReplSession, Box<dyn std::error::Error>> {
+        use rexpect::reader::Options;
+        use rexpect::session::PtyReplSession;
+
         let mut cmd = self.command(shell.name);
         cmd.arg(shell.startup_flag);
         cmd.env("TERM", "xterm-256color").env_remove("RV_TEST_EXE");
@@ -136,16 +162,29 @@ impl RvTest {
 
     /// Mocks the /releases API endpoint. Returns the mock handle
     /// so that tests can optionally assert it was called.
+    ///
+    /// Assets use the archive suffix for `self.platform`, so the mocked
+    /// response matches whatever platform the subprocess is configured for.
     pub fn mock_releases(&mut self, versions: Vec<&str>) -> Mock {
+        self.mock_releases_for_platform(versions, self.platform)
+    }
+
+    /// Mocks the /releases API endpoint with assets for a specific platform.
+    pub fn mock_releases_for_platform(
+        &mut self,
+        versions: Vec<&str>,
+        platform: HostPlatform,
+    ) -> Mock {
         use indoc::formatdoc;
 
+        let suffix = platform.archive_suffix();
         let assets = versions
             .into_iter()
             .map(|v| {
                 formatdoc!(
                     r#"
             {{
-                "name": "ruby-{v}.arm64_sonoma.tar.gz",
+                "name": "ruby-{v}{suffix}",
                 "browser_download_url": "http://..."
             }}"#
                 )
@@ -163,6 +202,87 @@ impl RvTest {
 
         self.server
             .mock("GET", "/repos/spinel-coop/rv-ruby/releases/latest")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(body)
+            .create()
+    }
+
+    /// Mocks the rv-ruby /releases endpoint with assets for all NON-WINDOWS platforms.
+    ///
+    /// Windows uses a separate endpoint (RubyInstaller2), so Windows assets
+    /// should NOT appear in the rv-ruby release. Use `mock_windows_releases()`
+    /// to mock the Windows endpoint.
+    pub fn mock_releases_all_platforms(&mut self, versions: Vec<&str>) -> Mock {
+        use indoc::formatdoc;
+
+        let assets: Vec<String> = versions
+            .into_iter()
+            .flat_map(|v| {
+                HostPlatform::all()
+                    .iter()
+                    .filter(|hp| !hp.is_windows())
+                    .map(move |hp| {
+                        let suffix = hp.archive_suffix();
+                        formatdoc!(
+                            r#"
+            {{
+                "name": "ruby-{v}{suffix}",
+                "browser_download_url": "http://..."
+            }}"#
+                        )
+                    })
+            })
+            .collect();
+
+        let assets_str = assets.join(",\n    ");
+
+        let body = formatdoc!(
+            r#"
+            {{
+                "name": "latest",
+                "assets": [{assets_str}]
+            }}"#
+        );
+
+        self.server
+            .mock("GET", "/repos/spinel-coop/rv-ruby/releases/latest")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(body)
+            .create()
+    }
+
+    /// Mocks the RubyInstaller2 /releases endpoint for Windows.
+    ///
+    /// Returns an array of releases (one per version), each with a
+    /// `rubyinstaller-{v}-1-x64.7z` asset. This matches the real
+    /// RubyInstaller2 release structure.
+    pub fn mock_windows_releases(&mut self, versions: Vec<&str>) -> Mock {
+        use indoc::formatdoc;
+
+        let releases: Vec<String> = versions
+            .iter()
+            .map(|v| {
+                formatdoc!(
+                    r#"
+            {{
+                "name": "RubyInstaller-{v}-1",
+                "assets": [
+                    {{
+                        "name": "rubyinstaller-{v}-1-x64.7z",
+                        "browser_download_url": "http://..."
+                    }}
+                ]
+            }}"#
+                )
+            })
+            .collect();
+
+        let body = format!("[{}]", releases.join(",\n"));
+
+        self.server
+            .mock("GET", "/repos/oneclick/rubyinstaller2/releases")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(body)
@@ -233,28 +353,43 @@ impl RvTest {
             "ruby"
         };
 
-        // Create a mock ruby executable that outputs the expected format for rv-ruby
-        let ruby_exe = bin_dir.join("ruby");
-        let mock_script = format!(
-            r#"#!/bin/bash
-
-echo "{engine}"
-echo "{version}"
-echo "aarch64-darwin23"
-echo "aarch64"
-echo "darwin23"
-echo ""
-"#
-        );
-        std::fs::write(&ruby_exe, mock_script).expect("Failed to create ruby executable");
-
-        // Make it executable on Unix systems
+        // Create a mock ruby executable that outputs the expected format for rv-ruby.
+        // On Unix, this is a bash script at `bin/ruby`.
+        // On Windows, this is a batch script at `bin/ruby.cmd` (since we can't create
+        // a real .exe from tests, and rv-ruby checks for .cmd as a fallback).
         #[cfg(unix)]
         {
+            let ruby_exe = bin_dir.join("ruby");
+            let mock_script = format!(
+                "#!/bin/bash\n\
+                 echo \"{engine}\"\n\
+                 echo \"{version}\"\n\
+                 echo \"aarch64-darwin23\"\n\
+                 echo \"aarch64\"\n\
+                 echo \"darwin23\"\n\
+                 echo \"\"\n"
+            );
+            std::fs::write(&ruby_exe, mock_script).expect("Failed to create ruby executable");
+
             use std::os::unix::fs::PermissionsExt;
             let mut perms = std::fs::metadata(&ruby_exe).unwrap().permissions();
             perms.set_mode(0o755);
             std::fs::set_permissions(&ruby_exe, perms).unwrap();
+        }
+
+        #[cfg(windows)]
+        {
+            let ruby_cmd = bin_dir.join("ruby.cmd");
+            let mock_script = format!(
+                "@echo off\r\n\
+                 echo {engine}\r\n\
+                 echo {version}\r\n\
+                 echo aarch64-darwin23\r\n\
+                 echo aarch64\r\n\
+                 echo darwin23\r\n\
+                 echo.\r\n"
+            );
+            std::fs::write(&ruby_cmd, mock_script).expect("Failed to create ruby executable");
         }
 
         ruby_dir
@@ -341,7 +476,17 @@ impl RvOutput {
         }
 
         // Remove test root from paths
-        output.replace(&self.test_root, "/tmp")
+        output = output.replace(&self.test_root, "/tmp");
+
+        // Normalize Windows Ruby executable names so snapshots match across platforms.
+        // On Windows, create_ruby_dir() creates ruby.cmd (since we can't create ELF/Mach-O
+        // executables from tests), so list output shows bin/ruby.cmd instead of bin/ruby.
+        if cfg!(windows) {
+            output = output.replace("/ruby.cmd", "/ruby");
+            output = output.replace("/ruby.exe", "/ruby");
+        }
+
+        output
     }
 
     /// Normalize stderr for cross-platform snapshot testing

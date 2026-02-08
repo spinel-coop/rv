@@ -2,7 +2,7 @@ pub mod engine;
 pub mod request;
 pub mod version;
 
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rv_cache::{CacheKey, CacheKeyHasher};
@@ -16,11 +16,28 @@ use tracing::instrument;
 
 use crate::version::RubyVersion;
 
-/// Returns the Ruby executable name for the current platform.
-/// On Windows, Ruby is distributed as `ruby.exe` (from RubyInstaller2).
+/// Returns the possible Ruby executable names for the current platform, in priority order.
+/// On Windows, checks `ruby.exe` (standard RubyInstaller2) then `ruby.cmd` (batch wrapper).
 /// On Unix systems (macOS, Linux), it's just `ruby`.
-fn ruby_executable_name() -> &'static str {
-    if cfg!(windows) { "ruby.exe" } else { "ruby" }
+fn ruby_executable_names() -> &'static [&'static str] {
+    if cfg!(windows) {
+        &["ruby.exe", "ruby.cmd"]
+    } else {
+        &["ruby"]
+    }
+}
+
+/// Find the Ruby executable in a directory's `bin/` subdirectory.
+/// Returns the first matching executable name from [`ruby_executable_names`].
+fn find_ruby_executable(dir: &Utf8Path) -> Option<Utf8PathBuf> {
+    let bin_dir = dir.join("bin");
+    for name in ruby_executable_names() {
+        let path = bin_dir.join(name);
+        if path.exists() {
+            return Some(path);
+        }
+    }
+    None
 }
 
 static RUBY_DESCRIPTION_REGEX: Lazy<Regex> = Lazy::new(|| {
@@ -79,10 +96,7 @@ impl Ruby {
         }
 
         // Check for Ruby executable
-        let ruby_bin = dir.join("bin").join(ruby_executable_name());
-        if !ruby_bin.exists() {
-            return Err(RubyError::NoRubyExecutable);
-        }
+        let ruby_bin = find_ruby_executable(&dir).ok_or(RubyError::NoRubyExecutable)?;
 
         let symlink = find_symlink_target(&ruby_bin);
 
@@ -98,7 +112,7 @@ impl Ruby {
 
     /// Check if this Ruby installation is valid
     pub fn is_valid(&self) -> bool {
-        self.executable_path().exists()
+        find_ruby_executable(&self.path).is_some()
     }
 
     /// Get display name for this Ruby
@@ -106,9 +120,11 @@ impl Ruby {
         self.version.to_string()
     }
 
-    /// Get the path to the Ruby executable for display purposes
+    /// Get the path to the Ruby executable.
+    /// Checks for the first matching name from [`ruby_executable_names`].
     pub fn executable_path(&self) -> Utf8PathBuf {
-        self.bin_path().join(ruby_executable_name())
+        find_ruby_executable(&self.path)
+            .unwrap_or_else(|| self.bin_path().join(ruby_executable_names()[0]))
     }
 
     pub fn bin_path(&self) -> Utf8PathBuf {

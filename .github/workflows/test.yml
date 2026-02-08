@@ -42,9 +42,10 @@ jobs:
       matrix:
         runs-on:
           - ubuntu-latest # x86
-          - macos-latest # xarm
-          - ubuntu-24.04-arm #arm
+          - macos-latest # arm
+          - ubuntu-24.04-arm # arm
           - macos-15-intel # x86
+          - windows-latest # x86
 
     steps:
       - name: Check out repo
@@ -63,5 +64,10 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Build tests
+        shell: bash
+        run: cargo nextest run --no-run
+
       - name: Run tests
+        shell: bash
         run: ./bin/test
