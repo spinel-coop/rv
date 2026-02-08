@@ -12,7 +12,7 @@ pub struct UnsupportedPlatformError {
 /// Using an enum with no wildcard fallback ensures the compiler enforces
 /// exhaustive handling. Adding a new platform variant (e.g., `WindowsAarch64`)
 /// will produce compiler errors at every call site until all methods handle it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum HostPlatform {
     MacosAarch64,
     MacosX86_64,
@@ -106,6 +106,10 @@ impl HostPlatform {
     }
 
     /// All supported platforms.
+    ///
+    /// **Maintainer note:** When adding a new variant, add it here too.
+    /// The exhaustive matches in every other method will force a compiler
+    /// error when you add a variant, bringing you into this file.
     pub fn all() -> &'static [Self] {
         &[
             Self::MacosAarch64,
@@ -128,8 +132,14 @@ impl HostPlatform {
     }
 
     /// The full archive suffix for this platform (e.g., `".arm64_sonoma.tar.gz"`).
-    pub fn archive_suffix(&self) -> String {
-        format!(".{}.{}", self.ruby_arch_str(), self.archive_ext())
+    pub fn archive_suffix(&self) -> &'static str {
+        match self {
+            Self::MacosAarch64 => ".arm64_sonoma.tar.gz",
+            Self::MacosX86_64 => ".ventura.tar.gz",
+            Self::LinuxX86_64 => ".x86_64_linux.tar.gz",
+            Self::LinuxAarch64 => ".arm64_linux.tar.gz",
+            Self::WindowsX86_64 => ".x64.7z",
+        }
     }
 }
 
@@ -246,8 +256,15 @@ mod tests {
     }
 
     #[test]
-    fn test_all_returns_five_variants() {
-        assert_eq!(HostPlatform::all().len(), 5);
+    fn test_all_has_no_duplicates_and_round_trips() {
+        let all = HostPlatform::all();
+        // If you add a variant, update all() — this catches duplicates and
+        // verifies every entry is a valid, distinct platform.
+        let mut seen = std::collections::HashSet::new();
+        for hp in all {
+            assert!(seen.insert(hp), "Duplicate in all(): {hp:?}");
+            assert_eq!(HostPlatform::from_target_triple(hp.target_triple()).unwrap(), *hp);
+        }
     }
 
     #[test]
