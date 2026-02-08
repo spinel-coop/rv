@@ -106,7 +106,7 @@ pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
         .iter()
         .filter_map(|(always_include, path)| {
             let join = root.join(path.strip_prefix("/").unwrap_or(path));
-            join.canonicalize_utf8()
+            rv_dirs::canonicalize_utf8(&join)
                 .ok()
                 .or(always_include.then_some(path.into()))
         })

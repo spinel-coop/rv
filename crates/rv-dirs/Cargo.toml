@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 camino = { workspace = true }
+dunce = { workspace = true }
 etcetera = { workspace = true }
 tracing = { workspace = true }
 

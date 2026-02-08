@@ -190,7 +190,7 @@ impl Cache {
         }
 
         Ok(Self {
-            root: root.canonicalize_utf8().map_err(io::Error::other)?,
+            root: rv_dirs::canonicalize_utf8(root)?,
             ..self
         })
     }

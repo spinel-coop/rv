@@ -2367,6 +2367,7 @@ version = "0.1.0"
 dependencies = [
  "assert_fs",
  "camino",
+ "dunce",
  "etcetera",
  "fs-err",
  "indoc",

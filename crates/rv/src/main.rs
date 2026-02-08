@@ -104,7 +104,7 @@ impl Cli {
         } else {
             self.ruby_dir
                 .iter()
-                .map(|path: &Utf8PathBuf| Ok(root.join(path.canonicalize_utf8()?)))
+                .map(|path: &Utf8PathBuf| Ok(root.join(rv_dirs::canonicalize_utf8(path)?)))
                 .collect::<Result<Vec<_>>>()?
         };
         let ruby_dirs: IndexSet<Utf8PathBuf> = ruby_dirs.into_iter().collect();

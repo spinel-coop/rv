@@ -39,7 +39,7 @@ pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
     let mut cmd_args = Vec::from(cmd_args);
     let mut ruby_version = None;
 
-    let invocation = if script.canonicalize_utf8()?.exists() {
+    let invocation = if rv_dirs::canonicalize_utf8(&script)?.exists() {
         let content = std::fs::read_to_string(&script)?;
         if let Some(metadata) = script_metadata::parse(&content) {
             if let Some(ref version) = metadata.requires_ruby {

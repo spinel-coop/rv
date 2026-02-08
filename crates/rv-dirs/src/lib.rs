@@ -1,7 +1,19 @@
-use std::{env, ffi::OsString};
+use std::{env, ffi::OsString, io};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use etcetera::BaseStrategy;
+
+/// Canonicalize a path without the Windows `\\?\` extended-length prefix.
+///
+/// On Windows, [`std::fs::canonicalize`] returns paths with the `\\?\` prefix,
+/// which breaks `cmd.exe`, many Windows tools, and string-based path comparisons.
+/// This function uses [`dunce::canonicalize`] to return clean canonical paths
+/// on all platforms (following the same pattern as uv's `simple_canonicalize`).
+pub fn canonicalize_utf8(path: impl AsRef<Utf8Path>) -> io::Result<Utf8PathBuf> {
+    dunce::canonicalize(path.as_ref()).and_then(|p| {
+        Utf8PathBuf::try_from(p).map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))
+    })
+}
 
 /// Returns an appropriate user-home directory, or the system temporary directory if the platform
 /// does not have user home directories
