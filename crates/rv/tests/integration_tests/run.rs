@@ -9,6 +9,7 @@ impl RvTest {
         self.rv(&run_args)
     }
 
+    #[allow(dead_code)]
     pub fn script_run_with_ruby(&self, ruby: &str, script: &str, args: &[&str]) -> RvOutput {
         let mut run_args = vec!["run", "--ruby", ruby, script];
         if !args.is_empty() {

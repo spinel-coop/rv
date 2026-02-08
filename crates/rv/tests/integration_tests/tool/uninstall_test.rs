@@ -1,7 +1,9 @@
 use crate::common::{RvOutput, RvTest};
+#[cfg(unix)]
 use fs_err as fs;
 
 impl RvTest {
+    #[allow(dead_code)]
     pub fn tool_uninstall(&mut self, args: &[&str]) -> RvOutput {
         self.rv(&[&["tool", "uninstall"], args].concat())
     }

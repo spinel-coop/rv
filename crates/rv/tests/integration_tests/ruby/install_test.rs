@@ -1,6 +1,7 @@
 use crate::common::RvTest;
 use rv_platform::HostPlatform;
 use std::fs;
+#[cfg(unix)]
 use std::process::Command;
 
 #[test]

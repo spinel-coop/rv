@@ -1,6 +1,7 @@
 #[cfg(unix)]
 use fs_err as fs;
 
+#[cfg(unix)]
 use crate::common::{RvOutput, RvTest};
 #[cfg(unix)]
 use owo_colors::OwoColorize;

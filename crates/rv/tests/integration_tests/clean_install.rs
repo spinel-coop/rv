@@ -1,3 +1,4 @@
+#[cfg(unix)]
 use crate::common::{RvOutput, RvTest};
 
 // ci() removes RV_TEST_PLATFORM so the subprocess detects native platform and
