@@ -59,7 +59,12 @@ impl Platform {
             .replace("-pc", "")
             .replace("-apple", "")
             // rubygems uses arm64 in macOS instead of aarch64
-            .replace("aarch64-darwin", "arm64-darwin");
+            .replace("aarch64-darwin", "arm64-darwin")
+            // Rust targets Windows as `x86_64-pc-windows-msvc` (→ `x86_64-windows-msvc`
+            // after vendor stripping above). RubyGems uses `x64-mingw-ucrt` for modern
+            // Windows Ruby (RubyInstaller 3.1.0+, which switched from mingw32 to UCRT).
+            // See: https://rubyinstaller.org/2021/12/31/rubyinstaller-3.1.0-1-released.html
+            .replace("x86_64-windows-msvc", "x64-mingw-ucrt");
 
         Self::new(rubygems_platform).expect("Could not parse current platform")
     }
