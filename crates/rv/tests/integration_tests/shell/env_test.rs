@@ -130,14 +130,18 @@ fn test_shell_env_with_ruby_and_xdg_compatible_gem_path() {
     hash -r
     ");
 
+    // On Windows, RUBY_ROOT / GEM_HOME / GEM_PATH get single-quoted because the
+    // pre-normalization Windows path contains `C:` — the colon triggers quoting by
+    // shell_escape::unix::escape(). After test-root replacement the colon is gone
+    // but the quotes remain. This is semantically correct for bash.
     #[cfg(windows)]
     assert_snapshot!(stdout, @r"
     unset RUBYOPT GEM_ROOT MANPATH
-    export RUBY_ROOT=/tmp/home/.local/share/rv/rubies/ruby-3.3.5
+    export RUBY_ROOT='/tmp/home/.local/share/rv/rubies/ruby-3.3.5'
     export RUBY_ENGINE=ruby
     export RUBY_VERSION=3.3.5
-    export GEM_HOME=/tmp/home/.local/share/rv/gems/ruby/3.3.5
-    export GEM_PATH=/tmp/home/.local/share/rv/gems/ruby/3.3.5
+    export GEM_HOME='/tmp/home/.local/share/rv/gems/ruby/3.3.5'
+    export GEM_PATH='/tmp/home/.local/share/rv/gems/ruby/3.3.5'
     export PATH='/tmp/home/.local/share/rv/gems/ruby/3.3.5/bin:/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin:/tmp/bin'
     hash -r
     ");
@@ -184,11 +188,11 @@ fn test_shell_env_with_ruby_and_legacy_gem_path() {
     #[cfg(windows)]
     assert_snapshot!(stdout, @r"
     unset RUBYOPT GEM_ROOT MANPATH
-    export RUBY_ROOT=/tmp/home/.local/share/rv/rubies/ruby-3.3.5
+    export RUBY_ROOT='/tmp/home/.local/share/rv/rubies/ruby-3.3.5'
     export RUBY_ENGINE=ruby
     export RUBY_VERSION=3.3.5
-    export GEM_HOME=/tmp/home/.gem/ruby/3.3.5
-    export GEM_PATH=/tmp/home/.gem/ruby/3.3.5
+    export GEM_HOME='/tmp/home/.gem/ruby/3.3.5'
+    export GEM_PATH='/tmp/home/.gem/ruby/3.3.5'
     export PATH='/tmp/home/.gem/ruby/3.3.5/bin:/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin:/tmp/bin'
     hash -r
     ");
