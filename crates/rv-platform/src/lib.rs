@@ -219,7 +219,9 @@ mod tests {
     #[test]
     fn test_archive_ext() {
         assert_eq!(HostPlatform::MacosAarch64.archive_ext(), "tar.gz");
+        assert_eq!(HostPlatform::MacosX86_64.archive_ext(), "tar.gz");
         assert_eq!(HostPlatform::LinuxX86_64.archive_ext(), "tar.gz");
+        assert_eq!(HostPlatform::LinuxAarch64.archive_ext(), "tar.gz");
         assert_eq!(HostPlatform::WindowsX86_64.archive_ext(), "7z");
     }
 
@@ -263,7 +265,10 @@ mod tests {
         let mut seen = std::collections::HashSet::new();
         for hp in all {
             assert!(seen.insert(hp), "Duplicate in all(): {hp:?}");
-            assert_eq!(HostPlatform::from_target_triple(hp.target_triple()).unwrap(), *hp);
+            assert_eq!(
+                HostPlatform::from_target_triple(hp.target_triple()).unwrap(),
+                *hp
+            );
         }
     }
 
@@ -273,6 +278,26 @@ mod tests {
             HostPlatform::MacosAarch64.archive_suffix(),
             ".arm64_sonoma.tar.gz"
         );
+        assert_eq!(
+            HostPlatform::MacosX86_64.archive_suffix(),
+            ".ventura.tar.gz"
+        );
+        assert_eq!(
+            HostPlatform::LinuxX86_64.archive_suffix(),
+            ".x86_64_linux.tar.gz"
+        );
+        assert_eq!(
+            HostPlatform::LinuxAarch64.archive_suffix(),
+            ".arm64_linux.tar.gz"
+        );
         assert_eq!(HostPlatform::WindowsX86_64.archive_suffix(), ".x64.7z");
+    }
+
+    #[test]
+    fn test_round_trip_ruby_arch_str() {
+        for hp in HostPlatform::all() {
+            let round_tripped = HostPlatform::from_ruby_arch_str(hp.ruby_arch_str()).unwrap();
+            assert_eq!(*hp, round_tripped);
+        }
     }
 }
