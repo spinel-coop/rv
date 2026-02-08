@@ -77,6 +77,29 @@ jobs:
           ./target/release/rv --help
           ./target/release/rv ruby run 3.4.7 -- -e 'puts RUBY_DESCRIPTION'
 
+  macos:
+    name: Run on macOS
+    needs: lint
+    runs-on: macos-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build rv
+        run: ./bin/build
+
+      - name: Test rv installs and runs ruby
+        run: |
+          ./target/release/rv --version
+          ./target/release/rv --help
+          ./target/release/rv ruby run 3.4.7 -- -e 'puts RUBY_DESCRIPTION'
+
   wsl-windows:
     name: Run on WSL (Windows)
     needs: lint
