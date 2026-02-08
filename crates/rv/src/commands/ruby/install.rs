@@ -2,7 +2,6 @@ use anstream::println;
 use bytesize::ByteSize;
 use camino::{Utf8Path, Utf8PathBuf};
 use core::panic;
-use current_platform::CURRENT_PLATFORM;
 use futures_util::StreamExt;
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
@@ -12,6 +11,7 @@ use tokio::io::AsyncWriteExt;
 use tracing::{debug, info_span};
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 
+use rv_platform::HostPlatform;
 use rv_ruby::{request::RubyRequest, version::RubyVersion};
 
 use crate::config::Config;
@@ -42,7 +42,7 @@ pub enum Error {
     #[error("Failed to unpack archive path {0}")]
     InvalidTarballPath(PathBuf),
     #[error(transparent)]
-    UnsupportedPlatform(#[from] rv_gem_types::platform::PlatformError),
+    UnsupportedPlatform(#[from] rv_platform::UnsupportedPlatformError),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -114,8 +114,9 @@ async fn download_and_extract_remote_tarball(
     version: &str,
     progress: &WorkProgress,
 ) -> Result<()> {
-    let url = ruby_url(version)?;
-    let archive_path = archive_cache_path(config, &url)?;
+    let host = HostPlatform::current()?;
+    let url = ruby_url(version, &host);
+    let archive_path = archive_cache_path(config, &url, &host);
 
     let cache_dir = archive_path.parent().unwrap();
     if !cache_dir.exists() {
@@ -128,10 +129,10 @@ async fn download_and_extract_remote_tarball(
             archive_path.cyan()
         );
     } else {
-        download_ruby_archive(config, &url, &archive_path, version, progress).await?;
+        download_ruby_archive(config, &url, &archive_path, version, progress, &host).await?;
     }
 
-    extract_ruby_archive(&archive_path, install_dir, version)?;
+    extract_ruby_archive(&archive_path, install_dir, version, &host)?;
 
     Ok(())
 }
@@ -142,7 +143,8 @@ async fn extract_local_ruby_archive(
     install_dir: &Utf8PathBuf,
     version: &str,
 ) -> Result<()> {
-    extract_ruby_archive(Utf8Path::new(&archive_path), install_dir, version)?;
+    let host = HostPlatform::current()?;
+    extract_ruby_archive(Utf8Path::new(&archive_path), install_dir, version, &host)?;
 
     Ok(())
 }
@@ -152,62 +154,46 @@ fn valid_archive_exists(path: &Utf8Path) -> bool {
     fs_err::metadata(path).is_ok_and(|m| m.is_file() && m.len() > 0)
 }
 
-/// Returns (arch_string, file_extension) for the current platform
-fn platform_info() -> Result<(&'static str, &'static str)> {
-    match CURRENT_PLATFORM {
-        "aarch64-apple-darwin" => Ok(("arm64_sonoma", "tar.gz")),
-        "x86_64-apple-darwin" => Ok(("ventura", "tar.gz")),
-        "x86_64-unknown-linux-gnu" => Ok(("x86_64_linux", "tar.gz")),
-        "aarch64-unknown-linux-gnu" => Ok(("arm64_linux", "tar.gz")),
-        "x86_64-pc-windows-msvc" => Ok(("x64", "7z")),
-        other => Err(rv_gem_types::platform::PlatformError::UnsupportedPlatform {
-            platform: other.to_string(),
-        }
-        .into()),
-    }
-}
-
-fn ruby_url(version: &str) -> Result<String> {
-    let (arch, ext) = platform_info()?;
+fn ruby_url(version: &str, host: &HostPlatform) -> String {
+    let arch = host.ruby_arch_str();
+    let ext = host.archive_ext();
 
     // Windows uses RubyInstaller2 directly
-    if cfg!(target_os = "windows") {
+    if host.is_windows() {
         let download_base = std::env::var("RV_INSTALL_URL").unwrap_or_else(|_| {
             format!(
                 "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-{version}-1"
             )
         });
         // RubyInstaller2 URL pattern: rubyinstaller-{version}-1-x64.7z
-        return Ok(format!(
-            "{download_base}/rubyinstaller-{version}-1-{arch}.{ext}"
-        ));
+        return format!("{download_base}/rubyinstaller-{version}-1-{arch}.{ext}");
     }
 
     // macOS/Linux use rv-ruby
     let download_base = std::env::var("RV_INSTALL_URL")
         .unwrap_or("https://github.com/spinel-coop/rv-ruby/releases/latest/download".to_owned());
 
-    Ok(format!("{download_base}/ruby-{version}.{arch}.{ext}"))
+    format!("{download_base}/ruby-{version}.{arch}.{ext}")
 }
 
-fn archive_cache_path(config: &Config, url: impl AsRef<str>) -> Result<Utf8PathBuf> {
-    let (_, ext) = platform_info()?;
+fn archive_cache_path(config: &Config, url: impl AsRef<str>, host: &HostPlatform) -> Utf8PathBuf {
+    let ext = host.archive_ext();
     let cache_key = rv_cache::cache_digest(url.as_ref());
-    Ok(config
+    config
         .cache
         .shard(rv_cache::CacheBucket::Ruby, "tarballs")
         .into_path_buf()
-        .join(format!("{cache_key}.{ext}")))
+        .join(format!("{cache_key}.{ext}"))
 }
 
-fn temp_archive_path(config: &Config, url: impl AsRef<str>) -> Result<Utf8PathBuf> {
-    let (_, ext) = platform_info()?;
+fn temp_archive_path(config: &Config, url: impl AsRef<str>, host: &HostPlatform) -> Utf8PathBuf {
+    let ext = host.archive_ext();
     let cache_key = rv_cache::cache_digest(url.as_ref());
-    Ok(config
+    config
         .cache
         .shard(rv_cache::CacheBucket::Ruby, "tarballs")
         .into_path_buf()
-        .join(format!("{cache_key}.{ext}.tmp")))
+        .join(format!("{cache_key}.{ext}.tmp"))
 }
 
 /// Write the file from this HTTP `response` to the given `path`.
@@ -255,6 +241,7 @@ async fn download_ruby_archive(
     archive_path: &Utf8PathBuf,
     version: &str,
     progress: &WorkProgress,
+    host: &HostPlatform,
 ) -> Result<()> {
     debug!("Downloading archive from {url}");
     // Build the request with optional GitHub authentication
@@ -300,7 +287,7 @@ async fn download_ruby_archive(
     let _guard = span.enter();
 
     // Write the archive bytes to the filesystem.
-    let temp_path = temp_archive_path(config, url)?;
+    let temp_path = temp_archive_path(config, url, host);
     if let Err(e) = write_to_filesystem(
         response,
         &temp_path,
@@ -323,6 +310,7 @@ fn extract_ruby_archive(
     archive_path: &Utf8Path,
     rubies_dir: &Utf8Path,
     version: &str,
+    host: &HostPlatform,
 ) -> Result<()> {
     let span = info_span!("Installing Ruby", version = version);
     span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name}").unwrap());
@@ -336,7 +324,7 @@ fn extract_ruby_archive(
     let extension = archive_path.extension().unwrap_or("");
     match extension {
         "zip" => extract_zip(archive_path, rubies_dir, version),
-        "7z" => extract_7z(archive_path, rubies_dir, version),
+        "7z" => extract_7z(archive_path, rubies_dir, version, host),
         _ => extract_tarball(archive_path, rubies_dir, version),
     }
 }
@@ -392,13 +380,18 @@ fn extract_zip(zip_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> Res
     Ok(())
 }
 
-fn extract_7z(archive_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> Result<()> {
+fn extract_7z(
+    archive_path: &Utf8Path,
+    rubies_dir: &Utf8Path,
+    version: &str,
+    host: &HostPlatform,
+) -> Result<()> {
     // Extract 7z archive to rubies_dir
     sevenz_rust2::decompress_file(archive_path.as_std_path(), rubies_dir.as_std_path())?;
 
     // RubyInstaller2 extracts to: rubyinstaller-{version}-1-{arch}/
     // We need to rename it to: ruby-{version}/
-    let (arch, _) = platform_info()?;
+    let arch = host.ruby_arch_str();
     let extracted_dir = rubies_dir.join(format!("rubyinstaller-{version}-1-{arch}"));
     let target_dir = rubies_dir.join(format!("ruby-{version}"));
 
@@ -417,24 +410,25 @@ mod tests {
     use std::io::Write as _;
 
     #[test]
-    fn test_platform_info_returns_valid_result() {
-        let result = platform_info();
+    fn test_ruby_url_unix() {
+        let host = HostPlatform::from_target_triple("aarch64-apple-darwin").unwrap();
+        let url = ruby_url("3.4.1", &host);
 
-        match result {
-            Ok((arch, ext)) => {
-                assert!(!arch.is_empty(), "arch should not be empty");
-                assert!(
-                    ext == "tar.gz" || ext == "zip" || ext == "7z",
-                    "extension should be tar.gz, zip, or 7z, got: {ext}"
-                );
-            }
-            Err(Error::UnsupportedPlatform(_)) => {
-                // Acceptable - means we're on an unsupported platform
-            }
-            Err(e) => {
-                unreachable!("Unexpected error: {e:?}");
-            }
-        }
+        assert_eq!(
+            url,
+            "https://github.com/spinel-coop/rv-ruby/releases/latest/download/ruby-3.4.1.arm64_sonoma.tar.gz"
+        );
+    }
+
+    #[test]
+    fn test_ruby_url_windows() {
+        let host = HostPlatform::from_target_triple("x86_64-pc-windows-msvc").unwrap();
+        let url = ruby_url("3.4.1", &host);
+
+        assert_eq!(
+            url,
+            "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-3.4.1-1/rubyinstaller-3.4.1-1-x64.7z"
+        );
     }
 
     #[test]
@@ -497,7 +491,8 @@ mod tests {
         let rubies_path = Utf8Path::from_path(rubies_dir.path()).unwrap();
         let zip_utf8_path = Utf8Path::from_path(zip_path.path()).unwrap();
 
-        let result = extract_ruby_archive(zip_utf8_path, rubies_path, "3.4.1");
+        let host = HostPlatform::from_target_triple("x86_64-pc-windows-msvc").unwrap();
+        let result = extract_ruby_archive(zip_utf8_path, rubies_path, "3.4.1", &host);
         assert!(result.is_ok());
     }
 
