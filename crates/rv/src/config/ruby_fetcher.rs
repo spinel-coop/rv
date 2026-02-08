@@ -17,8 +17,9 @@ use rv_ruby::{Asset, Release, Ruby, request::RequestError, version::ParseVersion
 // Use GitHub's TTL, but don't re-check more than every 60 seconds.
 const MINIMUM_CACHE_TTL: Duration = Duration::from_secs(60);
 
-static ARCH_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"ruby-[\d\.a-z-]+\.(?P<arch>[a-zA-Z0-9_]+)\.tar\.gz").unwrap());
+static ARCH_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"ruby-[\d\.a-z-]+\.(?P<arch>[a-zA-Z0-9_]+)\.(?:tar\.gz|7z)").unwrap()
+});
 
 static PARSE_MAX_AGE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"max-age=(\d+)").unwrap());
 
@@ -233,6 +234,7 @@ fn parse_arch_str(arch_str: &str) -> (&'static str, &'static str) {
         "sequoia" => ("macos", "x86_64"),
         "x86_64_linux" => ("linux", "x86_64"),
         "arm64_linux" => ("linux", "aarch64"),
+        "x64" => ("windows", "x86_64"),
         _ => ("unknown", "unknown"),
     }
 }
@@ -246,6 +248,7 @@ fn current_os_and_arch() -> (&'static str, &'static str) {
         "x86_64-apple-darwin" => ("macos", "x86_64"),
         "x86_64-unknown-linux-gnu" => ("linux", "x86_64"),
         "aarch64-unknown-linux-gnu" => ("linux", "aarch64"),
+        "x86_64-pc-windows-msvc" => ("windows", "x86_64"),
         _ => ("unknown", "unknown"),
     }
 }
@@ -258,6 +261,7 @@ fn all_suffixes() -> impl IntoIterator<Item = &'static str> {
         // We follow the Homebrew convention that if there's no arch, it defaults to x86.
         ".ventura.tar.gz",
         ".sequoia.tar.gz",
+        ".x64.7z",
     ]
 }
 
@@ -327,5 +331,37 @@ mod tests {
             gem_root: None,
         };
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_current_os_and_arch_windows() {
+        // SAFETY: This test is run in a single-threaded context.
+        unsafe { std::env::set_var("RV_TEST_PLATFORM", "x86_64-pc-windows-msvc") };
+        let (os, arch) = current_os_and_arch();
+        unsafe { std::env::remove_var("RV_TEST_PLATFORM") };
+
+        assert_eq!(os, "windows");
+        assert_eq!(arch, "x86_64");
+    }
+
+    #[test]
+    fn test_parse_arch_str_windows() {
+        let (os, arch) = parse_arch_str("x64");
+        assert_eq!(os, "windows");
+        assert_eq!(arch, "x86_64");
+    }
+
+    #[test]
+    fn test_ruby_from_asset_windows() {
+        let asset = Asset {
+            name: "ruby-3.3.0.x64.7z".to_owned(),
+            browser_download_url: "https://example.com/ruby-3.3.0.x64.7z".to_owned(),
+        };
+        let ruby = ruby_from_asset(&asset).unwrap();
+        assert_eq!(ruby.os, "windows");
+        assert_eq!(ruby.arch, "x86_64");
+        assert_eq!(ruby.version.major, 3);
+        assert_eq!(ruby.version.minor, 3);
+        assert_eq!(ruby.version.patch, 0);
     }
 }
