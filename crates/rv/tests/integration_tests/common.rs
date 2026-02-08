@@ -24,7 +24,10 @@ pub struct RvTest {
 impl RvTest {
     pub fn new() -> Self {
         let temp_dir = Utf8TempDir::new().expect("Failed to create temporary directory");
-        let cwd = temp_dir.path().into();
+        // Use dunce to canonicalize the cwd, avoiding Windows 8.3 short paths
+        // (e.g. RUNNER~1) that would mismatch with temp_root() in normalization.
+        let cwd: Utf8PathBuf =
+            Utf8PathBuf::try_from(dunce::canonicalize(temp_dir.path()).unwrap()).unwrap();
         let platform = HostPlatform::MacosAarch64;
 
         let mut test = Self {
@@ -505,9 +508,13 @@ impl RvOutput {
             output = output.replace("\r\n", "\n");
         }
 
-        // Replace Windows path separators with forward slashes
+        // Replace Windows path separators with forward slashes.
+        // Then restore PowerShell provider paths (Env:\, Function:\) that use
+        // backslash as a provider separator, not a file path separator.
         if cfg!(windows) {
             output = output.replace('\\', "/");
+            output = output.replace("Env:/", "Env:\\");
+            output = output.replace("Function:/", "Function:\\");
         }
 
         // Remove test root from paths. On Windows, also match the forward-slash

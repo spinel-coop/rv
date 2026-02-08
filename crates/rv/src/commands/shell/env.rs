@@ -26,7 +26,9 @@ pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
             }
 
             for (var, val) in set {
-                println!("export {var}={}", shell_escape::escape(val.into()))
+                // Always use Unix-style escaping (single quotes) for bash/zsh,
+                // even when rv is running on Windows.
+                println!("export {var}={}", shell_escape::unix::escape(val.into()))
             }
 
             println!("hash -r");
