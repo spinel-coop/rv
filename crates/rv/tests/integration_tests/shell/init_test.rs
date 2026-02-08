@@ -1,6 +1,9 @@
-use crate::common::{RvTest, Shell};
+use crate::common::RvTest;
+#[cfg(unix)]
+use crate::common::Shell;
 use insta::assert_snapshot;
 
+#[cfg(unix)]
 fn switch_rubies(shell: Shell) -> Result<(), Box<dyn std::error::Error>> {
     let test = RvTest::new();
 
@@ -22,6 +25,7 @@ fn switch_rubies(shell: Shell) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg(unix)]
 #[test]
 fn test_switch_rubies_bash() -> Result<(), Box<dyn std::error::Error>> {
     let shell = Shell {
@@ -45,6 +49,7 @@ fn test_switch_rubies_fish() -> Result<(), Box<dyn std::error::Error>> {
     switch_rubies(shell)
 }
 
+#[cfg(unix)]
 #[test]
 fn test_switch_rubies_zsh() -> Result<(), Box<dyn std::error::Error>> {
     let shell = Shell {

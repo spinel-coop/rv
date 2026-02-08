@@ -82,6 +82,7 @@ fs-err = { workspace = true }
 camino-tempfile-ext = { workspace = true }
 mockito = "1.7.1"
 pretty_assertions = { workspace = true }
+[target.'cfg(unix)'.dev-dependencies]
 rexpect = "0.6.3"
 
 [lints]

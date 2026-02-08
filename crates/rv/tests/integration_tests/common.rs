@@ -1,10 +1,10 @@
 use camino::Utf8PathBuf;
 use camino_tempfile_ext::camino_tempfile::Utf8TempDir;
 use mockito::Mock;
-use rexpect::{reader::Options, session::PtyReplSession};
 use rv_platform::HostPlatform;
 use std::{collections::HashMap, process::Command};
 
+#[cfg(unix)]
 pub struct Shell {
     pub name: &'static str,
     pub startup_flag: &'static str,
@@ -114,7 +114,14 @@ impl RvTest {
         self.command(env!("CARGO_BIN_EXE_rv"))
     }
 
-    pub fn make_session(&self, shell: Shell) -> Result<PtyReplSession, Box<dyn std::error::Error>> {
+    #[cfg(unix)]
+    pub fn make_session(
+        &self,
+        shell: Shell,
+    ) -> Result<rexpect::session::PtyReplSession, Box<dyn std::error::Error>> {
+        use rexpect::reader::Options;
+        use rexpect::session::PtyReplSession;
+
         let mut cmd = self.command(shell.name);
         cmd.arg(shell.startup_flag);
         cmd.env("TERM", "xterm-256color").env_remove("RV_TEST_EXE");
