@@ -896,7 +896,8 @@ fn compile_gems(
     graph.into_par_iter().try_for_each(|node| {
         if let Some(spec) = nodes.get(&*node) {
             span.pb_set_message(&spec.name);
-            let compiled_ok = compile_gem(config, args, spec)?;
+            let compile_stats = compile_gem(config, args, spec)?;
+            let compiled_ok = compile_stats.ok;
             span.pb_inc(1);
             progress.complete_one();
             if !compiled_ok {
@@ -1329,7 +1330,16 @@ fn find_exts_dir(config: &Config, version: &RubyRequest) -> Result<Utf8PathBuf> 
 static EXTCONF_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)extconf").unwrap());
 static RAKE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)rakefile|mkrf_conf").unwrap());
 
-fn compile_gem(config: &Config, args: &CiInnerArgs, spec: &GemSpecification) -> Result<bool> {
+struct CompileStats {
+    ok: bool,
+    cached: bool,
+}
+
+fn compile_gem(
+    config: &Config,
+    args: &CiInnerArgs,
+    spec: &GemSpecification,
+) -> Result<CompileStats> {
     let mut compile_results = Vec::with_capacity(spec.extensions.len());
 
     let gem_home = &args.install_path;
@@ -1344,7 +1354,10 @@ fn compile_gem(config: &Config, args: &CiInnerArgs, spec: &GemSpecification) -> 
 
     if std::fs::exists(ext_dest.join("gem.build_complete"))? {
         debug!("native extensions for {} already built", spec.full_name());
-        return Ok(true);
+        return Ok(CompileStats {
+            ok: true,
+            cached: true,
+        });
     }
     debug!("compiling native extensions for {}", spec.full_name());
 
@@ -1412,7 +1425,10 @@ fn compile_gem(config: &Config, args: &CiInnerArgs, spec: &GemSpecification) -> 
     }
 
     let all_ok = compile_results.iter().all(|res| res.success());
-    Ok(all_ok)
+    Ok(CompileStats {
+        ok: all_ok,
+        cached: false,
+    })
 }
 
 fn build_rakefile(
