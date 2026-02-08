@@ -64,6 +64,10 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Build tests
+        shell: bash
+        run: cargo nextest run --no-run
+
       - name: Run tests
         shell: bash
         run: ./bin/test
