@@ -232,7 +232,7 @@ fn test_powershell_env_with_ruby() {
     $env:RUBY_VERSION = "3.3.5"
     $env:GEM_HOME = "/tmp/home/.gem/ruby/3.3.5"
     $env:GEM_PATH = "/tmp/home/.gem/ruby/3.3.5"
-    $env:PATH = "/tmp/home/.gem/ruby/3.3.5/bin:/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin:/tmp/bin"
+    $env:PATH = "/tmp/home/.gem/ruby/3.3.5/bin;/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin;/tmp/bin"
     "#);
 }
 

@@ -509,9 +509,13 @@ impl RvOutput {
         }
 
         // Replace Windows path separators with forward slashes.
+        // First replace double-backslash (JSON-escaped `\` produces `\\` in output)
+        // with a single forward slash, then replace remaining single backslashes.
+        // Without this ordering, `\\` becomes `//` instead of `/`.
         // Then restore PowerShell provider paths (Env:\, Function:\) that use
         // backslash as a provider separator, not a file path separator.
         if cfg!(windows) {
+            output = output.replace("\\\\", "/");
             output = output.replace('\\', "/");
             output = output.replace("Env:/", "Env:\\");
             output = output.replace("Function:/", "Function:\\");
@@ -547,7 +551,13 @@ impl RvOutput {
 
         // Replace Windows path separators with forward slashes
         if cfg!(windows) {
+            output = output.replace("\\\\", "/");
             output = output.replace('\\', "/");
+        }
+
+        // Normalize the binary name: clap uses argv[0] which is `rv.exe` on Windows
+        if cfg!(windows) {
+            output = output.replace("rv.exe", "rv");
         }
 
         output
