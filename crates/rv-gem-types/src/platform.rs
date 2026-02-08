@@ -65,19 +65,12 @@ impl Platform {
     }
 
     pub fn local_precompiled_ruby_arch() -> Result<String, PlatformError> {
-        let result = match CURRENT_PLATFORM {
-            "aarch64-apple-darwin" => "arm64_sonoma",
-            "x86_64-apple-darwin" => "ventura",
-            "x86_64-unknown-linux-gnu" => "x86_64_linux",
-            "aarch64-unknown-linux-gnu" => "arm64_linux",
-            other => {
-                return Err(PlatformError::UnsupportedPlatform {
-                    platform: other.to_string(),
-                });
-            }
-        };
-
-        Ok(result.to_string())
+        use rv_platform::HostPlatform;
+        HostPlatform::current()
+            .map(|hp| hp.ruby_arch_str().to_string())
+            .map_err(|e| PlatformError::UnsupportedPlatform {
+                platform: e.platform,
+            })
     }
 
     pub fn ruby() -> Self {
