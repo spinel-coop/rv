@@ -41,10 +41,10 @@ pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
 
     let invocation = if rv_dirs::canonicalize_utf8(&script)?.exists() {
         let content = std::fs::read_to_string(&script)?;
-        if let Some(metadata) = script_metadata::parse(&content) {
-            if let Some(ref version) = metadata.requires_ruby {
-                debug!("Using Ruby version from script metadata: {}", version);
-            }
+        if let Some(metadata) = script_metadata::parse(&content)
+            && let Some(ref version) = metadata.requires_ruby
+        {
+            debug!("Using Ruby version from script metadata: {}", version);
             ruby_version = metadata.requires_ruby
         }
 
