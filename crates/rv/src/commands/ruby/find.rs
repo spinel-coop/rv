@@ -6,12 +6,8 @@ use crate::config::Config;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
-    #[error(transparent)]
-    InvalidVersion(#[from] rv_ruby::request::RequestError),
     #[error("no matching ruby version found")]
     NoMatchingRuby,
-    #[error(transparent)]
-    ConfigError(#[from] crate::config::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;

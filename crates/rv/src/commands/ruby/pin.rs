@@ -19,8 +19,6 @@ pub enum Error {
     #[error("No Ruby version request found in {}", path.cyan())]
     NoRubyRequest { path: Utf8PathBuf },
     #[error(transparent)]
-    InvalidVersion(#[from] rv_ruby::request::RequestError),
-    #[error(transparent)]
     IoError(#[from] std::io::Error),
 }
 
