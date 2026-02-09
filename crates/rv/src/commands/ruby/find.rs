@@ -12,10 +12,10 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
-pub fn find(config: &Config, version: Option<RubyRequest>) -> Result<()> {
-    let request = match version {
+pub fn find(config: &Config, request: Option<RubyRequest>) -> Result<()> {
+    let request = match request {
         None => config.ruby_request(),
-        Some(version) => version,
+        Some(request) => request,
     };
     if let Some(ruby) = config.matching_ruby(&request) {
         println!("{}", ruby.executable_path().cyan());

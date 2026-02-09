@@ -65,8 +65,8 @@ impl Invocation {
     }
 }
 
-/// Shell out to the given ruby `version`, run it with the given arguments.
-/// If given `version` is `None`, shell out to whatever version is pinned in a version
+/// Shell out to the given ruby `request`, run it with the given arguments.
+/// If given `request` is `None`, shell out to whatever version is pinned in a version
 /// file, or to the default ruby version if no ruby version is found in version files.
 /// By default, if the ruby isn't installed, install it (disabled via `no_install`).
 /// The ruby's output may be captured, depending on `capture_output`. If you pass
@@ -74,15 +74,15 @@ impl Invocation {
 pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
     invocation: Invocation,
     config: &Config,
-    version: Option<RubyRequest>,
+    request: Option<RubyRequest>,
     no_install: bool,
     args: &[A],
     capture_output: CaptureOutput,
     cwd: Option<&Utf8Path>,
 ) -> Result<Output> {
-    let request = match version {
+    let request = match request {
         None => config.ruby_request(),
-        Some(version) => version,
+        Some(request) => request,
     };
     let install = !no_install;
     if config.matching_ruby(&request).is_none() && install {

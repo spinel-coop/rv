@@ -50,12 +50,12 @@ type Result<T> = miette::Result<T, Error>;
 pub async fn install(
     config: &Config,
     install_dir: Option<String>,
-    requested: Option<RubyRequest>,
+    request: Option<RubyRequest>,
     tarball_path: Option<String>,
 ) -> Result<()> {
     let progress = WorkProgress::new();
 
-    let requested_range = match requested {
+    let requested_range = match request {
         None => config.ruby_request(),
         Some(version) => version,
     };
