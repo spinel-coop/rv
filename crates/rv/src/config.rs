@@ -4,7 +4,7 @@ use std::{
     str::FromStr,
 };
 
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::{FromPathBufError, Utf8Path, Utf8PathBuf};
 use indexmap::IndexSet;
 use tracing::{debug, instrument};
 
@@ -14,12 +14,16 @@ use rv_ruby::{
     version::{ParseVersionError, RubyVersion},
 };
 
+use crate::GlobalArgs;
+
 pub mod github;
 mod ruby_cache;
 mod ruby_fetcher;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
+    #[error(transparent)]
+    NonUtf8Path(#[from] FromPathBufError),
     #[error("Ruby cache miss or invalid cache for {}", ruby_path)]
     RubyCacheMiss { ruby_path: Utf8PathBuf },
     #[error(transparent)]
@@ -49,6 +53,46 @@ pub struct Config {
 }
 
 impl Config {
+    pub(crate) fn new(global_args: &GlobalArgs) -> Result<Self> {
+        let root = global_args
+            .root_dir
+            .as_ref()
+            .unwrap_or(&"/".into())
+            .to_owned();
+
+        let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
+        let ruby_dirs = if global_args.ruby_dir.is_empty() {
+            default_ruby_dirs(&root)
+        } else {
+            global_args
+                .ruby_dir
+                .iter()
+                .map(|path: &Utf8PathBuf| Ok(root.join(rv_dirs::canonicalize_utf8(path)?)))
+                .collect::<Result<Vec<_>>>()?
+        };
+        let ruby_dirs: IndexSet<Utf8PathBuf> = ruby_dirs.into_iter().collect();
+        let cache = global_args.cache_args.to_cache()?;
+        let current_exe = if let Some(exe) = global_args.current_exe.clone() {
+            exe
+        } else {
+            std::env::current_exe()?.to_str().unwrap().into()
+        };
+
+        let requested_ruby = find_requested_ruby(current_dir.clone(), root.clone())?;
+        if let Some(req) = &requested_ruby {
+            debug!("Found request for {} in {:?}", req.0, req.1);
+        }
+
+        Ok(Self {
+            ruby_dirs,
+            root,
+            current_dir,
+            cache,
+            current_exe,
+            requested_ruby,
+        })
+    }
+
     #[instrument(skip_all, level = "trace")]
     pub fn rubies(&self) -> Vec<Ruby> {
         self.discover_installed_rubies()

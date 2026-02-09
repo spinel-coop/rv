@@ -1,15 +1,13 @@
 use anstream::stream::IsTerminal;
-use camino::{FromPathBufError, Utf8PathBuf};
+use camino::Utf8PathBuf;
 use clap::builder::Styles;
 use clap::builder::styling::AnsiColor;
 use clap::{ArgAction, CommandFactory, Parser, Subcommand};
 use clap_verbosity_flag::tracing::LevelFilter;
 use config::Config;
-use indexmap::IndexSet;
 use miette::Report;
 use rv_cache::CacheArgs;
 use tokio::main;
-use tracing::debug;
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
@@ -32,6 +30,20 @@ const STYLES: Styles = Styles::styled()
     .usage(AnsiColor::Green.on_default().bold())
     .literal(AnsiColor::Cyan.on_default().bold())
     .placeholder(AnsiColor::Cyan.on_default());
+
+struct GlobalArgs {
+    /// Ruby directories to search for installations
+    ruby_dir: Vec<Utf8PathBuf>,
+
+    /// Cache related parameters
+    cache_args: CacheArgs,
+
+    /// Root directory for testing
+    root_dir: Option<Utf8PathBuf>,
+
+    /// Executable path for testing
+    current_exe: Option<Utf8PathBuf>,
+}
 
 /// An extremely fast Ruby version manager.
 #[derive(Parser)]
@@ -80,38 +92,13 @@ struct Cli {
 }
 
 impl Cli {
-    fn config(&self) -> Result<Config> {
-        let root = self.root_dir.as_ref().unwrap_or(&"/".into()).to_owned();
-
-        let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
-        let ruby_dirs = if self.ruby_dir.is_empty() {
-            config::default_ruby_dirs(&root)
-        } else {
-            self.ruby_dir
-                .iter()
-                .map(|path: &Utf8PathBuf| Ok(root.join(rv_dirs::canonicalize_utf8(path)?)))
-                .collect::<Result<Vec<_>>>()?
-        };
-        let ruby_dirs: IndexSet<Utf8PathBuf> = ruby_dirs.into_iter().collect();
-        let cache = self.cache_args.to_cache()?;
-        let current_exe = if let Some(exe) = self.current_exe.clone() {
-            exe
-        } else {
-            std::env::current_exe()?.to_str().unwrap().into()
-        };
-        let requested_ruby = config::find_requested_ruby(current_dir.clone(), root.clone())?;
-        if let Some(req) = &requested_ruby {
-            debug!("Found request for {} in {:?}", req.0, req.1);
+    pub fn global_args(&self) -> GlobalArgs {
+        GlobalArgs {
+            root_dir: self.root_dir.clone(),
+            ruby_dir: self.ruby_dir.clone(),
+            cache_args: self.cache_args.clone(),
+            current_exe: self.current_exe.clone(),
         }
-
-        Ok(Config {
-            ruby_dirs,
-            root,
-            current_dir,
-            cache,
-            current_exe,
-            requested_ruby,
-        })
     }
 }
 
@@ -192,8 +179,6 @@ pub enum Error {
     RunError(#[from] commands::ruby::run::Error),
     #[error(transparent)]
     ScriptRunError(#[from] commands::run::Error),
-    #[error(transparent)]
-    NonUtf8Path(#[from] FromPathBufError),
     #[error(transparent)]
     CacheError(#[from] commands::cache::Error),
     #[error(transparent)]
@@ -294,7 +279,7 @@ async fn main_inner() -> Result<()> {
 
     reg.init();
 
-    let config = cli.config()?;
+    let config = Config::new(&cli.global_args())?;
     run_cmd(&config, cli.command).await
 }
 
