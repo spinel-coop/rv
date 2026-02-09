@@ -332,13 +332,13 @@ impl RvTest {
             .with_body(content)
     }
 
-    #[allow(dead_code)]
+    #[cfg(unix)]
     pub fn mock_gem_download(&mut self, filename: &str, content: &[u8]) -> Mock {
         let path = format!("gems/{}", filename);
         self.mock_tarball_download(&path, content)
     }
 
-    #[allow(dead_code)]
+    #[cfg(unix)]
     pub fn mock_info_endpoint(&mut self, name: &str, content: &[u8]) -> Mock {
         let path = format!("/info/{}", name);
         self.server
@@ -349,7 +349,7 @@ impl RvTest {
     }
 
     /// Mock a tarball on disk for testing
-    #[allow(dead_code)]
+    #[cfg(unix)]
     pub fn mock_tarball_on_disk(&mut self, filename: &str, content: &[u8]) -> Utf8PathBuf {
         let temp_dir = self.temp_root().join("tmp");
         std::fs::create_dir_all(&temp_dir).expect("Failed to create TMP directory");
@@ -431,19 +431,19 @@ impl RvTest {
         ruby_dir
     }
 
-    #[allow(dead_code)]
+    #[cfg(unix)]
     pub fn use_gemfile(&self, path: &str) {
         let gemfile = fs_err::read_to_string(path).unwrap();
         let _ = fs_err::write(self.cwd.join("Gemfile"), &gemfile);
     }
 
-    #[allow(dead_code)]
+    #[cfg(unix)]
     pub fn use_lockfile(&self, path: &str) {
         let lockfile = fs_err::read_to_string(path).unwrap();
         let _ = fs_err::write(self.cwd.join("Gemfile.lock"), &lockfile);
     }
 
-    #[allow(dead_code)]
+    #[cfg(unix)]
     pub fn replace_source(&self, from: &str, to: &str) {
         let gemfile_path = self.cwd.join("Gemfile");
         let gemfile = fs_err::read_to_string(&gemfile_path).unwrap();

@@ -1,9 +1,11 @@
+#[cfg(unix)]
 use crate::common::{RvOutput, RvTest};
+
 #[cfg(unix)]
 use rv_cache::rm_rf;
 
+#[cfg(unix)]
 impl RvTest {
-    #[allow(dead_code)]
     pub fn tool_list(&mut self, args: &[&str]) -> RvOutput {
         self.rv(&[&["tool", "list"], args].concat())
     }
