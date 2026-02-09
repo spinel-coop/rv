@@ -4,7 +4,7 @@ use clap_complete::{Shell as ClapCompleteShell, generate};
 
 use super::Shell;
 
-pub fn shell_completions(cmd: &mut clap::Command, shell: Shell) {
+pub fn completions(cmd: &mut clap::Command, shell: Shell) {
     let name = cmd.get_name().to_owned();
     match shell {
         Shell::Zsh => {

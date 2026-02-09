@@ -6,6 +6,10 @@ use crate::config::Config;
 use clap::{Args, Subcommand};
 use serde::Serialize;
 
+use crate::commands::shell::completions::completions;
+use crate::commands::shell::env::env;
+use crate::commands::shell::init::init;
+
 #[derive(Args)]
 #[command(args_conflicts_with_subcommands = true)]
 #[group(required = true, multiple = false)]
@@ -54,11 +58,28 @@ impl std::fmt::Display for Shell {
 pub enum Error {
     #[error(transparent)]
     IoError(#[from] std::io::Error),
+    #[error(transparent)]
+    ConfigError(#[from] crate::config::Error),
+    #[error(transparent)]
+    InitError(#[from] crate::commands::shell::init::Error),
+    #[error(transparent)]
+    EnvError(#[from] crate::commands::shell::env::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
 
-pub fn setup(config: &Config, shell: Shell) -> Result<()> {
+pub fn shell(config: &Config, cmd: &mut clap::Command, args: ShellArgs) -> Result<()> {
+    match args.command {
+        None => setup(config, args.shell.unwrap())?,
+        Some(ShellCommand::Init { shell }) => init(config, shell)?,
+        Some(ShellCommand::Completions { shell }) => completions(cmd, shell),
+        Some(ShellCommand::Env { shell }) => env(config, shell)?,
+    }
+
+    Ok(())
+}
+
+fn setup(config: &Config, shell: Shell) -> Result<()> {
     use indoc::{formatdoc, printdoc};
 
     let name = shell.to_string();

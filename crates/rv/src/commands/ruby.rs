@@ -3,6 +3,8 @@ use clap::{Args, Subcommand};
 use crate::output_format::OutputFormat;
 use rv_ruby::request::RubyRequest;
 
+use crate::Config;
+
 pub mod dir;
 pub mod find;
 pub mod install;
@@ -84,4 +86,57 @@ pub enum RubyCommand {
         #[arg(last = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
+}
+
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum Error {
+    #[error(transparent)]
+    FindError(#[from] find::Error),
+    #[error(transparent)]
+    ListError(#[from] crate::commands::ruby::list::Error),
+    #[error(transparent)]
+    PinError(#[from] crate::commands::ruby::pin::Error),
+    #[error(transparent)]
+    InstallError(#[from] crate::commands::ruby::install::Error),
+    #[error(transparent)]
+    UninstallError(#[from] crate::commands::ruby::uninstall::Error),
+    #[error(transparent)]
+    RunError(#[from] crate::commands::ruby::run::Error),
+}
+
+type Result<T> = miette::Result<T, Error>;
+
+pub async fn ruby(config: &Config, args: RubyArgs) -> Result<()> {
+    match args.command {
+        RubyCommand::Find { version } => find::find(config, version)?,
+        RubyCommand::List {
+            format,
+            version_filter,
+        } => list::list(config, format, version_filter).await?,
+        RubyCommand::Pin { version } => pin::pin(config, version)?,
+        RubyCommand::Dir => dir::dir(config),
+        RubyCommand::Install {
+            version,
+            install_dir,
+            tarball_path,
+        } => install::install(config, install_dir, version, tarball_path).await?,
+        RubyCommand::Uninstall { version } => uninstall::uninstall(config, version).await?,
+        RubyCommand::Run {
+            version,
+            no_install,
+            args,
+        } => run::run(
+            run::Invocation::ruby(vec![]),
+            config,
+            version,
+            no_install,
+            &args,
+            Default::default(),
+            Default::default(),
+        )
+        .await
+        .map(|_| ())?,
+    };
+
+    Ok(())
 }
