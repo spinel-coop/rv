@@ -500,7 +500,6 @@ impl RvOutput {
         String::from_utf8_lossy(&self.output.stdout).to_string()
     }
 
-    #[allow(dead_code)]
     pub fn stderr(&self) -> String {
         String::from_utf8_lossy(&self.output.stderr).to_string()
     }
@@ -546,7 +545,6 @@ impl RvOutput {
     }
 
     /// Normalize stderr for cross-platform snapshot testing
-    #[allow(dead_code)]
     pub fn normalized_stderr(&self) -> String {
         let mut output = self.stderr();
 
