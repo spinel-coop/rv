@@ -8,7 +8,7 @@ use rv_ruby::{Ruby, version::RubyVersion};
 use serde::Serialize;
 use tracing::{info, warn};
 
-use crate::{config::Config, output_format::OutputFormat};
+use crate::{GlobalArgs, config::Config, output_format::OutputFormat};
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -67,11 +67,13 @@ pub struct VersionFilter {
 }
 
 /// Lists the available and installed rubies.
-pub async fn list(
-    config: &Config,
+pub(crate) async fn list(
+    global_args: &GlobalArgs,
     format: OutputFormat,
     version_filter: VersionFilter,
 ) -> Result<()> {
+    let config = Config::new(global_args, None)?;
+
     let installed_rubies = config.rubies();
 
     if version_filter.installed_only && installed_rubies.is_empty() && format == OutputFormat::Text
@@ -218,38 +220,42 @@ fn format_ruby_entry(entry: &JsonRubyEntry, width: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::GlobalArgs;
     use assert_fs::TempDir;
     use camino::Utf8PathBuf;
-    use indexmap::indexset;
-    use rv_ruby::{request::Source, version::RubyVersion};
+    use rv_cache::CacheArgs;
+    use rv_ruby::version::RubyVersion;
     use std::str::FromStr as _;
 
-    fn test_config() -> Result<Config> {
-        let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
-        let ruby_dir = root.join("opt/rubies");
+    fn global_args() -> Result<GlobalArgs> {
+        let root_dir = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
+        let ruby_dir = root_dir.join("opt/rubies");
         fs_err::create_dir_all(&ruby_dir)?;
-        let current_dir = root.join("project");
-        fs_err::create_dir_all(&current_dir)?;
+        let current_exe = root_dir.join("bin").join("rv");
 
-        let config = Config {
-            ruby_dirs: indexset![ruby_dir],
-            current_exe: root.join("bin").join("rv"),
-            requested_ruby: Some(("3.5.0".parse().unwrap(), Source::Other)),
-            current_dir,
-            cache: rv_cache::Cache::temp().unwrap(),
-            root,
+        let cache_args = CacheArgs {
+            no_cache: false,
+            cache_dir: None,
         };
 
-        Ok(config)
+        let global_args = GlobalArgs {
+            ruby_dir: [ruby_dir].to_vec(),
+            root_dir: Some(root_dir),
+            current_exe: Some(current_exe),
+            cache_args,
+        };
+
+        Ok(global_args)
     }
+
     #[tokio::test]
     async fn test_list() {
-        let config = test_config().unwrap();
+        let global_args = global_args().unwrap();
         let version_filter = VersionFilter {
             all: false,
             installed_only: false,
         };
-        list(&config, OutputFormat::Text, version_filter)
+        list(&global_args, OutputFormat::Text, version_filter)
             .await
             .unwrap();
     }

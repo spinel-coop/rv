@@ -1,11 +1,11 @@
 use camino::Utf8PathBuf;
-use rv_ruby::request::{RubyRequest, Source};
+use rv_ruby::request::RubyRequest;
 use rv_version::{Version, VersionError};
 use tracing::debug;
 
+use crate::GlobalArgs;
 use crate::commands::ruby::run::{Invocation, Program};
 use crate::commands::tool::{Installed, install as tool_install};
-use crate::config::Config;
 use fs_err as fs;
 
 #[derive(thiserror::Error, Debug)]
@@ -94,8 +94,8 @@ impl<'i> WithVersion<'i> {
 }
 
 /// Run a tool, installing it from a gem if necessary.
-pub async fn run(
-    config: &Config,
+pub(crate) async fn run(
+    global_args: &GlobalArgs,
     gem: Option<String>,
     gem_server: String,
     no_install: bool,
@@ -141,7 +141,7 @@ pub async fn run(
                 return Err(Error::NotInstalled);
             }
             tool_install::install(
-                config,
+                global_args,
                 target_gem_version.suffix_of(target_gem_name),
                 gem_server,
                 false,
@@ -159,11 +159,6 @@ pub async fn run(
         .parse()
         .map_err(Error::InvalidRubyVersion)?;
     debug!("Tool requires Ruby {ruby_version}");
-    let mut config_to_run_tool = config.to_owned();
-    config_to_run_tool.requested_ruby = Some((
-        ruby_version.clone(),
-        Source::DotRubyVersion(ruby_version_path),
-    ));
     let tool_bin_dir = installed_tool.dir.join("bin");
     let file = tool_bin_dir.join(executable.name);
     if !file.exists() {
@@ -184,7 +179,7 @@ pub async fn run(
     };
     crate::commands::ruby::run::run(
         invocation,
-        config,
+        global_args,
         Some(ruby_version),
         no_install,
         args,

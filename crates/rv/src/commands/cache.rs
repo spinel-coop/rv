@@ -4,7 +4,7 @@ use clap::{Args, Subcommand};
 use owo_colors::OwoColorize;
 use rv_cache::CleanReporter;
 
-use crate::config::Config;
+use crate::{GlobalArgs, config::Config};
 
 #[derive(Args)]
 pub struct CacheCommandArgs {
@@ -31,7 +31,9 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
-pub fn cache(config: &Config, args: CacheCommandArgs) -> Result<()> {
+pub(crate) fn cache(global_args: &GlobalArgs, args: CacheCommandArgs) -> Result<()> {
+    let config = &Config::new(global_args, None)?;
+
     match args.command {
         CacheCommand::Dir => cache_dir(config)?,
         CacheCommand::Clean => cache_clean(config)?,

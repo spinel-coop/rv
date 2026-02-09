@@ -53,7 +53,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub(crate) fn new(global_args: &GlobalArgs) -> Result<Self> {
+    pub(crate) fn new(global_args: &GlobalArgs, version: Option<RubyRequest>) -> Result<Self> {
         let root = global_args
             .root_dir
             .as_ref()
@@ -78,10 +78,16 @@ impl Config {
             std::env::current_exe()?.to_str().unwrap().into()
         };
 
-        let requested_ruby = find_requested_ruby(current_dir.clone(), root.clone())?;
-        if let Some(req) = &requested_ruby {
-            debug!("Found request for {} in {:?}", req.0, req.1);
-        }
+        let requested_ruby = match version {
+            Some(request) => Some((request, Source::Other)),
+            None => match find_requested_ruby(current_dir.clone(), root.clone())? {
+                Some(req) => {
+                    debug!("Found request for {} in {:?}", req.0, req.1);
+                    Some(req)
+                }
+                None => None,
+            },
+        };
 
         Ok(Self {
             ruby_dirs,

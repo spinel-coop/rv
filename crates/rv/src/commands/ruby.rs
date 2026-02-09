@@ -3,7 +3,7 @@ use clap::{Args, Subcommand};
 use crate::output_format::OutputFormat;
 use rv_ruby::request::RubyRequest;
 
-use crate::Config;
+use crate::GlobalArgs;
 
 pub mod dir;
 pub mod find;
@@ -97,6 +97,8 @@ pub enum Error {
     #[error(transparent)]
     PinError(#[from] crate::commands::ruby::pin::Error),
     #[error(transparent)]
+    DirError(#[from] crate::commands::ruby::dir::Error),
+    #[error(transparent)]
     InstallError(#[from] crate::commands::ruby::install::Error),
     #[error(transparent)]
     UninstallError(#[from] crate::commands::ruby::uninstall::Error),
@@ -106,28 +108,28 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
-pub async fn ruby(config: &Config, args: RubyArgs) -> Result<()> {
+pub(crate) async fn ruby(global_args: &GlobalArgs, args: RubyArgs) -> Result<()> {
     match args.command {
-        RubyCommand::Find { version } => find::find(config, version)?,
+        RubyCommand::Find { version } => find::find(global_args, version)?,
         RubyCommand::List {
             format,
             version_filter,
-        } => list::list(config, format, version_filter).await?,
-        RubyCommand::Pin { version } => pin::pin(config, version)?,
-        RubyCommand::Dir => dir::dir(config),
+        } => list::list(global_args, format, version_filter).await?,
+        RubyCommand::Pin { version } => pin::pin(global_args, version)?,
+        RubyCommand::Dir => dir::dir(global_args)?,
         RubyCommand::Install {
             version,
             install_dir,
             tarball_path,
-        } => install::install(config, install_dir, version, tarball_path).await?,
-        RubyCommand::Uninstall { version } => uninstall::uninstall(config, version).await?,
+        } => install::install(global_args, install_dir, version, tarball_path).await?,
+        RubyCommand::Uninstall { version } => uninstall::uninstall(global_args, version).await?,
         RubyCommand::Run {
             version,
             no_install,
             args,
         } => run::run(
             run::Invocation::ruby(vec![]),
-            config,
+            global_args,
             version,
             no_install,
             &args,

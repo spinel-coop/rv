@@ -3,7 +3,7 @@ use camino::Utf8PathBuf;
 use owo_colors::OwoColorize;
 use rv_ruby::request::RubyRequest;
 
-use crate::config::Config;
+use crate::{GlobalArgs, config::Config};
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -21,8 +21,10 @@ pub enum Error {
 type Result<T> = miette::Result<T, Error>;
 
 /// Uninstall the given Ruby version.
-pub async fn uninstall(config: &Config, request: RubyRequest) -> Result<()> {
-    if let Some(ruby) = config.matching_ruby(&request) {
+pub(crate) async fn uninstall(global_args: &GlobalArgs, request: RubyRequest) -> Result<()> {
+    let config = Config::new(global_args, Some(request))?;
+
+    if let Some(ruby) = config.current_ruby() {
         let ruby_path = ruby.path;
         println!("Deleting {}", ruby_path.cyan());
 

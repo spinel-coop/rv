@@ -2,7 +2,7 @@ pub mod completions;
 pub mod env;
 pub mod init;
 
-use crate::config::Config;
+use crate::{GlobalArgs, config::Config};
 use clap::{Args, Subcommand};
 use serde::Serialize;
 
@@ -68,7 +68,13 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
-pub fn shell(config: &Config, cmd: &mut clap::Command, args: ShellArgs) -> Result<()> {
+pub(crate) fn shell(
+    global_args: &GlobalArgs,
+    cmd: &mut clap::Command,
+    args: ShellArgs,
+) -> Result<()> {
+    let config = &Config::new(global_args, None)?;
+
     match args.command {
         None => setup(config, args.shell.unwrap())?,
         Some(ShellCommand::Init { shell }) => init(config, shell)?,

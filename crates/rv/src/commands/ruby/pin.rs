@@ -10,7 +10,7 @@ use owo_colors::OwoColorize;
 use rv_ruby::request::RubyRequest;
 use rv_ruby::request::Source;
 
-use crate::config::Config;
+use crate::{GlobalArgs, config::Config};
 
 static RUBY_TOOL_VERSIONS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^ *ruby ").unwrap());
 
@@ -19,12 +19,16 @@ pub enum Error {
     #[error("No Ruby version request found in {}", path.cyan())]
     NoRubyRequest { path: Utf8PathBuf },
     #[error(transparent)]
+    ConfigError(#[from] crate::config::Error),
+    #[error(transparent)]
     IoError(#[from] std::io::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
 
-pub fn pin(config: &Config, request: Option<RubyRequest>) -> Result<()> {
+pub(crate) fn pin(global_args: &GlobalArgs, request: Option<RubyRequest>) -> Result<()> {
+    let config = &Config::new(global_args, None)?;
+
     match request {
         None => show_pinned_ruby(config),
         Some(request) => set_pinned_ruby(config, request),

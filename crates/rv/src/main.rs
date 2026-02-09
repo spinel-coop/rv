@@ -4,7 +4,6 @@ use clap::builder::Styles;
 use clap::builder::styling::AnsiColor;
 use clap::{ArgAction, CommandFactory, Parser, Subcommand};
 use clap_verbosity_flag::tracing::LevelFilter;
-use config::Config;
 use miette::Report;
 use rv_cache::CacheArgs;
 use tokio::main;
@@ -170,8 +169,6 @@ pub enum Error {
     #[error(transparent)]
     IoError(#[from] std::io::Error),
     #[error(transparent)]
-    ConfigError(#[from] config::Error),
-    #[error(transparent)]
     RubyError(#[from] commands::ruby::Error),
     #[error(transparent)]
     CiError(#[from] commands::clean_install::Error),
@@ -279,21 +276,20 @@ async fn main_inner() -> Result<()> {
 
     reg.init();
 
-    let config = Config::new(&cli.global_args())?;
-    run_cmd(&config, cli.command).await
+    run_cmd(&cli.global_args(), cli.command).await
 }
 
 /// Run an `rv` subcommand.
 /// This is like shelling out to `rv` except it reuses the current context
 /// and doesn't need to start a new process.
-async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
+async fn run_cmd(global_args: &GlobalArgs, command: Commands) -> Result<()> {
     match command {
-        Commands::Ruby(ruby_args) => ruby(config, ruby_args).await?,
-        Commands::CleanInstall(ci_args) => ci(config, ci_args).await?,
-        Commands::Cache(cache_args) => cache(config, cache_args)?,
-        Commands::Shell(shell_args) => shell(config, &mut Cli::command(), shell_args)?,
-        Commands::Tool(tool_args) => tool(config, tool_args).await?,
-        Commands::Run(run_args) => run(config, run_args).await?,
+        Commands::Ruby(ruby_args) => ruby(global_args, ruby_args).await?,
+        Commands::CleanInstall(ci_args) => ci(global_args, ci_args).await?,
+        Commands::Cache(cache_args) => cache(global_args, cache_args)?,
+        Commands::Shell(shell_args) => shell(global_args, &mut Cli::command(), shell_args)?,
+        Commands::Tool(tool_args) => tool(global_args, tool_args).await?,
+        Commands::Run(run_args) => run(global_args, run_args).await?,
     };
 
     Ok(())

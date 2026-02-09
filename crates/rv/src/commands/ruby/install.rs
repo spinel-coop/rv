@@ -14,11 +14,13 @@ use tracing_indicatif::span_ext::IndicatifSpanExt;
 use rv_platform::HostPlatform;
 use rv_ruby::{request::RubyRequest, version::RubyVersion};
 
-use crate::config::Config;
 use crate::progress::WorkProgress;
+use crate::{GlobalArgs, config::Config};
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
+    #[error(transparent)]
+    ConfigError(#[from] crate::config::Error),
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),
     #[error(transparent)]
@@ -47,18 +49,17 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
-pub async fn install(
-    config: &Config,
+pub(crate) async fn install(
+    global_args: &GlobalArgs,
     install_dir: Option<String>,
     request: Option<RubyRequest>,
     tarball_path: Option<String>,
 ) -> Result<()> {
+    let config = &Config::new(global_args, request)?;
+
     let progress = WorkProgress::new();
 
-    let requested_range = match request {
-        None => config.ruby_request(),
-        Some(version) => version,
-    };
+    let requested_range = config.ruby_request();
 
     let selected_version = if let Ok(version) = RubyVersion::try_from(requested_range.clone()) {
         debug!(
