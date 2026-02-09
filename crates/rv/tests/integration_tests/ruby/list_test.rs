@@ -13,7 +13,7 @@ fn test_ruby_list_text_output_empty() {
     let test = RvTest::new();
     let output = test.ruby_list(&[]);
 
-    assert!(output.success(), "rv ruby list should succeed");
+    output.assert_success();
     assert_snapshot!(output.normalized_stdout());
 }
 
@@ -39,7 +39,7 @@ fn test_ruby_list_text_output_with_rubies() {
 
     let output = test.ruby_list(&[]);
 
-    assert!(output.success(), "rv ruby list should succeed");
+    output.assert_success();
     assert_snapshot!(output.normalized_stdout());
 }
 
