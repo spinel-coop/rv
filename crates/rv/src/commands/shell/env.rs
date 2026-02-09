@@ -26,7 +26,16 @@ pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
             }
 
             for (var, val) in set {
-                println!("export {var}={}", shell_escape::escape(val.into()))
+                // On Windows, normalize paths for Unix shells:
+                // - Replace `\` path separators with `/` (bash/zsh always use forward slashes)
+                // - Replace `;` path list separators with `:` (std::env::join_paths
+                //   uses `;` on Windows, but bash/zsh always use `:`)
+                // This also prevents shell_escape from adding unnecessary quotes
+                // around values that only contain backslashes as "special" characters.
+                #[cfg(windows)]
+                let val = val.replace('\\', "/").replace(';', ":");
+
+                println!("export {var}={}", shell_escape::unix::escape(val.into()))
             }
 
             println!("hash -r");
@@ -37,6 +46,10 @@ pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
                 println!("set -ge {}", unset.join(" "))
             }
             for (var, val) in set {
+                // Same Windows path normalization as bash/zsh — fish uses `/` and `:`
+                #[cfg(windows)]
+                let val = val.replace('\\', "/").replace(';', ":");
+
                 println!("set -gx {var} \"{}\"", fish_var_escape(val))
             }
             Ok(())

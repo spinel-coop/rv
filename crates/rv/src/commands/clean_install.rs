@@ -704,7 +704,7 @@ fn cache_gemspec_path(
             "-e",
             &format!(
                 "puts Gem::Specification.load(\"{}\").to_yaml",
-                gemspec_path.canonicalize_utf8()?,
+                rv_dirs::canonicalize_utf8(&gemspec_path)?,
             ),
         ],
         CaptureOutput::Both,
@@ -730,8 +730,7 @@ fn cache_gemspec_path(
 
 fn find_manifest_paths(gemfile: &Option<Utf8PathBuf>) -> Result<(Utf8PathBuf, Utf8PathBuf)> {
     let Some(gemfile) = gemfile else {
-        let lockfile_path = Utf8PathBuf::from("Gemfile.lock")
-            .canonicalize_utf8()
+        let lockfile_path = rv_dirs::canonicalize_utf8(Utf8Path::new("Gemfile.lock"))
             .map_err(|_| Error::MissingImplicitLockfile)?;
         let lockfile_dir = lockfile_path.parent().unwrap();
 
@@ -739,8 +738,7 @@ fn find_manifest_paths(gemfile: &Option<Utf8PathBuf>) -> Result<(Utf8PathBuf, Ut
         return Ok((lockfile_dir.into(), lockfile_path));
     };
 
-    let gemfile_path = gemfile
-        .canonicalize_utf8()
+    let gemfile_path = rv_dirs::canonicalize_utf8(gemfile)
         .map_err(|_| Error::MissingGemfile(gemfile.to_string()))?;
 
     let lockfile_dir = gemfile_path
@@ -749,9 +747,8 @@ fn find_manifest_paths(gemfile: &Option<Utf8PathBuf>) -> Result<(Utf8PathBuf, Ut
 
     let lockfile_path = gemfile_path.with_added_extension("lock");
 
-    let lockfile_path = lockfile_path
-        .canonicalize_utf8()
-        .map_err(|_| Error::MissingLockfile {
+    let lockfile_path =
+        rv_dirs::canonicalize_utf8(&lockfile_path).map_err(|_| Error::MissingLockfile {
             lockfile_dir: lockfile_dir.to_string(),
             lockfile_name: lockfile_path.file_name().unwrap().to_string(),
         })?;
@@ -1931,6 +1928,8 @@ end"#;
         let expected = ("linux", "x86_64");
         #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
         let expected = ("linux", "aarch64");
+        #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+        let expected = ("mingw", "x64");
         let actual = Platform::local();
         let Platform::Specific {
             cpu: actual_cpu,
@@ -2062,6 +2061,10 @@ SHA512:
         let expected_version = "24.1.0.0-aarch64-linux";
         #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
         let expected_version = "24.1.0.0-x86_64-linux";
+        // No Windows-specific libv8-node variant in the fixture, so the generic
+        // (ruby platform) variant is selected.
+        #[cfg(target_os = "windows")]
+        let expected_version = "24.1.0.0";
 
         assert_eq!(
             libv8.gem_version.version, expected_version,

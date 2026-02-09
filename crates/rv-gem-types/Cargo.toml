@@ -9,6 +9,7 @@ thiserror = { workspace = true }
 regex = { workspace = true }
 once_cell = { workspace = true }
 indexmap = { workspace = true }
+rv-platform = { workspace = true }
 rv-version = { workspace = true }
 serde = { workspace = true }
 

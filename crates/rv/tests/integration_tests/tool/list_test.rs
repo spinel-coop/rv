@@ -1,17 +1,22 @@
 use crate::common::{RvOutput, RvTest};
+#[cfg(unix)]
 use rv_cache::rm_rf;
 
 impl RvTest {
+    #[allow(dead_code)]
     pub fn tool_list(&mut self, args: &[&str]) -> RvOutput {
         self.rv(&[&["tool", "list"], args].concat())
     }
 }
 
+// This test calls tool_install() which downloads real Ruby binaries and is
+// gated to Unix. See install_test.rs for details.
+#[cfg(unix)]
 #[test]
 fn test_tool_list() {
     let mut test = RvTest::new();
 
-    let _releases_mock = test.mock_releases(["4.0.0"].to_vec());
+    let _releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
 
     let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
     let _info_endpoint_mock = test

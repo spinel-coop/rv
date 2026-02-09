@@ -1,0 +1,15 @@
+[package]
+name = "rv-platform"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+current_platform = { workspace = true }
+proptest-derive = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+
+[lints]
+workspace = true

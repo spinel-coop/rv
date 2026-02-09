@@ -19,6 +19,30 @@ pub fn github_token() -> Option<String> {
         .or_else(|| std::env::var("GH_TOKEN").ok())
 }
 
+/// Builds a `reqwest::RequestBuilder` for a GitHub API endpoint with standard headers
+/// and optional authentication.
+pub fn github_api_get(
+    client: &reqwest::Client,
+    url: impl reqwest::IntoUrl,
+) -> reqwest::RequestBuilder {
+    use tracing::debug;
+
+    let mut builder = client
+        .get(url)
+        .header("User-Agent", "rv-cli")
+        .header("Accept", "application/vnd.github+json")
+        .header("X-GitHub-Api-Version", GITHUB_API_VERSION);
+
+    if let Some(token) = github_token() {
+        debug!("Using authenticated GitHub API request");
+        builder = builder.header("Authorization", format!("Bearer {}", token));
+    } else {
+        debug!("No GitHub token found, using unauthenticated API request");
+    }
+
+    builder
+}
+
 /// Checks if the URL is a GitHub URL by parsing the host.
 /// Returns true if the host is exactly "github.com" or ends with ".github.com".
 pub fn is_github_url(url: &str) -> bool {

@@ -59,7 +59,14 @@ const STYLES: Styles = Styles::styled()
 #[command(disable_help_flag = true)]
 struct Cli {
     /// Ruby directories to search for installations
-    #[arg(long = "ruby-dir", env = "RUBIES_PATH", value_delimiter = ':')]
+    #[cfg_attr(
+        not(windows),
+        arg(long = "ruby-dir", env = "RUBIES_PATH", value_delimiter = ':')
+    )]
+    #[cfg_attr(
+        windows,
+        arg(long = "ruby-dir", env = "RUBIES_PATH", value_delimiter = ';')
+    )]
     ruby_dir: Vec<Utf8PathBuf>,
 
     #[command(flatten)]
@@ -97,7 +104,7 @@ impl Cli {
         } else {
             self.ruby_dir
                 .iter()
-                .map(|path: &Utf8PathBuf| Ok(root.join(path.canonicalize_utf8()?)))
+                .map(|path: &Utf8PathBuf| Ok(root.join(rv_dirs::canonicalize_utf8(path)?)))
                 .collect::<Result<Vec<_>>>()?
         };
         let ruby_dirs: IndexSet<Utf8PathBuf> = ruby_dirs.into_iter().collect();

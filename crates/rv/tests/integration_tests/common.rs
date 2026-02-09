@@ -1,9 +1,10 @@
 use camino::Utf8PathBuf;
 use camino_tempfile_ext::camino_tempfile::Utf8TempDir;
 use mockito::Mock;
-use rexpect::{reader::Options, session::PtyReplSession};
+use rv_platform::HostPlatform;
 use std::{collections::HashMap, process::Command};
 
+#[cfg(unix)]
 pub struct Shell {
     pub name: &'static str,
     pub startup_flag: &'static str,
@@ -16,28 +17,42 @@ pub struct RvTest {
     pub env: HashMap<String, String>,
     // For mocking the releases json from Github API
     pub server: mockito::ServerGuard,
+    /// The platform the subprocess sees via `RV_TEST_PLATFORM`.
+    pub platform: HostPlatform,
 }
 
 impl RvTest {
     pub fn new() -> Self {
         let temp_dir = Utf8TempDir::new().expect("Failed to create temporary directory");
-        let cwd = temp_dir.path().into();
+        // Use dunce to canonicalize the cwd, avoiding Windows 8.3 short paths
+        // (e.g. RUNNER~1) that would mismatch with temp_root() in normalization.
+        let cwd: Utf8PathBuf =
+            Utf8PathBuf::try_from(dunce::canonicalize(temp_dir.path()).unwrap()).unwrap();
+        let platform = HostPlatform::MacosAarch64;
 
         let mut test = Self {
             temp_dir,
             cwd,
             env: HashMap::new(),
             server: mockito::Server::new(),
+            platform,
         };
 
         test.env
             .insert("RV_ROOT_DIR".into(), test.temp_root().as_str().into());
         // Set consistent arch/os for cross-platform testing
         test.env
-            .insert("RV_TEST_PLATFORM".into(), "aarch64-apple-darwin".into()); // For mocking current_platform::CURRENT_PLATFORM
+            .insert("RV_TEST_PLATFORM".into(), platform.target_triple().into());
 
         test.env.insert("RV_TEST_EXE".into(), "/tmp/bin/rv".into());
         test.env.insert("HOME".into(), test.temp_home().into());
+        // On Windows, set APPDATA and USERPROFILE so that the Win32
+        // SHGetKnownFolderPath API (used by the `etcetera` crate for data_dir)
+        // resolves to our test home dir instead of the real user profile.
+        // This is the same approach used by uv (Astral's Python package manager).
+        test.env.insert("APPDATA".into(), test.temp_home().into());
+        test.env
+            .insert("USERPROFILE".into(), test.temp_home().into());
         test.env
             .insert("BUNDLE_PATH".into(), test.cwd.join("app").into());
 
@@ -54,6 +69,23 @@ impl RvTest {
             "RV_INSTALL_URL".into(),
             format!("{}/{}", test.server.url(), "latest/download"),
         );
+        test.env.insert(
+            "RV_WINDOWS_LIST_URL".into(),
+            format!(
+                "{}/{}",
+                test.server.url(),
+                "repos/oneclick/rubyinstaller2/releases"
+            ),
+        );
+
+        // Override the rubies directory so rv looks in the test temp dir.
+        // On Windows, etcetera resolves data_dir via the Win32 SHGetKnownFolderPath
+        // API which returns the real %APPDATA% path, ignoring our test HOME env var.
+        // RUBIES_PATH forces rv to use our temp dir instead.
+        let rubies_dir = test.temp_home().join(".local/share/rv/rubies");
+        std::fs::create_dir_all(&rubies_dir).expect("Failed to create rubies directory");
+        test.env
+            .insert("RUBIES_PATH".into(), rubies_dir.as_str().into());
 
         // Disable caching for tests by default
         test.env.insert("RV_NO_CACHE".into(), "true".into());
@@ -62,7 +94,9 @@ impl RvTest {
     }
 
     pub fn temp_root(&self) -> Utf8PathBuf {
-        self.temp_dir.path().canonicalize_utf8().unwrap()
+        // Use dunce::canonicalize to avoid Windows 8.3 short paths (e.g. RUNNER~1)
+        // and \\?\ UNC prefix that std::fs::canonicalize produces on Windows.
+        Utf8PathBuf::try_from(dunce::canonicalize(self.temp_dir.path()).unwrap()).unwrap()
     }
 
     pub fn enable_cache(&mut self) -> Utf8PathBuf {
@@ -73,6 +107,12 @@ impl RvTest {
             .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
 
         cache_dir
+    }
+
+    pub fn set_platform(&mut self, platform: HostPlatform) {
+        self.platform = platform;
+        self.env
+            .insert("RV_TEST_PLATFORM".into(), platform.target_triple().into());
     }
 
     pub fn temp_home(&self) -> Utf8PathBuf {
@@ -95,7 +135,14 @@ impl RvTest {
         self.command(env!("CARGO_BIN_EXE_rv"))
     }
 
-    pub fn make_session(&self, shell: Shell) -> Result<PtyReplSession, Box<dyn std::error::Error>> {
+    #[cfg(unix)]
+    pub fn make_session(
+        &self,
+        shell: Shell,
+    ) -> Result<rexpect::session::PtyReplSession, Box<dyn std::error::Error>> {
+        use rexpect::reader::Options;
+        use rexpect::session::PtyReplSession;
+
         let mut cmd = self.command(shell.name);
         cmd.arg(shell.startup_flag);
         cmd.env("TERM", "xterm-256color").env_remove("RV_TEST_EXE");
@@ -130,22 +177,47 @@ impl RvTest {
     pub fn command<S: AsRef<std::ffi::OsStr>>(&self, program: S) -> Command {
         let mut cmd = Command::new(program);
         cmd.current_dir(&self.cwd);
-        cmd.env_clear().envs(&self.env);
+        cmd.env_clear();
+
+        // On Windows, preserve essential system env vars. Without SystemRoot,
+        // Winsock can't initialize (error 10106) and all HTTP requests fail.
+        // Without COMSPEC, .cmd batch scripts can't be executed.
+        #[cfg(windows)]
+        for var in ["SystemRoot", "SYSTEMDRIVE", "COMSPEC"] {
+            if let Ok(val) = std::env::var(var) {
+                cmd.env(var, val);
+            }
+        }
+
+        cmd.envs(&self.env);
         cmd
     }
 
     /// Mocks the /releases API endpoint. Returns the mock handle
     /// so that tests can optionally assert it was called.
+    ///
+    /// Assets use the archive suffix for `self.platform`, so the mocked
+    /// response matches whatever platform the subprocess is configured for.
     pub fn mock_releases(&mut self, versions: Vec<&str>) -> Mock {
+        self.mock_releases_for_platform(versions, self.platform)
+    }
+
+    /// Mocks the /releases API endpoint with assets for a specific platform.
+    pub fn mock_releases_for_platform(
+        &mut self,
+        versions: Vec<&str>,
+        platform: HostPlatform,
+    ) -> Mock {
         use indoc::formatdoc;
 
+        let suffix = platform.archive_suffix();
         let assets = versions
             .into_iter()
             .map(|v| {
                 formatdoc!(
                     r#"
             {{
-                "name": "ruby-{v}.arm64_sonoma.tar.gz",
+                "name": "ruby-{v}{suffix}",
                 "browser_download_url": "http://..."
             }}"#
                 )
@@ -169,6 +241,87 @@ impl RvTest {
             .create()
     }
 
+    /// Mocks the rv-ruby /releases endpoint with assets for all NON-WINDOWS platforms.
+    ///
+    /// Windows uses a separate endpoint (RubyInstaller2), so Windows assets
+    /// should NOT appear in the rv-ruby release. Use `mock_windows_releases()`
+    /// to mock the Windows endpoint.
+    pub fn mock_releases_all_platforms(&mut self, versions: Vec<&str>) -> Mock {
+        use indoc::formatdoc;
+
+        let assets: Vec<String> = versions
+            .into_iter()
+            .flat_map(|v| {
+                HostPlatform::all()
+                    .iter()
+                    .filter(|hp| !hp.is_windows())
+                    .map(move |hp| {
+                        let suffix = hp.archive_suffix();
+                        formatdoc!(
+                            r#"
+            {{
+                "name": "ruby-{v}{suffix}",
+                "browser_download_url": "http://..."
+            }}"#
+                        )
+                    })
+            })
+            .collect();
+
+        let assets_str = assets.join(",\n    ");
+
+        let body = formatdoc!(
+            r#"
+            {{
+                "name": "latest",
+                "assets": [{assets_str}]
+            }}"#
+        );
+
+        self.server
+            .mock("GET", "/repos/spinel-coop/rv-ruby/releases/latest")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(body)
+            .create()
+    }
+
+    /// Mocks the RubyInstaller2 /releases endpoint for Windows.
+    ///
+    /// Returns an array of releases (one per version), each with a
+    /// `rubyinstaller-{v}-1-x64.7z` asset. This matches the real
+    /// RubyInstaller2 release structure.
+    pub fn mock_windows_releases(&mut self, versions: Vec<&str>) -> Mock {
+        use indoc::formatdoc;
+
+        let releases: Vec<String> = versions
+            .iter()
+            .map(|v| {
+                formatdoc!(
+                    r#"
+            {{
+                "name": "RubyInstaller-{v}-1",
+                "assets": [
+                    {{
+                        "name": "rubyinstaller-{v}-1-x64.7z",
+                        "browser_download_url": "http://..."
+                    }}
+                ]
+            }}"#
+                )
+            })
+            .collect();
+
+        let body = format!("[{}]", releases.join(",\n"));
+
+        self.server
+            .mock("GET", "/repos/oneclick/rubyinstaller2/releases")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(body)
+            .create()
+    }
+
     /// Mock a tarball download for testing
     pub fn mock_tarball_download(&mut self, filename: &str, content: &[u8]) -> Mock {
         let path = format!("/{}", filename);
@@ -179,11 +332,13 @@ impl RvTest {
             .with_body(content)
     }
 
+    #[allow(dead_code)]
     pub fn mock_gem_download(&mut self, filename: &str, content: &[u8]) -> Mock {
         let path = format!("gems/{}", filename);
         self.mock_tarball_download(&path, content)
     }
 
+    #[allow(dead_code)]
     pub fn mock_info_endpoint(&mut self, name: &str, content: &[u8]) -> Mock {
         let path = format!("/info/{}", name);
         self.server
@@ -194,6 +349,7 @@ impl RvTest {
     }
 
     /// Mock a tarball on disk for testing
+    #[allow(dead_code)]
     pub fn mock_tarball_on_disk(&mut self, filename: &str, content: &[u8]) -> Utf8PathBuf {
         let temp_dir = self.temp_root().join("tmp");
         std::fs::create_dir_all(&temp_dir).expect("Failed to create TMP directory");
@@ -233,43 +389,61 @@ impl RvTest {
             "ruby"
         };
 
-        // Create a mock ruby executable that outputs the expected format for rv-ruby
-        let ruby_exe = bin_dir.join("ruby");
-        let mock_script = format!(
-            r#"#!/bin/bash
-
-echo "{engine}"
-echo "{version}"
-echo "aarch64-darwin23"
-echo "aarch64"
-echo "darwin23"
-echo ""
-"#
-        );
-        std::fs::write(&ruby_exe, mock_script).expect("Failed to create ruby executable");
-
-        // Make it executable on Unix systems
+        // Create a mock ruby executable that outputs the expected format for rv-ruby.
+        // On Unix, this is a bash script at `bin/ruby`.
+        // On Windows, this is a batch script at `bin/ruby.cmd` (since we can't create
+        // a real .exe from tests, and rv-ruby checks for .cmd as a fallback).
         #[cfg(unix)]
         {
+            let ruby_exe = bin_dir.join("ruby");
+            let mock_script = format!(
+                "#!/bin/bash\n\
+                 echo \"{engine}\"\n\
+                 echo \"{version}\"\n\
+                 echo \"aarch64-darwin23\"\n\
+                 echo \"aarch64\"\n\
+                 echo \"darwin23\"\n\
+                 echo \"\"\n"
+            );
+            std::fs::write(&ruby_exe, mock_script).expect("Failed to create ruby executable");
+
             use std::os::unix::fs::PermissionsExt;
             let mut perms = std::fs::metadata(&ruby_exe).unwrap().permissions();
             perms.set_mode(0o755);
             std::fs::set_permissions(&ruby_exe, perms).unwrap();
         }
 
+        #[cfg(windows)]
+        {
+            let ruby_cmd = bin_dir.join("ruby.cmd");
+            let mock_script = format!(
+                "@echo off\r\n\
+                 echo {engine}\r\n\
+                 echo {version}\r\n\
+                 echo aarch64-darwin23\r\n\
+                 echo aarch64\r\n\
+                 echo darwin23\r\n\
+                 echo.\r\n"
+            );
+            std::fs::write(&ruby_cmd, mock_script).expect("Failed to create ruby executable");
+        }
+
         ruby_dir
     }
 
+    #[allow(dead_code)]
     pub fn use_gemfile(&self, path: &str) {
         let gemfile = fs_err::read_to_string(path).unwrap();
         let _ = fs_err::write(self.cwd.join("Gemfile"), &gemfile);
     }
 
+    #[allow(dead_code)]
     pub fn use_lockfile(&self, path: &str) {
         let lockfile = fs_err::read_to_string(path).unwrap();
         let _ = fs_err::write(self.cwd.join("Gemfile.lock"), &lockfile);
     }
 
+    #[allow(dead_code)]
     pub fn replace_source(&self, from: &str, to: &str) {
         let gemfile_path = self.cwd.join("Gemfile");
         let gemfile = fs_err::read_to_string(&gemfile_path).unwrap();
@@ -335,13 +509,40 @@ impl RvOutput {
     pub fn normalized_stdout(&self) -> String {
         let mut output = self.stdout();
 
-        // Replace Windows path separators with forward slashes
+        // Normalize CRLF to LF before any other processing
         if cfg!(windows) {
-            output = output.replace('\\', "/");
+            output = output.replace("\r\n", "\n");
         }
 
-        // Remove test root from paths
-        output.replace(&self.test_root, "/tmp")
+        // Replace Windows path separators with forward slashes.
+        // First replace double-backslash (JSON-escaped `\` produces `\\` in output)
+        // with a single forward slash, then replace remaining single backslashes.
+        // Without this ordering, `\\` becomes `//` instead of `/`.
+        // Then restore PowerShell provider paths (Env:\, Function:\) that use
+        // backslash as a provider separator, not a file path separator.
+        if cfg!(windows) {
+            output = output.replace("\\\\", "/");
+            output = output.replace('\\', "/");
+            output = output.replace("Env:/", "Env:\\");
+            output = output.replace("Function:/", "Function:\\");
+        }
+
+        // Remove test root from paths. On Windows, also match the forward-slash
+        // version since we already converted backslashes above.
+        output = output.replace(&self.test_root, "/tmp");
+        if cfg!(windows) {
+            output = output.replace(&self.test_root.replace('\\', "/"), "/tmp");
+        }
+
+        // Normalize Windows Ruby executable names so snapshots match across platforms.
+        // On Windows, create_ruby_dir() creates ruby.cmd (since we can't create ELF/Mach-O
+        // executables from tests), so list output shows bin/ruby.cmd instead of bin/ruby.
+        if cfg!(windows) {
+            output = output.replace("/ruby.cmd", "/ruby");
+            output = output.replace("/ruby.exe", "/ruby");
+        }
+
+        output
     }
 
     /// Normalize stderr for cross-platform snapshot testing
@@ -349,11 +550,58 @@ impl RvOutput {
     pub fn normalized_stderr(&self) -> String {
         let mut output = self.stderr();
 
+        // Normalize CRLF to LF before any other processing
+        if cfg!(windows) {
+            output = output.replace("\r\n", "\n");
+        }
+
         // Replace Windows path separators with forward slashes
         if cfg!(windows) {
+            output = output.replace("\\\\", "/");
             output = output.replace('\\', "/");
         }
 
+        // Normalize the binary name: clap uses argv[0] which is `rv.exe` on Windows
+        if cfg!(windows) {
+            output = output.replace("rv.exe", "rv");
+        }
+
         output
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(unix)]
+    use std::os::unix::process::ExitStatusExt;
+    #[cfg(windows)]
+    use std::os::windows::process::ExitStatusExt;
+
+    fn fake_output(stdout: &str) -> RvOutput {
+        RvOutput {
+            output: std::process::Output {
+                status: std::process::ExitStatus::from_raw(0),
+                stdout: stdout.as_bytes().to_vec(),
+                stderr: Vec::new(),
+            },
+            test_root: "/private/var/folders/abc123".into(),
+        }
+    }
+
+    #[test]
+    fn test_normalized_stdout_replaces_test_root() {
+        let out = fake_output("ruby at /private/var/folders/abc123/home/.local/share/rv\n");
+        assert_eq!(
+            out.normalized_stdout(),
+            "ruby at /tmp/home/.local/share/rv\n"
+        );
+    }
+
+    #[test]
+    fn test_normalized_stdout_preserves_other_content() {
+        let out = fake_output("hello world\n");
+        assert_eq!(out.normalized_stdout(), "hello world\n");
     }
 }

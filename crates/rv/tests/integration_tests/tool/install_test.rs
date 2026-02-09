@@ -1,12 +1,25 @@
+#[cfg(unix)]
 use fs_err as fs;
 
+#[cfg(unix)]
 use crate::common::{RvOutput, RvTest};
+#[cfg(unix)]
 use owo_colors::OwoColorize;
+#[cfg(unix)]
 use rv_cache::rm_rf;
 
+// tool_install() removes RV_TEST_PLATFORM so the subprocess detects native
+// platform and downloads real Ruby binaries from GitHub. On Windows, this
+// triggers the RubyInstaller2 flow which has a completely different download
+// path. These tests are gated to Unix until dedicated Windows CI setup exists.
+#[cfg(unix)]
 impl RvTest {
     pub fn tool_install(&mut self, args: &[&str]) -> RvOutput {
         self.env.remove("RV_INSTALL_URL");
+        // Remove RV_TEST_PLATFORM so the subprocess uses its compile-time native
+        // platform. This is necessary because tool install downloads real Ruby
+        // binaries from GitHub, and those binaries must match the host architecture.
+        self.env.remove("RV_TEST_PLATFORM");
         self.rv(&[
             &["tool", "install", "--gem-server", &self.server_url()],
             args,
@@ -15,11 +28,12 @@ impl RvTest {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn test_tool_install_twice() {
     let mut test = RvTest::new();
 
-    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
+    let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
 
     let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
     let info_endpoint_mock = test
@@ -65,11 +79,12 @@ fn test_tool_install_twice() {
 }
 
 /// Tests users can explicitly install an older version of a gem.
+#[cfg(unix)]
 #[test]
 fn test_tool_install_non_latest_version() {
     let mut test = RvTest::new();
 
-    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
+    let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
 
     let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
     let info_endpoint_mock = test
@@ -101,11 +116,12 @@ fn test_tool_install_non_latest_version() {
     tarball_mock.assert();
 }
 
+#[cfg(unix)]
 #[test]
 fn test_tool_install_writes_ruby_version_file() {
     let mut test = RvTest::new();
 
-    let releases_mock = test.mock_releases(["4.0.0"].to_vec());
+    let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
 
     let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
     let info_endpoint_mock = test

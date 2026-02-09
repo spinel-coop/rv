@@ -1,7 +1,19 @@
-use std::{env, ffi::OsString};
+use std::{env, ffi::OsString, io};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use etcetera::BaseStrategy;
+
+/// Canonicalize a path without the Windows `\\?\` extended-length prefix.
+///
+/// On Windows, [`std::fs::canonicalize`] returns paths with the `\\?\` prefix,
+/// which breaks `cmd.exe`, many Windows tools, and string-based path comparisons.
+/// This function uses [`dunce::canonicalize`] to return clean canonical paths
+/// on all platforms (following the same pattern as uv's `simple_canonicalize`).
+pub fn canonicalize_utf8(path: impl AsRef<Utf8Path>) -> io::Result<Utf8PathBuf> {
+    dunce::canonicalize(path.as_ref()).and_then(|p| {
+        Utf8PathBuf::try_from(p).map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))
+    })
+}
 
 /// Returns an appropriate user-home directory, or the system temporary directory if the platform
 /// does not have user home directories
@@ -207,8 +219,9 @@ mod test {
 
         // This is typically only a drive (that is, letter and colon) but we
         // allow anything, including a path to the test fixtures...
+        let context_utf8 = Utf8Path::from_path(context.path()).unwrap();
         assert_eq!(
-            locate_system_config_windows(context.path()).unwrap(),
+            locate_system_config_windows(context_utf8).unwrap(),
             context
                 .child("ProgramData")
                 .child("rv")
@@ -218,7 +231,8 @@ mod test {
 
         // This does not have a `ProgramData` child, so contains no config.
         let context = assert_fs::TempDir::new()?;
-        assert_eq!(locate_system_config_windows(context.path()), None);
+        let context_utf8 = Utf8Path::from_path(context.path()).unwrap();
+        assert_eq!(locate_system_config_windows(context_utf8), None);
 
         Ok(())
     }

@@ -9,6 +9,7 @@ impl RvTest {
         self.rv(&run_args)
     }
 
+    #[allow(dead_code)]
     pub fn script_run_with_ruby(&self, ruby: &str, script: &str, args: &[&str]) -> RvOutput {
         let mut run_args = vec!["run", "--ruby", ruby, script];
         if !args.is_empty() {
@@ -34,9 +35,17 @@ fn test_run_script_not_found() {
     let output = test.script_run("nonexistent.rb", &[]);
 
     output.assert_failure();
-    assert!(output.stderr().contains("No such file or directory"));
+    let stderr = output.stderr();
+    // Unix: "No such file or directory", Windows: "The system cannot find the file specified"
+    assert!(
+        stderr.contains("No such file or directory")
+            || stderr.contains("cannot find the file")
+            || stderr.contains("ScriptRunError"),
+        "Expected a 'file not found' error, got: {stderr}"
+    );
 }
 
+#[cfg(unix)]
 #[test]
 fn test_run_script_with_metadata() {
     let test = RvTest::new();
@@ -60,6 +69,7 @@ puts RUBY_VERSION
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn test_run_script_with_shebang_and_metadata() {
     let test = RvTest::new();
@@ -84,6 +94,7 @@ puts RUBY_VERSION
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn test_run_script_without_metadata() {
     let test = RvTest::new();
@@ -104,6 +115,7 @@ fn test_run_script_without_metadata() {
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn test_run_ruby_flag_overrides_metadata() {
     let test = RvTest::new();
@@ -128,6 +140,7 @@ puts RUBY_VERSION
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn test_run_with_dot_ruby_version() {
     let test = RvTest::new();
@@ -151,6 +164,7 @@ fn test_run_with_dot_ruby_version() {
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn test_run_metadata_overrides_dot_ruby_version() {
     let test = RvTest::new();
@@ -177,6 +191,7 @@ puts RUBY_VERSION
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn test_run_passes_arguments_to_script() {
     let test = RvTest::new();
@@ -213,6 +228,7 @@ puts RUBY_VERSION
     assert!(output.stderr().contains("NoMatchingRuby"));
 }
 
+#[cfg(unix)]
 #[test]
 fn test_run_jruby_metadata() {
     let test = RvTest::new();

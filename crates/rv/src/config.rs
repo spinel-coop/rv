@@ -106,7 +106,7 @@ pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
         .iter()
         .filter_map(|(always_include, path)| {
             let join = root.join(path.strip_prefix("/").unwrap_or(path));
-            join.canonicalize_utf8()
+            rv_dirs::canonicalize_utf8(&join)
                 .ok()
                 .or(always_include.then_some(path.into()))
         })
@@ -249,7 +249,9 @@ pub fn env_with_path_for(
         }
 
         // Set MANPATH so `man ruby`, `man irb`, etc. work correctly.
+        // MANPATH is a Unix concept — Windows has no man page system.
         // A trailing colon means "also search system man directories".
+        #[cfg(not(windows))]
         if let Some(man_path) = ruby.man_path() {
             let existing = env::var("MANPATH").unwrap_or_default();
             insert("MANPATH", format!("{}:{}", man_path, existing));
