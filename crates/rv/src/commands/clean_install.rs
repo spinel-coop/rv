@@ -31,10 +31,11 @@ use url::Url;
 use crate::commands::clean_install::checksums::ArchiveChecksums;
 use crate::commands::clean_install::checksums::HashReader;
 use crate::commands::clean_install::checksums::Hashed;
+use crate::commands::ruby::install::install as ruby_install;
 use crate::commands::ruby::run::CaptureOutput;
 use crate::commands::ruby::run::Invocation;
-use crate::config::Config;
 use crate::progress::WorkProgress;
+use crate::{GlobalArgs, config::Config};
 use std::collections::HashMap;
 use std::io;
 use std::io::Read;
@@ -176,22 +177,23 @@ pub enum Error {
 type Result<T> = std::result::Result<T, Error>;
 type UnpackResult<T> = std::result::Result<T, UnpackError>;
 
-pub async fn ci(config: &Config, args: CleanInstallArgs) -> Result<()> {
+pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Result<()> {
+    let config = &Config::new(global_args, None)?;
+
     // We need some Ruby installed, because we need to run Ruby code when installing
     // gems. Ensure Ruby is installed here so we can use it later.
-    let ruby_request = config.ruby_request();
-    if config.matching_ruby(&ruby_request).is_none() {
-        crate::ruby_install(config, None, Some(ruby_request.clone()), None).await?;
+    if config.current_ruby().is_none() {
+        ruby_install(global_args, None, None, None).await?;
     }
 
     // Now that it's installed, we can use Ruby to query various directories
     // we'll need to know later.
     let ruby = config
-        .matching_ruby(&ruby_request)
+        .current_ruby()
         .expect("Ruby should be installed after the check above");
-    let extensions_dir = find_exts_dir(config, &ruby_request)?;
+    let extensions_dir = find_exts_dir(config)?;
     let (lockfile_dir, lockfile_path) = find_manifest_paths(&args.gemfile)?;
-    let install_path = find_install_path(config, &lockfile_dir, &ruby_request)?;
+    let install_path = find_install_path(config, &lockfile_dir)?;
     let inner_args = CiInnerArgs {
         skip_compile_extensions: args.skip_compile_extensions,
         max_concurrent_requests: args.max_concurrent_requests,
@@ -228,20 +230,22 @@ pub struct InstallStats {
     pub executables_installed: usize,
 }
 
-pub async fn install_from_lockfile(
-    config: &Config,
+pub(crate) async fn install_from_lockfile(
+    global_args: &GlobalArgs,
+    request: Option<RubyRequest>,
     lockfile: GemfileDotLock<'_>,
     install_path: Utf8PathBuf,
 ) -> Result<InstallStats> {
+    let config = &Config::new(global_args, request.clone())?;
+
     // We need some Ruby installed, because we need to run Ruby code when installing
     // gems. Ensure Ruby is installed here so we can use it later.
-    let ruby_request = config.ruby_request();
-    if config.matching_ruby(&ruby_request).is_none() {
-        crate::ruby_install(config, None, Some(ruby_request.clone()), None).await?;
+    if config.current_ruby().is_none() {
+        ruby_install(global_args, None, request, None).await?;
     }
 
     let ruby = config
-        .matching_ruby(&ruby_request)
+        .current_ruby()
         .expect("Ruby should be installed after the check above");
     let inner_args = CiInnerArgs {
         skip_compile_extensions: false,
@@ -249,7 +253,7 @@ pub async fn install_from_lockfile(
         max_concurrent_installs: 20,
         validate_checksums: true,
         install_path,
-        extensions_dir: find_exts_dir(config, &ruby_request)?,
+        extensions_dir: find_exts_dir(config)?,
         ruby_executable_path: ruby.executable_path(),
     };
 
@@ -700,7 +704,6 @@ fn cache_gemspec_path(
     let result = crate::commands::ruby::run::run_no_install(
         Invocation::ruby(vec![]),
         config,
-        &config.ruby_request(),
         &[
             "-e",
             &format!(
@@ -760,11 +763,7 @@ fn find_manifest_paths(gemfile: &Option<Utf8PathBuf>) -> Result<(Utf8PathBuf, Ut
 
 /// Which path should `ci` install gems under?
 /// Uses Bundler's `configured_path.path`.
-fn find_install_path(
-    config: &Config,
-    lockfile_dir: &Utf8Path,
-    version: &RubyRequest,
-) -> Result<Utf8PathBuf> {
+fn find_install_path(config: &Config, lockfile_dir: &Utf8Path) -> Result<Utf8PathBuf> {
     let args = [
         "-rbundler",
         "-e",
@@ -773,7 +772,6 @@ fn find_install_path(
     let bundle_path = match crate::commands::ruby::run::run_no_install(
         Invocation::ruby(vec![]),
         config,
-        version,
         args.as_slice(),
         CaptureOutput::Both,
         Some(lockfile_dir),
@@ -1321,12 +1319,11 @@ impl CompileNativeExtResult {
     }
 }
 
-fn find_exts_dir(config: &Config, version: &RubyRequest) -> Result<Utf8PathBuf> {
+fn find_exts_dir(config: &Config) -> Result<Utf8PathBuf> {
     debug!("Finding extensions dir");
     let exts_dir = crate::commands::ruby::run::run_no_install(
         Invocation::ruby(vec![]),
         config,
-        version,
         &[
             "-e",
             "puts File.join(Gem::Platform.local.to_s, Gem.extension_api_version)",
@@ -1474,7 +1471,6 @@ fn build_rakefile(
         output = crate::commands::ruby::run::run_no_install(
             Invocation::ruby(vec![]),
             config,
-            &config.ruby_request(),
             &[ext_file],
             CaptureOutput::Both,
             Some(&ext_dir),
@@ -1493,7 +1489,6 @@ fn build_rakefile(
     output = crate::commands::ruby::run::run_no_install(
         rake,
         config,
-        &config.ruby_request(),
         &args,
         CaptureOutput::Both,
         Some(&ext_dir),
@@ -1528,7 +1523,6 @@ fn build_extconf(
     output = crate::commands::ruby::run::run_no_install(
         Invocation::ruby(vec![("GEM_HOME", gem_home.to_string())]),
         config,
-        &config.ruby_request(),
         &[ext_file],
         CaptureOutput::Both,
         Some(&ext_dir),
@@ -1558,7 +1552,6 @@ fn build_extconf(
     let _ = crate::commands::ruby::run::run_no_install(
         Invocation::tool("make", make_env.clone()),
         config,
-        &config.ruby_request(),
         &[&["clean"], base_args.as_slice()].concat(),
         CaptureOutput::Both,
         Some(&ext_dir),
@@ -1568,7 +1561,6 @@ fn build_extconf(
     output = crate::commands::ruby::run::run_no_install(
         Invocation::tool("make", make_env.clone()),
         config,
-        &config.ruby_request(),
         &base_args,
         CaptureOutput::Both,
         Some(&ext_dir),
@@ -1583,7 +1575,6 @@ fn build_extconf(
     output = crate::commands::ruby::run::run_no_install(
         Invocation::tool("make", make_env.clone()),
         config,
-        &config.ruby_request(),
         &[&["install"], base_args.as_slice()].concat(),
         CaptureOutput::Both,
         Some(&ext_dir),
@@ -1594,7 +1585,6 @@ fn build_extconf(
     let _ = crate::commands::ruby::run::run_no_install(
         Invocation::tool("make", make_env),
         config,
-        &config.ruby_request(),
         &[&["clean"], base_args.as_slice()].concat(),
         CaptureOutput::Both,
         Some(&ext_dir),

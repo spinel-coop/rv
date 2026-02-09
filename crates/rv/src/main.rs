@@ -1,15 +1,12 @@
 use anstream::stream::IsTerminal;
-use camino::{FromPathBufError, Utf8PathBuf};
+use camino::Utf8PathBuf;
 use clap::builder::Styles;
 use clap::builder::styling::AnsiColor;
 use clap::{ArgAction, CommandFactory, Parser, Subcommand};
 use clap_verbosity_flag::tracing::LevelFilter;
-use config::Config;
-use indexmap::IndexSet;
 use miette::Report;
 use rv_cache::CacheArgs;
 use tokio::main;
-use tracing::debug;
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
@@ -20,33 +17,32 @@ pub mod output_format;
 pub mod progress;
 pub mod script_metadata;
 
-use crate::commands::cache::{CacheCommand, CacheCommandArgs, cache_clean, cache_dir, cache_prune};
+use crate::commands::cache::{CacheCommandArgs, cache};
 use crate::commands::clean_install::{CleanInstallArgs, ci};
-use crate::commands::ruby::dir::dir as ruby_dir;
-use crate::commands::ruby::find::find as ruby_find;
-use crate::commands::ruby::install::install as ruby_install;
-use crate::commands::ruby::list::list as ruby_list;
-use crate::commands::ruby::pin::pin as ruby_pin;
-use crate::commands::ruby::run::{Invocation, run as ruby_run};
-use crate::commands::ruby::uninstall::uninstall as ruby_uninstall;
-use crate::commands::ruby::{RubyArgs, RubyCommand};
-use crate::commands::run::{RunArgs, run as script_run};
-use crate::commands::shell::completions::shell_completions;
-use crate::commands::shell::env::env as shell_env;
-use crate::commands::shell::init::init as shell_init;
-use crate::commands::shell::setup as shell_setup;
-use crate::commands::shell::{ShellArgs, ShellCommand};
-use crate::commands::tool::ToolArgs;
-use crate::commands::tool::install::install as tool_install;
-use crate::commands::tool::list::list as tool_list;
-use crate::commands::tool::run::run as tool_run;
-use crate::commands::tool::uninstall::uninstall as tool_uninstall;
+use crate::commands::ruby::{RubyArgs, ruby};
+use crate::commands::run::{RunArgs, run};
+use crate::commands::shell::{ShellArgs, shell};
+use crate::commands::tool::{ToolArgs, tool};
 
 const STYLES: Styles = Styles::styled()
     .header(AnsiColor::Green.on_default().bold())
     .usage(AnsiColor::Green.on_default().bold())
     .literal(AnsiColor::Cyan.on_default().bold())
     .placeholder(AnsiColor::Cyan.on_default());
+
+struct GlobalArgs {
+    /// Ruby directories to search for installations
+    ruby_dir: Vec<Utf8PathBuf>,
+
+    /// Cache related parameters
+    cache_args: CacheArgs,
+
+    /// Root directory for testing
+    root_dir: Option<Utf8PathBuf>,
+
+    /// Executable path for testing
+    current_exe: Option<Utf8PathBuf>,
+}
 
 /// An extremely fast Ruby version manager.
 #[derive(Parser)]
@@ -95,38 +91,13 @@ struct Cli {
 }
 
 impl Cli {
-    fn config(&self) -> Result<Config> {
-        let root = self.root_dir.as_ref().unwrap_or(&"/".into()).to_owned();
-
-        let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
-        let ruby_dirs = if self.ruby_dir.is_empty() {
-            config::default_ruby_dirs(&root)
-        } else {
-            self.ruby_dir
-                .iter()
-                .map(|path: &Utf8PathBuf| Ok(root.join(rv_dirs::canonicalize_utf8(path)?)))
-                .collect::<Result<Vec<_>>>()?
-        };
-        let ruby_dirs: IndexSet<Utf8PathBuf> = ruby_dirs.into_iter().collect();
-        let cache = self.cache_args.to_cache()?;
-        let current_exe = if let Some(exe) = self.current_exe.clone() {
-            exe
-        } else {
-            std::env::current_exe()?.to_str().unwrap().into()
-        };
-        let requested_ruby = config::find_requested_ruby(current_dir.clone(), root.clone())?;
-        if let Some(req) = &requested_ruby {
-            debug!("Found request for {} in {:?}", req.0, req.1);
+    pub fn global_args(&self) -> GlobalArgs {
+        GlobalArgs {
+            root_dir: self.root_dir.clone(),
+            ruby_dir: self.ruby_dir.clone(),
+            cache_args: self.cache_args.clone(),
+            current_exe: self.current_exe.clone(),
         }
-
-        Ok(Config {
-            ruby_dirs,
-            root,
-            current_dir,
-            cache,
-            current_exe,
-            requested_ruby,
-        })
     }
 }
 
@@ -198,17 +169,7 @@ pub enum Error {
     #[error(transparent)]
     IoError(#[from] std::io::Error),
     #[error(transparent)]
-    ConfigError(#[from] config::Error),
-    #[error(transparent)]
-    FindError(#[from] commands::ruby::find::Error),
-    #[error(transparent)]
-    PinError(#[from] commands::ruby::pin::Error),
-    #[error(transparent)]
-    ListError(#[from] commands::ruby::list::Error),
-    #[error(transparent)]
-    InstallError(#[from] commands::ruby::install::Error),
-    #[error(transparent)]
-    UninstallError(#[from] commands::ruby::uninstall::Error),
+    RubyError(#[from] commands::ruby::Error),
     #[error(transparent)]
     CiError(#[from] commands::clean_install::Error),
     #[error(transparent)]
@@ -216,28 +177,18 @@ pub enum Error {
     #[error(transparent)]
     ScriptRunError(#[from] commands::run::Error),
     #[error(transparent)]
-    NonUtf8Path(#[from] FromPathBufError),
-    #[error(transparent)]
-    Error(#[from] commands::shell::init::Error),
+    CacheError(#[from] commands::cache::Error),
     #[error(transparent)]
     ShellError(#[from] commands::shell::Error),
     #[error(transparent)]
-    EnvError(#[from] commands::shell::env::Error),
-    #[error(transparent)]
-    ToolInstallError(#[from] commands::tool::install::Error),
-    #[error(transparent)]
-    ToolListError(#[from] commands::tool::list::Error),
-    #[error(transparent)]
-    ToolUninstallError(#[from] commands::tool::uninstall::Error),
-    #[error(transparent)]
-    ToolRunError(#[from] commands::tool::run::Error),
+    ToolError(#[from] commands::tool::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
 
 #[main]
 async fn main() {
-    if let Err(err) = run().await {
+    if let Err(err) = main_inner().await {
         let is_tty = std::io::stderr().is_terminal();
         if is_tty {
             eprintln!("{:?}", Report::new(err));
@@ -248,7 +199,7 @@ async fn main() {
     }
 }
 
-async fn run() -> Result<()> {
+async fn main_inner() -> Result<()> {
     let is_rvx = std::env::args().next().unwrap().ends_with("rvx");
     let cli = if is_rvx {
         let mut args = std::env::args().collect::<Vec<String>>();
@@ -325,77 +276,20 @@ async fn run() -> Result<()> {
 
     reg.init();
 
-    let config = cli.config()?;
-    run_cmd(&config, cli.command).await
+    run_cmd(&cli.global_args(), cli.command).await
 }
 
 /// Run an `rv` subcommand.
 /// This is like shelling out to `rv` except it reuses the current context
 /// and doesn't need to start a new process.
-async fn run_cmd(config: &Config, command: Commands) -> Result<()> {
+async fn run_cmd(global_args: &GlobalArgs, command: Commands) -> Result<()> {
     match command {
-        Commands::Ruby(ruby) => match ruby.command {
-            RubyCommand::Find { version } => ruby_find(config, version)?,
-            RubyCommand::List {
-                format,
-                version_filter,
-            } => ruby_list(config, format, version_filter).await?,
-            RubyCommand::Pin { version } => ruby_pin(config, version)?,
-            RubyCommand::Dir => ruby_dir(config),
-            RubyCommand::Install {
-                version,
-                install_dir,
-                tarball_path,
-            } => ruby_install(config, install_dir, version, tarball_path).await?,
-            RubyCommand::Uninstall { version } => ruby_uninstall(config, version).await?,
-            RubyCommand::Run {
-                version,
-                no_install,
-                args,
-            } => ruby_run(
-                Invocation::ruby(vec![]),
-                config,
-                version,
-                no_install,
-                &args,
-                Default::default(),
-                Default::default(),
-            )
-            .await
-            .map(|_| ())?,
-        },
-        Commands::CleanInstall(ci_args) => ci(config, ci_args).await?,
-        Commands::Cache(cache) => match cache.command {
-            CacheCommand::Dir => cache_dir(config)?,
-            CacheCommand::Clean => cache_clean(config)?,
-            CacheCommand::Prune => cache_prune(config)?,
-        },
-        Commands::Shell(shell_args) => match shell_args.command {
-            None => shell_setup(config, shell_args.shell.unwrap())?,
-            Some(ShellCommand::Init { shell }) => shell_init(config, shell)?,
-            Some(ShellCommand::Completions { shell }) => {
-                shell_completions(&mut Cli::command(), shell)
-            }
-            Some(ShellCommand::Env { shell }) => shell_env(config, shell)?,
-        },
-        Commands::Tool(tool) => match tool.command {
-            commands::tool::ToolCommand::Install {
-                gem,
-                gem_server,
-                force,
-            } => tool_install(config, gem, gem_server, force)
-                .await
-                .map(|_| ())?,
-            commands::tool::ToolCommand::List { format } => tool_list(config, format)?,
-            commands::tool::ToolCommand::Uninstall { gem } => tool_uninstall(config, gem)?,
-            commands::tool::ToolCommand::Run {
-                gem,
-                gem_server,
-                no_install,
-                args,
-            } => tool_run(config, gem, gem_server, no_install, args).await?,
-        },
-        Commands::Run(run_args) => script_run(config, run_args).await?,
+        Commands::Ruby(ruby_args) => ruby(global_args, ruby_args).await?,
+        Commands::CleanInstall(ci_args) => ci(global_args, ci_args).await?,
+        Commands::Cache(cache_args) => cache(global_args, cache_args)?,
+        Commands::Shell(shell_args) => shell(global_args, &mut Cli::command(), shell_args)?,
+        Commands::Tool(tool_args) => tool(global_args, tool_args).await?,
+        Commands::Run(run_args) => run(global_args, run_args).await?,
     };
 
     Ok(())

@@ -159,6 +159,7 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::RequestedRuby;
     use assert_fs::TempDir;
     use camino::{Utf8Path, Utf8PathBuf};
     use indexmap::indexset;
@@ -177,7 +178,7 @@ mod tests {
             current_dir: root.clone(),
             cache: Cache::temp().unwrap(),
             current_exe: root.join("bin").join("rv"),
-            requested_ruby: None,
+            requested_ruby: RequestedRuby::Global,
         };
 
         (config, temp_dir)

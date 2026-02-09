@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::GlobalArgs;
 use camino::Utf8PathBuf;
 use fs_err as fs;
 
@@ -10,7 +10,7 @@ pub enum Error {
     CouldNotDelete(std::io::Error),
 }
 
-pub fn uninstall(_config: &Config, target_gem_name: String) -> Result<(), Error> {
+pub(crate) fn uninstall(_global_args: &GlobalArgs, target_gem_name: String) -> Result<(), Error> {
     let tool_dir = crate::commands::tool::tool_dir();
 
     // If the tool directory is missing, then there's nothing to uninstall.

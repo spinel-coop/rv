@@ -2,7 +2,7 @@ use camino::Utf8PathBuf;
 use serde::Serialize;
 use tabled::{Table, settings::Style};
 
-use crate::{config::Config, output_format::OutputFormat};
+use crate::{GlobalArgs, output_format::OutputFormat};
 use fs_err as fs;
 
 const NO_TOOLS_INSTALLED: &str = "No tools installed";
@@ -19,7 +19,7 @@ struct Tool {
     version: String,
 }
 
-pub fn list(_config: &Config, format: OutputFormat) -> Result<(), Error> {
+pub(crate) fn list(_global_args: &GlobalArgs, format: OutputFormat) -> Result<(), Error> {
     let tool_dir = crate::commands::tool::tool_dir();
 
     // If the tool directory is missing, then there's nothing installed.

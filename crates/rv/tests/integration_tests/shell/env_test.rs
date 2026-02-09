@@ -10,7 +10,7 @@ fn test_shell_env_succeeds() {
     let output = test.rv(&["shell", "env", "zsh"]);
 
     assert_snapshot!(output.normalized_stdout());
-    assert!(output.success());
+    output.assert_success();
 }
 
 #[test]
@@ -19,7 +19,7 @@ fn test_bash_env_succeeds() {
     let output = test.rv(&["shell", "env", "bash"]);
 
     assert_snapshot!(output.normalized_stdout());
-    assert!(output.success());
+    output.assert_success();
 }
 
 #[test]
@@ -28,7 +28,7 @@ fn test_fish_env_succeeds() {
     let output = test.rv(&["shell", "env", "fish"]);
 
     assert_snapshot!(output.normalized_stdout());
-    assert!(output.success());
+    output.assert_success();
 }
 
 #[test]
@@ -37,7 +37,7 @@ fn test_nushell_env_succeeds() {
     let output = test.rv(&["shell", "env", "nu"]);
 
     assert_snapshot!(output.normalized_stdout());
-    assert!(output.success());
+    output.assert_success();
 }
 
 #[test]
@@ -46,7 +46,7 @@ fn test_powershell_env_succeeds() {
     let output = test.rv(&["shell", "env", "powershell"]);
 
     assert_snapshot!(output.normalized_stdout());
-    assert!(output.success());
+    output.assert_success();
 }
 
 #[test]
@@ -56,7 +56,7 @@ fn test_shell_env_with_path() {
     let output = test.rv(&["shell", "env", "zsh"]);
 
     assert_snapshot!(output.normalized_stdout());
-    assert!(output.success());
+    output.assert_success();
 }
 
 #[test]
@@ -70,7 +70,7 @@ fn test_shell_env_clears_ruby_vars() {
     let output = test.rv(&["shell", "env", "zsh"]);
 
     assert_snapshot!(output.normalized_stdout());
-    assert!(output.success());
+    output.assert_success();
 }
 
 #[test]
@@ -86,7 +86,7 @@ fn test_shell_env_clear_gem_vars() {
     let output = test.rv(&["shell", "env", "zsh"]);
 
     assert_snapshot!(output.normalized_stdout());
-    assert!(output.success());
+    output.assert_success();
 }
 
 // MANPATH is a Unix concept — on Windows, the #[cfg(not(windows))] guard in config.rs

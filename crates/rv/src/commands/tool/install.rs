@@ -3,12 +3,12 @@ use std::{collections::HashMap, fs};
 use owo_colors::OwoColorize;
 use reqwest::StatusCode;
 use rv_lockfile::datatypes::GemfileDotLock;
-use rv_ruby::request::Source;
 use rv_version::Version as GemVersion;
 use tracing::debug;
 use url::Url;
 
 use crate::{
+    GlobalArgs,
     commands::{
         clean_install::InstallStats,
         tool::{
@@ -31,6 +31,8 @@ type GemName = String;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
+    #[error(transparent)]
+    ConfigError(#[from] crate::config::Error),
     #[error("{0} is not a valid URL")]
     BadUrl(String),
     #[error("{gem_name} doesn't exist on {server}")]
@@ -89,12 +91,14 @@ impl InnerArgs {
     }
 }
 
-pub async fn install(
-    config: &Config,
+pub(crate) async fn install(
+    global_args: &GlobalArgs,
     gem: GemName,
     gem_server: String,
     force: bool,
 ) -> Result<Installed> {
+    let config = &Config::new(global_args, None)?;
+
     // Check if 'gem' is in 'gem@version' format.
     // If `gem_version` is None, it means "latest". Otherwise it's a specific version.
     let (gem_name, gem_version) = if let Some((name, gem_version)) = gem.split_once('@') {
@@ -217,13 +221,12 @@ pub async fn install(
     // Make a Gemfile.lock in-memory, install it via `rv ci`.
     let lockfile_builder = LockfileBuilder::new(&gemserver, versions_needed);
     let lockfile = lockfile_builder.lockfile();
-    let mut config_for_install = config.clone();
-    config_for_install.requested_ruby = Some((ruby_to_use.clone().into(), Source::Other));
 
     let InstallStats {
         executables_installed,
     } = crate::commands::clean_install::install_from_lockfile(
-        &config_for_install,
+        global_args,
+        Some(ruby_to_use.clone().into()),
         lockfile,
         install_path.clone(),
     )

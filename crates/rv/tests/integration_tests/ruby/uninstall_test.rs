@@ -13,7 +13,7 @@ fn test_ruby_uninstall_no_rubies() {
     uninstall.assert_failure();
     assert_eq!(
         uninstall.normalized_stderr(),
-        "Error: UninstallError(NoMatchingRuby)\n"
+        "Error: RubyError(UninstallError(NoMatchingRuby))\n"
     );
 }
 
@@ -36,7 +36,7 @@ fn test_ruby_uninstall_no_matching_rubies() {
     uninstall.assert_failure();
     assert_eq!(
         uninstall.normalized_stderr(),
-        "Error: UninstallError(NoMatchingRuby)\n"
+        "Error: RubyError(UninstallError(NoMatchingRuby))\n"
     );
 }
 

@@ -6,7 +6,7 @@ pub mod uninstall;
 use camino::Utf8PathBuf;
 use clap::{Args, Subcommand};
 
-use crate::output_format::OutputFormat;
+use crate::{GlobalArgs, commands::tool, output_format::OutputFormat};
 
 #[derive(Args)]
 pub struct ToolArgs {
@@ -64,6 +64,42 @@ pub enum ToolCommand {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true, value_names = ["COMMAND", "ARGS"])]
         args: Vec<String>,
     },
+}
+
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum Error {
+    #[error(transparent)]
+    ToolInstallError(#[from] tool::install::Error),
+    #[error(transparent)]
+    ToolListError(#[from] tool::list::Error),
+    #[error(transparent)]
+    ToolUninstallError(#[from] tool::uninstall::Error),
+    #[error(transparent)]
+    ToolRunError(#[from] tool::run::Error),
+}
+
+type Result<T> = miette::Result<T, Error>;
+
+pub(crate) async fn tool(global_args: &GlobalArgs, tool_args: ToolArgs) -> Result<()> {
+    match tool_args.command {
+        ToolCommand::Install {
+            gem,
+            gem_server,
+            force,
+        } => install::install(global_args, gem, gem_server, force)
+            .await
+            .map(|_| ())?,
+        ToolCommand::List { format } => list::list(global_args, format)?,
+        ToolCommand::Uninstall { gem } => uninstall::uninstall(global_args, gem)?,
+        ToolCommand::Run {
+            gem,
+            gem_server,
+            no_install,
+            args,
+        } => run::run(global_args, gem, gem_server, no_install, args).await?,
+    };
+
+    Ok(())
 }
 
 /// The directory where this tool can be found.

@@ -3,8 +3,8 @@ use clap::Args;
 use rv_ruby::request::RubyRequest;
 use tracing::debug;
 
+use crate::GlobalArgs;
 use crate::commands::ruby::run::{Invocation, Program};
-use crate::config::Config;
 use crate::script_metadata;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -33,7 +33,7 @@ pub struct RunArgs {
     args: Vec<String>,
 }
 
-pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
+pub(crate) async fn run(global_args: &GlobalArgs, args: RunArgs) -> Result<()> {
     let (script, cmd_args) = args.args.split_first().unwrap();
     let script = Utf8PathBuf::from(script);
     let mut cmd_args = Vec::from(cmd_args);
@@ -41,10 +41,10 @@ pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
 
     let invocation = if rv_dirs::canonicalize_utf8(&script)?.exists() {
         let content = std::fs::read_to_string(&script)?;
-        if let Some(metadata) = script_metadata::parse(&content) {
-            if let Some(ref version) = metadata.requires_ruby {
-                debug!("Using Ruby version from script metadata: {}", version);
-            }
+        if let Some(metadata) = script_metadata::parse(&content)
+            && let Some(ref version) = metadata.requires_ruby
+        {
+            debug!("Using Ruby version from script metadata: {}", version);
             ruby_version = metadata.requires_ruby
         }
 
@@ -67,7 +67,7 @@ pub async fn run(config: &Config, args: RunArgs) -> Result<()> {
 
     crate::commands::ruby::run::run(
         invocation,
-        config,
+        global_args,
         ruby_version,
         args.no_install,
         &cmd_args,
