@@ -27,9 +27,11 @@ impl HostPlatform {
     /// Checks the `RV_TEST_PLATFORM` env var first (for testing), then falls
     /// back to the compile-time `CURRENT_PLATFORM`.
     pub fn current() -> Result<Self, UnsupportedPlatformError> {
-        let platform =
-            std::env::var("RV_TEST_PLATFORM").unwrap_or_else(|_| CURRENT_PLATFORM.to_string());
-        Self::from_target_triple(&platform)
+        if let Ok(platform) = std::env::var("RV_TEST_PLATFORM") {
+            Self::from_target_triple(&platform)
+        } else {
+            Self::from_target_triple(CURRENT_PLATFORM)
+        }
     }
 
     /// Parse a Rust target triple into a `HostPlatform`.
