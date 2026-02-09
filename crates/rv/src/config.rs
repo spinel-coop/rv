@@ -49,7 +49,14 @@ pub struct Config {
     pub current_dir: Utf8PathBuf,
     pub cache: rv_cache::Cache,
     pub current_exe: Utf8PathBuf,
-    pub requested_ruby: Option<(RubyRequest, Source)>,
+    pub requested_ruby: RequestedRuby,
+}
+
+#[derive(Debug, Clone)]
+pub enum RequestedRuby {
+    Explicit(RubyRequest),
+    Pinned((RubyRequest, Source)),
+    Global,
 }
 
 impl Config {
@@ -79,13 +86,13 @@ impl Config {
         };
 
         let requested_ruby = match version {
-            Some(request) => Some((request, Source::Other)),
+            Some(request) => RequestedRuby::Explicit(request),
             None => match find_requested_ruby(current_dir.clone(), root.clone())? {
                 Some(req) => {
                     debug!("Found request for {} in {:?}", req.0, req.1);
-                    Some(req)
+                    RequestedRuby::Pinned(req)
                 }
-                None => None,
+                None => RequestedRuby::Global,
             },
         };
 
@@ -121,10 +128,10 @@ impl Config {
     }
 
     pub fn ruby_request(&self) -> RubyRequest {
-        if let Some(request) = &self.requested_ruby {
-            request.0.clone()
-        } else {
-            RubyRequest::default()
+        match &self.requested_ruby {
+            RequestedRuby::Explicit(request) => request.clone(),
+            RequestedRuby::Pinned((request, _)) => request.clone(),
+            RequestedRuby::Global => RubyRequest::default(),
         }
     }
 }
@@ -334,7 +341,7 @@ mod tests {
         Config {
             ruby_dirs: indexset![ruby_dir],
             current_exe: root.join("bin").join("rv"),
-            requested_ruby: Some(("3.5.0".parse().unwrap(), Source::Other)),
+            requested_ruby: RequestedRuby::Explicit("3.5.0".parse().unwrap()),
             current_dir,
             cache: rv_cache::Cache::temp().unwrap(),
             root,

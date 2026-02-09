@@ -123,13 +123,12 @@ fn powershell_escape(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::Config;
+    use crate::config::{Config, RequestedRuby};
 
     use super::*;
     use assert_fs::TempDir;
     use camino::Utf8PathBuf;
     use indexmap::indexset;
-    use rv_ruby::request::Source;
     use serde_json::json;
 
     fn test_config() -> Result<Config> {
@@ -142,7 +141,7 @@ mod tests {
         let config = Config {
             ruby_dirs: indexset![ruby_dir],
             current_exe: root.join("bin").join("rv"),
-            requested_ruby: Some(("3.5.0".parse().unwrap(), Source::Other)),
+            requested_ruby: RequestedRuby::Explicit("3.5.0".parse().unwrap()),
             current_dir,
             cache: rv_cache::Cache::temp().unwrap(),
             root,
