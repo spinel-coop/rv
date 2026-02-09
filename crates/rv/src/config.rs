@@ -131,17 +131,17 @@ pub fn find_requested_ruby(
             )));
         }
 
-        let tools_versions = project_dir.join(".tool-versions");
-        if tools_versions.exists() {
-            let tools_versions_string = std::fs::read_to_string(&tools_versions)?;
-            let tools_version = tools_versions_string
+        let tool_versions = project_dir.join(".tool-versions");
+        if tool_versions.exists() {
+            let tool_versions_string = std::fs::read_to_string(&tool_versions)?;
+            let tool_version = tool_versions_string
                 .lines()
                 .find_map(|l| l.trim_start().strip_prefix("ruby "));
 
-            if let Some(version) = tools_version {
+            if let Some(version) = tool_version {
                 return Ok(Some((
                     version.parse()?,
-                    Source::DotToolVersions(tools_versions),
+                    Source::DotToolVersions(tool_versions),
                 )));
             }
         }
