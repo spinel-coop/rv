@@ -1,4 +1,8 @@
 use current_platform::CURRENT_PLATFORM;
+#[cfg(test)]
+use proptest::prelude::*;
+#[cfg(test)]
+use proptest_derive::Arbitrary;
 
 /// Error returned when the current platform is not supported by rv.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -13,6 +17,7 @@ pub struct UnsupportedPlatformError {
 /// exhaustive handling. Adding a new platform variant (e.g., `WindowsAarch64`)
 /// will produce compiler errors at every call site until all methods handle it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub enum HostPlatform {
     MacosAarch64,
     MacosX86_64,
@@ -300,6 +305,15 @@ mod tests {
         for hp in HostPlatform::all() {
             let round_tripped = HostPlatform::from_ruby_arch_str(hp.ruby_arch_str()).unwrap();
             assert_eq!(*hp, round_tripped);
+        }
+    }
+
+    proptest! {
+        /// If this test fails, you forgot to add your new variant of `HostPlatform`
+        /// to `HostPlatform::all`
+        #[test]
+        fn platform_in_list_of_all_platforms(host_platform: HostPlatform) {
+            assert!(HostPlatform::all().contains(&host_platform))
         }
     }
 }
