@@ -107,16 +107,14 @@ impl Config {
         self.discover_remote_rubies().await
     }
 
-    pub fn matching_ruby(&self, request: &RubyRequest) -> Option<Ruby> {
+    pub fn current_ruby(&self) -> Option<Ruby> {
+        let request = &self.ruby_request();
+
         self.discover_rubies_matching(|dir_name| {
             RubyVersion::from_str(dir_name).is_ok_and(|v| v.satisfies(request))
         })
         .last()
         .cloned()
-    }
-
-    pub fn current_ruby(&self) -> Option<Ruby> {
-        self.matching_ruby(&self.ruby_request())
     }
 
     pub fn ruby_request(&self) -> RubyRequest {
