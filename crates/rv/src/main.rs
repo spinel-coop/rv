@@ -115,6 +115,7 @@ enum Commands {
     Tool(ToolArgs),
     #[command(
         about = "Run a command or script with Ruby",
+        visible_alias = "r",
         dont_delimit_trailing_values = true
     )]
     Run(RunArgs),
