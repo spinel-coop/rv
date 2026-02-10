@@ -69,10 +69,6 @@ pub struct CleanInstallArgs {
     #[arg(long, hide = true, default_value = "true")]
     pub validate_checksums: bool,
 
-    /// Don't compile the extensions in native gems.
-    #[arg(long, hide = true, default_value = "false")]
-    pub skip_compile_extensions: bool,
-
     /// Force installation of gems, whatever is installed or not.
     #[arg(long, default_value = "false")]
     pub force: bool,
@@ -80,7 +76,6 @@ pub struct CleanInstallArgs {
 
 #[derive(Debug)]
 struct CiInnerArgs {
-    pub skip_compile_extensions: bool,
     pub max_concurrent_requests: usize,
     pub max_concurrent_installs: usize,
     pub validate_checksums: bool,
@@ -200,7 +195,6 @@ pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Resu
     let (lockfile_dir, lockfile_path) = find_manifest_paths(&args.gemfile)?;
     let install_path = find_install_path(config, &lockfile_dir)?;
     let inner_args = CiInnerArgs {
-        skip_compile_extensions: args.skip_compile_extensions,
         max_concurrent_requests: args.max_concurrent_requests,
         max_concurrent_installs: args.max_concurrent_installs,
         validate_checksums: args.validate_checksums,
@@ -254,7 +248,6 @@ pub(crate) async fn install_from_lockfile(
         .current_ruby()
         .expect("Ruby should be installed after the check above");
     let inner_args = CiInnerArgs {
-        skip_compile_extensions: false,
         max_concurrent_requests: 10,
         max_concurrent_installs: 20,
         validate_checksums: true,
@@ -895,10 +888,6 @@ fn compile_gems(
     args: &CiInnerArgs,
     progress: &WorkProgress,
 ) -> Result<GemsCompiled> {
-    if args.skip_compile_extensions {
-        return Ok(Default::default());
-    }
-
     use dep_graph::DepGraph;
     use rayon::prelude::*;
 
