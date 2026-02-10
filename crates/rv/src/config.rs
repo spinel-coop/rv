@@ -46,7 +46,6 @@ type Result<T> = miette::Result<T, Error>;
 pub struct Config {
     pub ruby_dirs: IndexSet<Utf8PathBuf>,
     pub root: Utf8PathBuf,
-    pub current_dir: Utf8PathBuf,
     pub cache: rv_cache::Cache,
     pub current_exe: Utf8PathBuf,
     pub requested_ruby: RequestedRuby,
@@ -68,7 +67,6 @@ impl Config {
             .unwrap_or(&"/".into())
             .to_owned();
 
-        let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
         let ruby_dirs = if global_args.ruby_dir.is_empty() {
             default_ruby_dirs(&root)
         } else {
@@ -88,13 +86,12 @@ impl Config {
 
         let requested_ruby = match version {
             Some(request) => RequestedRuby::Explicit(request),
-            None => find_requested_ruby(current_dir.clone(), root.clone())?,
+            None => find_requested_ruby(root.clone())?,
         };
 
         Ok(Self {
             ruby_dirs,
             root,
-            current_dir,
             cache,
             current_exe,
             requested_ruby,
@@ -166,8 +163,9 @@ pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
         .collect()
 }
 
-pub fn find_requested_ruby(current_dir: Utf8PathBuf, root: Utf8PathBuf) -> Result<RequestedRuby> {
+pub fn find_requested_ruby(root: Utf8PathBuf) -> Result<RequestedRuby> {
     let home_dir = rv_dirs::home_dir();
+    let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
 
     let search_root = match current_dir
         .ancestors()
@@ -190,12 +188,9 @@ pub fn find_requested_ruby(current_dir: Utf8PathBuf, root: Utf8PathBuf) -> Resul
     Ok(RequestedRuby::Global)
 }
 
-fn find_project_ruby(
-    current_dir: Utf8PathBuf,
-    root: Utf8PathBuf,
-) -> Result<Option<(RubyRequest, Source)>> {
-    debug!("Searching for project directory in {}", current_dir);
-    let mut project_dir = current_dir;
+fn find_project_ruby(dir: Utf8PathBuf, root: Utf8PathBuf) -> Result<Option<(RubyRequest, Source)>> {
+    debug!("Searching for project directory in {}", dir);
+    let mut project_dir = dir;
 
     loop {
         if let Some(ruby) = find_directory_ruby(&project_dir)? {
@@ -361,14 +356,11 @@ mod tests {
         let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
         let ruby_dir = root.join("opt/rubies");
         std::fs::create_dir_all(&ruby_dir).unwrap();
-        let current_dir = root.join("project");
-        std::fs::create_dir_all(&current_dir).unwrap();
 
         Config {
             ruby_dirs: indexset![ruby_dir],
             current_exe: root.join("bin").join("rv"),
             requested_ruby: RequestedRuby::Explicit("3.5.0".parse().unwrap()),
-            current_dir,
             cache: rv_cache::Cache::temp().unwrap(),
             root,
         };
@@ -383,6 +375,6 @@ mod tests {
     #[test]
     fn test_find_requested_ruby() {
         let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
-        find_requested_ruby(root.clone(), root).unwrap();
+        find_requested_ruby(root).unwrap();
     }
 }

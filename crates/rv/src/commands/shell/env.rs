@@ -135,14 +135,11 @@ mod tests {
         let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
         let ruby_dir = root.join("opt/rubies");
         std::fs::create_dir_all(&ruby_dir)?;
-        let current_dir = root.join("project");
-        std::fs::create_dir_all(&current_dir)?;
 
         let config = Config {
             ruby_dirs: indexset![ruby_dir],
             current_exe: root.join("bin").join("rv"),
             requested_ruby: RequestedRuby::Explicit("3.5.0".parse().unwrap()),
-            current_dir,
             cache: rv_cache::Cache::temp().unwrap(),
             root,
         };
