@@ -228,11 +228,11 @@ fn test_parse_minimal_ruby_project() {
 
 #[test]
 fn test_platform_specific_spec_count() {
-    let input = include_str!("../tests/inputs/Gemfile.testwithnative.lock");
+    let input = include_str!("../tests/inputs/Gemfile.one-for-multiple-platforms.lock");
 
     let lockfile = must_parse(input);
 
-    assert_eq!(lockfile.gem_spec_count(), 2);
+    assert_eq!(lockfile.gem_spec_count(), 7);
     assert_eq!(lockfile.platform_specific_spec_count(), 1);
 }
 
