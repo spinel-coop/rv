@@ -29,6 +29,8 @@ const STYLES: Styles = Styles::styled()
     .usage(AnsiColor::Green.on_default().bold())
     .literal(AnsiColor::Cyan.on_default().bold())
     .placeholder(AnsiColor::Cyan.on_default());
+const PROJECT_URL: &str = "https://rv.dev";
+const SOFTWARE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 struct GlobalArgs {
     /// Ruby directories to search for installations
@@ -55,8 +57,11 @@ struct GlobalArgs {
 #[command(disable_help_flag = true)]
 #[command(after_help = {
     let header_style = AnsiColor::Green.on_default().bold();
-    let url_style = AnsiColor::Cyan.on_default().bold();
-    format!("{header_style}Project URL:{header_style:#} {url_style}https://github.com/spinel-coop/rv{url_style:#}")
+    let value_style = AnsiColor::Cyan.on_default().bold();
+    format!(
+        "{header_style}{:<16}:{header_style:#} {value_style}{PROJECT_URL}{value_style:#}\n{header_style}{:<16}:{header_style:#} {value_style}{SOFTWARE_VERSION}{value_style:#}",
+        "Project URL", "Software Version"
+    )
 })]
 struct Cli {
     /// Ruby directories to search for installations
