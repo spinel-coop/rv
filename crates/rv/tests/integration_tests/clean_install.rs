@@ -190,7 +190,7 @@ fn test_clean_install_native_macos_aarch64() {
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative.lock");
 
-    let output = test.ci(&["--skip-compile-extensions"]);
+    let output = test.ci(&[]);
 
     mock.assert();
     output.assert_success();
@@ -209,7 +209,7 @@ fn test_clean_install_native_linux_x86_64() {
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative.lock");
 
-    let output = test.ci(&["--skip-compile-extensions"]);
+    let output = test.ci(&[]);
 
     mock.assert();
     output.assert_success();
