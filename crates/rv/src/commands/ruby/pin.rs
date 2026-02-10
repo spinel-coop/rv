@@ -40,7 +40,7 @@ pub(crate) fn pin(global_args: &GlobalArgs, request: Option<RubyRequest>) -> Res
 
 fn set_pinned_ruby(config: &Config, request: RubyRequest) -> Result<()> {
     let version = request.to_tool_consumable_version();
-    let project_dir: Cow<Utf8PathBuf> = match config.requested_ruby {
+    let project_dir = match config.requested_ruby {
         RequestedRuby::Project((_, Source::DotToolVersions(ref path))) => {
             let versions = fs_err::read_to_string(path)?;
             let mut new_versions = String::new();
@@ -90,7 +90,7 @@ fn show_pinned_ruby(config: &Config) -> Result<()> {
         }
     };
 
-    let dir: Cow<Utf8PathBuf> = match source {
+    let dir = match source {
         Source::DotToolVersions(path) => Cow::Borrowed(path),
         Source::DotRubyVersion(path) => Cow::Borrowed(path),
         Source::GemfileLock(path) => Cow::Borrowed(path),
