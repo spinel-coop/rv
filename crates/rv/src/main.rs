@@ -59,7 +59,14 @@ struct GlobalArgs {
     let header_style = AnsiColor::Green.on_default().bold();
     let value_style = AnsiColor::Cyan.on_default().bold();
     format!(
-        "{header_style}Project URL:{header_style:#}      {value_style}{PROJECT_URL}{value_style:#}\n{header_style}Software Version:{header_style:#} {value_style}{SOFTWARE_VERSION}{value_style:#}"
+        concat!(
+            "{header_style}Project URL:{header_style:#}      {value_style}{project_url}{value_style:#}\n",
+            "{header_style}Software Version:{header_style:#} {value_style}{software_version}{value_style:#}"
+        ),
+        header_style = header_style,
+        value_style = value_style,
+        project_url = PROJECT_URL,
+        software_version = SOFTWARE_VERSION,
     )
 })]
 struct Cli {
