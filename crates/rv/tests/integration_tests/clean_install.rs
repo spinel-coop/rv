@@ -43,6 +43,30 @@ fn test_clean_install_download_test_gem() {
 
 #[cfg(unix)]
 #[test]
+fn test_clean_install_rakefile_extension() {
+    let mut test = RvTest::new();
+
+    let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
+
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.rakeext");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.rakeext.lock");
+    test.replace_source("http://gems.example.com", &test.server_url());
+
+    let tarball_content =
+        fs_err::read("../rv-gem-package/tests/fixtures/rake-ext-test-1.0.0.gem").unwrap();
+    let mock = test
+        .mock_gem_download("rake-ext-test-1.0.0.gem", &tarball_content)
+        .create();
+
+    let output = test.ci(&["--verbose"]);
+
+    output.assert_success();
+    releases_mock.assert();
+    mock.assert();
+}
+
+#[cfg(unix)]
+#[test]
 fn test_clean_install_input_validation() {
     let mut test = RvTest::new();
 

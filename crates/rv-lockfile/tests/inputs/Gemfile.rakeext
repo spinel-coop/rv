@@ -1,0 +1,2 @@
+source "http://gems.example.com/"
+gem "rake-ext-test", "1.0.0"
