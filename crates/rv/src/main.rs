@@ -53,6 +53,11 @@ struct GlobalArgs {
 #[command(styles=STYLES)]
 #[command(version)]
 #[command(disable_help_flag = true)]
+#[command(after_help = {
+    let header_style = AnsiColor::Green.on_default().bold();
+    let url_style = AnsiColor::Cyan.on_default().bold();
+    format!("{header_style}Project URL:{header_style:#} {url_style}https://github.com/spinel-coop/rv{url_style:#}")
+})]
 struct Cli {
     /// Ruby directories to search for installations
     #[cfg_attr(
