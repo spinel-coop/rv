@@ -285,7 +285,7 @@ async fn ci_inner_work(
 
         if already_installed > 0 {
             println!(
-                "{} gems already installed, skipping installation. Use --force if you want to install this gems again.",
+                "{} gems already installed, skipping installation. Use --force if you want to install these gems again.",
                 already_installed
             );
         }
