@@ -111,10 +111,10 @@ enum Commands {
     Shell(ShellArgs),
     #[command(about = "Clean install from a Gemfile.lock", visible_alias = "ci")]
     CleanInstall(CleanInstallArgs),
-    #[command(about = "Manage Ruby tools", hide = true)]
+    #[command(about = "Manage Ruby tools")]
     Tool(ToolArgs),
     #[command(
-        about = "Run a Ruby script with automatic version detection",
+        about = "Run a command or script with Ruby",
         dont_delimit_trailing_values = true
     )]
     Run(RunArgs),
