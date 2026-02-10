@@ -225,3 +225,104 @@ fn test_parse_minimal_ruby_project() {
         "should contain rspec-core"
     );
 }
+
+#[test]
+fn test_platform_specific_spec_count() {
+    let input = include_str!("../tests/inputs/Gemfile.one-for-multiple-platforms.lock");
+
+    let lockfile = must_parse(input);
+
+    assert_eq!(lockfile.gem_spec_count(), 7);
+    assert_eq!(lockfile.platform_specific_spec_count(), 1);
+}
+
+#[test]
+fn test_discard_installed_gems() {
+    use camino::Utf8PathBuf;
+    use std::fs;
+    use tempfile::TempDir;
+
+    let temp_dir = TempDir::new().unwrap();
+    let install_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf()).unwrap();
+
+    // A fake installed gem (We check based on dir, so just a dir with the name is enough)
+    let installed_gem_dir = install_path.join("gems").join("rake-13.3.0");
+    fs::create_dir_all(&installed_gem_dir).unwrap();
+
+    let input = include_str!("../tests/inputs/Gemfile.twosources.lock");
+
+    let mut lockfile = must_parse(input);
+
+    lockfile.discard_installed_gems(&install_path);
+
+    assert_eq!(lockfile.gem_spec_count(), 1);
+    assert_eq!(lockfile.gem[0].specs[0].gem_version.name, "rack");
+}
+
+#[test]
+fn test_prefer_platform_specific_gems() {
+    // Use the real Discourse lockfile fixture which has libv8-node with
+    // multiple platform variants (ruby, x86_64-linux, aarch64-linux, etc.)
+    let input = include_str!("..//tests/inputs/Gemfile.discourse.lock");
+    let lockfile = must_parse(input);
+
+    // Get all specs from the gem sources
+    let all_specs: Vec<_> = lockfile
+        .gem
+        .clone()
+        .into_iter()
+        .flat_map(|section| section.specs)
+        .collect();
+
+    // Get all specs filtered by platform specific
+    let result: Vec<_> = lockfile
+        .gem
+        .clone()
+        .into_iter()
+        .flat_map(|section| section.platform_specific_gems())
+        .collect();
+
+    // Count how many libv8-node variants exist before filtering
+    let libv8_before: Vec<_> = all_specs
+        .iter()
+        .filter(|s| s.gem_version.name == "libv8-node")
+        .collect();
+    assert!(
+        libv8_before.len() > 1,
+        "fixture should have multiple libv8-node variants, found {}",
+        libv8_before.len()
+    );
+
+    // Should only have ONE libv8-node after filtering
+    let libv8_after: Vec<_> = result
+        .iter()
+        .filter(|s| s.gem_version.name == "libv8-node")
+        .collect();
+    assert_eq!(
+        libv8_after.len(),
+        1,
+        "should have exactly one libv8-node after filtering, found {}",
+        libv8_after.len()
+    );
+
+    // Verify the correct platform was chosen for the current machine
+    let libv8 = libv8_after[0];
+
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    let expected_version = "24.1.0.0-arm64-darwin";
+    #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+    let expected_version = "24.1.0.0-x86_64-darwin";
+    #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+    let expected_version = "24.1.0.0-aarch64-linux";
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    let expected_version = "24.1.0.0-x86_64-linux";
+    // No Windows-specific libv8-node variant in the fixture, so the generic
+    // (ruby platform) variant is selected.
+    #[cfg(target_os = "windows")]
+    let expected_version = "24.1.0.0";
+
+    assert_eq!(
+        libv8.gem_version.version, expected_version,
+        "should select platform-specific version for current platform"
+    );
+}

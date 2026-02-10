@@ -41,6 +41,29 @@ impl GemfileDotLock<'_> {
     pub fn gem_spec_count(&self) -> usize {
         self.gem.iter().map(|s| s.specs.len()).sum()
     }
+
+    pub fn platform_specific_spec_count(&self) -> usize {
+        self.gem
+            .iter()
+            .map(|s| s.platform_specific_gems().len())
+            .sum::<usize>()
+            + self.git.iter().map(|s| s.specs.len()).sum::<usize>()
+            + self.path.iter().map(|s| s.specs.len()).sum::<usize>()
+    }
+
+    pub fn discard_installed_gems(&mut self, install_path: &camino::Utf8PathBuf) {
+        use std::path::Path;
+
+        self.gem.iter_mut().for_each(|gem_section| {
+            gem_section.specs.retain(|spec| {
+                let gem_path = install_path.join("gems").join(spec.gem_version.to_string());
+
+                !Path::new(&gem_path).exists()
+            });
+        });
+
+        self.gem.retain(|section| !section.specs.is_empty());
+    }
 }
 
 /// Git source that gems could come from.
@@ -73,6 +96,38 @@ pub struct GemSection<'i> {
     pub remote: &'i str,
     /// All gems which came from this source in particular.
     pub specs: Vec<Spec<'i>>,
+}
+
+impl<'i> GemSection<'i> {
+    pub fn platform_specific_gems(&self) -> Vec<Spec<'i>> {
+        use rv_gem_types::VersionPlatform;
+        use std::collections::HashMap;
+        use std::str::FromStr;
+
+        let mut by_name: HashMap<&str, Vec<Spec<'i>>> = HashMap::new();
+        for spec in &self.specs {
+            let Ok(vp) = VersionPlatform::from_str(spec.gem_version.version) else {
+                continue;
+            };
+            if vp.platform.is_local() {
+                by_name
+                    .entry(spec.gem_version.name)
+                    .or_default()
+                    .push(spec.clone());
+            }
+        }
+
+        by_name
+            .into_values()
+            .filter_map(|candidates| {
+                candidates.into_iter().max_by(|a, b| {
+                    let vp_a = VersionPlatform::from_str(a.gem_version.version).ok();
+                    let vp_b = VersionPlatform::from_str(b.gem_version.version).ok();
+                    vp_a.cmp(&vp_b)
+                })
+            })
+            .collect()
+    }
 }
 
 /// Filesystem path that gems could come from.

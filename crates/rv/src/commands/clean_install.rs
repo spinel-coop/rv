@@ -13,7 +13,6 @@ use rayon::ThreadPoolBuildError;
 use regex::Regex;
 use reqwest::Client;
 use rv_gem_types::Specification as GemSpecification;
-use rv_gem_types::VersionPlatform;
 use rv_lockfile::datatypes::ChecksumAlgorithm;
 use rv_lockfile::datatypes::GemSection;
 use rv_lockfile::datatypes::GemVersion;
@@ -73,6 +72,10 @@ pub struct CleanInstallArgs {
     /// Don't compile the extensions in native gems.
     #[arg(long, hide = true, default_value = "false")]
     pub skip_compile_extensions: bool,
+
+    /// Force installation of gems, whatever is installed or not.
+    #[arg(long, default_value = "false")]
+    pub force: bool,
 }
 
 #[derive(Debug)]
@@ -85,6 +88,8 @@ struct CiInnerArgs {
     pub extensions_dir: Utf8PathBuf,
     /// Full path to the Ruby executable, used for Windows .bat binstub wrappers
     pub ruby_executable_path: Utf8PathBuf,
+    /// Will install already installed gems
+    pub force: bool,
 }
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -202,6 +207,7 @@ pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Resu
         install_path,
         extensions_dir,
         ruby_executable_path: ruby.executable_path(),
+        force: args.force,
     };
 
     // Terminal progress indicator (OSC 9;4) for supported terminals
@@ -255,6 +261,7 @@ pub(crate) async fn install_from_lockfile(
         install_path,
         extensions_dir: find_exts_dir(config)?,
         ruby_executable_path: ruby.executable_path(),
+        force: true,
     };
 
     // Terminal progress indicator (OSC 9;4) for supported terminals
@@ -268,10 +275,31 @@ async fn ci_inner_work(
     config: &Config,
     args: &CiInnerArgs,
     progress: &WorkProgress,
-    lockfile: GemfileDotLock<'_>,
+    mut lockfile: GemfileDotLock<'_>,
 ) -> Result<InstallStats> {
     let binstub_dir = args.install_path.join("bin");
     tokio::fs::create_dir_all(&binstub_dir).await?;
+
+    if !args.force {
+        let original_count = lockfile.platform_specific_spec_count();
+        lockfile.discard_installed_gems(&args.install_path);
+        let filtered_count = lockfile.platform_specific_spec_count();
+
+        let already_installed = original_count.saturating_sub(filtered_count);
+
+        if already_installed > 0 {
+            println!(
+                "{} gems already installed, skipping installation. Use --force if you want to install these gems again.",
+                already_installed
+            );
+        }
+
+        if filtered_count == 0 {
+            return Ok(InstallStats {
+                executables_installed: 0,
+            });
+        }
+    }
 
     // Phase 1: Downloads (0-40%)
     let gem_count = lockfile.gem_spec_count() as u64;
@@ -1700,7 +1728,7 @@ async fn download_gem_source<'i>(
     // over generic "ruby" platform gems. This ensures we use prebuilt binaries
     // (like libv8-node-24.1.0.0-x86_64-linux.gem) instead of compiling from
     // source (libv8-node-24.1.0.0.gem).
-    let gems_to_download = prefer_platform_specific_gems(gem_source.specs);
+    let gems_to_download = gem_source.platform_specific_gems();
     let spec_stream = futures_util::stream::iter(gems_to_download);
     let downloaded_gems: Vec<_> = spec_stream
         .map(|spec| {
@@ -1795,39 +1823,6 @@ async fn download_gem<'i>(
     }
 
     Ok(DownloadedRubygems { contents, spec })
-}
-
-/// Filter gem specs to those matching local platform, preferring platform-specific
-/// gems over generic "ruby" platform gems.
-///
-/// When a lockfile contains both a generic ruby gem (e.g., `libv8-node-24.1.0.0`)
-/// and platform-specific variants (e.g., `libv8-node-24.1.0.0-x86_64-linux`),
-/// this function ensures we download the platform-specific prebuilt binary
-/// instead of the generic gem that would require compiling from source.
-fn prefer_platform_specific_gems<'i>(specs: Vec<Spec<'i>>) -> Vec<Spec<'i>> {
-    // Group specs by gem name, keeping only those matching local platform
-    let mut by_name: HashMap<&str, Vec<Spec<'i>>> = HashMap::new();
-    for spec in specs {
-        let Ok(vp) = VersionPlatform::from_str(spec.gem_version.version) else {
-            continue;
-        };
-        if vp.platform.is_local() {
-            by_name.entry(spec.gem_version.name).or_default().push(spec);
-        }
-    }
-
-    // For each gem, pick the best platform variant using VersionPlatform ordering
-    // (Platform::Ruby < Platform::Specific, so max_by prefers specific)
-    by_name
-        .into_values()
-        .filter_map(|candidates| {
-            candidates.into_iter().max_by(|a, b| {
-                let vp_a = VersionPlatform::from_str(a.gem_version.version).ok();
-                let vp_b = VersionPlatform::from_str(b.gem_version.version).ok();
-                vp_a.cmp(&vp_b)
-            })
-        })
-        .collect()
 }
 
 /// Format a duration in a human-readable way (e.g., "16s" or "1m16s").
@@ -2040,68 +2035,6 @@ SHA512:
         assert_eq!(
             "c7271aa96826b53e9ae015b4163fbe4f6256cc9101cae95bdde1ee8801cf9a156eaf9c1a678c87cb1d49b2c7b09e2b29f02487394bee0092e4d57fc1952c4c62",
             &hex::encode(sha512.data_tar_gz)
-        );
-    }
-
-    #[test]
-    fn test_prefer_platform_specific_gems() {
-        // Use the real Discourse lockfile fixture which has libv8-node with
-        // multiple platform variants (ruby, x86_64-linux, aarch64-linux, etc.)
-        let input = include_str!("../../../rv-lockfile/tests/inputs/Gemfile.discourse.lock");
-        let lockfile = rv_lockfile::parse(input).expect("should parse discourse lockfile");
-
-        // Get all specs from the gem sources
-        let all_specs: Vec<_> = lockfile
-            .gem
-            .into_iter()
-            .flat_map(|section| section.specs)
-            .collect();
-
-        // Count how many libv8-node variants exist before filtering
-        let libv8_before: Vec<_> = all_specs
-            .iter()
-            .filter(|s| s.gem_version.name == "libv8-node")
-            .collect();
-        assert!(
-            libv8_before.len() > 1,
-            "fixture should have multiple libv8-node variants, found {}",
-            libv8_before.len()
-        );
-
-        // Apply the filter
-        let result = super::prefer_platform_specific_gems(all_specs);
-
-        // Should only have ONE libv8-node after filtering
-        let libv8_after: Vec<_> = result
-            .iter()
-            .filter(|s| s.gem_version.name == "libv8-node")
-            .collect();
-        assert_eq!(
-            libv8_after.len(),
-            1,
-            "should have exactly one libv8-node after filtering, found {}",
-            libv8_after.len()
-        );
-
-        // Verify the correct platform was chosen for the current machine
-        let libv8 = libv8_after[0];
-
-        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-        let expected_version = "24.1.0.0-arm64-darwin";
-        #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
-        let expected_version = "24.1.0.0-x86_64-darwin";
-        #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
-        let expected_version = "24.1.0.0-aarch64-linux";
-        #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-        let expected_version = "24.1.0.0-x86_64-linux";
-        // No Windows-specific libv8-node variant in the fixture, so the generic
-        // (ruby platform) variant is selected.
-        #[cfg(target_os = "windows")]
-        let expected_version = "24.1.0.0";
-
-        assert_eq!(
-            libv8.gem_version.version, expected_version,
-            "should select platform-specific version for current platform"
         );
     }
 }
