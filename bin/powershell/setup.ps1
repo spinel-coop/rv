@@ -4,7 +4,7 @@ $ErrorActionPreference = "Stop"
 if (-not (Get-Command link.exe -ErrorAction SilentlyContinue)) {
     Write-Host "Installing Visual Studio Build Tools with C++ workload..."
     winget install Microsoft.VisualStudio.2022.BuildTools --accept-source-agreements --accept-package-agreements `
-        --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+        --override "--wait --quiet --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
     Write-Host "Build Tools installed. You may need to restart your terminal for the changes to take effect."
 }
 
