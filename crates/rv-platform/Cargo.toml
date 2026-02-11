@@ -5,11 +5,11 @@ edition = "2024"
 
 [dependencies]
 current_platform = { workspace = true }
-proptest-derive = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }
+proptest-derive = { workspace = true }
 
 [lints]
 workspace = true

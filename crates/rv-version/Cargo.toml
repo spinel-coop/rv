@@ -7,5 +7,14 @@ edition = "2024"
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 
+[dev-dependencies]
+criterion = { workspace = true }
+proptest = { workspace = true }
+proptest-derive = { workspace = true }
+
+[[bench]]
+name = "cmp"
+harness = false
+
 [lints]
 workspace = true
