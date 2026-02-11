@@ -82,19 +82,27 @@ fn test_ruby_list_multiple_matching_rubies() {
     let output = test.ruby_list(&[]);
     output.assert_success();
     assert_snapshot!(output.normalized_stdout(), @r"
-      ruby-3.1.4 [installed] /tmp/home/.local/share/rv/rubies/3.1.4/bin/ruby
-      ruby-3.1.4 [installed] /tmp/home/.local/share/rv/rubies/ruby-3.1.4/bin/ruby
-    * ruby-3.2.0 [installed] /tmp/home/.local/share/rv/rubies/ruby-3.2.0/bin/ruby
+    ┌──────────────┬─────────────┬─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+    │ Version      │ Installed   │ Path                                                                                                                │
+    ├──────────────┼─────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+    │   ruby-3.1.4 │ [installed] │ /tmp/home/.local/share/rv/rubies/3.1.4/bin/ruby      │
+    │   ruby-3.1.4 │ [installed] │ /tmp/home/.local/share/rv/rubies/ruby-3.1.4/bin/ruby │
+    │ * ruby-3.2.0 │ [installed] │ /tmp/home/.local/share/rv/rubies/ruby-3.2.0/bin/ruby │
+    └──────────────┴─────────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
     ");
 
     test.create_ruby_dir("3.2.0");
     let output = test.ruby_list(&[]);
     output.assert_success();
     assert_snapshot!(output.normalized_stdout(), @r"
-      ruby-3.1.4 [installed] /tmp/home/.local/share/rv/rubies/3.1.4/bin/ruby
-      ruby-3.1.4 [installed] /tmp/home/.local/share/rv/rubies/ruby-3.1.4/bin/ruby
-      ruby-3.2.0 [installed] /tmp/home/.local/share/rv/rubies/3.2.0/bin/ruby
-    * ruby-3.2.0 [installed] /tmp/home/.local/share/rv/rubies/ruby-3.2.0/bin/ruby
+    ┌──────────────┬─────────────┬─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+    │ Version      │ Installed   │ Path                                                                                                                │
+    ├──────────────┼─────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+    │   ruby-3.1.4 │ [installed] │ /tmp/home/.local/share/rv/rubies/3.1.4/bin/ruby      │
+    │   ruby-3.1.4 │ [installed] │ /tmp/home/.local/share/rv/rubies/ruby-3.1.4/bin/ruby │
+    │   ruby-3.2.0 │ [installed] │ /tmp/home/.local/share/rv/rubies/3.2.0/bin/ruby      │
+    │ * ruby-3.2.0 │ [installed] │ /tmp/home/.local/share/rv/rubies/ruby-3.2.0/bin/ruby │
+    └──────────────┴─────────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
     ");
 
     test.env.insert(
@@ -105,10 +113,14 @@ fn test_ruby_list_multiple_matching_rubies() {
     let output = test.ruby_list(&[]);
     output.assert_success();
     assert_snapshot!(output.normalized_stdout(), @r"
-      ruby-3.1.4 [installed] /tmp/home/.local/share/rv/rubies/3.1.4/bin/ruby
-      ruby-3.1.4 [installed] /tmp/home/.local/share/rv/rubies/ruby-3.1.4/bin/ruby
-      ruby-3.2.0 [installed] /tmp/home/.local/share/rv/rubies/3.2.0/bin/ruby
-    * ruby-3.2.0 [installed] /tmp/home/.local/share/rv/rubies/ruby-3.2.0/bin/ruby
+    ┌──────────────┬─────────────┬─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+    │ Version      │ Installed   │ Path                                                                                                                │
+    ├──────────────┼─────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+    │   ruby-3.1.4 │ [installed] │ /tmp/home/.local/share/rv/rubies/3.1.4/bin/ruby      │
+    │   ruby-3.1.4 │ [installed] │ /tmp/home/.local/share/rv/rubies/ruby-3.1.4/bin/ruby │
+    │   ruby-3.2.0 │ [installed] │ /tmp/home/.local/share/rv/rubies/3.2.0/bin/ruby      │
+    │ * ruby-3.2.0 │ [installed] │ /tmp/home/.local/share/rv/rubies/ruby-3.2.0/bin/ruby │
+    └──────────────┴─────────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
     ");
 }
 

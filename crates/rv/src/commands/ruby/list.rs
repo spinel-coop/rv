@@ -1,6 +1,7 @@
 use clap::Args;
-use std::collections::BTreeMap;
 use std::io;
+use std::{borrow::Cow, collections::BTreeMap};
+use tabled::{Table, settings::Style};
 
 use anstream::println;
 use owo_colors::OwoColorize;
@@ -51,6 +52,34 @@ impl JsonRubyEntry {
             installed,
             details,
         }
+    }
+}
+
+impl tabled::Tabled for JsonRubyEntry {
+    const LENGTH: usize = 3;
+
+    fn fields(&self) -> Vec<Cow<'_, str>> {
+        let name = if self.active {
+            format!("* {}", self.details.display_name())
+        } else {
+            format!("  {}", self.details.display_name())
+        };
+
+        let installed = if self.installed {
+            "[installed]".green().to_string().into()
+        } else {
+            "[available]".dimmed().to_string().into()
+        };
+        let path = if self.installed {
+            self.details.executable_path().cyan().to_string().into()
+        } else {
+            "".into()
+        };
+        vec![name.into(), installed, path]
+    }
+
+    fn headers() -> Vec<Cow<'static, str>> {
+        vec!["Version".into(), "Installed".into(), "Path".into()]
     }
 }
 
@@ -185,36 +214,15 @@ fn latest_patch_version(remote_rubies: &Vec<Ruby>) -> Vec<Ruby> {
 fn print_entries(entries: &[JsonRubyEntry], format: OutputFormat) -> Result<()> {
     match format {
         OutputFormat::Text => {
-            let width = entries
-                .iter()
-                .map(|e| e.details.display_name().len())
-                .max()
-                .unwrap_or(0);
-            for entry in entries {
-                println!("{}", format_ruby_entry(entry, width));
-            }
+            let mut table = Table::new(entries);
+            table.with(Style::sharp());
+            println!("{table}");
         }
         OutputFormat::Json => {
             serde_json::to_writer_pretty(io::stdout(), entries)?;
         }
     }
     Ok(())
-}
-
-/// Formats a single entry for text output.
-fn format_ruby_entry(entry: &JsonRubyEntry, width: usize) -> String {
-    let marker = if entry.active { "*" } else { " " };
-    let name = entry.details.display_name();
-
-    if entry.installed {
-        format!(
-            "{marker} {name:width$} {} {}",
-            "[installed]".green(),
-            entry.details.executable_path().cyan()
-        )
-    } else {
-        format!("{marker} {name:width$} {}", "[available]".dimmed())
-    }
 }
 
 #[cfg(test)]
