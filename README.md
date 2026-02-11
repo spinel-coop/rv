@@ -14,7 +14,9 @@ Manage your projects, including all their Ruby versions and gems, with `rv`.
 brew install rv
 ```
 
-Or, visit [releases](https://github.com/spinel-coop/rv/releases) for an installer shell script.
+Or, visit [releases](https://github.com/spinel-coop/rv/releases) for installer scripts for macOS, Linux, and Windows.
+
+On Windows PowerShell, use `rvw` instead of `rv`. (`rv` conflicts with the built-in `Remove-Variable` alias)
 
 ## Quickstart
 
@@ -25,7 +27,15 @@ rvx rails new . # run any gem CLI directly
 rv clean-install # install project Ruby and gems from Gemfile.lock
 rv ruby pin 4.0.0 # set a project Ruby version
 rv ruby install 4.0.0 # install a Ruby version
-rv shell [zsh|bash|fish|nu] # set up automatic version switching
+rv shell [zsh|bash|fish|nu|powershell] # set up automatic version switching
+```
+
+On Windows PowerShell, use `rvw` instead of `rv`:
+
+```powershell
+rvw run ruby             # run any command or script with Ruby available
+rvw clean-install        # install project Ruby and gems from Gemfile.lock
+rvw shell powershell     # set up automatic version switching
 ```
 
 See [SHELL INTEGRATION](docs/SHELL_INTEGRATION.md) for more about `.ruby-version` and automatic version switching.
@@ -46,10 +56,10 @@ For details, see [INSTALL_BENCHMARK.md](docs/INSTALL_BENCHMARK.md).
 
 ## Requirements
 
-- **Operating Systems**: macOS 14+, Linux glibc 2.35+
+- **Operating Systems**: macOS 14+, Linux glibc 2.35+, Windows 10+
 - **Architectures**: x86, arm64
 - **Ruby Versions**: Ruby 3.2, 3.3, 3.4, and 4.0.
-- **Shells**: zsh, bash, fish, nushell. See [SHELL INTEGRATION](docs/SHELL_INTEGRATION.md) for more.
+- **Shells**: zsh, bash, fish, nushell, PowerShell. See [SHELL INTEGRATION](docs/SHELL_INTEGRATION.md) for more.
 
 ## From Spinel Cooperative
 
@@ -81,6 +91,8 @@ See [PLANS.md](docs/PLANS.md) for more on our future plans.
 ## Contributing
 
 Install dependencies on macOS or Ubuntu with `bin/setup`. Make changes, and then run the development binary with `bin/rv`, or install the development binary to your system with `bin/install`.
+
+On Windows, equivalent PowerShell scripts are available in `bin\powershell\`.
 
 When you're done, make sure to run the tests with `bin/test`, and the linter with `bin/lint`. Then, send us a pull request! We love pull requests.
 
