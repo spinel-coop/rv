@@ -19,4 +19,6 @@ cd lobsters
 
 rv ci
 
+rv run bundle check
+
 smoke_test_success "lobsters"

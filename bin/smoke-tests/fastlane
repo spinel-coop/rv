@@ -23,4 +23,6 @@ echo "3.3" > .ruby-version
 
 rv ci
 
+rv run bundle check
+
 smoke_test_success "fastlane"
