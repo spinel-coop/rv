@@ -200,34 +200,34 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Build rv
+      - name: Build rvw
         run: .\bin\powershell\build.ps1
 
-      - name: Run basic rv commands
+      - name: Run basic rvw commands
         run: |
           .\target\release\rvw --version
           .\target\release\rvw --help
 
-      - name: Run rv ruby run (install Ruby)
+      - name: Run rvw ruby run (install Ruby)
         run: .\bin\integration-tests\windows\ruby-run.ps1 .\target\release\rvw
 
-      - name: Run rv ruby list
+      - name: Run rvw ruby list
         run: .\bin\integration-tests\windows\ruby-list.ps1 .\target\release\rvw
 
-      - name: Run rv ruby find
+      - name: Run rvw ruby find
         run: .\bin\integration-tests\windows\ruby-find.ps1 .\target\release\rvw
 
-      - name: Run rv ruby pin
+      - name: Run rvw ruby pin
         run: .\bin\integration-tests\windows\ruby-pin.ps1 .\target\release\rvw
 
-      - name: Run rv shell env
+      - name: Run rvw shell env
         run: .\bin\integration-tests\windows\shell-env.ps1 .\target\release\rvw
 
-      - name: Run rv cache dir
+      - name: Run rvw cache dir
         run: .\bin\integration-tests\windows\cache-dir.ps1 .\target\release\rvw
 
-      - name: Run rv ruby uninstall
+      - name: Run rvw ruby uninstall
         run: .\bin\integration-tests\windows\ruby-uninstall.ps1 .\target\release\rvw
 
-      - name: Run rv ci
+      - name: Run rvw ci
         run: .\bin\integration-tests\windows\ci.ps1 .\target\release\rvw

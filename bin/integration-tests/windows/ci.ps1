@@ -14,6 +14,8 @@ $RV = $args[0]
 if (-not $RV) { throw "Usage: ci.ps1 <rv-binary-path>" }
 
 # Resolve rv to absolute path before changing directories
+# Append .exe if needed, since Resolve-Path requires the exact filename
+if (-not (Test-Path $RV) -and (Test-Path "$RV.exe")) { $RV = "$RV.exe" }
 $RV = (Resolve-Path $RV).Path
 
 Write-Host "=== Set up test project ==="
