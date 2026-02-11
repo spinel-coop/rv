@@ -28,6 +28,11 @@ macos-sign = true
 # Provide sigstore attestations from GitHub
 github-attestions = true
 
+# Which binaries to include per target platform
+[dist.binaries]
+"*" = ["rv", "rvx"]
+x86_64-pc-windows-msvc = ["rv", "rvx", "rvw"]
+
 [dist.github-custom-runners]
 x86_64-apple-darwin = "macos-14"
 aarch64-apple-darwin = "macos-14"

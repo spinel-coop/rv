@@ -143,8 +143,11 @@ fn setup(config: &Config, shell: Shell) -> Result<()> {
             printdoc! {"
                 {header}
 
-                Add-Content -Path $PROFILE -Value 'Invoke-Expression (& {rv} shell init powershell)'
-                Add-Content -Path $PROFILE -Value 'Invoke-Expression (& {rv} shell completions powershell)'
+                Use \"rvw\" or \"rv.exe\" to invoke rv from the command line.
+                On PowerShell, \"rv\" conflicts with the built-in Remove-Variable alias.
+
+                Add-Content -Path $PROFILE -Value 'Invoke-Expression (& \"{rv}\" shell init powershell)'
+                Add-Content -Path $PROFILE -Value 'Invoke-Expression (& \"{rv}\" shell completions powershell)'
             "};
 
             Ok(())
