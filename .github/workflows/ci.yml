@@ -73,8 +73,15 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Build
+      - name: Build (Unix)
+        if: runner.os != 'Windows'
         run: ./bin/rv --version
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          .\bin\powershell\build.ps1
+          .\target\release\rvw --version
 
   manage-external-rubies:
     name: External Ruby management

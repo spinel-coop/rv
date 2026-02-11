@@ -86,5 +86,8 @@ pretty_assertions = { workspace = true }
 [target.'cfg(unix)'.dev-dependencies]
 rexpect = "0.6.3"
 
+[[bin]]
+name = "rvw"
+
 [lints]
 workspace = true
