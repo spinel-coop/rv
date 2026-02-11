@@ -28,13 +28,15 @@ pub enum Error {
 type Result<T> = miette::Result<T, Error>;
 
 // Struct for JSON output and maintaing the list of installed/active rubies
-#[derive(Serialize)]
-#[cfg_attr(test, derive(Debug, PartialEq))]
+#[derive(Serialize, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 struct JsonRubyEntry {
     #[serde(flatten)]
     details: Ruby,
     installed: bool,
     active: bool,
+    #[serde(skip)]
+    color: bool,
 }
 
 impl JsonRubyEntry {
@@ -51,7 +53,12 @@ impl JsonRubyEntry {
             active: active_ruby.as_ref().is_some_and(|a| a == &details),
             installed,
             details,
+            color: true,
         }
+    }
+
+    fn no_color(&mut self) {
+        self.color = false;
     }
 }
 
@@ -66,12 +73,22 @@ impl tabled::Tabled for JsonRubyEntry {
         };
 
         let installed = if self.installed {
-            "[installed]".green().to_string().into()
-        } else {
+            if self.color {
+                "[installed]".green().to_string().into()
+            } else {
+                "[installed]".to_string().into()
+            }
+        } else if self.color {
             "[available]".dimmed().to_string().into()
+        } else {
+            "[available]".to_string().into()
         };
         let path = if self.installed {
-            self.details.executable_path().cyan().to_string().into()
+            if self.color {
+                self.details.executable_path().cyan().to_string().into()
+            } else {
+                self.details.executable_path().to_string().into()
+            }
         } else {
             "".into()
         };
@@ -100,6 +117,7 @@ pub(crate) async fn list(
     global_args: &GlobalArgs,
     format: OutputFormat,
     version_filter: VersionFilter,
+    no_color: bool,
 ) -> Result<()> {
     let config = Config::new(global_args, None)?;
 
@@ -155,6 +173,7 @@ pub(crate) async fn list(
                         details,
                         installed: false,
                         active: true,
+                        color: true,
                     }]);
             };
 
@@ -172,7 +191,7 @@ pub(crate) async fn list(
     // Create entries for output
     let entries: Vec<JsonRubyEntry> = rubies_map.into_values().flatten().collect();
 
-    print_entries(&entries, format)
+    print_entries(entries, format, no_color)
 }
 
 fn latest_patch_version(remote_rubies: &Vec<Ruby>) -> Vec<Ruby> {
@@ -211,15 +230,24 @@ fn latest_patch_version(remote_rubies: &Vec<Ruby>) -> Vec<Ruby> {
     available_rubies.into_values().collect()
 }
 
-fn print_entries(entries: &[JsonRubyEntry], format: OutputFormat) -> Result<()> {
+fn print_entries(
+    mut entries: Vec<JsonRubyEntry>,
+    format: OutputFormat,
+    no_color: bool,
+) -> Result<()> {
     match format {
         OutputFormat::Text => {
+            if no_color {
+                for e in entries.iter_mut() {
+                    e.no_color();
+                }
+            }
             let mut table = Table::new(entries);
             table.with(Style::sharp());
             println!("{table}");
         }
         OutputFormat::Json => {
-            serde_json::to_writer_pretty(io::stdout(), entries)?;
+            serde_json::to_writer_pretty(io::stdout(), &entries)?;
         }
     }
     Ok(())
@@ -263,7 +291,7 @@ mod tests {
             all: false,
             installed_only: false,
         };
-        list(&global_args, OutputFormat::Text, version_filter)
+        list(&global_args, OutputFormat::Text, version_filter, true)
             .await
             .unwrap();
     }

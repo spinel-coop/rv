@@ -29,6 +29,11 @@ pub enum RubyCommand {
 
         #[command(flatten)]
         version_filter: list::VersionFilter,
+
+        /// By default, the table view is colored.
+        /// Set this to skip coloring.
+        #[arg(long)]
+        no_color: bool,
     },
 
     #[command(about = "Show or set the Ruby version for the current project")]
@@ -114,7 +119,8 @@ pub(crate) async fn ruby(global_args: &GlobalArgs, args: RubyArgs) -> Result<()>
         RubyCommand::List {
             format,
             version_filter,
-        } => list::list(global_args, format, version_filter).await?,
+            no_color,
+        } => list::list(global_args, format, version_filter, no_color).await?,
         RubyCommand::Pin { version } => pin::pin(global_args, version)?,
         RubyCommand::Dir => dir::dir(global_args)?,
         RubyCommand::Install {

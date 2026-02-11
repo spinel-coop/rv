@@ -37,7 +37,7 @@ fn test_ruby_list_text_output_with_rubies() {
     test.create_ruby_dir("ruby-3.1.4");
     test.create_ruby_dir("ruby-3.2.0");
 
-    let output = test.ruby_list(&[]);
+    let output = test.ruby_list(&["--no-color"]);
 
     output.assert_success();
     assert_snapshot!(output.normalized_stdout());
@@ -79,7 +79,7 @@ fn test_ruby_list_multiple_matching_rubies() {
     test.create_ruby_dir("ruby-3.2.0");
     test.create_ruby_dir("3.1.4");
 
-    let output = test.ruby_list(&[]);
+    let output = test.ruby_list(&["--no-color"]);
     output.assert_success();
     assert_snapshot!(output.normalized_stdout(), @r"
     ┌──────────────┬─────────────┬─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -92,7 +92,7 @@ fn test_ruby_list_multiple_matching_rubies() {
     ");
 
     test.create_ruby_dir("3.2.0");
-    let output = test.ruby_list(&[]);
+    let output = test.ruby_list(&["--no-color"]);
     output.assert_success();
     assert_snapshot!(output.normalized_stdout(), @r"
     ┌──────────────┬─────────────┬─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -110,7 +110,7 @@ fn test_ruby_list_multiple_matching_rubies() {
         "/tmp/home/.local/share/rv/rubies/3.1.4/bin".into(),
     );
 
-    let output = test.ruby_list(&[]);
+    let output = test.ruby_list(&["--no-color"]);
     output.assert_success();
     assert_snapshot!(output.normalized_stdout(), @r"
     ┌──────────────┬─────────────┬─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
