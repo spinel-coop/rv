@@ -21,6 +21,7 @@ use crate::commands::cache::{CacheCommandArgs, cache};
 use crate::commands::clean_install::{CleanInstallArgs, ci};
 use crate::commands::ruby::{RubyArgs, ruby};
 use crate::commands::run::{RunArgs, run};
+use crate::commands::selfupdate::selfupdate;
 use crate::commands::shell::{ShellArgs, shell};
 use crate::commands::tool::{ToolArgs, tool};
 
@@ -121,6 +122,8 @@ enum Commands {
     Shell(ShellArgs),
     #[command(about = "Clean install from a Gemfile.lock", visible_alias = "ci")]
     CleanInstall(CleanInstallArgs),
+    #[command(about = "Update rv itself, if an update is available")]
+    Selfupdate,
     #[command(about = "Manage Ruby tools")]
     Tool(ToolArgs),
     #[command(
@@ -189,6 +192,8 @@ pub enum Error {
     ScriptRunError(#[from] commands::run::Error),
     #[error(transparent)]
     CacheError(#[from] commands::cache::Error),
+    #[error(transparent)]
+    SelfupdateError(#[from] commands::selfupdate::Error),
     #[error(transparent)]
     ShellError(#[from] commands::shell::Error),
     #[error(transparent)]
@@ -298,6 +303,7 @@ async fn run_cmd(global_args: &GlobalArgs, command: Commands) -> Result<()> {
         Commands::Ruby(ruby_args) => ruby(global_args, ruby_args).await?,
         Commands::CleanInstall(ci_args) => ci(global_args, ci_args).await?,
         Commands::Cache(cache_args) => cache(global_args, cache_args)?,
+        Commands::Selfupdate => selfupdate(global_args).await?,
         Commands::Shell(shell_args) => shell(global_args, &mut Cli::command(), shell_args)?,
         Commands::Tool(tool_args) => tool(global_args, tool_args).await?,
         Commands::Run(run_args) => run(global_args, run_args).await?,

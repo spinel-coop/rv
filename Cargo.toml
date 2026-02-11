@@ -16,6 +16,7 @@ resolver = "2"
 
 [workspace.dependencies]
 # External dependencies
+axoupdater = "0.9.1"
 anstream = "0.6.19"
 assert_fs = "1.1.3"
 bytesize = "2.3.0"
