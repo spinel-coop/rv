@@ -2687,13 +2687,16 @@ dependencies = [
 name = "rv-lockfile"
 version = "0.1.0"
 dependencies = [
+ "camino",
  "criterion",
  "hex",
  "insta",
  "line-ending",
  "miette",
+ "rv-gem-types",
  "rv-version",
  "serde",
+ "tempfile",
  "thiserror 2.0.17",
  "winnow",
 ]
