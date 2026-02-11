@@ -22,7 +22,9 @@ pub enum HostPlatform {
     MacosAarch64,
     MacosX86_64,
     LinuxX86_64,
+    LinuxMuslX86_64,
     LinuxAarch64,
+    LinuxMuslAarch64,
     WindowsX86_64,
 }
 
@@ -45,7 +47,9 @@ impl HostPlatform {
             "aarch64-apple-darwin" => Ok(Self::MacosAarch64),
             "x86_64-apple-darwin" => Ok(Self::MacosX86_64),
             "x86_64-unknown-linux-gnu" => Ok(Self::LinuxX86_64),
+            "x86_64-unknown-linux-musl" => Ok(Self::LinuxMuslX86_64),
             "aarch64-unknown-linux-gnu" => Ok(Self::LinuxAarch64),
+            "aarch64-unknown-linux-musl" => Ok(Self::LinuxMuslAarch64),
             "x86_64-pc-windows-msvc" => Ok(Self::WindowsX86_64),
             other => Err(UnsupportedPlatformError {
                 platform: other.to_string(),
@@ -58,6 +62,7 @@ impl HostPlatform {
         match self {
             Self::MacosAarch64 | Self::MacosX86_64 => "macos",
             Self::LinuxX86_64 | Self::LinuxAarch64 => "linux",
+            Self::LinuxMuslX86_64 | Self::LinuxMuslAarch64 => "linux-musl",
             Self::WindowsX86_64 => "windows",
         }
     }
@@ -65,8 +70,10 @@ impl HostPlatform {
     /// The normalized architecture name used for filtering ruby releases.
     pub fn arch(&self) -> &'static str {
         match self {
-            Self::MacosAarch64 | Self::LinuxAarch64 => "aarch64",
-            Self::MacosX86_64 | Self::LinuxX86_64 | Self::WindowsX86_64 => "x86_64",
+            Self::MacosAarch64 | Self::LinuxAarch64 | Self::LinuxMuslAarch64 => "aarch64",
+            Self::MacosX86_64 | Self::LinuxX86_64 | Self::LinuxMuslX86_64 | Self::WindowsX86_64 => {
+                "x86_64"
+            }
         }
     }
 
@@ -78,7 +85,9 @@ impl HostPlatform {
             Self::MacosAarch64 => "arm64_sonoma",
             Self::MacosX86_64 => "ventura",
             Self::LinuxX86_64 => "x86_64_linux",
+            Self::LinuxMuslX86_64 => "x86_64_linux_musl",
             Self::LinuxAarch64 => "arm64_linux",
+            Self::LinuxMuslAarch64 => "arm64_linux_musl",
             Self::WindowsX86_64 => "x64",
         }
     }
@@ -86,9 +95,12 @@ impl HostPlatform {
     /// The archive file extension for this platform's ruby downloads.
     pub fn archive_ext(&self) -> &'static str {
         match self {
-            Self::MacosAarch64 | Self::MacosX86_64 | Self::LinuxX86_64 | Self::LinuxAarch64 => {
-                "tar.gz"
-            }
+            Self::MacosAarch64
+            | Self::MacosX86_64
+            | Self::LinuxX86_64
+            | Self::LinuxMuslX86_64
+            | Self::LinuxAarch64
+            | Self::LinuxMuslAarch64 => "tar.gz",
             Self::WindowsX86_64 => "7z",
         }
     }
@@ -104,7 +116,9 @@ impl HostPlatform {
             "arm64_sonoma" => Ok(Self::MacosAarch64),
             "ventura" | "sequoia" => Ok(Self::MacosX86_64),
             "x86_64_linux" => Ok(Self::LinuxX86_64),
+            "x86_64_linux_musl" => Ok(Self::LinuxMuslX86_64),
             "arm64_linux" => Ok(Self::LinuxAarch64),
+            "arm64_linux_musl" => Ok(Self::LinuxMuslAarch64),
             "x64" => Ok(Self::WindowsX86_64),
             other => Err(UnsupportedPlatformError {
                 platform: other.to_string(),
@@ -122,7 +136,9 @@ impl HostPlatform {
             Self::MacosAarch64,
             Self::MacosX86_64,
             Self::LinuxX86_64,
+            Self::LinuxMuslX86_64,
             Self::LinuxAarch64,
+            Self::LinuxMuslAarch64,
             Self::WindowsX86_64,
         ]
     }
@@ -133,7 +149,9 @@ impl HostPlatform {
             Self::MacosAarch64 => "aarch64-apple-darwin",
             Self::MacosX86_64 => "x86_64-apple-darwin",
             Self::LinuxX86_64 => "x86_64-unknown-linux-gnu",
+            Self::LinuxMuslX86_64 => "x86_64-unknown-linux-musl",
             Self::LinuxAarch64 => "aarch64-unknown-linux-gnu",
+            Self::LinuxMuslAarch64 => "aarch64-unknown-linux-musl",
             Self::WindowsX86_64 => "x86_64-pc-windows-msvc",
         }
     }
@@ -144,7 +162,9 @@ impl HostPlatform {
             Self::MacosAarch64 => ".arm64_sonoma.tar.gz",
             Self::MacosX86_64 => ".ventura.tar.gz",
             Self::LinuxX86_64 => ".x86_64_linux.tar.gz",
+            Self::LinuxMuslX86_64 => ".x86_64_linux_musl.tar.gz",
             Self::LinuxAarch64 => ".arm64_linux.tar.gz",
+            Self::LinuxMuslAarch64 => ".arm64_linux_musl.tar.gz",
             Self::WindowsX86_64 => ".x64.7z",
         }
     }
