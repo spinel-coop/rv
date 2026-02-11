@@ -28,17 +28,20 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
-pub(crate) fn pin(global_args: &GlobalArgs, request: Option<RubyRequest>) -> Result<()> {
-    let config = &Config::new(global_args, None)?;
+pub(crate) async fn pin(global_args: &GlobalArgs, request: Option<RubyRequest>) -> Result<()> {
+    let config = &Config::new(global_args, request.clone())?;
 
     match request {
         None => show_pinned_ruby(config),
-        Some(request) => set_pinned_ruby(config, request),
+        Some(request) => {
+            let version = config.find_remote_ruby_request(&request).await?;
+
+            set_pinned_ruby(config, version.number())
+        }
     }
 }
 
-fn set_pinned_ruby(config: &Config, request: RubyRequest) -> Result<()> {
-    let version = request.to_tool_consumable_version();
+fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
     let project_dir = match config.requested_ruby {
         RequestedRuby::Project((_, Source::DotToolVersions(ref path))) => {
             let versions = fs_err::read_to_string(path)?;
