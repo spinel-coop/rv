@@ -15,6 +15,7 @@ pub enum VersionError {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum VersionSegment {
     Number(u32),
     String(String),
@@ -51,6 +52,7 @@ impl std::fmt::Display for VersionSegment {
 }
 
 #[derive(Debug, Clone, Eq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct Version {
     pub version: String,
     pub segments: Vec<VersionSegment>,

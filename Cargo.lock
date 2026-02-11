@@ -2731,6 +2731,9 @@ dependencies = [
 name = "rv-version"
 version = "0.1.0"
 dependencies = [
+ "criterion",
+ "proptest",
+ "proptest-derive",
  "serde",
  "thiserror 2.0.17",
 ]
