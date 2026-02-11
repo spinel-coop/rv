@@ -19,10 +19,6 @@ targets = [
 ]
 # Path that installers should place binaries in
 install-path = "CARGO_HOME"
-# Which binaries to include per target platform
-[dist.binaries]
-"*" = ["rv", "rvx"]
-x86_64-pc-windows-msvc = ["rv", "rvx", "rvw"]
 # Whether to install an updater program
 install-updater = false
 # Build only the required packages, and individually
@@ -31,6 +27,11 @@ precise-builds = true
 macos-sign = true
 # Provide sigstore attestations from GitHub
 github-attestions = true
+
+# Which binaries to include per target platform
+[dist.binaries]
+"*" = ["rv", "rvx"]
+x86_64-pc-windows-msvc = ["rv", "rvx", "rvw"]
 
 [dist.github-custom-runners]
 x86_64-apple-darwin = "macos-14"
