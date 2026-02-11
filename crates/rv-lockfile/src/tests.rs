@@ -245,13 +245,27 @@ fn test_discard_installed_gems() {
     let temp_dir = TempDir::new().unwrap();
     let install_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf()).unwrap();
 
+    let input = include_str!("../tests/inputs/Gemfile.twosources.lock");
+
+    let mut lockfile = must_parse(input);
+
     // A fake installed gem (We check based on dir, so just a dir with the name is enough)
     let installed_gem_dir = install_path.join("gems").join("rake-13.3.0");
     fs::create_dir_all(&installed_gem_dir).unwrap();
 
-    let input = include_str!("../tests/inputs/Gemfile.twosources.lock");
+    lockfile.discard_installed_gems(&install_path);
+
+    assert_eq!(lockfile.gem_spec_count(), 2);
+    assert_eq!(lockfile.gem[0].specs[0].gem_version.name, "rake");
+    assert_eq!(lockfile.gem[1].specs[0].gem_version.name, "rack");
 
     let mut lockfile = must_parse(input);
+
+    // A fake installed specification (We check based on file presence, so just an empty file is enough)
+    let specifications_dir = install_path.join("specifications");
+    fs::create_dir_all(&specifications_dir).unwrap();
+    let installed_specification = specifications_dir.join("rake-13.3.0.gemspec");
+    fs::write(&installed_specification, "").unwrap();
 
     lockfile.discard_installed_gems(&install_path);
 
