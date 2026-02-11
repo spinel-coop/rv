@@ -112,7 +112,9 @@ impl FromStr for RubyRequest {
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         let input = input.trim();
         let first_char = input.chars().next().ok_or(RequestError::EmptyInput)?;
-        let (engine, version) = if first_char.is_alphabetic() {
+        let (engine, version) = if input == "latest" {
+            ("ruby", "")
+        } else if first_char.is_alphabetic() {
             input.split_once('-').unwrap_or((input, ""))
         } else {
             ("ruby", input)
@@ -500,6 +502,17 @@ mod tests {
             format!("ruby-{}", version.trim()),
             "Parsed output does not match input for {version}"
         );
+    }
+
+    #[test]
+    fn test_ruby_request_from_str_with_latest_word() {
+        let request = r("latest");
+        assert_eq!(request.engine, "ruby".into());
+        assert_eq!(request.major, None);
+        assert_eq!(request.minor, None);
+        assert_eq!(request.patch, None);
+        assert_eq!(request.tiny, None);
+        assert_eq!(request.prerelease, None);
     }
 
     #[test]
