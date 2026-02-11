@@ -1,6 +1,5 @@
 /// Windows-friendly entry point for `rv`. On PowerShell, the bare name `rv` conflicts with
 /// the built-in `Remove-Variable` alias, so `rvw` provides a conflict-free way to invoke rv.
-
 use std::convert::Infallible;
 use std::path::{Path, PathBuf};
 use std::{
