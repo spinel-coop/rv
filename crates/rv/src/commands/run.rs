@@ -44,7 +44,7 @@ pub(crate) async fn run(global_args: &GlobalArgs, args: RunArgs) -> Result<()> {
 
     let script_filepath = rv_dirs::canonicalize_utf8(&script).ok();
     let invocation = if script_filepath
-        .map(|path| path.exists())
+        .map(|path| path.is_file())
         .unwrap_or_default()
     {
         let content = fs::read_to_string(&script)?;
