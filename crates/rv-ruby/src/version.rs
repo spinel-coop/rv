@@ -151,6 +151,11 @@ impl RubyVersion {
         version
     }
 
+    /// ABI compatibility version for this ruby version.
+    pub fn abi(&self) -> String {
+        format!("{}.{}.0", self.major, self.minor)
+    }
+
     /// Is this ruby version a prerelease.
     pub fn is_prerelease(&self) -> bool {
         self.prerelease.is_some()

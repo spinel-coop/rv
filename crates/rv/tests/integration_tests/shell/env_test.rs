@@ -98,7 +98,7 @@ fn test_shell_env_with_ruby_and_xdg_compatible_gem_path() {
     test.create_ruby_dir("ruby-3.3.5");
 
     // Ensure the legacy path is not present.
-    rm_rf(test.legacy_gem_path("3.3.5")).unwrap();
+    rm_rf(test.legacy_gem_path("3.3")).unwrap();
 
     test.env.insert("PATH".into(), "/tmp/bin".into());
     test.env.insert("RUBY_ROOT".into(), "/tmp/ruby".into());
@@ -123,10 +123,10 @@ fn test_shell_env_with_ruby_and_xdg_compatible_gem_path() {
     export RUBY_ROOT=/tmp/home/.local/share/rv/rubies/ruby-3.3.5
     export RUBY_ENGINE=ruby
     export RUBY_VERSION=3.3.5
-    export GEM_HOME=/tmp/home/.local/share/rv/gems/ruby/3.3.5
-    export GEM_PATH=/tmp/home/.local/share/rv/gems/ruby/3.3.5
+    export GEM_HOME=/tmp/home/.local/share/rv/gems/ruby/3.3.0
+    export GEM_PATH=/tmp/home/.local/share/rv/gems/ruby/3.3.0
     export MANPATH='/tmp/home/.local/share/rv/rubies/ruby-3.3.5/share/man:'
-    export PATH='/tmp/home/.local/share/rv/gems/ruby/3.3.5/bin:/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin:/tmp/bin'
+    export PATH='/tmp/home/.local/share/rv/gems/ruby/3.3.0/bin:/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin:/tmp/bin'
     hash -r
     ");
 
@@ -140,9 +140,9 @@ fn test_shell_env_with_ruby_and_xdg_compatible_gem_path() {
     export RUBY_ROOT='/tmp/home/.local/share/rv/rubies/ruby-3.3.5'
     export RUBY_ENGINE=ruby
     export RUBY_VERSION=3.3.5
-    export GEM_HOME='/tmp/home/.local/share/rv/gems/ruby/3.3.5'
-    export GEM_PATH='/tmp/home/.local/share/rv/gems/ruby/3.3.5'
-    export PATH='/tmp/home/.local/share/rv/gems/ruby/3.3.5/bin:/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin:/tmp/bin'
+    export GEM_HOME='/tmp/home/.local/share/rv/gems/ruby/3.3.0'
+    export GEM_PATH='/tmp/home/.local/share/rv/gems/ruby/3.3.0'
+    export PATH='/tmp/home/.local/share/rv/gems/ruby/3.3.0/bin:/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin:/tmp/bin'
     hash -r
     ");
 }
@@ -153,7 +153,7 @@ fn test_shell_env_with_ruby_and_legacy_gem_path() {
     test.create_ruby_dir("ruby-3.3.5");
 
     // Ensure the legacy path is present.
-    create_dir_all(test.legacy_gem_path("3.3.5")).unwrap();
+    create_dir_all(test.legacy_gem_path("3.3")).unwrap();
 
     test.env.insert("PATH".into(), "/tmp/bin".into());
     test.env.insert("RUBY_ROOT".into(), "/tmp/ruby".into());
@@ -178,10 +178,10 @@ fn test_shell_env_with_ruby_and_legacy_gem_path() {
     export RUBY_ROOT=/tmp/home/.local/share/rv/rubies/ruby-3.3.5
     export RUBY_ENGINE=ruby
     export RUBY_VERSION=3.3.5
-    export GEM_HOME=/tmp/home/.gem/ruby/3.3.5
-    export GEM_PATH=/tmp/home/.gem/ruby/3.3.5
+    export GEM_HOME=/tmp/home/.gem/ruby/3.3.0
+    export GEM_PATH=/tmp/home/.gem/ruby/3.3.0
     export MANPATH='/tmp/home/.local/share/rv/rubies/ruby-3.3.5/share/man:'
-    export PATH='/tmp/home/.gem/ruby/3.3.5/bin:/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin:/tmp/bin'
+    export PATH='/tmp/home/.gem/ruby/3.3.0/bin:/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin:/tmp/bin'
     hash -r
     ");
 
@@ -191,9 +191,9 @@ fn test_shell_env_with_ruby_and_legacy_gem_path() {
     export RUBY_ROOT='/tmp/home/.local/share/rv/rubies/ruby-3.3.5'
     export RUBY_ENGINE=ruby
     export RUBY_VERSION=3.3.5
-    export GEM_HOME='/tmp/home/.gem/ruby/3.3.5'
-    export GEM_PATH='/tmp/home/.gem/ruby/3.3.5'
-    export PATH='/tmp/home/.gem/ruby/3.3.5/bin:/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin:/tmp/bin'
+    export GEM_HOME='/tmp/home/.gem/ruby/3.3.0'
+    export GEM_PATH='/tmp/home/.gem/ruby/3.3.0'
+    export PATH='/tmp/home/.gem/ruby/3.3.0/bin:/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin:/tmp/bin'
     hash -r
     ");
 }
@@ -204,7 +204,7 @@ fn test_powershell_env_with_ruby() {
     test.create_ruby_dir("ruby-3.3.5");
 
     // Ensure the legacy path is present.
-    create_dir_all(test.legacy_gem_path("3.3.5")).unwrap();
+    create_dir_all(test.legacy_gem_path("3.3")).unwrap();
 
     test.env.insert("PATH".into(), "/tmp/bin".into());
 
@@ -220,10 +220,10 @@ fn test_powershell_env_with_ruby() {
     $env:RUBY_ROOT = "/tmp/home/.local/share/rv/rubies/ruby-3.3.5"
     $env:RUBY_ENGINE = "ruby"
     $env:RUBY_VERSION = "3.3.5"
-    $env:GEM_HOME = "/tmp/home/.gem/ruby/3.3.5"
-    $env:GEM_PATH = "/tmp/home/.gem/ruby/3.3.5"
+    $env:GEM_HOME = "/tmp/home/.gem/ruby/3.3.0"
+    $env:GEM_PATH = "/tmp/home/.gem/ruby/3.3.0"
     $env:MANPATH = "/tmp/home/.local/share/rv/rubies/ruby-3.3.5/share/man:"
-    $env:PATH = "/tmp/home/.gem/ruby/3.3.5/bin:/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin:/tmp/bin"
+    $env:PATH = "/tmp/home/.gem/ruby/3.3.0/bin:/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin:/tmp/bin"
     "#);
 
     #[cfg(windows)]
@@ -234,9 +234,9 @@ fn test_powershell_env_with_ruby() {
     $env:RUBY_ROOT = "/tmp/home/.local/share/rv/rubies/ruby-3.3.5"
     $env:RUBY_ENGINE = "ruby"
     $env:RUBY_VERSION = "3.3.5"
-    $env:GEM_HOME = "/tmp/home/.gem/ruby/3.3.5"
-    $env:GEM_PATH = "/tmp/home/.gem/ruby/3.3.5"
-    $env:PATH = "/tmp/home/.gem/ruby/3.3.5/bin;/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin;/tmp/bin"
+    $env:GEM_HOME = "/tmp/home/.gem/ruby/3.3.0"
+    $env:GEM_PATH = "/tmp/home/.gem/ruby/3.3.0"
+    $env:PATH = "/tmp/home/.gem/ruby/3.3.0/bin;/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin;/tmp/bin"
     "#);
 }
 
@@ -253,7 +253,7 @@ fn test_shell_env_with_existing_manpath() {
     );
 
     // Ensure the legacy path is present.
-    create_dir_all(test.legacy_gem_path("3.3.5")).unwrap();
+    create_dir_all(test.legacy_gem_path("3.3")).unwrap();
 
     test.env.insert("PATH".into(), "/tmp/bin".into());
 

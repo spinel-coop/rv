@@ -137,10 +137,7 @@ impl Ruby {
 
     pub fn gem_home(&self) -> Utf8PathBuf {
         let home = rv_dirs::home_dir();
-        let legacy_path = home
-            .join(".gem")
-            .join(self.version.engine.name())
-            .join(self.version.number());
+        let legacy_path = home.join(".gem").join(self.gem_scope());
         if legacy_path.exists() {
             legacy_path
         } else {
@@ -148,8 +145,7 @@ impl Ruby {
                 .join("share")
                 .join("rv")
                 .join("gems")
-                .join(self.version.engine.name())
-                .join(self.version.number())
+                .join(self.gem_scope())
         }
     }
 
@@ -160,6 +156,11 @@ impl Ruby {
         } else {
             None
         }
+    }
+
+    /// path scope for gems that can be safely shared with other rubies
+    pub fn gem_scope(&self) -> String {
+        format!("{}/{}", self.version.engine.name(), self.version.abi())
     }
 }
 
