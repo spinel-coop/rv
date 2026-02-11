@@ -4,8 +4,12 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "README.md"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "README.md"
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
