@@ -23,4 +23,6 @@ cd discourse
 
 rv ci
 
+rv run bundle check
+
 smoke_test_success "discourse"

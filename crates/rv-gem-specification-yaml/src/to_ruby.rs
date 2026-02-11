@@ -93,18 +93,7 @@ pub fn to_ruby(spec: Specification) -> String {
     if bindir != "bin" {
         writeln!(ruby_src, "  s.bindir = \"{}\".freeze", bindir).unwrap();
     }
-    writeln!(
-        ruby_src,
-        "  s.date = \"{}\"",
-        if let Some(date) = date.strip_suffix(" 00:00:00.000000000 Z") {
-            date
-        } else if let Some(date) = date.strip_suffix(" 00:00:00 Z") {
-            date
-        } else {
-            &date
-        }
-    )
-    .unwrap();
+    writeln!(ruby_src, "  s.date = \"{}\"", &date[..10]).unwrap();
     if let Some(description) = description {
         writeln!(
             ruby_src,

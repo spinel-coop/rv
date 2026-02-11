@@ -30,4 +30,6 @@ cd "$TEST_DIR"
 
 rv ci
 
+rv run bundle check
+
 smoke_test_success "llhttp-ffi (transitive deps)"
