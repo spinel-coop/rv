@@ -1,5 +1,6 @@
 use camino::Utf8PathBuf;
 use clap::Args;
+use fs_err as fs;
 use rv_ruby::request::RubyRequest;
 use tracing::debug;
 
@@ -9,6 +10,8 @@ use crate::script_metadata;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
+    #[error("Could not read file {file}: {e}")]
+    CouldNotRead { file: String, e: std::io::Error },
     #[error(transparent)]
     IoError(#[from] std::io::Error),
     #[error(transparent)]
@@ -39,8 +42,12 @@ pub(crate) async fn run(global_args: &GlobalArgs, args: RunArgs) -> Result<()> {
     let mut cmd_args = Vec::from(cmd_args);
     let mut ruby_version = None;
 
-    let invocation = if rv_dirs::canonicalize_utf8(&script)?.exists() {
-        let content = std::fs::read_to_string(&script)?;
+    let script_filepath = rv_dirs::canonicalize_utf8(&script).ok();
+    let invocation = if script_filepath
+        .map(|path| path.exists())
+        .unwrap_or_default()
+    {
+        let content = fs::read_to_string(&script)?;
         if let Some(metadata) = script_metadata::parse(&content)
             && let Some(ref version) = metadata.requires_ruby
         {
