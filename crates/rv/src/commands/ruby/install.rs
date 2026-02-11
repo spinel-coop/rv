@@ -55,7 +55,7 @@ pub(crate) async fn install(
     request: Option<RubyRequest>,
     tarball_path: Option<String>,
 ) -> Result<()> {
-    let config = &Config::new(global_args, request)?;
+    let config = &Config::new(global_args, request.clone())?;
 
     let progress = WorkProgress::new();
 
@@ -68,11 +68,7 @@ pub(crate) async fn install(
         version
     } else {
         debug!("Fetching available rubies, because user gave an underspecified Ruby range");
-        let remote_rubies = config.remote_rubies().await;
-        requested_range
-            .find_match_in(&remote_rubies)
-            .ok_or(Error::NoMatchingRuby)?
-            .version
+        config.find_remote_ruby_request(&request.unwrap()).await?
     };
 
     let install_dir = match install_dir {

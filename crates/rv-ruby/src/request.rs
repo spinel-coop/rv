@@ -17,6 +17,7 @@ pub struct RubyRequest {
     pub patch: Option<VersionPart>,
     pub tiny: Option<VersionPart>,
     pub prerelease: Option<String>,
+    pub alias: Option<String>,
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -57,6 +58,7 @@ impl Default for RubyRequest {
             patch: None,
             tiny: None,
             prerelease: None,
+            alias: None,
         }
     }
 }
@@ -94,16 +96,26 @@ impl RubyRequest {
     /// Resolve the Ruby request to a specific version of ruby, chosen from
     /// the given list.
     pub fn find_match_in(&self, rubies: &[Ruby]) -> Option<Ruby> {
+        if self.is_alias_latest() {
+            return rubies
+                .last()
+                .filter(|r| r.version.prerelease.is_none())
+                .cloned();
+        }
+
         rubies
             .iter()
             .rev()
             .find(|r| r.version.satisfies(self))
             .cloned()
     }
-
     /// A version that toolfiles like .tool-version/.ruby-version/Gemfile/Gemfile.lock knows how to read.
     pub fn to_tool_consumable_version(&self) -> String {
         self.to_string().replace("ruby-", "")
+    }
+
+    fn is_alias_latest(&self) -> bool {
+        matches!(self.alias.as_deref(), Some("latest"))
     }
 }
 
@@ -113,7 +125,15 @@ impl FromStr for RubyRequest {
         let input = input.trim();
         let first_char = input.chars().next().ok_or(RequestError::EmptyInput)?;
         let (engine, version) = if input == "latest" {
-            ("ruby", "")
+            return Ok(RubyRequest {
+                engine: "ruby".into(),
+                major: None,
+                minor: None,
+                patch: None,
+                tiny: None,
+                prerelease: None,
+                alias: Some(String::from("latest")),
+            });
         } else if first_char.is_alphabetic() {
             input.split_once('-').unwrap_or((input, ""))
         } else {
@@ -157,6 +177,7 @@ impl FromStr for RubyRequest {
                 patch: None,
                 tiny: None,
                 prerelease: prerelease.map(ToString::to_string),
+                alias: None,
             });
         };
 
@@ -204,6 +225,7 @@ impl FromStr for RubyRequest {
             patch,
             tiny,
             prerelease: prerelease.map(ToString::to_string),
+            alias: None,
         })
     }
 }
