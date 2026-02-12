@@ -1,5 +1,50 @@
 # `rv` changelog
 
+## rv 0.5.0 (12 February, 2026)
+
+Thank you to new contributors @a-chacon and @phromo!
+
+### Added
+
+ - Windows support #377 #478 #487 @case
+ - rv run #404 @phromo @indirect
+ - rv tool install #336 #409 #428 @adamchalmers @deivid-rodriguez
+ - rv tool list #396 @adamchalmers
+ - rv tool uninstall #396 @adamchalmers
+ - rv tool run #412 #424 #426 @adamchalmers @indirect
+ - rvx #425 @indirect
+ - New rv ruby list flag to show all available versions #462 @a-chacon
+ - New --force flag for reinstalling gems in rv clean-install #475 @a-chacon
+
+
+### Changed
+
+ - Better quickstart/readme #445 @indirect
+ - rv clean-install shows how many native extension compilations were cached #473 @adamchalmers
+
+
+### Fixed
+
+ - Better error messages when gemspecs fail parsing #432 #435 @deivid-rodriguez
+ - Build Rakefile extensions with build dependencies #436 @deivid-rodriguez
+ - Native extensions were installing in the wrong order #442 @deivid-rodriguez
+ - Use platform-specific gems where possible #454 @case 
+ - Consistent behavior when there's no user HOME #463 @deivid-rodriguez
+ - Better errors when trying to install a Ruby version that doesn’t exist #467 @adamchalmers
+ - rv clean-install no longer requires a Gemfile #468 @deivid-rodriguez
+ - --ruby-dir flag supports relative paths #470 @deivid-rodriguez
+ - Choose the right Ruby version #476 @deivid-rodriguez
+ - Change default gem home to be shared across ABI-compatible Ruby versions #495 @deivid-rodriguez
+ - rv ruby pin `<version>` now properly pins version in project directory, even if there's a globally pinned version in user's home #476 @deivid-rodriguez
+ - rv now properly activates ruby version configured in ~/.ruby-version , even if run outside of user's home folder #476 @deivid-rodriguez
+
+
+### Internal
+
+ - Big improvements to smoke test suite for most of rv’s surface area #440 #453 @case
+ - Centralized, cohesive platform handling via rv_platform #472 @case
+ - Integration tests for Rake extensions #481 @case
+
 ## rv 0.4.3 (22 January, 2026)
 
 - `rv ci` did not respect custom gem lib directories (#402, @deivid-rodriguez)
@@ -8,7 +53,7 @@
 
 ## rv 0.4.2 (22 January, 2026)
 
-## Fixed
+### Fixed
 
 - `rv ci` was not compiling all native extensions (#399, @deivid-rodriguez)
 - `rv ci` was using the wrong Ruby (#345, @case)
@@ -21,13 +66,13 @@
 - `rv ruby pin` didn't handle non-CRuby ruby (#349, @deivid-rodriguez)
 - `depgraph` was setting the wrong number of workers (#362, @case)
 
-## Added
+### Added
 
 - Users can use their GitHub auth to get more generous ratelimits (#386, @pboling)
 - Progress indicators for `rv ci` (#350, #352, #357, #358, #374 @case, @deivid-rodriguez)
 - Generate gemspecs in Rust instead of shelling out to Ruby (#376, #391, @adamchalmers, @deivid-rodriguez)
 
-## Improved
+### Improved
 
 - `bin/setup` script works on more platforms (#388, @pboling)
 - Better smoke tests (#343, #346, #360, #365 @case)
