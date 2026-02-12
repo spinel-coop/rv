@@ -56,9 +56,11 @@ impl GemfileDotLock<'_> {
 
         self.gem.iter_mut().for_each(|gem_section| {
             gem_section.specs.retain(|spec| {
-                let gem_path = install_path.join("gems").join(spec.gem_version.to_string());
+                let full_version = spec.gem_version;
+                let gem_path = install_path.join(format!("gems/{full_version}"));
+                let spec_path = install_path.join(format!("specifications/{full_version}.gemspec"));
 
-                !Path::new(&gem_path).exists()
+                !Path::new(&gem_path).exists() || !Path::new(&spec_path).exists()
             });
         });
 

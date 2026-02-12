@@ -17,11 +17,7 @@ setup_rv
 [[ -d brew ]] || git clone --depth 1 https://github.com/Homebrew/brew.git
 cd brew/Library/Homebrew
 
-# This repo includes some gems in `vendor/bundle` partially installed: the gems
-# code is properly installed in the `gems/` folder, but specifications are not
-# present in `specifications/`. We can't (yet?) heal these partial installs, so
-# we reinstall everything for now
-rv ci --force
+rv ci
 
 rv run bundle check
 
