@@ -54,7 +54,7 @@ impl RvTest {
         test.env
             .insert("USERPROFILE".into(), test.temp_home().into());
         test.env
-            .insert("BUNDLE_PATH".into(), test.cwd.join("app").into());
+            .insert("RV_PATH".into(), test.cwd.join("app").into());
 
         // Disable network requests by default
         test.env.insert(

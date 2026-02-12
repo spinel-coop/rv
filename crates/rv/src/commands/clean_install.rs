@@ -19,7 +19,7 @@ use rv_lockfile::datatypes::GemVersion;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_lockfile::datatypes::GitSection;
 use rv_lockfile::datatypes::Spec;
-use rv_ruby::request::RubyRequest;
+use rv_ruby::{Ruby, request::RubyRequest};
 use sha2::Digest;
 use tracing::debug;
 use tracing::info;
@@ -193,7 +193,7 @@ pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Resu
         .expect("Ruby should be installed after the check above");
     let extensions_dir = find_exts_dir(config)?;
     let (lockfile_dir, lockfile_path) = find_manifest_paths(&args.gemfile)?;
-    let install_path = find_install_path(config, &lockfile_dir)?;
+    let install_path = find_install_path(config, &lockfile_dir, &ruby)?;
     let inner_args = CiInnerArgs {
         max_concurrent_requests: args.max_concurrent_requests,
         max_concurrent_installs: args.max_concurrent_installs,
@@ -784,29 +784,37 @@ fn find_manifest_paths(gemfile: &Option<Utf8PathBuf>) -> Result<(Utf8PathBuf, Ut
 
 /// Which path should `ci` install gems under?
 /// Uses Bundler's `configured_path.path`.
-fn find_install_path(config: &Config, lockfile_dir: &Utf8Path) -> Result<Utf8PathBuf> {
-    let args = [
-        "-rbundler",
-        "-e",
-        "puts Bundler.configured_bundle_path.path",
-    ];
-    let bundle_path = match crate::commands::ruby::run::run_no_install(
-        Invocation::ruby(vec![]),
-        config,
-        args.as_slice(),
-        CaptureOutput::Both,
-        Some(lockfile_dir),
-    ) {
-        Ok(output) => output.stdout,
-        Err(_) => Vec::from(".rv"),
+fn find_install_path(config: &Config, lockfile_dir: &Utf8Path, ruby: &Ruby) -> Result<Utf8PathBuf> {
+    let bundle_path = match std::env::var("RV_PATH") {
+        Ok(path) => Utf8PathBuf::from(path).join(ruby.gem_scope()),
+        Err(_) => {
+            let args = [
+                "-rbundler",
+                "-e",
+                "puts Bundler.configured_bundle_path.path",
+            ];
+
+            let bundle_path = match crate::commands::ruby::run::run_no_install(
+                Invocation::ruby(vec![]),
+                config,
+                args.as_slice(),
+                CaptureOutput::Both,
+                Some(lockfile_dir),
+            ) {
+                Ok(output) => output.stdout,
+                Err(_) => Vec::from(".rv"),
+            };
+
+            if bundle_path.is_empty() {
+                return Err(Error::BadBundlePath);
+            }
+
+            String::from_utf8(bundle_path)
+                .map(|s| Utf8PathBuf::from(s.trim()))
+                .map_err(|_| Error::BadBundlePath)?
+        }
     };
 
-    if bundle_path.is_empty() {
-        return Err(Error::BadBundlePath);
-    }
-    let bundle_path = String::from_utf8(bundle_path)
-        .map(|s| Utf8PathBuf::from(s.trim()))
-        .map_err(|_| Error::BadBundlePath)?;
     let install_path = lockfile_dir.join(bundle_path);
     debug!("found install path {:?}", install_path);
     Ok(install_path)
