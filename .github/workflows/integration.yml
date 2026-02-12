@@ -152,8 +152,11 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v6
 
+      - name: Update WSL
+        run: wsl --update --web-download
+
       - name: Install WSL Ubuntu
-        run: wsl --install -d Ubuntu-24.04 --no-launch
+        run: wsl --install -d Ubuntu-24.04 --web-download --no-launch
 
       - name: Install dependencies
         run: wsl -d Ubuntu-24.04 -u root -- bash -c "apt-get update && apt-get install -y build-essential curl"
