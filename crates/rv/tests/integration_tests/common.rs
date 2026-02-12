@@ -328,7 +328,7 @@ impl RvTest {
     /// Mock a ruby tarball download for testing
     pub fn mock_ruby_download(&mut self, version: &str) -> Mock {
         let path = self.ruby_tarball_download_path(version);
-        let content = self.create_mock_tarball();
+        let content = self.create_mock_tarball(version);
         self.mock_tarball_download(path, &content)
     }
 
@@ -360,7 +360,7 @@ impl RvTest {
     /// Mock a tarball on disk for testing
     #[cfg(unix)]
     pub fn mock_tarball_on_disk(&mut self, version: &str) -> Utf8PathBuf {
-        let content = &self.create_mock_tarball();
+        let content = &self.create_mock_tarball(version);
         let filename = &self.make_tarball_file_name(version);
         let temp_dir = self.temp_root().join("tmp");
         std::fs::create_dir_all(&temp_dir).expect("Failed to create TMP directory");
@@ -370,7 +370,7 @@ impl RvTest {
         full_path
     }
 
-    pub fn create_mock_tarball(&self) -> Vec<u8> {
+    pub fn create_mock_tarball(&self, version: &str) -> Vec<u8> {
         use flate2::Compression;
         use flate2::write::GzEncoder;
         use std::io::Write;
@@ -380,8 +380,9 @@ impl RvTest {
         {
             let mut builder = Builder::new(&mut archive_data);
 
+            let root = format!("ruby-{version}/");
             let mut dir_header = tar::Header::new_gnu();
-            dir_header.set_path("portable-ruby/").unwrap();
+            dir_header.set_path(&root).unwrap();
             dir_header.set_size(0);
             dir_header.set_mode(0o755);
             dir_header.set_entry_type(tar::EntryType::Directory);
@@ -389,16 +390,19 @@ impl RvTest {
             builder.append(&dir_header, std::io::empty()).unwrap();
 
             let mut bin_dir_header = tar::Header::new_gnu();
-            bin_dir_header.set_path("portable-ruby/bin/").unwrap();
+            bin_dir_header.set_path(format!("{root}bin/")).unwrap();
             bin_dir_header.set_size(0);
             bin_dir_header.set_mode(0o755);
             bin_dir_header.set_entry_type(tar::EntryType::Directory);
             bin_dir_header.set_cksum();
             builder.append(&bin_dir_header, std::io::empty()).unwrap();
 
-            let ruby_content = "#!/bin/bash\necho 'mock ruby'\n";
             let mut ruby_header = tar::Header::new_gnu();
-            ruby_header.set_path("portable-ruby/bin/ruby").unwrap();
+            let ruby_executable_name = self.ruby_executable_name();
+            let ruby_content = &self.ruby_mock_script("ruby", version);
+            ruby_header
+                .set_path(format!("{root}bin/{ruby_executable_name}"))
+                .unwrap();
             ruby_header.set_size(ruby_content.len() as u64);
             ruby_header.set_mode(0o755);
             ruby_header.set_cksum();
@@ -467,48 +471,57 @@ impl RvTest {
         };
 
         // Create a mock ruby executable that outputs the expected format for rv-ruby.
-        // On Unix, this is a bash script at `bin/ruby`.
-        // On Windows, this is a batch script at `bin/ruby.cmd` (since we can't create
-        // a real .exe from tests, and rv-ruby checks for .cmd as a fallback).
+        let ruby_exe = bin_dir.join(self.ruby_executable_name());
+        let mock_script = self.ruby_mock_script(engine, version);
+        std::fs::write(&ruby_exe, mock_script).expect("Failed to create ruby executable");
+
         #[cfg(unix)]
         {
-            let ruby_exe = bin_dir.join("ruby");
-            let mock_script = format!(
-                "#!/bin/bash\n\
-                 echo \"{engine}\"\n\
-                 echo \"{version}\"\n\
-                 echo \"aarch64-darwin23\"\n\
-                 echo \"aarch64\"\n\
-                 echo \"darwin23\"\n\
-                 echo \"\"\n"
-            );
-            std::fs::write(&ruby_exe, mock_script).expect("Failed to create ruby executable");
-
             use std::os::unix::fs::PermissionsExt;
             let mut perms = std::fs::metadata(&ruby_exe).unwrap().permissions();
             perms.set_mode(0o755);
             std::fs::set_permissions(&ruby_exe, perms).unwrap();
         }
 
-        #[cfg(windows)]
-        {
-            let ruby_cmd = bin_dir.join("ruby.cmd");
-            let mock_script = format!(
-                "@echo off\r\n\
-                 echo {engine}\r\n\
-                 echo {version}\r\n\
-                 echo aarch64-darwin23\r\n\
-                 echo aarch64\r\n\
-                 echo darwin23\r\n\
-                 echo.\r\n"
-            );
-            std::fs::write(&ruby_cmd, mock_script).expect("Failed to create ruby executable");
-        }
-
         ruby_dir
     }
 
     #[cfg(unix)]
+    fn ruby_executable_name(&self) -> &str {
+        "ruby"
+    }
+
+    #[cfg(windows)]
+    fn ruby_executable_name(&self) -> &str {
+        "ruby.cmd"
+    }
+
+    #[cfg(unix)]
+    fn ruby_mock_script(&self, engine: &str, version: &str) -> String {
+        format!(
+            "#!/bin/bash\n\
+             echo \"{engine}\"\n\
+             echo \"{version}\"\n\
+             echo \"aarch64-darwin23\"\n\
+             echo \"aarch64\"\n\
+             echo \"darwin23\"\n\
+             echo \"\"\n"
+        )
+    }
+
+    #[cfg(windows)]
+    fn ruby_mock_script(&self, engine: &str, version: &str) -> String {
+        format!(
+            "@echo off\r\n\
+             echo {engine}\r\n\
+             echo {version}\r\n\
+             echo aarch64-darwin23\r\n\
+             echo aarch64\r\n\
+             echo darwin23\r\n\
+             echo.\r\n"
+        )
+    }
+
     pub fn use_gemfile(&self, path: &str) {
         let gemfile = fs_err::read_to_string(path).unwrap();
         let _ = fs_err::write(self.cwd.join("Gemfile"), &gemfile);

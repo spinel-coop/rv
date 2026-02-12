@@ -67,7 +67,7 @@ fn test_ruby_install_incomplete_request() {
 fn test_ruby_install_successful_download() {
     let mut test = RvTest::new();
 
-    let tarball_content = test.create_mock_tarball();
+    let tarball_content = test.create_mock_tarball("3.4.5");
     let download_path = test.ruby_tarball_download_path("3.4.5");
     let ruby_mock = test
         .mock_tarball_download(download_path, &tarball_content)
@@ -119,7 +119,7 @@ fn test_ruby_install_from_tarball() {
     // is the mocked ruby from the tarball actually installed
     let mocked_ruby_path = test
         .temp_home()
-        .join(".local/share/rv/rubies/portable-ruby/bin/ruby");
+        .join(".local/share/rv/rubies/ruby-3.4.5/bin/ruby");
     let mut command = Command::new(mocked_ruby_path);
     command.output().expect("mock ruby");
 }
@@ -258,7 +258,7 @@ fn test_ruby_install_invalid_url() {
 fn test_ruby_install_atomic_rename_behavior() {
     let mut test = RvTest::new();
 
-    let tarball_content = test.create_mock_tarball();
+    let tarball_content = test.create_mock_tarball("3.4.5");
     let download_path = test.ruby_tarball_download_path("3.4.5");
     let ruby_mock = test
         .mock_tarball_download(download_path, &tarball_content)

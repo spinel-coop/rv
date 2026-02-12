@@ -22,7 +22,7 @@ impl RvTest {
 fn test_clean_install_download_test_gem() {
     let mut test = RvTest::new();
 
-    let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
+    test.create_ruby_dir("ruby-4.0.1");
 
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testsource");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testsource.lock");
@@ -33,7 +33,6 @@ fn test_clean_install_download_test_gem() {
     let output = test.ci(&["--verbose"]);
 
     output.assert_success();
-    releases_mock.assert();
     mock.assert();
 }
 
@@ -42,7 +41,7 @@ fn test_clean_install_download_test_gem() {
 fn test_clean_install_rakefile_extension() {
     let mut test = RvTest::new();
 
-    let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
+    test.create_ruby_dir("ruby-4.0.1");
 
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.rakeext");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.rakeext.lock");
@@ -53,7 +52,6 @@ fn test_clean_install_rakefile_extension() {
     let output = test.ci(&["--verbose"]);
 
     output.assert_success();
-    releases_mock.assert();
     mock.assert();
 }
 
@@ -62,7 +60,7 @@ fn test_clean_install_rakefile_extension() {
 fn test_clean_install_input_validation() {
     let mut test = RvTest::new();
 
-    let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
+    test.create_ruby_dir("ruby-4.0.1");
 
     // Test missing a lockfile fails
     let output = test.ci(&[]);
@@ -71,13 +69,11 @@ fn test_clean_install_input_validation() {
         output.normalized_stderr(),
         "Error: CiError(MissingImplicitLockfile)\n",
     );
-    releases_mock.assert();
 
     // Test using only a lockfile works
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.empty.lock");
     let output = test.ci(&[]);
     output.assert_success();
-    releases_mock.assert();
 
     let gemfile_path = test.cwd.join("Gemfile.empty");
     let gemfile = fs_err::read_to_string("../rv-lockfile/tests/inputs/Gemfile.empty").unwrap();
@@ -97,7 +93,6 @@ fn test_clean_install_input_validation() {
     // Test passing an explicit Gemfile works
     let output = test.ci(&["--gemfile", "Gemfile.empty"]);
     output.assert_success();
-    releases_mock.assert();
 
     let project_dir = test.temp_root().join("project");
     std::fs::create_dir_all(project_dir.as_path()).unwrap();
@@ -120,7 +115,6 @@ fn test_clean_install_input_validation() {
 
     let output = test.ci(&["--gemfile", "project/Gemfile"]);
     output.assert_success();
-    releases_mock.assert();
 
     // Test passing a missing gemfile gives a nice error
     let output = test.ci(&["--gemfile", "Gemfile.missing"]);
@@ -129,7 +123,6 @@ fn test_clean_install_input_validation() {
         output.normalized_stderr(),
         "Error: CiError(MissingGemfile(\"Gemfile.missing\"))\n",
     );
-    releases_mock.assert();
 
     // Test passing an invalid gemfile gives a nice error
     let output = test.ci(&["--gemfile", "/"]);
@@ -138,7 +131,6 @@ fn test_clean_install_input_validation() {
         output.normalized_stderr(),
         "Error: CiError(InvalidGemfilePath(\"/\"))\n",
     );
-    releases_mock.assert();
 }
 
 #[cfg(unix)]
@@ -166,14 +158,13 @@ fn test_clean_install_respects_ruby() {
 #[test]
 fn test_clean_install_native_macos_aarch64() {
     let mut test = RvTest::new();
-    let mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
+    test.create_ruby_dir("ruby-4.0.1");
 
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative.lock");
 
     let output = test.ci(&[]);
 
-    mock.assert();
     output.assert_success();
 
     // Store a snapshot of all the files `rv ci` created.
@@ -185,14 +176,13 @@ fn test_clean_install_native_macos_aarch64() {
 #[test]
 fn test_clean_install_native_linux_x86_64() {
     let mut test = RvTest::new();
-    let mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
+    test.create_ruby_dir("ruby-4.0.1");
 
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative.lock");
 
     let output = test.ci(&[]);
 
-    mock.assert();
     output.assert_success();
 
     // Store a snapshot of all the files `rv ci` created.
