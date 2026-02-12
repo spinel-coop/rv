@@ -109,10 +109,18 @@ impl Config {
         self.discover_remote_rubies().await
     }
 
-    pub async fn find_remote_ruby_request(&self, request: &RubyRequest) -> Result<RubyVersion> {
+    pub async fn find_remote_ruby_request(
+        &self,
+        request: Option<&RubyRequest>,
+    ) -> Result<RubyVersion> {
         let remote_rubies = self.remote_rubies().await;
 
-        let matched_ruby = request
+        let requested = match request {
+            Some(req) => req,
+            None => &self.ruby_request(),
+        };
+
+        let matched_ruby = requested
             .find_match_in(&remote_rubies)
             .ok_or(Error::NoMatchingRuby)?;
 

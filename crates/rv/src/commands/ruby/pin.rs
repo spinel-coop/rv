@@ -33,8 +33,8 @@ pub(crate) async fn pin(global_args: &GlobalArgs, request: Option<RubyRequest>) 
 
     match request {
         None => show_pinned_ruby(config),
-        Some(request) => {
-            let version = config.find_remote_ruby_request(&request).await?;
+        Some(ref req) => {
+            let version = config.find_remote_ruby_request(Some(req)).await?;
 
             set_pinned_ruby(config, version.number())
         }
