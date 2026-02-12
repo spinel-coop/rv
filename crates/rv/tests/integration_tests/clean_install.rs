@@ -301,9 +301,9 @@ fn test_clean_install_fails_if_evaluating_a_path_gemspec_fails() {
     output.assert_failure();
 
     assert!(
-        !output
+        output
             .normalized_stderr()
-            .contains("cannot load no such file -- ./missing.rb"),
+            .contains("cannot load such file -- ./missing.rb"),
         "should show an error about the file that failed to load"
     );
 }
