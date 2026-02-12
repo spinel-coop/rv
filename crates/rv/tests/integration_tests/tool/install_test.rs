@@ -40,11 +40,7 @@ fn test_tool_install_twice() {
         .mock_info_endpoint("indirect", &info_endpoint_content)
         .create();
 
-    let tarball_content =
-        fs_err::read("../rv-gem-package/tests/fixtures/indirect-1.2.0.gem").unwrap();
-    let tarball_mock = test
-        .mock_gem_download("indirect-1.2.0.gem", &tarball_content)
-        .create();
+    let tarball_mock = test.mock_gem_download("indirect-1.2.0.gem").create();
 
     let output = test.tool_install(&["indirect"]);
     output.assert_success();
@@ -89,11 +85,7 @@ fn test_tool_install_non_latest_version() {
         .mock_info_endpoint("indirect", &info_endpoint_content)
         .create();
 
-    let tarball_content =
-        fs_err::read("../rv-gem-package/tests/fixtures/indirect-1.1.0.gem").unwrap();
-    let tarball_mock = test
-        .mock_gem_download("indirect-1.1.0.gem", &tarball_content)
-        .create();
+    let tarball_mock = test.mock_gem_download("indirect-1.1.0.gem").create();
 
     // Install it, with an explicit version.
     let output = test.tool_install(&["indirect@1.1.0"]);
@@ -125,11 +117,7 @@ fn test_tool_install_writes_ruby_version_file() {
         .mock_info_endpoint("indirect", &info_endpoint_content)
         .create();
 
-    let tarball_content =
-        fs_err::read("../rv-gem-package/tests/fixtures/indirect-1.2.0.gem").unwrap();
-    let tarball_mock = test
-        .mock_gem_download("indirect-1.2.0.gem", &tarball_content)
-        .create();
+    let tarball_mock = test.mock_gem_download("indirect-1.2.0.gem").create();
 
     let output = test.tool_install(&["indirect"]);
     output.assert_success();

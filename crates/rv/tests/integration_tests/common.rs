@@ -325,20 +325,26 @@ impl RvTest {
             .create()
     }
 
+    /// Mock a ruby tarball download for testing
+    pub fn mock_ruby_download(&mut self, version: &str) -> Mock {
+        let path = self.ruby_tarball_download_path(version);
+        let content = self.create_mock_tarball();
+        self.mock_tarball_download(path, &content)
+    }
+
+    pub fn mock_gem_download(&mut self, package: &str) -> Mock {
+        let path = self.gem_package_download_path(package);
+        let content = fs_err::read(format!("../rv-gem-package/tests/fixtures/{package}")).unwrap();
+        self.mock_tarball_download(path, &content)
+    }
+
     /// Mock a tarball download for testing
-    pub fn mock_tarball_download(&mut self, filename: &str, content: &[u8]) -> Mock {
-        let path = format!("/{}", filename);
+    pub fn mock_tarball_download(&mut self, path: String, content: &[u8]) -> Mock {
         self.server
             .mock("GET", path.as_str())
             .with_status(200)
             .with_header("content-type", "application/gzip")
             .with_body(content)
-    }
-
-    #[cfg(unix)]
-    pub fn mock_gem_download(&mut self, filename: &str, content: &[u8]) -> Mock {
-        let path = format!("gems/{}", filename);
-        self.mock_tarball_download(&path, content)
     }
 
     #[cfg(unix)]
@@ -353,13 +359,81 @@ impl RvTest {
 
     /// Mock a tarball on disk for testing
     #[cfg(unix)]
-    pub fn mock_tarball_on_disk(&mut self, filename: &str, content: &[u8]) -> Utf8PathBuf {
+    pub fn mock_tarball_on_disk(&mut self, version: &str) -> Utf8PathBuf {
+        let content = &self.create_mock_tarball();
+        let filename = &self.make_tarball_file_name(version);
         let temp_dir = self.temp_root().join("tmp");
         std::fs::create_dir_all(&temp_dir).expect("Failed to create TMP directory");
         let full_path = temp_dir.join(filename);
         std::fs::write(&full_path, content).expect("Failed to write path");
 
         full_path
+    }
+
+    pub fn create_mock_tarball(&self) -> Vec<u8> {
+        use flate2::Compression;
+        use flate2::write::GzEncoder;
+        use std::io::Write;
+        use tar::Builder;
+
+        let mut archive_data = Vec::new();
+        {
+            let mut builder = Builder::new(&mut archive_data);
+
+            let mut dir_header = tar::Header::new_gnu();
+            dir_header.set_path("portable-ruby/").unwrap();
+            dir_header.set_size(0);
+            dir_header.set_mode(0o755);
+            dir_header.set_entry_type(tar::EntryType::Directory);
+            dir_header.set_cksum();
+            builder.append(&dir_header, std::io::empty()).unwrap();
+
+            let mut bin_dir_header = tar::Header::new_gnu();
+            bin_dir_header.set_path("portable-ruby/bin/").unwrap();
+            bin_dir_header.set_size(0);
+            bin_dir_header.set_mode(0o755);
+            bin_dir_header.set_entry_type(tar::EntryType::Directory);
+            bin_dir_header.set_cksum();
+            builder.append(&bin_dir_header, std::io::empty()).unwrap();
+
+            let ruby_content = "#!/bin/bash\necho 'mock ruby'\n";
+            let mut ruby_header = tar::Header::new_gnu();
+            ruby_header.set_path("portable-ruby/bin/ruby").unwrap();
+            ruby_header.set_size(ruby_content.len() as u64);
+            ruby_header.set_mode(0o755);
+            ruby_header.set_cksum();
+            builder
+                .append(&ruby_header, ruby_content.as_bytes())
+                .unwrap();
+
+            builder.finish().unwrap();
+        }
+
+        let mut gz_data = Vec::new();
+        {
+            let mut encoder = GzEncoder::new(&mut gz_data, Compression::default());
+            encoder.write_all(&archive_data).unwrap();
+            encoder.finish().unwrap();
+        }
+
+        gz_data
+    }
+
+    pub fn ruby_tarball_url(&self, version: &str) -> String {
+        format!(
+            "{}{}",
+            self.server_url(),
+            self.ruby_tarball_download_path(version)
+        )
+    }
+
+    pub fn ruby_tarball_download_path(&self, version: &str) -> String {
+        let filename = self.make_tarball_file_name(version);
+        format!("/latest/download/{filename}")
+    }
+
+    pub fn gem_package_download_path(&self, package: &str) -> String {
+        format!("/gems/{}", package)
     }
 
     /// Get the server URL for constructing download URLs
@@ -455,6 +529,20 @@ impl RvTest {
         let lockfile_path = self.cwd.join("Gemfile.lock");
         let lockfile = fs_err::read_to_string(&lockfile_path).unwrap();
         let _ = fs_err::write(lockfile_path, lockfile.replace(from, to));
+    }
+
+    fn make_tarball_file_name(&self, version: &str) -> String {
+        let suffix = self.make_platform_suffix();
+        format!("ruby-{version}.{suffix}.tar.gz")
+    }
+
+    /// Returns the ruby arch string matching the default test platform (`MacosAarch64`).
+    ///
+    /// Uses `HostPlatform::MacosAarch64` to match the hardcoded default in `RvTest::new()`,
+    /// NOT `HostPlatform::current()`, because the test process doesn't have
+    /// `RV_TEST_PLATFORM` set — only the subprocess does.
+    fn make_platform_suffix(&self) -> String {
+        HostPlatform::MacosAarch64.ruby_arch_str().to_string()
     }
 }
 

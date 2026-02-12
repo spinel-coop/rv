@@ -28,11 +28,7 @@ fn test_clean_install_download_test_gem() {
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testsource.lock");
     test.replace_source("http://gems.example.com", &test.server_url());
 
-    let tarball_content =
-        fs_err::read("../rv-gem-package/tests/fixtures/test-gem-1.0.0.gem").unwrap();
-    let mock = test
-        .mock_gem_download("test-gem-1.0.0.gem", &tarball_content)
-        .create();
+    let mock = test.mock_gem_download("test-gem-1.0.0.gem").create();
 
     let output = test.ci(&["--verbose"]);
 
@@ -52,11 +48,7 @@ fn test_clean_install_rakefile_extension() {
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.rakeext.lock");
     test.replace_source("http://gems.example.com", &test.server_url());
 
-    let tarball_content =
-        fs_err::read("../rv-gem-package/tests/fixtures/rake-ext-test-1.0.0.gem").unwrap();
-    let mock = test
-        .mock_gem_download("rake-ext-test-1.0.0.gem", &tarball_content)
-        .create();
+    let mock = test.mock_gem_download("rake-ext-test-1.0.0.gem").create();
 
     let output = test.ci(&["--verbose"]);
 

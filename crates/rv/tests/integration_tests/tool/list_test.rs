@@ -25,11 +25,7 @@ fn test_tool_list() {
         .mock_info_endpoint("indirect", &info_endpoint_content)
         .create();
 
-    let tarball_content =
-        fs_err::read("../rv-gem-package/tests/fixtures/indirect-1.2.0.gem").unwrap();
-    let _tarball_mock = test
-        .mock_gem_download("indirect-1.2.0.gem", &tarball_content)
-        .create();
+    let _tarball_mock = test.mock_gem_download("indirect-1.2.0.gem").create();
 
     let output = test.tool_install(&["indirect"]);
     output.assert_success();
