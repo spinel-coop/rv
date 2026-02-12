@@ -2,9 +2,27 @@
 source: crates/rv/tests/integration_tests/ruby/list_test.rs
 expression: output.normalized_stdout()
 ---
-┌──────────────┬─────────────┬─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ Version      │ Installed   │ Path                                                                                                                │
-├──────────────┼─────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│   ruby-3.1.4 │ [installed] │ /tmp/home/.local/share/rv/rubies/ruby-3.1.4/bin/ruby │
-│ * ruby-3.2.0 │ [installed] │ /tmp/home/.local/share/rv/rubies/ruby-3.2.0/bin/ruby │
-└──────────────┴─────────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+[
+  {
+    "key": "ruby-3.1.4-macos-aarch64",
+    "version": "ruby-3.1.4",
+    "path": "/tmp/home/.local/share/rv/rubies/ruby-3.1.4",
+    "managed": true,
+    "arch": "aarch64",
+    "os": "macos",
+    "gem_root": null,
+    "installed": true,
+    "active": false
+  },
+  {
+    "key": "ruby-3.2.0-macos-aarch64",
+    "version": "ruby-3.2.0",
+    "path": "/tmp/home/.local/share/rv/rubies/ruby-3.2.0",
+    "managed": true,
+    "arch": "aarch64",
+    "os": "macos",
+    "gem_root": null,
+    "installed": true,
+    "active": true
+  }
+]
