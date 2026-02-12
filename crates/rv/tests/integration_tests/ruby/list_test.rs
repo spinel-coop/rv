@@ -11,7 +11,7 @@ impl RvTest {
 #[test]
 fn test_ruby_list_text_output_empty() {
     let test = RvTest::new();
-    let output = test.ruby_list(&[]);
+    let output = test.ruby_list(&["--format", "json"]);
 
     output.assert_success();
     assert_snapshot!(output.normalized_stdout());
@@ -37,7 +37,7 @@ fn test_ruby_list_text_output_with_rubies() {
     test.create_ruby_dir("ruby-3.1.4");
     test.create_ruby_dir("ruby-3.2.0");
 
-    let output = test.ruby_list(&[]);
+    let output = test.ruby_list(&["--no-color", "--format", "json"]);
 
     output.assert_success();
     assert_snapshot!(output.normalized_stdout());
@@ -79,37 +79,153 @@ fn test_ruby_list_multiple_matching_rubies() {
     test.create_ruby_dir("ruby-3.2.0");
     test.create_ruby_dir("3.1.4");
 
-    let output = test.ruby_list(&[]);
+    let output = test.ruby_list(&["--no-color", "--format", "json"]);
     output.assert_success();
-    assert_snapshot!(output.normalized_stdout(), @r"
-      ruby-3.1.4 [installed] /tmp/home/.local/share/rv/rubies/3.1.4/bin/ruby
-      ruby-3.1.4 [installed] /tmp/home/.local/share/rv/rubies/ruby-3.1.4/bin/ruby
-    * ruby-3.2.0 [installed] /tmp/home/.local/share/rv/rubies/ruby-3.2.0/bin/ruby
-    ");
+    assert_snapshot!(output.normalized_stdout(), @r#"
+    [
+      {
+        "key": "ruby-3.1.4-macos-aarch64",
+        "version": "ruby-3.1.4",
+        "path": "/tmp/home/.local/share/rv/rubies/3.1.4",
+        "managed": true,
+        "arch": "aarch64",
+        "os": "macos",
+        "gem_root": null,
+        "installed": true,
+        "active": false
+      },
+      {
+        "key": "ruby-3.1.4-macos-aarch64",
+        "version": "ruby-3.1.4",
+        "path": "/tmp/home/.local/share/rv/rubies/ruby-3.1.4",
+        "managed": true,
+        "arch": "aarch64",
+        "os": "macos",
+        "gem_root": null,
+        "installed": true,
+        "active": false
+      },
+      {
+        "key": "ruby-3.2.0-macos-aarch64",
+        "version": "ruby-3.2.0",
+        "path": "/tmp/home/.local/share/rv/rubies/ruby-3.2.0",
+        "managed": true,
+        "arch": "aarch64",
+        "os": "macos",
+        "gem_root": null,
+        "installed": true,
+        "active": true
+      }
+    ]
+    "#);
 
     test.create_ruby_dir("3.2.0");
-    let output = test.ruby_list(&[]);
+    let output = test.ruby_list(&["--no-color", "--format", "json"]);
     output.assert_success();
-    assert_snapshot!(output.normalized_stdout(), @r"
-      ruby-3.1.4 [installed] /tmp/home/.local/share/rv/rubies/3.1.4/bin/ruby
-      ruby-3.1.4 [installed] /tmp/home/.local/share/rv/rubies/ruby-3.1.4/bin/ruby
-      ruby-3.2.0 [installed] /tmp/home/.local/share/rv/rubies/3.2.0/bin/ruby
-    * ruby-3.2.0 [installed] /tmp/home/.local/share/rv/rubies/ruby-3.2.0/bin/ruby
-    ");
+    assert_snapshot!(output.normalized_stdout(), @r#"
+    [
+      {
+        "key": "ruby-3.1.4-macos-aarch64",
+        "version": "ruby-3.1.4",
+        "path": "/tmp/home/.local/share/rv/rubies/3.1.4",
+        "managed": true,
+        "arch": "aarch64",
+        "os": "macos",
+        "gem_root": null,
+        "installed": true,
+        "active": false
+      },
+      {
+        "key": "ruby-3.1.4-macos-aarch64",
+        "version": "ruby-3.1.4",
+        "path": "/tmp/home/.local/share/rv/rubies/ruby-3.1.4",
+        "managed": true,
+        "arch": "aarch64",
+        "os": "macos",
+        "gem_root": null,
+        "installed": true,
+        "active": false
+      },
+      {
+        "key": "ruby-3.2.0-macos-aarch64",
+        "version": "ruby-3.2.0",
+        "path": "/tmp/home/.local/share/rv/rubies/3.2.0",
+        "managed": true,
+        "arch": "aarch64",
+        "os": "macos",
+        "gem_root": null,
+        "installed": true,
+        "active": false
+      },
+      {
+        "key": "ruby-3.2.0-macos-aarch64",
+        "version": "ruby-3.2.0",
+        "path": "/tmp/home/.local/share/rv/rubies/ruby-3.2.0",
+        "managed": true,
+        "arch": "aarch64",
+        "os": "macos",
+        "gem_root": null,
+        "installed": true,
+        "active": true
+      }
+    ]
+    "#);
 
     test.env.insert(
         "PATH".into(),
         "/tmp/home/.local/share/rv/rubies/3.1.4/bin".into(),
     );
 
-    let output = test.ruby_list(&[]);
+    let output = test.ruby_list(&["--no-color", "--format", "json"]);
     output.assert_success();
-    assert_snapshot!(output.normalized_stdout(), @r"
-      ruby-3.1.4 [installed] /tmp/home/.local/share/rv/rubies/3.1.4/bin/ruby
-      ruby-3.1.4 [installed] /tmp/home/.local/share/rv/rubies/ruby-3.1.4/bin/ruby
-      ruby-3.2.0 [installed] /tmp/home/.local/share/rv/rubies/3.2.0/bin/ruby
-    * ruby-3.2.0 [installed] /tmp/home/.local/share/rv/rubies/ruby-3.2.0/bin/ruby
-    ");
+    assert_snapshot!(output.normalized_stdout(), @r#"
+    [
+      {
+        "key": "ruby-3.1.4-macos-aarch64",
+        "version": "ruby-3.1.4",
+        "path": "/tmp/home/.local/share/rv/rubies/3.1.4",
+        "managed": true,
+        "arch": "aarch64",
+        "os": "macos",
+        "gem_root": null,
+        "installed": true,
+        "active": false
+      },
+      {
+        "key": "ruby-3.1.4-macos-aarch64",
+        "version": "ruby-3.1.4",
+        "path": "/tmp/home/.local/share/rv/rubies/ruby-3.1.4",
+        "managed": true,
+        "arch": "aarch64",
+        "os": "macos",
+        "gem_root": null,
+        "installed": true,
+        "active": false
+      },
+      {
+        "key": "ruby-3.2.0-macos-aarch64",
+        "version": "ruby-3.2.0",
+        "path": "/tmp/home/.local/share/rv/rubies/3.2.0",
+        "managed": true,
+        "arch": "aarch64",
+        "os": "macos",
+        "gem_root": null,
+        "installed": true,
+        "active": false
+      },
+      {
+        "key": "ruby-3.2.0-macos-aarch64",
+        "version": "ruby-3.2.0",
+        "path": "/tmp/home/.local/share/rv/rubies/ruby-3.2.0",
+        "managed": true,
+        "arch": "aarch64",
+        "os": "macos",
+        "gem_root": null,
+        "installed": true,
+        "active": true
+      }
+    ]
+    "#);
 }
 
 #[test]
@@ -118,7 +234,7 @@ fn test_ruby_list_with_available_and_installed_merges_both_lists() {
     test.create_ruby_dir("ruby-3.1.4");
 
     let mock = test.mock_releases(["3.4.5"].to_vec());
-    let output = test.rv(&["ruby", "list"]);
+    let output = test.ruby_list(&["--format", "json"]);
 
     mock.assert();
     output.assert_success();
@@ -133,7 +249,7 @@ fn test_ruby_list_with_available_and_installed_with_same_minor_lists_all_version
     test.create_ruby_dir("ruby-3.4.0");
 
     let mock = test.mock_releases(["3.4.1"].to_vec());
-    let output = test.rv(&["ruby", "list"]);
+    let output = test.ruby_list(&["--format", "json"]);
 
     mock.assert();
     output.assert_success();
@@ -148,7 +264,7 @@ fn test_ruby_list_with_available_and_installed_remotes_keep_only_latest_patch() 
     test.create_ruby_dir("ruby-3.3.1");
 
     let mock = test.mock_releases(["3.4.0", "3.4.1"].to_vec());
-    let output = test.rv(&["ruby", "list"]);
+    let output = test.ruby_list(&["--format", "json"]);
 
     mock.assert();
     output.assert_success();
@@ -160,12 +276,12 @@ fn test_ruby_list_with_available_and_installed_remotes_keep_only_latest_patch() 
 #[test]
 fn test_ruby_list_with_no_installed_rubies_is_empty() {
     let test = RvTest::new();
-    let output = test.rv(&["ruby", "list"]);
+    let output = test.ruby_list(&["--format", "json"]);
     output.assert_success();
 
     // The output will be completely empty because no rubies are installed
     // and the API is disabled.
-    assert_eq!(output.normalized_stdout(), "");
+    assert_eq!(output.normalized_stdout(), "[]");
 }
 
 #[test]
@@ -173,7 +289,7 @@ fn test_ruby_list_no_local_installs_still_lists_remote_rubies() {
     let mut test = RvTest::new();
 
     let mock = test.mock_releases(["3.0.0", "4.0.0"].to_vec());
-    let output = test.rv(&["ruby", "list"]);
+    let output = test.ruby_list(&["--format", "json"]);
 
     mock.assert();
     output.assert_success();
@@ -186,7 +302,7 @@ fn test_ruby_list_ruby_3_5_is_skipped() {
     let mut test = RvTest::new();
 
     let mock = test.mock_releases(["3.5.0-preview1", "4.0.0"].to_vec());
-    let output = test.rv(&["ruby", "list"]);
+    let output = test.ruby_list(&["--format", "json"]);
 
     mock.assert();
     output.assert_success();
@@ -204,7 +320,7 @@ fn test_ruby_list_shows_requested_ruby_even_if_not_installed_and_not_a_latest_pa
     test.cwd = project_dir;
 
     let mock = test.mock_releases(["3.4.7", "3.4.8"].to_vec());
-    let output = test.rv(&["ruby", "list"]);
+    let output = test.ruby_list(&["--format", "json"]);
 
     mock.assert();
     output.assert_success();
@@ -217,9 +333,9 @@ fn test_ruby_list_shows_requested_ruby_even_if_not_installed_and_not_a_latest_pa
 fn test_ruby_list_without_updating_versions() {
     let mut test = RvTest::new();
     test.env.insert("RV_LIST_URL".into(), "-".into());
-    let output = test.rv(&["ruby", "list"]);
+    let output = test.ruby_list(&["--format", "json"]);
     output.assert_success();
-    assert_eq!(output.normalized_stdout(), "");
+    assert_eq!(output.normalized_stdout(), "[]");
 }
 
 /// Verifies that Windows sees rubies from the RubyInstaller2 endpoint.
@@ -232,7 +348,7 @@ fn test_ruby_list_windows_platform_finds_rubies() {
     test.set_platform(HostPlatform::WindowsX86_64);
 
     let mock = test.mock_windows_releases(["3.4.4", "3.3.7"].to_vec());
-    let output = test.rv(&["ruby", "list"]);
+    let output = test.ruby_list(&["--format", "json"]);
 
     mock.assert();
     output.assert_success();
@@ -264,7 +380,7 @@ fn test_ruby_list_all_platforms_find_rubies() {
         test.set_platform(platform);
 
         let mock = test.mock_releases_all_platforms(["3.4.1"].to_vec());
-        let output = test.rv(&["ruby", "list"]);
+        let output = test.ruby_list(&["--format", "json"]);
 
         mock.assert();
         output.assert_success();

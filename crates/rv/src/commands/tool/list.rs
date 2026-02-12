@@ -80,7 +80,7 @@ pub(crate) fn list(_global_args: &GlobalArgs, format: OutputFormat) -> Result<()
         }
         OutputFormat::Text => {
             let mut table = Table::new(tools);
-            table.with(Style::modern());
+            table.with(Style::sharp());
             println!("{table}");
         }
         OutputFormat::Json => {

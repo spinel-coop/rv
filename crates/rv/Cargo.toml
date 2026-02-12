@@ -73,7 +73,7 @@ glob = "0.3.3"
 base64 = "0.22.1"
 dep-graph = { workspace = true }
 pubgrub = "0.3.0"
-tabled = "0.20.0"
+tabled = { version = "0.20.0", features = ["ansi"] }
 
 [dev-dependencies]
 insta = { workspace = true }

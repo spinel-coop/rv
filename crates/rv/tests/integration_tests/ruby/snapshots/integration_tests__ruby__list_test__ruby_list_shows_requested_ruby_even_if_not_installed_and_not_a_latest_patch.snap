@@ -2,5 +2,27 @@
 source: crates/rv/tests/integration_tests/ruby/list_test.rs
 expression: output.normalized_stdout()
 ---
-* ruby-3.4.7 [available]
-  ruby-3.4.8 [available]
+[
+  {
+    "key": "ruby-3.4.7-macos-aarch64",
+    "version": "ruby-3.4.7",
+    "path": "http://...",
+    "managed": false,
+    "arch": "aarch64",
+    "os": "macos",
+    "gem_root": null,
+    "installed": false,
+    "active": true
+  },
+  {
+    "key": "ruby-3.4.8-macos-aarch64",
+    "version": "ruby-3.4.8",
+    "path": "http://...",
+    "managed": false,
+    "arch": "aarch64",
+    "os": "macos",
+    "gem_root": null,
+    "installed": false,
+    "active": false
+  }
+]
