@@ -1,5 +1,4 @@
 use crate::common::RvTest;
-use rv_platform::HostPlatform;
 use std::fs;
 #[cfg(unix)]
 use std::process::Command;
@@ -8,7 +7,7 @@ use std::process::Command;
 fn test_ruby_install_no_specific_version() {
     let mut test = RvTest::new();
 
-    let _mock = test.mock_ruby_download("3.4.5").create();
+    let ruby_mock = test.mock_ruby_download("3.4.5").create();
 
     let cache_dir = test.enable_cache();
 
@@ -16,6 +15,7 @@ fn test_ruby_install_no_specific_version() {
 
     let output = test.rv(&["ruby", "install"]);
 
+    ruby_mock.assert();
     mock.assert();
     output.assert_success();
 
@@ -37,7 +37,7 @@ fn test_ruby_install_no_specific_version() {
 fn test_ruby_install_incomplete_request() {
     let mut test = RvTest::new();
 
-    let _mock = test.mock_ruby_download("4.0.0").create();
+    let ruby_mock = test.mock_ruby_download("4.0.0").create();
 
     let cache_dir = test.enable_cache();
 
@@ -45,6 +45,7 @@ fn test_ruby_install_incomplete_request() {
 
     let output = test.rv(&["ruby", "install", "4"]);
 
+    ruby_mock.assert();
     mock.assert();
     output.assert_success();
 
@@ -68,7 +69,7 @@ fn test_ruby_install_successful_download() {
 
     let tarball_content = test.create_mock_tarball();
     let download_path = test.ruby_tarball_download_path("3.4.5");
-    let _mock = test
+    let ruby_mock = test
         .mock_tarball_download(download_path, &tarball_content)
         .create();
 
@@ -76,6 +77,7 @@ fn test_ruby_install_successful_download() {
 
     let output = test.rv(&["ruby", "install", "3.4.5"]);
 
+    ruby_mock.assert();
     output.assert_success();
 
     let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("3.4.5"));
@@ -126,12 +128,10 @@ fn test_ruby_install_from_tarball() {
 fn test_ruby_install_http_failure_no_empty_file() {
     let mut test = RvTest::new();
 
-    let arch = HostPlatform::MacosAarch64.ruby_arch_str();
-    test.server
-        .mock(
-            "GET",
-            format!("/portable-ruby-3.4.5.{arch}.bottle.tar.gz").as_str(),
-        )
+    let download_path = test.ruby_tarball_download_path("3.4.5");
+    let ruby_mock = test
+        .server
+        .mock("GET", download_path.as_str())
         .with_status(404)
         .create();
 
@@ -139,12 +139,10 @@ fn test_ruby_install_http_failure_no_empty_file() {
 
     let output = test.rv(&["ruby", "install", "3.4.5"]);
 
+    ruby_mock.assert();
     output.assert_failure();
 
-    let cache_key = rv_cache::cache_digest(format!(
-        "{}/portable-ruby-3.4.5.{arch}.bottle.tar.gz",
-        test.server_url()
-    ));
+    let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("3.4.5"));
     let tarball_path = cache_dir
         .join("ruby-v0")
         .join("tarballs")
@@ -169,7 +167,7 @@ fn test_ruby_install_interrupted_download_cleanup() {
     let mut test = RvTest::new();
 
     let download_path = test.ruby_tarball_download_path("3.4.5");
-    let _mock = test
+    let ruby_mock = test
         .server
         .mock("GET", download_path.as_str())
         .with_status(200)
@@ -181,6 +179,7 @@ fn test_ruby_install_interrupted_download_cleanup() {
 
     let output = test.rv(&["ruby", "install", "3.4.5"]);
 
+    ruby_mock.assert();
     output.assert_failure();
 
     let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("3.4.5"));
@@ -261,13 +260,14 @@ fn test_ruby_install_atomic_rename_behavior() {
 
     let tarball_content = test.create_mock_tarball();
     let download_path = test.ruby_tarball_download_path("3.4.5");
-    let _mock = test
+    let ruby_mock = test
         .mock_tarball_download(download_path, &tarball_content)
         .create();
 
     let cache_dir = test.enable_cache();
 
     let output = test.rv(&["ruby", "install", "3.4.5"]);
+    ruby_mock.assert();
     output.assert_success();
 
     let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("3.4.5"));
@@ -289,13 +289,10 @@ fn test_ruby_install_atomic_rename_behavior() {
 fn test_ruby_install_temp_file_cleanup_on_extraction_failure() {
     let mut test = RvTest::new();
 
-    let arch = HostPlatform::MacosAarch64.ruby_arch_str();
-    let _mock = test
+    let download_path = test.ruby_tarball_download_path("3.4.5");
+    let ruby_mock = test
         .server
-        .mock(
-            "GET",
-            format!("/download/3.4.5/portable-ruby-3.4.5.{arch}.bottle.tar.gz").as_str(),
-        )
+        .mock("GET", download_path.as_str())
         .with_status(200)
         .with_header("content-type", "application/gzip")
         .with_body("invalid-tarball-content")
@@ -305,12 +302,10 @@ fn test_ruby_install_temp_file_cleanup_on_extraction_failure() {
 
     let output = test.rv(&["ruby", "install", "3.4.5"]);
 
+    ruby_mock.assert();
     output.assert_failure();
 
-    let cache_key = rv_cache::cache_digest(format!(
-        "{}/download/3.4.5/portable-ruby-3.4.5.{arch}.bottle.tar.gz",
-        test.server_url()
-    ));
+    let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("3.4.5"));
     let temp_path = cache_dir
         .join("ruby-v0")
         .join("tarballs")
