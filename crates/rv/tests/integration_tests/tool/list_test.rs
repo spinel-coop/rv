@@ -18,16 +18,20 @@ impl RvTest {
 fn test_tool_list() {
     let mut test = RvTest::new();
 
-    let _releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
+    let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
 
     let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
-    let _info_endpoint_mock = test
+    let info_endpoint_mock = test
         .mock_info_endpoint("indirect", &info_endpoint_content)
         .create();
 
-    let _tarball_mock = test.mock_gem_download("indirect-1.2.0.gem").create();
+    let tarball_mock = test.mock_gem_download("indirect-1.2.0.gem").create();
 
     let output = test.tool_install(&["indirect"]);
+
+    releases_mock.assert();
+    info_endpoint_mock.assert();
+    tarball_mock.assert();
     output.assert_success();
 
     // Test the list has 1 row
