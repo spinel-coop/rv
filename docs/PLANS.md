@@ -114,7 +114,7 @@ rv combines several functions that have previously been separate tools:
 - [x] macOS 15+
 - [x] Linux (glibc 2.35+)
 - [ ] Alpine (musl 1.2.5+)
-- [ ] Windows 11+
+- [x] Windows 11+
 
 ## configuration
 
