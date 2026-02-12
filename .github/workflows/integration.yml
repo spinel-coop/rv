@@ -153,7 +153,10 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install WSL Ubuntu
-        run: wsl --install -d Ubuntu-24.04 --no-launch
+        shell: powershell
+        run: |
+          winget install --id 9NZ3KLHXDJP5 --accept-source-agreements --accept-package-agreements --silent
+          ubuntu2404.exe install --root --ui=none
 
       - name: Install dependencies
         run: wsl -d Ubuntu-24.04 -u root -- bash -c "apt-get update && apt-get install -y build-essential curl"
