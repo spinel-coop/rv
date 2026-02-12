@@ -79,10 +79,6 @@ fn test_clean_install_input_validation() {
     output.assert_success();
     releases_mock.assert();
 
-    // Let rv infer installation path from Gemfile argument. This test would install real gems to
-    // real rv installation directory, so we use an empty Gemfile to avoid side effects.
-    test.env.remove("BUNDLE_PATH");
-
     let gemfile_path = test.cwd.join("Gemfile.empty");
     let gemfile = fs_err::read_to_string("../rv-lockfile/tests/inputs/Gemfile.empty").unwrap();
     let _ = fs_err::write(
@@ -121,10 +117,6 @@ fn test_clean_install_input_validation() {
         lockfile_path,
         lockfile.replace("https://rubygems.org", &test.server_url()),
     );
-
-    // Let rv infer installation path from Gemfile argument. This test would install real gems to
-    // real rv installation directory, so we use an empty Gemfile to avoid side effects.
-    test.env.remove("BUNDLE_PATH");
 
     let output = test.ci(&["--gemfile", "project/Gemfile"]);
     output.assert_success();
