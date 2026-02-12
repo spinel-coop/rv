@@ -56,8 +56,7 @@ fn test_tool_install_twice() {
         tool_home.cyan()
     );
 
-    let stdout = output.normalized_stdout();
-    assert!(stdout.contains(&expected_info_message), "{}", stdout);
+    output.assert_stdout_contains(&expected_info_message);
 
     releases_mock.assert();
     info_endpoint_mock.assert();
@@ -74,8 +73,7 @@ fn test_tool_install_twice() {
     let output = test.tool_install(&["indirect"]);
     output.assert_success();
 
-    let stdout = output.normalized_stdout();
-    assert!(stdout.contains(&expected_info_message), "{}", stdout);
+    output.assert_stdout_contains(&expected_info_message);
 }
 
 /// Tests users can explicitly install an older version of a gem.
@@ -108,8 +106,7 @@ fn test_tool_install_non_latest_version() {
         tool_home.cyan()
     );
 
-    let stdout = output.normalized_stdout();
-    assert!(stdout.contains(&expected_info_message), "{}", stdout);
+    output.assert_stdout_contains(&expected_info_message);
 
     releases_mock.assert();
     info_endpoint_mock.assert();

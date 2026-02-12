@@ -173,11 +173,8 @@ fn test_clean_install_respects_ruby() {
 
     let output = test.ci(&["--verbose"]);
     output.assert_success();
-    let stdout = output.normalized_stdout();
-    assert!(
-        stdout.contains("Installed Ruby version ruby-3.4.8 to /tmp/home/.local/share/rv/rubies"),
-        "{}",
-        stdout,
+    output.assert_stdout_contains(
+        "Installed Ruby version ruby-3.4.8 to /tmp/home/.local/share/rv/rubies",
     );
 }
 
@@ -299,13 +296,7 @@ fn test_clean_install_fails_if_evaluating_a_path_gemspec_fails() {
 
     mock.assert();
     output.assert_failure();
-
-    assert!(
-        output
-            .normalized_stderr()
-            .contains("cannot load such file -- ./missing.rb"),
-        "should show an error about the file that failed to load"
-    );
+    output.assert_stderr_contains("cannot load such file -- ./missing.rb");
 }
 
 #[cfg(unix)]

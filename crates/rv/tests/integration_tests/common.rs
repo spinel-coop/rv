@@ -499,6 +499,28 @@ impl RvOutput {
         self
     }
 
+    #[track_caller]
+    pub fn assert_stdout_contains(&self, expected: &str) -> &Self {
+        let got = self.normalized_stdout();
+
+        assert!(
+            got.contains(expected),
+            "# EXPECTED STDOUT TO INCLUDE\n{expected}\n\n# GOT\n{got}\n",
+        );
+        self
+    }
+
+    #[track_caller]
+    pub fn assert_stderr_contains(&self, expected: &str) -> &Self {
+        let got = self.normalized_stderr();
+
+        assert!(
+            got.contains(expected),
+            "# EXPECTED STDERR TO INCLUDE\n{expected}\n\n# GOT\n{got}\n",
+        );
+        self
+    }
+
     pub fn stdout(&self) -> String {
         String::from_utf8_lossy(&self.output.stdout).to_string()
     }
