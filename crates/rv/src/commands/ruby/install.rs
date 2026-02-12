@@ -68,7 +68,7 @@ pub(crate) async fn install(
         version
     } else {
         debug!("Fetching available rubies, because user gave an underspecified Ruby range");
-        config.find_remote_ruby_request(&request.unwrap()).await?
+        config.find_remote_ruby_request(request.as_ref()).await?
     };
 
     let install_dir = match install_dir {
