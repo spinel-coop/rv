@@ -1,0 +1,59 @@
+#!/bin/bash
+set -euo pipefail
+
+# Smoke test for evaluating gemspecs in PATH sources
+#
+# Tests that local gemspecs from PATH sources are evaluated from the gemspec
+# directory, not from the lockfile directory, so that relative requires inside
+# them work as expected
+
+source "$(dirname "$0")/shared.sh"
+
+macos_docker_reexec
+
+setup_rv
+
+# Use fixture files instead of cloning a project
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+TEST_DIR=$(mktemp -d)
+
+cd "$TEST_DIR"
+
+cp "$REPO_ROOT/crates/rv-lockfile/tests/inputs/Gemfile.relative-gemspec-paths" Gemfile
+cp "$REPO_ROOT/crates/rv-lockfile/tests/inputs/Gemfile.relative-gemspec-paths.lock" Gemfile.lock
+
+mkdir foo
+
+cat << EOF > foo/foo.gemspec
+require './version.rb'
+
+Gem::Specification.new do |s|
+    s.name = 'foo'
+    s.version = Foo::VERSION
+    s.summary = 'The foo gem'
+    s.author = 'Bandre Barco'
+end
+EOF
+
+cat << EOF > foo/version.rb
+module Foo
+    VERSION = '1.0.0'
+end
+EOF
+
+rv ci
+
+rv run bundle check
+
+cat << EOF > foo/foo.gemspec
+require './missing.rb'
+EOF
+
+if rv ci 2> results.txt
+then exit 1
+fi
+
+grep "cannot load such file -- ./missing.rb" results.txt
+
+smoke_test_success "local-gemspec"
