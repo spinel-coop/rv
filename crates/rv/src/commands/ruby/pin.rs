@@ -29,7 +29,7 @@ pub enum Error {
 type Result<T> = miette::Result<T, Error>;
 
 pub(crate) async fn pin(global_args: &GlobalArgs, request: Option<RubyRequest>) -> Result<()> {
-    let config = &Config::new(global_args, request.clone())?;
+    let config = &Config::new(global_args, None)?;
 
     match request {
         None => show_pinned_ruby(config),

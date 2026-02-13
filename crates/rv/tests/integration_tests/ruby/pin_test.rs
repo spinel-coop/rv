@@ -8,7 +8,9 @@ impl RvTest {
 
 #[test]
 fn test_ruby_pin_basic_test() {
-    let test = RvTest::new();
+    let mut test = RvTest::new();
+
+    test.mock_releases(["1.9.2-p0", "3.2.0", "3.3.0-preview1", "3.4.7"].to_vec());
 
     let set_pin = test.ruby_pin(&["3.4.7"]);
     set_pin.assert_success();
@@ -84,7 +86,8 @@ fn test_pin_runs_with_no_version() {
 
 #[test]
 fn test_pin_runs_with_tool_versions() {
-    let test = RvTest::new();
+    let mut test = RvTest::new();
+    test.mock_releases(["3.3.0", "3.4.0"].to_vec());
 
     let tool_versions_file = test.temp_root().join(".tool-versions");
     std::fs::write(&tool_versions_file, "ruby 3.2.0").unwrap();
