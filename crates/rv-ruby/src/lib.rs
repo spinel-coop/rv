@@ -11,7 +11,7 @@ use std::env::{
     self,
     consts::{ARCH, OS},
 };
-use std::process::{Command, ExitStatus};
+use std::process::Command;
 use tracing::instrument;
 
 use crate::version::RubyVersion;
@@ -200,8 +200,6 @@ pub enum RubyError {
     InvalidPath { path: String },
     #[error("No ruby executable found in bin/ directory")]
     NoRubyExecutable,
-    #[error("Running ruby failed with status {0}:\n{1}")]
-    RubyFailed(ExitStatus, String),
     #[error("Failed to parse Ruby directory name: {0}")]
     InvalidDirectoryName(String),
     #[error("Failed to parse version: {0}")]
