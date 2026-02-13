@@ -351,7 +351,6 @@ impl RvTest {
             .with_body(content)
     }
 
-    #[cfg(unix)]
     pub fn mock_info_endpoint(&mut self, name: &str, content: &[u8]) -> Mock {
         let path = format!("/info/{}", name);
         self.server
@@ -531,13 +530,11 @@ impl RvTest {
         let _ = fs_err::write(self.cwd.join("Gemfile"), &gemfile);
     }
 
-    #[cfg(unix)]
     pub fn use_lockfile(&self, path: &str) {
         let lockfile = fs_err::read_to_string(path).unwrap();
         let _ = fs_err::write(self.cwd.join("Gemfile.lock"), &lockfile);
     }
 
-    #[cfg(unix)]
     pub fn replace_source(&self, from: &str, to: &str) {
         let gemfile_path = self.cwd.join("Gemfile");
         let gemfile = fs_err::read_to_string(&gemfile_path).unwrap();

@@ -1,23 +1,11 @@
-#[cfg(unix)]
 use crate::common::{RvOutput, RvTest};
 
-// ci() removes RV_TEST_PLATFORM so the subprocess detects native platform and
-// downloads real Ruby binaries from GitHub. On Windows, this triggers the
-// RubyInstaller2 flow which has a completely different download/install path.
-// These tests are gated to Unix until dedicated Windows CI test setup exists.
-#[cfg(unix)]
 impl RvTest {
     pub fn ci(&mut self, args: &[&str]) -> RvOutput {
-        self.env.remove("RV_INSTALL_URL");
-        // Remove RV_TEST_PLATFORM so the subprocess uses its compile-time native
-        // platform. This is necessary because ci tests download real Ruby binaries
-        // from GitHub, and those binaries must match the host architecture.
-        self.env.remove("RV_TEST_PLATFORM");
         self.rv(&[&["ci"], args].concat())
     }
 }
 
-#[cfg(unix)]
 #[test]
 fn test_clean_install_download_test_gem() {
     let mut test = RvTest::new();
@@ -36,7 +24,6 @@ fn test_clean_install_download_test_gem() {
     mock.assert();
 }
 
-#[cfg(unix)]
 #[test]
 fn test_clean_install_input_validation() {
     let mut test = RvTest::new();
@@ -114,7 +101,6 @@ fn test_clean_install_input_validation() {
     );
 }
 
-#[cfg(unix)]
 #[test]
 fn test_clean_install_respects_ruby() {
     let mut test = RvTest::new();
@@ -124,12 +110,15 @@ fn test_clean_install_respects_ruby() {
     std::fs::write(project_dir.join(".ruby-version"), b"3.4.8").unwrap();
     test.cwd = project_dir;
 
+    let mock = test.mock_ruby_download("3.4.8").create();
+
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.empty");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.empty.lock");
     test.replace_source("https://rubygems.org", &test.server_url());
 
     let output = test.ci(&["--verbose"]);
     output.assert_success();
+    mock.assert();
     output.assert_stdout_contains(
         "Installed Ruby version ruby-3.4.8 to /tmp/home/.local/share/rv/rubies",
     );
@@ -143,10 +132,15 @@ fn test_clean_install_native_macos_aarch64() {
 
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative.lock");
+    test.replace_source("https://rubygems.org", &test.server_url());
+    let mock = test
+        .mock_gem_download("ffi-1.17.2-arm64-darwin.gem")
+        .create();
 
     let output = test.ci(&[]);
 
     output.assert_success();
+    mock.assert();
 
     // Store a snapshot of all the files `rv ci` created.
     let files_sorted = find_all_files_in_dir(test.cwd.as_ref());
@@ -161,10 +155,15 @@ fn test_clean_install_native_linux_x86_64() {
 
     test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative");
     test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative.lock");
+    test.replace_source("https://rubygems.org", &test.server_url());
+    let mock = test
+        .mock_gem_download("ffi-1.17.2-x86_64-linux-gnu.gem")
+        .create();
 
     let output = test.ci(&[]);
 
     output.assert_success();
+    mock.assert();
 
     // Store a snapshot of all the files `rv ci` created.
     let files_sorted = find_all_files_in_dir(test.cwd.as_ref());
