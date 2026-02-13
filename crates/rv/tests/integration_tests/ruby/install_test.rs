@@ -18,11 +18,8 @@ fn test_ruby_install_no_specific_version() {
     ruby_mock.assert();
     mock.assert();
     output.assert_success();
-
-    assert!(
-        output
-            .normalized_stdout()
-            .contains("Installed Ruby version ruby-3.4.5 to /tmp/home/.local/share/rv/rubies")
+    output.assert_stdout_contains(
+        "Installed Ruby version ruby-3.4.5 to /tmp/home/.local/share/rv/rubies",
     );
 
     let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("3.4.5"));
@@ -49,10 +46,8 @@ fn test_ruby_install_incomplete_request() {
     mock.assert();
     output.assert_success();
 
-    assert!(
-        output
-            .normalized_stdout()
-            .contains("Installed Ruby version ruby-4.0.0 to /tmp/home/.local/share/rv/rubies")
+    output.assert_stdout_contains(
+        "Installed Ruby version ruby-4.0.0 to /tmp/home/.local/share/rv/rubies",
     );
 
     let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("4.0.0"));
@@ -220,11 +215,7 @@ fn test_ruby_install_cached_file_reused() {
     let output2 = test.rv(&["ruby", "install", "3.4.5"]);
     output2.assert_success();
 
-    assert!(
-        output2
-            .stdout()
-            .contains("already exists, skipping download")
-    );
+    output2.assert_stdout_contains("already exists, skipping download");
 
     mock.assert();
 }
