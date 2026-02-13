@@ -138,7 +138,8 @@ impl RvTest {
         cmd.args(args);
 
         let output = cmd.output().expect("Failed to execute rv command");
-        RvOutput::new(self.temp_root().as_str(), output)
+        let test_root = self.temp_root().to_string();
+        RvOutput { test_root, output }
     }
 
     pub fn rv_command(&self) -> Command {
@@ -570,13 +571,6 @@ pub struct RvOutput {
 }
 
 impl RvOutput {
-    pub fn new(test_root: &str, output: std::process::Output) -> Self {
-        Self {
-            output,
-            test_root: test_root.into(),
-        }
-    }
-
     pub fn success(&self) -> bool {
         self.output.status.success()
     }
