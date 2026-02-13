@@ -97,7 +97,6 @@ fn test_ruby_install_successful_download() {
 }
 
 // The mock tarball contains a bash script (bin/ruby) that can't execute on Windows.
-#[cfg(unix)]
 #[test]
 fn test_ruby_install_from_tarball() {
     let mut test = RvTest::new();

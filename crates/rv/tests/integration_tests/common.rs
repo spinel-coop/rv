@@ -365,7 +365,6 @@ impl RvTest {
     }
 
     /// Mock a tarball on disk for testing
-    #[cfg(unix)]
     pub fn mock_tarball_on_disk(&mut self, version: &str) -> Utf8PathBuf {
         let content = &self.create_mock_tarball(version);
         let filename = &self.make_tarball_file_name(version);
