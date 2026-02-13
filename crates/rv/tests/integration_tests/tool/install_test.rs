@@ -59,11 +59,7 @@ fn test_tool_install_twice() {
     tarball_mock.assert();
 
     // Manually remove tool
-    rm_rf(
-        test.temp_home()
-            .join(".local/share/rv/tools/indirect@1.2.0"),
-    )
-    .unwrap();
+    rm_rf(test.data_dir().join("rv/tools/indirect@1.2.0")).unwrap();
 
     // Check it succeeds a second time
     let output = test.tool_install(&["indirect"]);
@@ -122,9 +118,7 @@ fn test_tool_install_writes_ruby_version_file() {
     let output = test.tool_install(&["indirect"]);
     output.assert_success();
 
-    let tool_home = test
-        .temp_home()
-        .join(".local/share/rv/tools/indirect@1.2.0");
+    let tool_home = test.data_dir().join("rv/tools/indirect@1.2.0");
     let ruby_version_path = tool_home.join(".ruby-version");
     assert!(
         ruby_version_path.exists(),

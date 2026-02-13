@@ -44,11 +44,7 @@ fn test_tool_list() {
     );
 
     // Manually remove tool
-    rm_rf(
-        test.temp_home()
-            .join(".local/share/rv/tools/indirect@1.2.0"),
-    )
-    .unwrap();
+    rm_rf(test.data_dir().join("rv/tools/indirect@1.2.0")).unwrap();
 
     // Test list has 0 rows.
     let second_list_output = test.tool_list(&["--format", "json"]);

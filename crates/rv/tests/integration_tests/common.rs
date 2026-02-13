@@ -46,11 +46,11 @@ impl RvTest {
 
         test.env.insert("RV_TEST_EXE".into(), "/tmp/bin/rv".into());
         test.env.insert("HOME".into(), test.temp_home().into());
-        // On Windows, set APPDATA and USERPROFILE so that the Win32
-        // SHGetKnownFolderPath API (used by the `etcetera` crate for data_dir)
-        // resolves to our test home dir instead of the real user profile.
-        // This is the same approach used by uv (Astral's Python package manager).
-        test.env.insert("APPDATA".into(), test.temp_home().into());
+        // On Windows, set APPDATA and USERPROFILE so that the Win32 SHGetKnownFolderPath API (used
+        // by the `etcetera` crate for data_dir) resolves to the test locations that we expect
+        // rather than to paths in the real user profile. This is the same approach used by uv
+        // (Astral's Python package manager).
+        test.env.insert("APPDATA".into(), test.data_dir().into());
         test.env
             .insert("USERPROFILE".into(), test.temp_home().into());
         test.env
@@ -117,6 +117,10 @@ impl RvTest {
 
     pub fn temp_home(&self) -> Utf8PathBuf {
         self.temp_root().join("home")
+    }
+
+    pub fn data_dir(&self) -> Utf8PathBuf {
+        self.temp_home().join(".local/share")
     }
 
     pub fn legacy_gem_path(&self, version: &str) -> Utf8PathBuf {
