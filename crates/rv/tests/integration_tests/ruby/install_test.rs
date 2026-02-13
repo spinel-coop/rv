@@ -1,7 +1,5 @@
 use crate::common::RvTest;
 use std::fs;
-#[cfg(unix)]
-use std::process::Command;
 
 #[test]
 fn test_ruby_install_no_specific_version() {
@@ -111,12 +109,9 @@ fn test_ruby_install_from_tarball() {
 
     output.assert_success();
 
-    // is the mocked ruby from the tarball actually installed
-    let mocked_ruby_path = test
-        .temp_home()
-        .join(".local/share/rv/rubies/ruby-3.4.5/bin/ruby");
-    let mut command = Command::new(mocked_ruby_path);
-    command.output().expect("mock ruby");
+    // Check mocked ruby from the tarball was actually installed by running it
+    let output = test.rv(&["ruby", "run"]);
+    output.assert_stdout_contains("ruby\n3.4.5");
 }
 
 #[test]
