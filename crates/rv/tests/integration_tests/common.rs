@@ -28,6 +28,10 @@ impl RvTest {
         // (e.g. RUNNER~1) that would mismatch with temp_root() in normalization.
         let cwd: Utf8PathBuf =
             Utf8PathBuf::try_from(dunce::canonicalize(temp_dir.path()).unwrap()).unwrap();
+
+        // Platform is fixed during our integration tests to macOS, so some code paths are not
+        // exercised on Windows, like the different ruby download URLs. Eventually we'll probably
+        // want to stop mocking this value if possible to get more coverage.
         let platform = HostPlatform::MacosAarch64;
 
         let mut test = Self {
