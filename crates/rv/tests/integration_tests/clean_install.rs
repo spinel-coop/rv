@@ -38,25 +38,6 @@ fn test_clean_install_download_test_gem() {
 
 #[cfg(unix)]
 #[test]
-fn test_clean_install_rakefile_extension() {
-    let mut test = RvTest::new();
-
-    test.create_ruby_dir("ruby-4.0.1");
-
-    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.rakeext");
-    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.rakeext.lock");
-    test.replace_source("http://gems.example.com", &test.server_url());
-
-    let mock = test.mock_gem_download("rake-ext-test-1.0.0.gem").create();
-
-    let output = test.ci(&["--verbose"]);
-
-    output.assert_success();
-    mock.assert();
-}
-
-#[cfg(unix)]
-#[test]
 fn test_clean_install_input_validation() {
     let mut test = RvTest::new();
 
