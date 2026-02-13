@@ -128,28 +128,21 @@ pub(crate) async fn install(
     gems_to_deps.insert(gem_name.clone(), releases.clone());
 
     let release_to_install = match gem_version {
-        Some(user_choice) => {
-            let Some(v) = releases
-                .iter()
-                .filter(|gem_release| gem_release.version() == &user_choice)
-                .max_by(|x, y| x.version_platform().cmp(y.version_platform()))
-            else {
-                return Err(Error::NoVersionFound(user_choice));
-            };
-            debug!("Selected {} {}", gem_name, v.full_name());
-            v.to_owned()
-        }
-        _ => {
-            let Some(v) = releases
-                .iter()
-                .max_by(|x, y| x.version_platform().cmp(y.version_platform()))
-            else {
-                return Err(Error::NoReleasesPublished);
-            };
-            debug!("Selected {} {}", gem_name, v.full_name());
-            v.to_owned()
-        }
+        Some(user_choice) => releases
+            .iter()
+            .filter(|gem_release| gem_release.version() == &user_choice)
+            .max_by(|x, y| x.version_platform().cmp(y.version_platform()))
+            .map_or_else(
+                || Err(Error::NoVersionFound(user_choice)),
+                |v| Ok(v.to_owned()),
+            )?,
+        _ => releases
+            .iter()
+            .max_by(|x, y| x.version_platform().cmp(y.version_platform()))
+            .map_or_else(|| Err(Error::NoReleasesPublished), |v| Ok(v.to_owned()))?,
     };
+
+    debug!("Selected {} {}", gem_name, release_to_install.full_name());
 
     // Check if the tool was already installed.
     let install_path = super::tool_dir_for(
