@@ -43,7 +43,7 @@ impl RvTest {
         };
 
         test.env
-            .insert("RV_ROOT_DIR".into(), test.temp_root().as_str().into());
+            .insert("RV_ROOT_DIR".into(), test.temp_root().into());
         // Set consistent arch/os for cross-platform testing
         test.env
             .insert("RV_TEST_PLATFORM".into(), platform.target_triple().into());
@@ -88,8 +88,7 @@ impl RvTest {
         // RUBIES_PATH forces rv to use our temp dir instead.
         let rubies_dir = test.temp_home().join(".local/share/rv/rubies");
         std::fs::create_dir_all(&rubies_dir).expect("Failed to create rubies directory");
-        test.env
-            .insert("RUBIES_PATH".into(), rubies_dir.as_str().into());
+        test.env.insert("RUBIES_PATH".into(), rubies_dir.into());
 
         // Disable caching for tests by default
         test.env.insert("RV_NO_CACHE".into(), "true".into());
@@ -108,7 +107,7 @@ impl RvTest {
 
         let cache_dir = self.temp_root().join("cache");
         self.env
-            .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
+            .insert("RV_CACHE_DIR".into(), cache_dir.clone().into());
 
         cache_dir
     }
