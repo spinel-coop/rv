@@ -1389,8 +1389,7 @@ fn compile_gem(
     let gem_home = &args.install_path;
     let gem_path = gem_home.join("gems").join(spec.full_name());
     let lib_dest = gem_path.join("lib");
-    let ext_dest = args
-        .install_path
+    let ext_dest = gem_home
         .join("extensions")
         .join(&args.extensions_dir)
         .join(spec.full_name());
