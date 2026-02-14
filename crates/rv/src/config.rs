@@ -109,22 +109,20 @@ impl Config {
         self.discover_remote_rubies().await
     }
 
-    pub async fn find_remote_ruby_request(
-        &self,
-        request: Option<&RubyRequest>,
-    ) -> Result<RubyVersion> {
-        let remote_rubies = self.remote_rubies().await;
+    pub async fn find_matching_remote_ruby(&self) -> Result<RubyVersion> {
+        let requested_range = self.ruby_request();
 
-        let requested = match request {
-            Some(req) => req,
-            None => &self.ruby_request(),
-        };
+        if let Ok(version) = RubyVersion::try_from(requested_range.clone()) {
+            Ok(version)
+        } else {
+            let remote_rubies = self.remote_rubies().await;
 
-        let matched_ruby = requested
-            .find_match_in(&remote_rubies)
-            .ok_or(Error::NoMatchingRuby)?;
+            let matched_ruby = requested_range
+                .find_match_in(&remote_rubies)
+                .ok_or(Error::NoMatchingRuby)?;
 
-        Ok(matched_ruby.version)
+            Ok(matched_ruby.version)
+        }
     }
 
     pub fn current_ruby(&self) -> Option<Ruby> {

@@ -12,7 +12,7 @@ use tracing::{debug, info_span};
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 
 use rv_platform::HostPlatform;
-use rv_ruby::{request::RubyRequest, version::RubyVersion};
+use rv_ruby::request::RubyRequest;
 
 use crate::progress::WorkProgress;
 use crate::{GlobalArgs, config::Config};
@@ -55,21 +55,11 @@ pub(crate) async fn install(
     request: Option<RubyRequest>,
     tarball_path: Option<String>,
 ) -> Result<()> {
-    let config = &Config::new(global_args, request.clone())?;
+    let config = &Config::new(global_args, request)?;
 
     let progress = WorkProgress::new();
 
-    let requested_range = config.ruby_request();
-
-    let selected_version = if let Ok(version) = RubyVersion::try_from(requested_range.clone()) {
-        debug!(
-            "Skipping the rv-ruby releases fetch because the user has given a specific ruby version {version}"
-        );
-        version
-    } else {
-        debug!("Fetching available rubies, because user gave an underspecified Ruby range");
-        config.find_remote_ruby_request(request.as_ref()).await?
-    };
+    let selected_version = config.find_matching_remote_ruby().await?;
 
     let install_dir = match install_dir {
         Some(dir) => Utf8PathBuf::from(dir),
