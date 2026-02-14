@@ -225,7 +225,7 @@ puts RUBY_VERSION
     let output = test.script_run_no_install(&script);
 
     output.assert_failure();
-    assert!(output.stderr().contains("NoMatchingRuby"));
+    output.assert_stderr_contains("NoMatchingRuby");
 }
 
 #[cfg(unix)]

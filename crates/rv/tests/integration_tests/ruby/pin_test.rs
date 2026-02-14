@@ -79,12 +79,7 @@ fn test_pin_runs_with_no_version() {
 
     let show_pin = test.ruby_pin(&[]);
     show_pin.assert_failure();
-    assert!(
-        show_pin
-            .stderr()
-            .contains("Error: RubyError(PinError(NoRubyRequest"),
-        "pin without arguments did not print a nice error",
-    );
+    show_pin.assert_stderr_contains("Error: RubyError(PinError(NoRubyRequest");
 }
 
 #[test]

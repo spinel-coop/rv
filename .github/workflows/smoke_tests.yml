@@ -53,6 +53,7 @@ jobs:
           - huginn
           - llhttp-ffi
           - lobsters
+          - local-gemspec
           - mastodon
     steps:
       - name: Check out repo

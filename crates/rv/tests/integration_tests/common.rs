@@ -28,6 +28,10 @@ impl RvTest {
         // (e.g. RUNNER~1) that would mismatch with temp_root() in normalization.
         let cwd: Utf8PathBuf =
             Utf8PathBuf::try_from(dunce::canonicalize(temp_dir.path()).unwrap()).unwrap();
+
+        // Platform is fixed during our integration tests to macOS, so some code paths are not
+        // exercised on Windows, like the different ruby download URLs. Eventually we'll probably
+        // want to stop mocking this value if possible to get more coverage.
         let platform = HostPlatform::MacosAarch64;
 
         let mut test = Self {
@@ -39,22 +43,22 @@ impl RvTest {
         };
 
         test.env
-            .insert("RV_ROOT_DIR".into(), test.temp_root().as_str().into());
+            .insert("RV_ROOT_DIR".into(), test.temp_root().into());
         // Set consistent arch/os for cross-platform testing
         test.env
             .insert("RV_TEST_PLATFORM".into(), platform.target_triple().into());
 
         test.env.insert("RV_TEST_EXE".into(), "/tmp/bin/rv".into());
         test.env.insert("HOME".into(), test.temp_home().into());
-        // On Windows, set APPDATA and USERPROFILE so that the Win32
-        // SHGetKnownFolderPath API (used by the `etcetera` crate for data_dir)
-        // resolves to our test home dir instead of the real user profile.
-        // This is the same approach used by uv (Astral's Python package manager).
-        test.env.insert("APPDATA".into(), test.temp_home().into());
+        // On Windows, set APPDATA and USERPROFILE so that the Win32 SHGetKnownFolderPath API (used
+        // by the `etcetera` crate for data_dir) resolves to the test locations that we expect
+        // rather than to paths in the real user profile. This is the same approach used by uv
+        // (Astral's Python package manager).
+        test.env.insert("APPDATA".into(), test.data_dir().into());
         test.env
             .insert("USERPROFILE".into(), test.temp_home().into());
         test.env
-            .insert("BUNDLE_PATH".into(), test.cwd.join("app").into());
+            .insert("RV_PATH".into(), test.cwd.join("app").into());
 
         // Disable network requests by default
         test.env.insert(
@@ -84,8 +88,7 @@ impl RvTest {
         // RUBIES_PATH forces rv to use our temp dir instead.
         let rubies_dir = test.temp_home().join(".local/share/rv/rubies");
         std::fs::create_dir_all(&rubies_dir).expect("Failed to create rubies directory");
-        test.env
-            .insert("RUBIES_PATH".into(), rubies_dir.as_str().into());
+        test.env.insert("RUBIES_PATH".into(), rubies_dir.into());
 
         // Disable caching for tests by default
         test.env.insert("RV_NO_CACHE".into(), "true".into());
@@ -104,7 +107,7 @@ impl RvTest {
 
         let cache_dir = self.temp_root().join("cache");
         self.env
-            .insert("RV_CACHE_DIR".into(), cache_dir.as_str().into());
+            .insert("RV_CACHE_DIR".into(), cache_dir.clone().into());
 
         cache_dir
     }
@@ -119,6 +122,10 @@ impl RvTest {
         self.temp_root().join("home")
     }
 
+    pub fn data_dir(&self) -> Utf8PathBuf {
+        self.temp_home().join(".local/share")
+    }
+
     pub fn legacy_gem_path(&self, version: &str) -> Utf8PathBuf {
         self.temp_home()
             .join(".gem")
@@ -131,7 +138,8 @@ impl RvTest {
         cmd.args(args);
 
         let output = cmd.output().expect("Failed to execute rv command");
-        RvOutput::new(self.temp_root().as_str(), output)
+        let test_root = self.temp_root().to_string();
+        RvOutput { test_root, output }
     }
 
     pub fn rv_command(&self) -> Command {
@@ -325,9 +333,21 @@ impl RvTest {
             .create()
     }
 
+    /// Mock a ruby tarball download for testing
+    pub fn mock_ruby_download(&mut self, version: &str) -> Mock {
+        let path = self.ruby_tarball_download_path(version);
+        let content = self.create_mock_tarball(version);
+        self.mock_tarball_download(path, &content)
+    }
+
+    pub fn mock_gem_download(&mut self, package: &str) -> Mock {
+        let path = self.gem_package_download_path(package);
+        let content = fs_err::read(format!("../rv-gem-package/tests/fixtures/{package}")).unwrap();
+        self.mock_tarball_download(path, &content)
+    }
+
     /// Mock a tarball download for testing
-    pub fn mock_tarball_download(&mut self, filename: &str, content: &[u8]) -> Mock {
-        let path = format!("/{}", filename);
+    pub fn mock_tarball_download(&mut self, path: String, content: &[u8]) -> Mock {
         self.server
             .mock("GET", path.as_str())
             .with_status(200)
@@ -335,13 +355,6 @@ impl RvTest {
             .with_body(content)
     }
 
-    #[cfg(unix)]
-    pub fn mock_gem_download(&mut self, filename: &str, content: &[u8]) -> Mock {
-        let path = format!("gems/{}", filename);
-        self.mock_tarball_download(&path, content)
-    }
-
-    #[cfg(unix)]
     pub fn mock_info_endpoint(&mut self, name: &str, content: &[u8]) -> Mock {
         let path = format!("/info/{}", name);
         self.server
@@ -352,14 +365,85 @@ impl RvTest {
     }
 
     /// Mock a tarball on disk for testing
-    #[cfg(unix)]
-    pub fn mock_tarball_on_disk(&mut self, filename: &str, content: &[u8]) -> Utf8PathBuf {
+    pub fn mock_tarball_on_disk(&mut self, version: &str) -> Utf8PathBuf {
+        let content = &self.create_mock_tarball(version);
+        let filename = &self.make_tarball_file_name(version);
         let temp_dir = self.temp_root().join("tmp");
         std::fs::create_dir_all(&temp_dir).expect("Failed to create TMP directory");
         let full_path = temp_dir.join(filename);
         std::fs::write(&full_path, content).expect("Failed to write path");
 
         full_path
+    }
+
+    pub fn create_mock_tarball(&self, version: &str) -> Vec<u8> {
+        use flate2::Compression;
+        use flate2::write::GzEncoder;
+        use std::io::Write;
+        use tar::Builder;
+
+        let mut archive_data = Vec::new();
+        {
+            let mut builder = Builder::new(&mut archive_data);
+
+            let root = format!("ruby-{version}/");
+            let mut dir_header = tar::Header::new_gnu();
+            dir_header.set_path(&root).unwrap();
+            dir_header.set_size(0);
+            dir_header.set_mode(0o755);
+            dir_header.set_entry_type(tar::EntryType::Directory);
+            dir_header.set_cksum();
+            builder.append(&dir_header, std::io::empty()).unwrap();
+
+            let mut bin_dir_header = tar::Header::new_gnu();
+            bin_dir_header.set_path(format!("{root}bin/")).unwrap();
+            bin_dir_header.set_size(0);
+            bin_dir_header.set_mode(0o755);
+            bin_dir_header.set_entry_type(tar::EntryType::Directory);
+            bin_dir_header.set_cksum();
+            builder.append(&bin_dir_header, std::io::empty()).unwrap();
+
+            let mut ruby_header = tar::Header::new_gnu();
+            let ruby_executable_name = self.ruby_executable_name();
+            let ruby_content = &self.ruby_mock_script("ruby", version);
+            ruby_header
+                .set_path(format!("{root}bin/{ruby_executable_name}"))
+                .unwrap();
+            ruby_header.set_size(ruby_content.len() as u64);
+            ruby_header.set_mode(0o755);
+            ruby_header.set_cksum();
+            builder
+                .append(&ruby_header, ruby_content.as_bytes())
+                .unwrap();
+
+            builder.finish().unwrap();
+        }
+
+        let mut gz_data = Vec::new();
+        {
+            let mut encoder = GzEncoder::new(&mut gz_data, Compression::default());
+            encoder.write_all(&archive_data).unwrap();
+            encoder.finish().unwrap();
+        }
+
+        gz_data
+    }
+
+    pub fn ruby_tarball_url(&self, version: &str) -> String {
+        format!(
+            "{}{}",
+            self.server_url(),
+            self.ruby_tarball_download_path(version)
+        )
+    }
+
+    pub fn ruby_tarball_download_path(&self, version: &str) -> String {
+        let filename = self.make_tarball_file_name(version);
+        format!("/latest/download/{filename}")
+    }
+
+    pub fn gem_package_download_path(&self, package: &str) -> String {
+        format!("/gems/{}", package)
     }
 
     /// Get the server URL for constructing download URLs
@@ -393,60 +477,67 @@ impl RvTest {
         };
 
         // Create a mock ruby executable that outputs the expected format for rv-ruby.
-        // On Unix, this is a bash script at `bin/ruby`.
-        // On Windows, this is a batch script at `bin/ruby.cmd` (since we can't create
-        // a real .exe from tests, and rv-ruby checks for .cmd as a fallback).
+        let ruby_exe = bin_dir.join(self.ruby_executable_name());
+        let mock_script = self.ruby_mock_script(engine, version);
+        std::fs::write(&ruby_exe, mock_script).expect("Failed to create ruby executable");
+
         #[cfg(unix)]
         {
-            let ruby_exe = bin_dir.join("ruby");
-            let mock_script = format!(
-                "#!/bin/bash\n\
-                 echo \"{engine}\"\n\
-                 echo \"{version}\"\n\
-                 echo \"aarch64-darwin23\"\n\
-                 echo \"aarch64\"\n\
-                 echo \"darwin23\"\n\
-                 echo \"\"\n"
-            );
-            std::fs::write(&ruby_exe, mock_script).expect("Failed to create ruby executable");
-
             use std::os::unix::fs::PermissionsExt;
             let mut perms = std::fs::metadata(&ruby_exe).unwrap().permissions();
             perms.set_mode(0o755);
             std::fs::set_permissions(&ruby_exe, perms).unwrap();
         }
 
-        #[cfg(windows)]
-        {
-            let ruby_cmd = bin_dir.join("ruby.cmd");
-            let mock_script = format!(
-                "@echo off\r\n\
-                 echo {engine}\r\n\
-                 echo {version}\r\n\
-                 echo aarch64-darwin23\r\n\
-                 echo aarch64\r\n\
-                 echo darwin23\r\n\
-                 echo.\r\n"
-            );
-            std::fs::write(&ruby_cmd, mock_script).expect("Failed to create ruby executable");
-        }
-
         ruby_dir
     }
 
     #[cfg(unix)]
+    fn ruby_executable_name(&self) -> &str {
+        "ruby"
+    }
+
+    #[cfg(windows)]
+    fn ruby_executable_name(&self) -> &str {
+        "ruby.cmd"
+    }
+
+    #[cfg(unix)]
+    fn ruby_mock_script(&self, engine: &str, version: &str) -> String {
+        format!(
+            "#!/bin/bash\n\
+             echo \"{engine}\"\n\
+             echo \"{version}\"\n\
+             echo \"aarch64-darwin23\"\n\
+             echo \"aarch64\"\n\
+             echo \"darwin23\"\n\
+             echo \"\"\n"
+        )
+    }
+
+    #[cfg(windows)]
+    fn ruby_mock_script(&self, engine: &str, version: &str) -> String {
+        format!(
+            "@echo off\r\n\
+             echo {engine}\r\n\
+             echo {version}\r\n\
+             echo aarch64-darwin23\r\n\
+             echo aarch64\r\n\
+             echo darwin23\r\n\
+             echo.\r\n"
+        )
+    }
+
     pub fn use_gemfile(&self, path: &str) {
         let gemfile = fs_err::read_to_string(path).unwrap();
         let _ = fs_err::write(self.cwd.join("Gemfile"), &gemfile);
     }
 
-    #[cfg(unix)]
     pub fn use_lockfile(&self, path: &str) {
         let lockfile = fs_err::read_to_string(path).unwrap();
         let _ = fs_err::write(self.cwd.join("Gemfile.lock"), &lockfile);
     }
 
-    #[cfg(unix)]
     pub fn replace_source(&self, from: &str, to: &str) {
         let gemfile_path = self.cwd.join("Gemfile");
         let gemfile = fs_err::read_to_string(&gemfile_path).unwrap();
@@ -455,6 +546,20 @@ impl RvTest {
         let lockfile_path = self.cwd.join("Gemfile.lock");
         let lockfile = fs_err::read_to_string(&lockfile_path).unwrap();
         let _ = fs_err::write(lockfile_path, lockfile.replace(from, to));
+    }
+
+    fn make_tarball_file_name(&self, version: &str) -> String {
+        let suffix = self.make_platform_suffix();
+        format!("ruby-{version}.{suffix}.tar.gz")
+    }
+
+    /// Returns the ruby arch string matching the default test platform (`MacosAarch64`).
+    ///
+    /// Uses `HostPlatform::MacosAarch64` to match the hardcoded default in `RvTest::new()`,
+    /// NOT `HostPlatform::current()`, because the test process doesn't have
+    /// `RV_TEST_PLATFORM` set — only the subprocess does.
+    fn make_platform_suffix(&self) -> String {
+        HostPlatform::MacosAarch64.ruby_arch_str().to_string()
     }
 }
 
@@ -465,13 +570,6 @@ pub struct RvOutput {
 }
 
 impl RvOutput {
-    pub fn new(test_root: &str, output: std::process::Output) -> Self {
-        Self {
-            output,
-            test_root: test_root.into(),
-        }
-    }
-
     pub fn success(&self) -> bool {
         self.output.status.success()
     }
@@ -495,6 +593,28 @@ impl RvOutput {
             "Expected command to fail, got:\n\n# STDERR\n{}\n# STDOUT\n{}",
             str::from_utf8(&self.output.stderr).unwrap(),
             str::from_utf8(&self.output.stdout).unwrap(),
+        );
+        self
+    }
+
+    #[track_caller]
+    pub fn assert_stdout_contains(&self, expected: &str) -> &Self {
+        let got = self.normalized_stdout();
+
+        assert!(
+            got.contains(expected),
+            "# EXPECTED STDOUT TO INCLUDE\n{expected}\n\n# GOT\n{got}\n",
+        );
+        self
+    }
+
+    #[track_caller]
+    pub fn assert_stderr_contains(&self, expected: &str) -> &Self {
+        let got = self.normalized_stderr();
+
+        assert!(
+            got.contains(expected),
+            "# EXPECTED STDERR TO INCLUDE\n{expected}\n\n# GOT\n{got}\n",
         );
         self
     }

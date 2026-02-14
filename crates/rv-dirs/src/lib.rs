@@ -79,17 +79,13 @@ fn parse_path(path: OsString) -> Option<Utf8PathBuf> {
 ///
 /// On Windows, use, e.g., C:\Users\Alice\AppData\Roaming
 /// On Linux and macOS, use `XDG_CONFIG_HOME` or $HOME/.config, e.g., /home/alice/.config.
-pub fn user_config_dir() -> Option<Utf8PathBuf> {
-    let base_strategy = etcetera::choose_base_strategy().unwrap();
-    let config_dir = base_strategy.config_dir();
-    Utf8PathBuf::try_from(config_dir).ok()
-}
+pub fn user_config_dir(root: &Utf8Path) -> Utf8PathBuf {
+    let config_path = etcetera::base_strategy::choose_base_strategy()
+        .ok()
+        .map(|dirs| dirs.config_dir().join("rv"))
+        .unwrap_or_else(|| env::temp_dir().join(".config/rv"));
 
-pub fn user_rv_config_dir() -> Option<Utf8PathBuf> {
-    user_config_dir().map(|mut path| {
-        path.push("rv");
-        path
-    })
+    root.join(config_path.to_string_lossy().as_ref())
 }
 
 #[cfg(not(windows))]

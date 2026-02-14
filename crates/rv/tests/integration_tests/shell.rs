@@ -45,10 +45,5 @@ fn test_fails_without_shell() {
     let test = RvTest::new();
     let output = test.rv(&["shell"]);
     output.assert_failure();
-
-    let stderr = output.stderr();
-    assert!(
-        stderr.contains("the following required arguments were not provided:\n  <SHELL>"),
-        "shell without arguments did not print a nice error",
-    );
+    output.assert_stderr_contains("the following required arguments were not provided:\n  <SHELL>");
 }

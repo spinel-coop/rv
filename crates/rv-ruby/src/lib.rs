@@ -11,7 +11,7 @@ use std::env::{
     self,
     consts::{ARCH, OS},
 };
-use std::process::{Command, ExitStatus};
+use std::process::Command;
 use tracing::instrument;
 
 use crate::version::RubyVersion;
@@ -198,10 +198,10 @@ impl CacheKey for Ruby {
 pub enum RubyError {
     #[error("Invalid path: {path}")]
     InvalidPath { path: String },
+    #[error("Failed to run ruby executable in bin/ directory")]
+    InvalidRubyExecutable,
     #[error("No ruby executable found in bin/ directory")]
     NoRubyExecutable,
-    #[error("Running ruby failed with status {0}:\n{1}")]
-    RubyFailed(ExitStatus, String),
     #[error("Failed to parse Ruby directory name: {0}")]
     InvalidDirectoryName(String),
     #[error("Failed to parse version: {0}")]
@@ -230,27 +230,22 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
         puts(Object.const_defined?(:RUBY_DESCRIPTION) ? RUBY_DESCRIPTION : '')
     "#;
 
-    // On Windows, .cmd/.bat wrappers can't receive arguments containing special
-    // characters like (, ), ? due to Rust's CVE-2024-24576 mitigation (1.77.2+).
-    // Following uv's pattern: write the probe script to a temp file, then invoke
-    // through cmd.exe /c to bypass the restriction entirely.
-    let output = if cfg!(windows)
-        && ruby_bin
-            .extension()
-            .is_some_and(|ext| ext.eq_ignore_ascii_case("cmd") || ext.eq_ignore_ascii_case("bat"))
-    {
+    // On Windows, .cmd wrappers can't receive arguments containing special characters like (, ), ?
+    // due to Rust's CVE-2024-24576 mitigation (1.77.2+). Following uv's pattern: write the probe
+    // script to a temp file, then invoke through cmd.exe /c to bypass the restriction entirely.
+    let output = if cfg!(windows) && ruby_bin.extension().is_some_and(|ext| ext == "cmd") {
         let probe_script = ruby_bin.with_file_name("_rv_probe.rb");
-        std::fs::write(&probe_script, full_script).map_err(|_| RubyError::NoRubyExecutable)?;
+        std::fs::write(&probe_script, full_script).map_err(|_| RubyError::InvalidRubyExecutable)?;
         let result = Command::new("cmd")
             .args(["/c", ruby_bin.as_str(), probe_script.as_str()])
             .output();
         let _ = std::fs::remove_file(&probe_script);
-        result.map_err(|_| RubyError::NoRubyExecutable)?
+        result.map_err(|_| RubyError::InvalidRubyExecutable)?
     } else {
         Command::new(ruby_bin)
             .args(["-e", full_script])
             .output()
-            .map_err(|_| RubyError::NoRubyExecutable)?
+            .map_err(|_| RubyError::InvalidRubyExecutable)?
     };
 
     let info = String::from_utf8(output.stdout).unwrap();
