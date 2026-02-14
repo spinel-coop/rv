@@ -298,3 +298,30 @@ fn test_ruby_install_temp_file_cleanup_on_extraction_failure() {
 
     assert!(!temp_path.exists(), "Temp file should be cleaned up");
 }
+
+#[test]
+fn test_ruby_install_with_latest() {
+    let mut test = RvTest::new();
+
+    let ruby_mock = test.mock_ruby_download("4.0.1").create();
+
+    let cache_dir = test.enable_cache();
+
+    let mock = test.mock_releases(["3.4.5", "4.0.1"].to_vec());
+
+    let output = test.rv(&["ruby", "install", "latest"]);
+
+    ruby_mock.assert();
+    mock.assert();
+    output.assert_success();
+    output.assert_stdout_contains(
+        "Installed Ruby version ruby-4.0.1 to /tmp/home/.local/share/rv/rubies",
+    );
+
+    let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("4.0.1"));
+    let tarball_path = cache_dir
+        .join("ruby-v0")
+        .join("tarballs")
+        .join(format!("{}.tar.gz", cache_key));
+    assert!(tarball_path.exists(), "Tarball should be cached");
+}

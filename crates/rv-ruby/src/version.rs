@@ -100,7 +100,6 @@ impl From<RubyVersion> for RubyRequest {
             patch: Some(version.patch),
             tiny: version.tiny,
             prerelease: version.prerelease,
-            alias: None,
         }
     }
 }
