@@ -122,7 +122,6 @@ async fn fetch_cached_github_release(
     default_url: &str,
     transform: impl FnOnce(bytes::Bytes) -> Result<Release>,
 ) -> Result<Release> {
-    let cache_entry = cache.entry(rv_cache::CacheBucket::Ruby, "releases", cache_file);
     let client = reqwest::Client::new();
 
     let url = std::env::var(env_var).unwrap_or_else(|_| default_url.to_string());
@@ -133,6 +132,9 @@ async fn fetch_cached_github_release(
             assets: Vec::new(),
         });
     }
+
+    let cache_key = rv_cache::cache_digest(format!("{}-{}", url, cache_file));
+    let cache_entry = cache.entry(rv_cache::CacheBucket::Ruby, "releases", cache_key);
 
     // 1. Try to read from the disk cache.
     let cached_data: Option<CachedRelease> =
