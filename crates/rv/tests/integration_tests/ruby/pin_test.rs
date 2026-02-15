@@ -136,3 +136,46 @@ fn test_pin_runs_with_tool_versions() {
     let content = fs_err::read_to_string(&tool_versions_file).unwrap();
     assert_eq!(content, " ruby 3.3.0\n");
 }
+
+#[test]
+fn test_ruby_pin_without_resolve() {
+    let test = RvTest::new();
+
+    let set_pin = test.ruby_pin(&["3"]);
+    set_pin.assert_success();
+
+    assert_eq!(
+        set_pin.normalized_stdout(),
+        "/tmp/.ruby-version pinned to 3\n"
+    );
+}
+
+#[test]
+fn test_ruby_pin_with_resolve() {
+    let mut test = RvTest::new();
+
+    test.mock_releases(["3.4.6", "3.4.7"].to_vec());
+
+    let set_pin = test.ruby_pin(&["3", "--resolved"]);
+    set_pin.assert_success();
+
+    assert_eq!(
+        set_pin.normalized_stdout(),
+        "/tmp/.ruby-version pinned to 3.4.7\n"
+    );
+}
+
+#[test]
+fn test_ruby_pin_with_latest_and_resolve() {
+    let mut test = RvTest::new();
+
+    test.mock_releases(["3.4.6", "3.4.7"].to_vec());
+
+    let set_pin = test.ruby_pin(&["latest", "--resolved"]);
+    set_pin.assert_success();
+
+    assert_eq!(
+        set_pin.normalized_stdout(),
+        "/tmp/.ruby-version pinned to 3.4.7\n"
+    );
+}
