@@ -52,17 +52,9 @@ impl GemfileDotLock<'_> {
     }
 
     pub fn discard_installed_gems(&mut self, install_path: &camino::Utf8PathBuf) {
-        use std::path::Path;
-
-        self.gem.iter_mut().for_each(|gem_section| {
-            gem_section.specs.retain(|spec| {
-                let full_version = spec.gem_version;
-                let gem_path = install_path.join(format!("gems/{full_version}"));
-                let spec_path = install_path.join(format!("specifications/{full_version}.gemspec"));
-
-                !Path::new(&gem_path).exists() || !Path::new(&spec_path).exists()
-            });
-        });
+        self.gem
+            .iter_mut()
+            .for_each(|gem_section| gem_section.discard_installed_gems(install_path));
 
         self.gem.retain(|section| !section.specs.is_empty());
     }
@@ -132,6 +124,18 @@ impl<'i> GemSection<'i> {
         }
 
         by_name.into_values().collect()
+    }
+
+    pub fn discard_installed_gems(&mut self, install_path: &camino::Utf8PathBuf) {
+        use std::path::Path;
+
+        self.specs.retain(|spec| {
+            let full_version = spec.gem_version;
+            let gem_path = install_path.join(format!("gems/{full_version}"));
+            let spec_path = install_path.join(format!("specifications/{full_version}.gemspec"));
+
+            !Path::new(&gem_path).exists() || !Path::new(&spec_path).exists()
+        });
     }
 }
 
