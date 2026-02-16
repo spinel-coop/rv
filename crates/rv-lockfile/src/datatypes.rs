@@ -106,29 +106,32 @@ impl<'i> GemSection<'i> {
         use std::collections::HashMap;
         use std::str::FromStr;
 
-        let mut by_name: HashMap<&str, Vec<Spec<'i>>> = HashMap::new();
+        let mut by_name: HashMap<&str, Spec<'i>> = HashMap::new();
         for spec in &self.specs {
-            let Ok(vp) = VersionPlatform::from_str(spec.gem_version.version) else {
+            let gem_version = spec.gem_version;
+
+            let Ok(vp) = VersionPlatform::from_str(gem_version.version) else {
                 continue;
             };
-            if vp.platform.is_local() {
-                by_name
-                    .entry(spec.gem_version.name)
-                    .or_default()
-                    .push(spec.clone());
+
+            if !vp.platform.is_local() {
+                continue;
+            }
+
+            if let Some(other_spec) = by_name.get_mut(gem_version.name) {
+                let Ok(other_vp) = VersionPlatform::from_str(other_spec.gem_version.version) else {
+                    continue;
+                };
+
+                if vp > other_vp {
+                    *other_spec = spec.clone();
+                }
+            } else {
+                by_name.insert(gem_version.name, spec.clone());
             }
         }
 
-        by_name
-            .into_values()
-            .filter_map(|candidates| {
-                candidates.into_iter().max_by(|a, b| {
-                    let vp_a = VersionPlatform::from_str(a.gem_version.version).ok();
-                    let vp_b = VersionPlatform::from_str(b.gem_version.version).ok();
-                    vp_a.cmp(&vp_b)
-                })
-            })
-            .collect()
+        by_name.into_values().collect()
     }
 }
 
