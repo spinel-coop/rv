@@ -42,13 +42,16 @@ impl GemfileDotLock<'_> {
         self.gem.iter().map(|s| s.specs.len()).sum()
     }
 
-    pub fn platform_specific_spec_count(&self) -> usize {
-        self.gem
-            .iter()
-            .map(|s| s.platform_specific_gems().len())
-            .sum::<usize>()
+    pub fn spec_count(&self) -> usize {
+        self.gem_spec_count()
             + self.git.iter().map(|s| s.specs.len()).sum::<usize>()
             + self.path.iter().map(|s| s.specs.len()).sum::<usize>()
+    }
+
+    pub fn retain_gems_to_be_installed(&mut self) {
+        self.gem
+            .iter_mut()
+            .for_each(|gem_section| gem_section.retain_gems_to_be_installed());
     }
 
     pub fn discard_installed_gems(&mut self, install_path: &camino::Utf8PathBuf) {
@@ -93,7 +96,7 @@ pub struct GemSection<'i> {
 }
 
 impl<'i> GemSection<'i> {
-    pub fn platform_specific_gems(&self) -> Vec<Spec<'i>> {
+    pub fn retain_gems_to_be_installed(&mut self) {
         use rv_gem_types::VersionPlatform;
         use std::collections::HashMap;
         use std::str::FromStr;
@@ -123,7 +126,8 @@ impl<'i> GemSection<'i> {
             }
         }
 
-        by_name.into_values().collect()
+        self.specs
+            .retain(|spec| by_name.get(spec.gem_version.name) == Some(spec))
     }
 
     pub fn discard_installed_gems(&mut self, install_path: &camino::Utf8PathBuf) {

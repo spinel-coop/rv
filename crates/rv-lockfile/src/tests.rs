@@ -227,13 +227,13 @@ fn test_parse_minimal_ruby_project() {
 }
 
 #[test]
-fn test_platform_specific_spec_count() {
+fn test_spec_count_multiple_platforms() {
     let input = include_str!("../tests/inputs/Gemfile.one-for-multiple-platforms.lock");
 
     let lockfile = must_parse(input);
 
+    assert_eq!(lockfile.spec_count(), 7);
     assert_eq!(lockfile.gem_spec_count(), 7);
-    assert_eq!(lockfile.platform_specific_spec_count(), 1);
 }
 
 #[test]
@@ -278,7 +278,7 @@ fn test_prefer_platform_specific_gems() {
     // Use the real Discourse lockfile fixture which has libv8-node with
     // multiple platform variants (ruby, x86_64-linux, aarch64-linux, etc.)
     let input = include_str!("..//tests/inputs/Gemfile.discourse.lock");
-    let lockfile = must_parse(input);
+    let mut lockfile = must_parse(input);
 
     // Get all specs from the gem sources
     let all_specs: Vec<_> = lockfile
@@ -286,14 +286,6 @@ fn test_prefer_platform_specific_gems() {
         .clone()
         .into_iter()
         .flat_map(|section| section.specs)
-        .collect();
-
-    // Get all specs filtered by platform specific
-    let result: Vec<_> = lockfile
-        .gem
-        .clone()
-        .into_iter()
-        .flat_map(|section| section.platform_specific_gems())
         .collect();
 
     // Count how many libv8-node variants exist before filtering
@@ -307,8 +299,18 @@ fn test_prefer_platform_specific_gems() {
         libv8_before.len()
     );
 
+    lockfile.retain_gems_to_be_installed();
+
+    // Get all specs filtered by platform specific
+    let filtered_specs: Vec<_> = lockfile
+        .gem
+        .clone()
+        .into_iter()
+        .flat_map(|section| section.specs)
+        .collect();
+
     // Should only have ONE libv8-node after filtering
-    let libv8_after: Vec<_> = result
+    let libv8_after: Vec<_> = filtered_specs
         .iter()
         .filter(|s| s.gem_version.name == "libv8-node")
         .collect();

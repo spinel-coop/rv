@@ -170,6 +170,38 @@ fn test_clean_install_native_linux_x86_64() {
     insta::assert_snapshot!(files_sorted);
 }
 
+#[cfg(any(
+    all(target_os = "macos", target_arch = "aarch64"),
+    all(target_os = "linux", target_arch = "x86_64")
+))]
+#[test]
+fn test_clean_install_native_and_generic_reinstall() {
+    let mut test = RvTest::new();
+    test.create_ruby_dir("ruby-4.0.1");
+
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative-and-generic");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testwithnative-and-generic.lock");
+    test.replace_source("https://rubygems.org", &test.server_url());
+
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    let package = "ffi-1.17.2-arm64-darwin.gem";
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    let package = "ffi-1.17.2-x86_64-linux-gnu.gem";
+
+    let mock = test.mock_gem_download(package).create();
+
+    let output = test.ci(&[]);
+
+    output.assert_success();
+    mock.assert();
+
+    // It should not download or install anything the second time
+    let output = test.ci(&[]);
+
+    output.assert_success();
+    output.assert_stdout_contains("1 gems already installed, skipping installation");
+}
+
 #[cfg(unix)]
 fn find_all_files_in_dir(cwd: &std::path::Path) -> String {
     let test_dir_contents = std::process::Command::new("find")

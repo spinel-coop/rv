@@ -273,10 +273,16 @@ async fn ci_inner_work(
     let binstub_dir = args.install_path.join("bin");
     tokio::fs::create_dir_all(&binstub_dir).await?;
 
+    // Filter to gems matching local platform, preferring platform-specific gems
+    // over generic "ruby" platform gems. This ensures we use prebuilt binaries
+    // (like libv8-node-24.1.0.0-x86_64-linux.gem) instead of compiling from
+    // source (libv8-node-24.1.0.0.gem).
+    lockfile.retain_gems_to_be_installed();
+
     if !args.force {
-        let original_count = lockfile.platform_specific_spec_count();
+        let original_count = lockfile.spec_count();
         lockfile.discard_installed_gems(&args.install_path);
-        let filtered_count = lockfile.platform_specific_spec_count();
+        let filtered_count = lockfile.spec_count();
 
         let already_installed = original_count.saturating_sub(filtered_count);
 
@@ -1719,12 +1725,7 @@ async fn download_gem_source<'i>(
     let client = rv_http_client()?;
 
     // Download them all, concurrently.
-    //
-    // Filter to gems matching local platform, preferring platform-specific gems
-    // over generic "ruby" platform gems. This ensures we use prebuilt binaries
-    // (like libv8-node-24.1.0.0-x86_64-linux.gem) instead of compiling from
-    // source (libv8-node-24.1.0.0.gem).
-    let gems_to_download = gem_source.platform_specific_gems();
+    let gems_to_download = gem_source.specs;
     let spec_stream = futures_util::stream::iter(gems_to_download);
     let downloaded_gems: Vec<_> = spec_stream
         .map(|spec| {
