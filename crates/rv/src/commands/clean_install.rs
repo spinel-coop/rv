@@ -287,9 +287,14 @@ async fn ci_inner_work(
         let already_installed = original_count.saturating_sub(filtered_count);
 
         if already_installed > 0 {
+            let n_gems = if already_installed == 1 {
+                "1 gem".to_string()
+            } else {
+                format!("{already_installed} gems")
+            };
+
             println!(
-                "{} gems already installed, skipping installation. Use --force if you want to install these gems again.",
-                already_installed
+                "{n_gems} already installed, skipping installation. Use --force if you want to install these gems again.",
             );
         }
 

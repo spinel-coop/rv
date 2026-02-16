@@ -199,7 +199,7 @@ fn test_clean_install_native_and_generic_reinstall() {
     let output = test.ci(&[]);
 
     output.assert_success();
-    output.assert_stdout_contains("1 gems already installed, skipping installation");
+    output.assert_stdout_contains("1 gem already installed, skipping installation");
 }
 
 #[cfg(unix)]
