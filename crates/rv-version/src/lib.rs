@@ -144,26 +144,48 @@ impl Version {
         self.segments.iter().any(|seg| seg.is_string())
     }
 
-    pub fn canonical_segments(&self) -> Vec<VersionSegment> {
+    pub fn canonical_segments(&self) -> Vec<&VersionSegment> {
         // Step 1: Split on the first string segment
         let index = self
             .segments
             .iter()
             .position(|s| s.is_string())
             .unwrap_or(self.segments.len());
-
-        let parts: [_; 2] = self.segments.split_at(index).into();
+        let parts: [&[VersionSegment]; 2] = self.segments.split_at(index).into();
 
         // Step 2: seek behind from each tail and remove contigous zero chains.
-        parts
+        let last_nonzero_index0 = parts[0].iter().rposition(|s| !s.is_zero()).unwrap_or(0);
+        let nonzero_parts0 = parts[0].iter().take(1 + last_nonzero_index0); // `1 +` to keep at least one element.
+
+        let last_nonzero_index1 = parts[1].iter().rposition(|s| !s.is_zero()).unwrap_or(0);
+        let nonzero_parts1 = parts[1].iter().take(1 + last_nonzero_index1); // `1 +` to keep at least one element.
+
+        // Step 3: combine the nonzero parts from each.
+        let mut out = Vec::with_capacity(nonzero_parts0.len() + nonzero_parts1.len());
+        out.extend(nonzero_parts0);
+        out.extend(nonzero_parts1);
+        out
+    }
+
+    pub fn canonical_segments_iter(&self) -> (impl Iterator<Item = &VersionSegment>, usize) {
+        // Step 1: Split on the first string segment
+        let index = self
+            .segments
             .iter()
-            .flat_map(|part| {
-                let mut part = part.to_vec();
-                let last_nonzero_index = part.iter().rposition(|s| !s.is_zero()).unwrap_or(0);
-                part.truncate(1 + last_nonzero_index); // `1 +` to keep at least one element.
-                part
-            })
-            .collect::<Vec<_>>()
+            .position(|s| s.is_string())
+            .unwrap_or(self.segments.len());
+        let parts: [&[VersionSegment]; 2] = self.segments.split_at(index).into();
+
+        // Step 2: seek behind from each tail and remove contigous zero chains.
+        let last_nonzero_index0 = parts[0].iter().rposition(|s| !s.is_zero()).unwrap_or(0);
+        let nonzero_parts0 = parts[0].iter().take(1 + last_nonzero_index0); // `1 +` to keep at least one element.
+
+        let last_nonzero_index1 = parts[1].iter().rposition(|s| !s.is_zero()).unwrap_or(0);
+        let nonzero_parts1 = parts[1].iter().take(1 + last_nonzero_index1); // `1 +` to keep at least one element.
+
+        // Step 3: combine the nonzero parts from each.
+        let n = nonzero_parts0.len() + nonzero_parts1.len();
+        (nonzero_parts0.chain(nonzero_parts1), n)
     }
 
     pub fn release(&self) -> Self {
@@ -214,23 +236,28 @@ impl Version {
         }
     }
 
-    fn split_alphanumeric(s: &str) -> Vec<String> {
+    fn split_alphanumeric(s: &str) -> Vec<&str> {
         let mut parts = Vec::new();
-        let mut current = String::new();
+        let mut current_low = 0;
+        let mut current_high = 0;
         let mut last_was_digit = false;
 
         for ch in s.chars() {
             let is_digit = ch.is_ascii_digit();
 
+            let current = &s[current_low..current_high];
             if !current.is_empty() && last_was_digit != is_digit {
-                parts.push(current.clone());
-                current.clear();
+                parts.push(current);
+                current_low = current_high;
+                current_high = current_low + 1;
+            } else {
+                current_high += 1;
             }
 
-            current.push(ch);
             last_was_digit = is_digit;
         }
 
+        let current = &s[current_low..current_high];
         if !current.is_empty() {
             parts.push(current);
         }
@@ -285,14 +312,14 @@ impl Ord for Version {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         use std::cmp::Ordering;
 
-        let self_segments = self.canonical_segments();
-        let other_segments = other.canonical_segments();
+        let (mut self_segments, len_self) = self.canonical_segments_iter();
+        let (mut other_segments, len_other) = other.canonical_segments_iter();
 
-        let max_len = self_segments.len().max(other_segments.len());
+        let max_len = len_self.max(len_other);
 
-        for i in 0..max_len {
-            let self_seg = self_segments.get(i).unwrap_or(&VersionSegment::Number(0));
-            let other_seg = other_segments.get(i).unwrap_or(&VersionSegment::Number(0));
+        for _i in 0..max_len {
+            let self_seg = self_segments.next().unwrap_or(&VersionSegment::Number(0));
+            let other_seg = other_segments.next().unwrap_or(&VersionSegment::Number(0));
 
             match (self_seg, other_seg) {
                 (VersionSegment::Number(a), VersionSegment::Number(b)) => match a.cmp(b) {
@@ -458,61 +485,64 @@ mod tests {
 
     #[test]
     fn test_canonical_segments() {
-        assert_eq!(v("0").canonical_segments(), vec![VersionSegment::Number(0)]);
+        assert_eq!(
+            v("0").canonical_segments(),
+            vec![&VersionSegment::Number(0)]
+        );
         assert_eq!(
             v("0-rc").canonical_segments(),
             vec![
-                VersionSegment::Number(0),
-                VersionSegment::String("pre".to_string()),
-                VersionSegment::String("rc".to_string())
+                &VersionSegment::Number(0),
+                &VersionSegment::String("pre".to_string()),
+                &VersionSegment::String("rc".to_string())
             ]
         );
         assert_eq!(
             v("1.0.0").canonical_segments(),
-            vec![VersionSegment::Number(1)]
+            vec![&VersionSegment::Number(1)]
         );
         assert_eq!(
             v("1.0.1").canonical_segments(),
             vec![
-                VersionSegment::Number(1),
-                VersionSegment::Number(0),
-                VersionSegment::Number(1)
+                &VersionSegment::Number(1),
+                &VersionSegment::Number(0),
+                &VersionSegment::Number(1)
             ]
         );
         assert_eq!(
             v("1.0.0.a.1.0").canonical_segments(),
             vec![
-                VersionSegment::Number(1),
-                VersionSegment::String("a".to_string()),
-                VersionSegment::Number(1)
+                &VersionSegment::Number(1),
+                &VersionSegment::String("a".to_string()),
+                &VersionSegment::Number(1)
             ]
         );
         assert_eq!(
             v("1.0.1-rc1").canonical_segments(),
             vec![
-                VersionSegment::Number(1),
-                VersionSegment::Number(0),
-                VersionSegment::Number(1),
-                VersionSegment::String("pre".to_string()),
-                VersionSegment::String("rc1".to_string()),
+                &VersionSegment::Number(1),
+                &VersionSegment::Number(0),
+                &VersionSegment::Number(1),
+                &VersionSegment::String("pre".to_string()),
+                &VersionSegment::String("rc1".to_string()),
             ]
         );
         assert_eq!(
             v("0.0.beta.1").canonical_segments(),
             vec![
-                VersionSegment::Number(0),
-                VersionSegment::String("beta".to_string()),
-                VersionSegment::Number(1),
+                &VersionSegment::Number(0),
+                &VersionSegment::String("beta".to_string()),
+                &VersionSegment::Number(1),
             ]
         );
         assert_eq!(
             v("1.2.3-1").canonical_segments(),
             vec![
-                VersionSegment::Number(1),
-                VersionSegment::Number(2),
-                VersionSegment::Number(3),
-                VersionSegment::String("pre".to_string()),
-                VersionSegment::Number(1)
+                &VersionSegment::Number(1),
+                &VersionSegment::Number(2),
+                &VersionSegment::Number(3),
+                &VersionSegment::String("pre".to_string()),
+                &VersionSegment::Number(1)
             ]
         );
     }
