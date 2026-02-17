@@ -9,7 +9,7 @@ pub type VersionPart = u32;
 
 /// A range of possible Ruby versions. E.g. "3.4" spans the range 3.4.0, 3.4.1, etc.
 /// This is different to a RubyVersion, which is one specific version in this requested range.
-#[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay)]
+#[derive(Debug, Clone, DeserializeFromStr, SerializeDisplay)]
 pub struct RubyRequest {
     pub engine: RubyEngine,
     pub major: Option<VersionPart>,
@@ -19,7 +19,7 @@ pub struct RubyRequest {
     pub prerelease: Option<String>,
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone)]
 pub enum Source {
     DotToolVersions(Utf8PathBuf),
     DotRubyVersion(Utf8PathBuf),
@@ -57,35 +57,6 @@ impl Default for RubyRequest {
             patch: None,
             tiny: None,
             prerelease: None,
-        }
-    }
-}
-
-impl PartialOrd for RubyRequest {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for RubyRequest {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        use std::cmp::Ordering;
-
-        if self.major != other.major {
-            self.major.cmp(&other.major)
-        } else if self.minor != other.minor {
-            self.minor.cmp(&other.minor)
-        } else if self.patch != other.patch {
-            self.patch.cmp(&other.patch)
-        } else if self.tiny != other.tiny {
-            self.tiny.cmp(&other.tiny)
-        } else {
-            match (&self.prerelease, &other.prerelease) {
-                (None, None) => Ordering::Equal,
-                (None, Some(_prerelease)) => Ordering::Greater,
-                (Some(_prerelease), None) => Ordering::Less,
-                (prerelease, other_prerelease) => prerelease.cmp(other_prerelease),
-            }
         }
     }
 }

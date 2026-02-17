@@ -115,11 +115,6 @@ impl Ruby {
         find_ruby_executable(&self.path).is_some()
     }
 
-    /// Get display name for this Ruby
-    pub fn display_name(&self) -> String {
-        self.version.to_string()
-    }
-
     /// Get the path to the Ruby executable.
     /// Checks for the first matching name from [`ruby_executable_names`].
     pub fn executable_path(&self) -> Utf8PathBuf {

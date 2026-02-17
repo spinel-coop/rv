@@ -23,8 +23,6 @@ impl Ord for RubyVersion {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         use std::cmp::Ordering;
 
-        // TODO: Deduplicate this logic which is repeated in request.rs on RubyRequest.
-
         if self.major != other.major {
             self.major.cmp(&other.major)
         } else if self.minor != other.minor {
