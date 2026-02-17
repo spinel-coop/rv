@@ -153,7 +153,7 @@ async fn fetch_cached_github_release(
 
     // 3. Cache is stale or missing.
     let etag = cached_data.as_ref().and_then(|c| c.etag.clone());
-    let mut request_builder = super::github::github_api_get(&client, url);
+    let mut request_builder = super::github::github_api_get(&client, &url);
 
     if let Some(etag) = &etag {
         debug!("Using ETag for conditional request: {}", etag);
@@ -210,7 +210,7 @@ async fn fetch_cached_github_release(
             Ok(release)
         }
         status => {
-            warn!("Failed to fetch {cache_file}, status: {status}");
+            warn!("Failed to fetch {cache_file} from {url}, status: {status}");
             Err(response.error_for_status().unwrap_err().into())
         }
     }
