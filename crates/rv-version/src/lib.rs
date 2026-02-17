@@ -12,6 +12,8 @@ pub enum VersionError {
     ConsecutiveDots { version: String },
     #[error("Version cannot be pure alphabetic: {version}")]
     PureAlphabetic { version: String },
+    #[error("Versions must be entirely ASCII characters")]
+    NoAscii,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -61,6 +63,9 @@ pub struct Version {
 impl Version {
     pub fn new(version: impl AsRef<str>) -> Result<Self, VersionError> {
         let normalized = Self::normalize_version(version.as_ref())?;
+        if !normalized.is_ascii() {
+            return Err(VersionError::NoAscii);
+        }
         let segments = Self::parse_segments(&normalized)?;
         Ok(Self {
             version: normalized,
@@ -370,7 +375,7 @@ impl std::str::FromStr for Version {
 
 #[cfg(test)]
 mod tests {
-    use std::cmp::Ordering;
+    use std::{cmp::Ordering, str::FromStr};
 
     use super::*;
 
@@ -635,5 +640,11 @@ mod tests {
         let mut v2 = versions.clone();
         v2.sort_unstable();
         assert_eq!(v2, versions);
+    }
+
+    #[test]
+    fn must_be_ascii() {
+        let err = Version::from_str("0𐌀").unwrap_err();
+        assert!(matches!(err, VersionError::NoAscii));
     }
 }
