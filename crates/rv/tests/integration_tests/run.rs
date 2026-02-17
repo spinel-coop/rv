@@ -40,7 +40,7 @@ fn test_run_script_not_found() {
     output.assert_failure();
 
     #[cfg(windows)]
-    let expected_err = "cannot find the file";
+    let expected_err = "program not found";
     #[cfg(unix)]
     let expected_err = "No such file or directory";
 
