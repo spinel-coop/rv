@@ -1,5 +1,5 @@
 use futures_util::{StreamExt, stream::FuturesUnordered};
-use rv_ruby::version::RubyVersion;
+use rv_ruby::version::ReleasedRubyVersion;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -28,7 +28,7 @@ pub(crate) async fn query_all_gem_deps(
     root: GemRelease,
     root_gem_name: &str,
     gemserver: &Gemserver,
-    ruby_to_use: &RubyVersion,
+    ruby_to_use: &ReleasedRubyVersion,
 ) -> Result<()> {
     // First, let's check the cache.
     // 0. Initialize the cache.
@@ -106,7 +106,7 @@ pub async fn query_all_gem_deps_from_server(
     root: GemRelease,
     gemserver: &Gemserver,
     gems_to_deps: &mut HashMap<String, Vec<GemRelease>>,
-    ruby_to_use: &RubyVersion,
+    ruby_to_use: &ReleasedRubyVersion,
 ) -> Result<()> {
     let results = Rc::new(Mutex::new(HashMap::<String, Vec<GemRelease>>::new()));
     let mut in_flight = FuturesUnordered::new();

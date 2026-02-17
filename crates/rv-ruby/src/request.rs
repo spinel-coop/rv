@@ -217,11 +217,11 @@ impl CacheKey for RubyRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::RubyVersion;
+    use crate::ReleasedRubyVersion;
 
     #[track_caller]
-    fn v(version: &str) -> RubyVersion {
-        RubyVersion::from_str(version).unwrap()
+    fn v(version: &str) -> ReleasedRubyVersion {
+        ReleasedRubyVersion::from_str(version).unwrap()
     }
 
     #[track_caller]
@@ -277,7 +277,7 @@ mod tests {
 
     #[test]
     fn test_major_only_version() {
-        let request = RubyVersion::from_str("3");
+        let request = ReleasedRubyVersion::from_str("3");
         let _err = request.unwrap_err();
     }
 

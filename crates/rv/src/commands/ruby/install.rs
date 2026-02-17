@@ -12,7 +12,7 @@ use tracing::{debug, info_span};
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 
 use rv_platform::HostPlatform;
-use rv_ruby::{request::RubyRequest, version::RubyVersion};
+use rv_ruby::{request::RubyRequest, version::ReleasedRubyVersion};
 
 use crate::progress::WorkProgress;
 use crate::{GlobalArgs, config::Config};
@@ -61,7 +61,9 @@ pub(crate) async fn install(
 
     let requested_range = config.ruby_request();
 
-    let selected_version = if let Ok(version) = RubyVersion::try_from(requested_range.clone()) {
+    let selected_version = if let Ok(version) =
+        ReleasedRubyVersion::try_from(requested_range.clone())
+    {
         debug!(
             "Skipping the rv-ruby releases fetch because the user has given a specific ruby version {version}"
         );

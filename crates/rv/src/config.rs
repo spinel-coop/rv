@@ -11,7 +11,7 @@ use tracing::{debug, instrument};
 use rv_ruby::{
     Ruby,
     request::{RequestError, RubyRequest, Source},
-    version::{ParseVersionError, RubyVersion},
+    version::{ParseVersionError, ReleasedRubyVersion},
 };
 
 use crate::GlobalArgs;
@@ -111,7 +111,7 @@ impl Config {
         let request = &self.ruby_request();
 
         self.discover_rubies_matching(|dir_name| {
-            RubyVersion::from_str(dir_name).is_ok_and(|v| v.satisfies(request))
+            ReleasedRubyVersion::from_str(dir_name).is_ok_and(|v| v.satisfies(request))
         })
         .last()
         .cloned()
@@ -246,7 +246,7 @@ fn find_directory_ruby(dir: &Utf8PathBuf) -> Result<Option<(RubyRequest, Source)
             .map_err(Error::CouldNotParseGemfileLock)?
             .ruby_version;
         if let Some(lockfile_ruby) = lockfile_ruby {
-            let version = RubyVersion::from_gemfile_lock(lockfile_ruby)
+            let version = ReleasedRubyVersion::from_gemfile_lock(lockfile_ruby)
                 .map_err(Error::CouldNotParseGemfileLockVersion)?;
             return Ok(Some((version.into(), Source::GemfileLock(lockfile))));
         }
