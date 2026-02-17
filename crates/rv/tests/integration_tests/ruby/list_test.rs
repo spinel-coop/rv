@@ -22,10 +22,7 @@ fn test_ruby_list_json_output_empty() {
     let test = RvTest::new();
     let output = test.ruby_list(&["--format", "json"]);
 
-    assert!(
-        output.success(),
-        "rv ruby list --format json should succeed"
-    );
+    output.assert_success();
     assert_snapshot!(output.normalized_stdout());
 }
 
@@ -53,10 +50,7 @@ fn test_ruby_list_json_output_with_rubies() {
 
     let output = test.ruby_list(&["--format", "json"]);
 
-    assert!(
-        output.success(),
-        "rv ruby list --format json should succeed"
-    );
+    output.assert_success();
 
     // Verify it's valid JSON
     let stdout = output.stdout();
