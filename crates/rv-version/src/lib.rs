@@ -161,8 +161,10 @@ impl Version {
         let nonzero_parts1 = parts[1].iter().take(1 + last_nonzero_index1); // `1 +` to keep at least one element.
 
         // Step 3: combine the nonzero parts from each.
-        let nonzero_parts = nonzero_parts0.chain(nonzero_parts1);
-        nonzero_parts.collect()
+        let mut out = Vec::with_capacity(nonzero_parts0.len() + nonzero_parts1.len());
+        out.extend(nonzero_parts0);
+        out.extend(nonzero_parts1);
+        out
     }
 
     pub fn release(&self) -> Self {
