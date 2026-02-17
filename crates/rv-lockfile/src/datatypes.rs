@@ -42,27 +42,22 @@ impl GemfileDotLock<'_> {
         self.gem.iter().map(|s| s.specs.len()).sum()
     }
 
-    pub fn platform_specific_spec_count(&self) -> usize {
-        self.gem
-            .iter()
-            .map(|s| s.platform_specific_gems().len())
-            .sum::<usize>()
+    pub fn spec_count(&self) -> usize {
+        self.gem_spec_count()
             + self.git.iter().map(|s| s.specs.len()).sum::<usize>()
             + self.path.iter().map(|s| s.specs.len()).sum::<usize>()
     }
 
+    pub fn retain_gems_to_be_installed(&mut self) {
+        self.gem
+            .iter_mut()
+            .for_each(|gem_section| gem_section.retain_gems_to_be_installed());
+    }
+
     pub fn discard_installed_gems(&mut self, install_path: &camino::Utf8PathBuf) {
-        use std::path::Path;
-
-        self.gem.iter_mut().for_each(|gem_section| {
-            gem_section.specs.retain(|spec| {
-                let full_version = spec.gem_version;
-                let gem_path = install_path.join(format!("gems/{full_version}"));
-                let spec_path = install_path.join(format!("specifications/{full_version}.gemspec"));
-
-                !Path::new(&gem_path).exists() || !Path::new(&spec_path).exists()
-            });
-        });
+        self.gem
+            .iter_mut()
+            .for_each(|gem_section| gem_section.discard_installed_gems(install_path));
 
         self.gem.retain(|section| !section.specs.is_empty());
     }
@@ -101,34 +96,50 @@ pub struct GemSection<'i> {
 }
 
 impl<'i> GemSection<'i> {
-    pub fn platform_specific_gems(&self) -> Vec<Spec<'i>> {
+    pub fn retain_gems_to_be_installed(&mut self) {
         use rv_gem_types::VersionPlatform;
         use std::collections::HashMap;
         use std::str::FromStr;
 
-        let mut by_name: HashMap<&str, Vec<Spec<'i>>> = HashMap::new();
+        let mut by_name: HashMap<&str, Spec<'i>> = HashMap::new();
         for spec in &self.specs {
-            let Ok(vp) = VersionPlatform::from_str(spec.gem_version.version) else {
+            let gem_version = spec.gem_version;
+
+            let Ok(vp) = VersionPlatform::from_str(gem_version.version) else {
                 continue;
             };
-            if vp.platform.is_local() {
-                by_name
-                    .entry(spec.gem_version.name)
-                    .or_default()
-                    .push(spec.clone());
+
+            if !vp.platform.is_local() {
+                continue;
+            }
+
+            if let Some(other_spec) = by_name.get_mut(gem_version.name) {
+                let Ok(other_vp) = VersionPlatform::from_str(other_spec.gem_version.version) else {
+                    continue;
+                };
+
+                if vp > other_vp {
+                    *other_spec = spec.clone();
+                }
+            } else {
+                by_name.insert(gem_version.name, spec.clone());
             }
         }
 
-        by_name
-            .into_values()
-            .filter_map(|candidates| {
-                candidates.into_iter().max_by(|a, b| {
-                    let vp_a = VersionPlatform::from_str(a.gem_version.version).ok();
-                    let vp_b = VersionPlatform::from_str(b.gem_version.version).ok();
-                    vp_a.cmp(&vp_b)
-                })
-            })
-            .collect()
+        self.specs
+            .retain(|spec| by_name.get(spec.gem_version.name) == Some(spec))
+    }
+
+    pub fn discard_installed_gems(&mut self, install_path: &camino::Utf8PathBuf) {
+        use std::path::Path;
+
+        self.specs.retain(|spec| {
+            let full_version = spec.gem_version;
+            let gem_path = install_path.join(format!("gems/{full_version}"));
+            let spec_path = install_path.join(format!("specifications/{full_version}.gemspec"));
+
+            !Path::new(&gem_path).exists() || !Path::new(&spec_path).exists()
+        });
     }
 }
 
