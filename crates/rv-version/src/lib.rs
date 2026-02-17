@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+const ZERO: VersionSegment = VersionSegment::Number(0);
+
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum VersionError {
     #[error("Malformed version number string {version}")]
@@ -122,7 +124,7 @@ impl Version {
         }
 
         if segments.is_empty() {
-            segments.push(VersionSegment::Number(0));
+            segments.push(ZERO);
         }
 
         Ok(segments)
@@ -279,7 +281,7 @@ impl Default for Version {
     fn default() -> Self {
         Version {
             version: "0".to_string(),
-            segments: vec![VersionSegment::Number(0)],
+            segments: vec![ZERO],
         }
     }
 }
@@ -318,8 +320,8 @@ impl Ord for Version {
         let max_len = len_self.max(len_other);
 
         for _i in 0..max_len {
-            let self_seg = self_segments.next().unwrap_or(&VersionSegment::Number(0));
-            let other_seg = other_segments.next().unwrap_or(&VersionSegment::Number(0));
+            let self_seg = self_segments.next().unwrap_or(&ZERO);
+            let other_seg = other_segments.next().unwrap_or(&ZERO);
 
             match (self_seg, other_seg) {
                 (VersionSegment::Number(a), VersionSegment::Number(b)) => match a.cmp(b) {
@@ -454,21 +456,17 @@ mod tests {
         );
         assert_eq!(
             v("1.0.0").segments,
-            vec![
-                VersionSegment::Number(1),
-                VersionSegment::Number(0),
-                VersionSegment::Number(0)
-            ]
+            vec![VersionSegment::Number(1), ZERO, ZERO]
         );
         assert_eq!(
             v("1.0.0.a.1.0").segments,
             vec![
                 VersionSegment::Number(1),
-                VersionSegment::Number(0),
-                VersionSegment::Number(0),
+                ZERO,
+                ZERO,
                 VersionSegment::String("a".to_string()),
                 VersionSegment::Number(1),
-                VersionSegment::Number(0),
+                ZERO,
             ]
         );
         assert_eq!(
@@ -485,14 +483,11 @@ mod tests {
 
     #[test]
     fn test_canonical_segments() {
-        assert_eq!(
-            v("0").canonical_segments(),
-            vec![&VersionSegment::Number(0)]
-        );
+        assert_eq!(v("0").canonical_segments(), vec![&ZERO]);
         assert_eq!(
             v("0-rc").canonical_segments(),
             vec![
-                &VersionSegment::Number(0),
+                &ZERO,
                 &VersionSegment::String("pre".to_string()),
                 &VersionSegment::String("rc".to_string())
             ]
@@ -505,7 +500,7 @@ mod tests {
             v("1.0.1").canonical_segments(),
             vec![
                 &VersionSegment::Number(1),
-                &VersionSegment::Number(0),
+                &ZERO,
                 &VersionSegment::Number(1)
             ]
         );
@@ -521,7 +516,7 @@ mod tests {
             v("1.0.1-rc1").canonical_segments(),
             vec![
                 &VersionSegment::Number(1),
-                &VersionSegment::Number(0),
+                &ZERO,
                 &VersionSegment::Number(1),
                 &VersionSegment::String("pre".to_string()),
                 &VersionSegment::String("rc1".to_string()),
@@ -530,7 +525,7 @@ mod tests {
         assert_eq!(
             v("0.0.beta.1").canonical_segments(),
             vec![
-                &VersionSegment::Number(0),
+                &ZERO,
                 &VersionSegment::String("beta".to_string()),
                 &VersionSegment::Number(1),
             ]
