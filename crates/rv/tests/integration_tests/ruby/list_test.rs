@@ -10,25 +10,32 @@ impl RvTest {
 
 #[test]
 fn test_ruby_list_text_output_empty() {
-    let test = RvTest::new();
+    let mut test = RvTest::new();
+    let mock = test.mock_releases([].to_vec());
     let output = test.ruby_list(&["--format", "json"]);
 
+    mock.assert();
     output.assert_success();
+    assert!(output.stderr().is_empty());
     assert_snapshot!(output.normalized_stdout());
 }
 
 #[test]
 fn test_ruby_list_json_output_empty() {
-    let test = RvTest::new();
+    let mut test = RvTest::new();
+    let mock = test.mock_releases([].to_vec());
     let output = test.ruby_list(&["--format", "json"]);
 
+    mock.assert();
     output.assert_success();
+    assert!(output.stderr().is_empty());
     assert_snapshot!(output.normalized_stdout());
 }
 
 #[test]
 fn test_ruby_list_text_output_with_rubies() {
-    let test = RvTest::new();
+    let mut test = RvTest::new();
+    let mock = test.mock_releases([].to_vec());
 
     // Create some mock Ruby installations
     test.create_ruby_dir("ruby-3.1.4");
@@ -36,13 +43,16 @@ fn test_ruby_list_text_output_with_rubies() {
 
     let output = test.ruby_list(&["--no-color", "--format", "json"]);
 
+    mock.assert();
     output.assert_success();
+    assert!(output.stderr().is_empty());
     assert_snapshot!(output.normalized_stdout());
 }
 
 #[test]
 fn test_ruby_list_json_output_with_rubies() {
-    let test = RvTest::new();
+    let mut test = RvTest::new();
+    let mock = test.mock_releases([].to_vec());
 
     // Create some mock Ruby installations
     test.create_ruby_dir("ruby-3.1.4");
@@ -50,7 +60,9 @@ fn test_ruby_list_json_output_with_rubies() {
 
     let output = test.ruby_list(&["--format", "json"]);
 
+    mock.assert();
     output.assert_success();
+    assert!(output.stderr().is_empty());
 
     // Verify it's valid JSON
     let stdout = output.stdout();
@@ -63,6 +75,7 @@ fn test_ruby_list_json_output_with_rubies() {
 #[test]
 fn test_ruby_list_multiple_matching_rubies() {
     let mut test = RvTest::new();
+    let mock = test.mock_releases([].to_vec());
 
     let project_dir = test.temp_root().join("project");
     std::fs::create_dir_all(project_dir.as_path()).unwrap();
@@ -75,7 +88,9 @@ fn test_ruby_list_multiple_matching_rubies() {
     test.create_ruby_dir("3.1.4");
 
     let output = test.ruby_list(&["--no-color", "--format", "json"]);
+    mock.assert();
     output.assert_success();
+    assert!(output.stderr().is_empty());
     assert_snapshot!(output.normalized_stdout(), @r#"
     [
       {
@@ -270,9 +285,12 @@ fn test_ruby_list_with_available_and_installed_remotes_keep_only_latest_patch() 
 
 #[test]
 fn test_ruby_list_with_no_installed_rubies_is_empty() {
-    let test = RvTest::new();
+    let mut test = RvTest::new();
+    let mock = test.mock_releases([].to_vec());
     let output = test.ruby_list(&["--format", "json"]);
+    mock.assert();
     output.assert_success();
+    assert!(output.stderr().is_empty());
 
     // The output will be completely empty because no rubies are installed
     // and the API is disabled.
