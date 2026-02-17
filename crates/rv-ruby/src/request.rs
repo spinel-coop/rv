@@ -9,7 +9,7 @@ pub type VersionPart = u32;
 
 /// A range of possible Ruby versions. E.g. "3.4" spans the range 3.4.0, 3.4.1, etc.
 /// This is different to a RubyVersion, which is one specific version in this requested range.
-#[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay)]
+#[derive(Debug, Clone, DeserializeFromStr, SerializeDisplay)]
 pub struct RubyRequest {
     pub engine: RubyEngine,
     pub major: Option<VersionPart>,
@@ -19,7 +19,7 @@ pub struct RubyRequest {
     pub prerelease: Option<String>,
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone)]
 pub enum Source {
     DotToolVersions(Utf8PathBuf),
     DotRubyVersion(Utf8PathBuf),
