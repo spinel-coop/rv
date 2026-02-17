@@ -38,12 +38,13 @@ fn test_run_script_not_found() {
     let output = test.script_run("nonexistent.rb", &[]);
 
     output.assert_failure();
-    let stderr = output.stderr();
-    // Unix: "No such file or directory", Windows: "The system cannot find the file specified"
-    assert!(
-        stderr.contains("No such file or directory") || stderr.contains("cannot find the file"),
-        "Expected a 'file not found' error, got: {stderr}"
-    );
+
+    #[cfg(windows)]
+    let expected_err = "cannot find the file";
+    #[cfg(unix)]
+    let expected_err = "No such file or directory";
+
+    output.assert_stderr_contains(expected_err);
 }
 
 #[cfg(unix)]
