@@ -32,17 +32,19 @@ impl RvTest {
 #[test]
 fn test_run_script_not_found() {
     let test = RvTest::new();
+
+    test.create_ruby_dir("ruby-4.0.1");
+
     let output = test.script_run("nonexistent.rb", &[]);
 
     output.assert_failure();
-    let stderr = output.stderr();
-    // Unix: "No such file or directory", Windows: "The system cannot find the file specified"
-    assert!(
-        stderr.contains("No such file or directory")
-            || stderr.contains("cannot find the file")
-            || stderr.contains("ScriptRunError"),
-        "Expected a 'file not found' error, got: {stderr}"
-    );
+
+    #[cfg(windows)]
+    let expected_err = "program not found";
+    #[cfg(unix)]
+    let expected_err = "No such file or directory";
+
+    output.assert_stderr_contains(expected_err);
 }
 
 #[cfg(unix)]

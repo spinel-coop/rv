@@ -26,8 +26,6 @@ pub enum Error {
     Install(#[from] tool_install::Error),
     #[error("Tool was not found, and you set --no-install so rv won't install it.")]
     NotInstalled,
-    #[error(transparent)]
-    ExecError(std::io::Error),
     #[error("No .ruby-version found for this tool")]
     NoRubyVersion,
     #[error("Could not read .ruby-version: {0}")]
