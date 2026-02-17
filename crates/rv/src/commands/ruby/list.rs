@@ -67,9 +67,9 @@ impl tabled::Tabled for JsonRubyEntry {
 
     fn fields(&self) -> Vec<Cow<'_, str>> {
         let name = if self.active {
-            format!("* {}", self.details.display_name())
+            format!("* {}", self.details.version)
         } else {
-            format!("  {}", self.details.display_name())
+            format!("  {}", self.details.version)
         };
 
         let installed = if self.installed {
@@ -134,11 +134,11 @@ pub(crate) async fn list(
     let mut active_ruby = requested.find_match_in(&installed_rubies);
 
     // Might have multiple installed rubies with the same version (e.g., "ruby-3.2.0" and "mruby-3.2.0").
-    let mut rubies_map: BTreeMap<String, Vec<JsonRubyEntry>> = BTreeMap::new();
+    let mut rubies_map: BTreeMap<RubyVersion, Vec<JsonRubyEntry>> = BTreeMap::new();
 
     for ruby in installed_rubies {
         rubies_map
-            .entry(ruby.display_name())
+            .entry(ruby.version.clone())
             .or_default()
             .push(JsonRubyEntry::installed(ruby, &active_ruby));
     }
@@ -157,7 +157,7 @@ pub(crate) async fn list(
         // Add selected remote rubies that are not already installed to the list
         for ruby in selected_remote_rubies {
             rubies_map
-                .entry(ruby.display_name())
+                .entry(ruby.version.clone())
                 .or_insert(vec![JsonRubyEntry::available(ruby, &active_ruby)]);
         }
 
@@ -168,7 +168,7 @@ pub(crate) async fn list(
                 let details = ruby.clone().unwrap();
 
                 rubies_map
-                    .entry(details.display_name())
+                    .entry(details.version.clone())
                     .or_insert(vec![JsonRubyEntry {
                         details,
                         installed: false,

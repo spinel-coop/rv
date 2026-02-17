@@ -269,6 +269,21 @@ fn test_ruby_list_with_available_and_installed_with_same_minor_lists_all_version
 }
 
 #[test]
+fn test_ruby_list_with_available_and_installed_sorts_properly() {
+    let mut test = RvTest::new();
+    test.create_ruby_dir("ruby-3.4.1");
+
+    let mock = test.mock_releases(["3.4.10"].to_vec());
+    let output = test.ruby_list(&["--format", "json"]);
+
+    mock.assert();
+    output.assert_success();
+
+    // 3.4.1 and 3.4.10 should be listed, with 3.4.1 marked as installed and sorted first
+    insta::assert_snapshot!(output.normalized_stdout());
+}
+
+#[test]
 fn test_ruby_list_with_available_and_installed_remotes_keep_only_latest_patch() {
     let mut test = RvTest::new();
     test.create_ruby_dir("ruby-3.3.1");
