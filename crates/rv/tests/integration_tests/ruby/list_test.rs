@@ -54,7 +54,8 @@ fn test_ruby_list_json_output_with_rubies() {
 
     // Verify it's valid JSON
     let stdout = output.stdout();
-    let _: serde_json::Value = serde_json::from_str(&stdout).expect("Output should be valid JSON");
+    let _: serde_json::Value = serde_json::from_str(&stdout)
+        .unwrap_or_else(|_| panic!("Output should be valid JSON, was: {stdout}"));
 
     assert_snapshot!(output.normalized_stdout());
 }
