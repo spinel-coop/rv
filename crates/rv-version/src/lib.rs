@@ -236,23 +236,28 @@ impl Version {
         }
     }
 
-    fn split_alphanumeric(s: &str) -> Vec<String> {
+    fn split_alphanumeric(s: &str) -> Vec<&str> {
         let mut parts = Vec::new();
-        let mut current = String::new();
+        let mut current_low = 0;
+        let mut current_high = 0;
         let mut last_was_digit = false;
 
         for ch in s.chars() {
             let is_digit = ch.is_ascii_digit();
 
+            let current = &s[current_low..current_high];
             if !current.is_empty() && last_was_digit != is_digit {
-                parts.push(current.clone());
-                current.clear();
+                parts.push(current);
+                current_low = current_high;
+                current_high = current_low + 1;
+            } else {
+                current_high += 1;
             }
 
-            current.push(ch);
             last_was_digit = is_digit;
         }
 
+        let current = &s[current_low..current_high];
         if !current.is_empty() {
             parts.push(current);
         }
@@ -313,8 +318,8 @@ impl Ord for Version {
         let max_len = len_self.max(len_other);
 
         for _i in 0..max_len {
-            let self_seg = self_segments.next().unwrap_or(&&VersionSegment::Number(0));
-            let other_seg = other_segments.next().unwrap_or(&&VersionSegment::Number(0));
+            let self_seg = self_segments.next().unwrap_or(&VersionSegment::Number(0));
+            let other_seg = other_segments.next().unwrap_or(&VersionSegment::Number(0));
 
             match (self_seg, other_seg) {
                 (VersionSegment::Number(a), VersionSegment::Number(b)) => match a.cmp(b) {
