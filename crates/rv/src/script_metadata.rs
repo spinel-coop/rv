@@ -76,6 +76,9 @@ puts "Hello"
 
         let metadata = parse(content).expect("should parse metadata");
         let ruby = metadata.requires_ruby.expect("should have ruby version");
+        let RubyRequest::Released(ruby) = ruby else {
+            panic!("Unexpected ruby version {ruby:?}")
+        };
         assert_eq!(ruby.major, Some(3));
         assert_eq!(ruby.minor, Some(4));
         assert_eq!(ruby.patch, None);
@@ -93,6 +96,9 @@ puts RUBY_VERSION
 
         let metadata = parse(content).expect("should parse metadata");
         let ruby = metadata.requires_ruby.expect("should have ruby version");
+        let RubyRequest::Released(ruby) = ruby else {
+            panic!("Unexpected ruby version {ruby:?}")
+        };
         assert_eq!(ruby.major, Some(3));
         assert_eq!(ruby.minor, Some(4));
         assert_eq!(ruby.patch, Some(1));
@@ -127,6 +133,9 @@ puts "Hello"
 
         let metadata = parse(content).expect("should parse metadata");
         let ruby = metadata.requires_ruby.expect("should have ruby version");
+        let RubyRequest::Released(ruby) = ruby else {
+            panic!("Unexpected ruby version {ruby:?}")
+        };
         assert_eq!(ruby.major, Some(3));
         assert_eq!(ruby.minor, Some(4));
         assert_eq!(ruby.patch, Some(0));
@@ -142,6 +151,9 @@ puts "Hello"
 
         let metadata = parse(content).expect("should parse metadata");
         let ruby = metadata.requires_ruby.expect("should have ruby version");
+        let RubyRequest::Released(ruby) = ruby else {
+            panic!("Unexpected ruby version {ruby:?}")
+        };
         assert_eq!(ruby.major, Some(3));
         assert_eq!(ruby.minor, Some(3));
     }
@@ -169,6 +181,9 @@ puts "Hello"
 
         let metadata = parse(content).expect("should parse metadata");
         let ruby = metadata.requires_ruby.expect("should have ruby version");
+        let RubyRequest::Released(ruby) = ruby else {
+            panic!("Unexpected ruby version {ruby:?}")
+        };
         assert_eq!(ruby.minor, Some(4)); // Should be 3.4, not 3.3
     }
 
@@ -181,6 +196,9 @@ puts "Hello"
 
         let metadata = parse(content).expect("should parse metadata");
         let ruby = metadata.requires_ruby.expect("should have ruby version");
+        let RubyRequest::Released(ruby) = ruby else {
+            panic!("Unexpected ruby version {ruby:?}")
+        };
         assert_eq!(ruby.engine.to_string(), "jruby");
         assert_eq!(ruby.major, Some(9));
         assert_eq!(ruby.minor, Some(4));

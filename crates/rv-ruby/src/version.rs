@@ -2,13 +2,55 @@ use std::str::FromStr;
 
 use crate::{
     engine::RubyEngine,
-    request::{RequestError, RubyRequest, VersionPart},
+    request::{ReleasedRubyRequest, RequestError, RubyRequest, VersionPart},
 };
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 /// A specific version of Ruby, which can be run and downloaded.
 /// This is different from a RubyRequest, which represents a range of possible
 /// Ruby versions.
+#[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay)]
+pub enum RubyVersion {
+    /// The daily dev builds from rv-ruby-dev
+    Dev,
+    /// A proper released version like 4.0.1
+    Released(ReleasedRubyVersion),
+}
+
+impl FromStr for RubyVersion {
+    type Err = ParseVersionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "dev" {
+            return Ok(Self::Dev);
+        }
+        ReleasedRubyVersion::from_str(s).map(Self::Released)
+    }
+}
+
+impl std::fmt::Display for RubyVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RubyVersion::Dev => write!(f, "dev"),
+            RubyVersion::Released(version) => version.fmt(f),
+        }
+    }
+}
+
+impl TryFrom<RubyRequest> for RubyVersion {
+    type Error = ParseVersionError;
+
+    fn try_from(request: RubyRequest) -> Result<Self, Self::Error> {
+        match request {
+            RubyRequest::Dev => Ok(Self::Dev),
+            RubyRequest::Released(released) => {
+                ReleasedRubyVersion::try_from(released).map(Self::Released)
+            }
+        }
+    }
+}
+
+/// A concrete, released version of Ruby that can be downloaded.
 #[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay)]
 pub struct ReleasedRubyVersion {
     pub engine: RubyEngine,
@@ -59,6 +101,8 @@ pub enum ParseVersionError {
     MissingMinor,
     #[error("Missing patch version")]
     MissingPatch,
+    #[error("Cannot use the dev version of Ruby here")]
+    CannotUseDev,
 }
 
 impl FromStr for ReleasedRubyVersion {
@@ -74,6 +118,18 @@ impl TryFrom<RubyRequest> for ReleasedRubyVersion {
     type Error = ParseVersionError;
 
     fn try_from(request: RubyRequest) -> Result<Self, Self::Error> {
+        match request {
+            RubyRequest::Dev => Err(ParseVersionError::CannotUseDev),
+            RubyRequest::Released(request) => Self::try_from(request),
+        }
+    }
+}
+
+/// If the Ruby request is very specific, it can be made into a specific Ruby version.
+impl TryFrom<ReleasedRubyRequest> for ReleasedRubyVersion {
+    type Error = ParseVersionError;
+
+    fn try_from(request: ReleasedRubyRequest) -> Result<Self, Self::Error> {
         let major = request.major.ok_or(ParseVersionError::MissingMajor)?;
         let minor = request.minor.ok_or(ParseVersionError::MissingMinor)?;
         let patch = request.patch.ok_or(ParseVersionError::MissingPatch)?;
@@ -91,20 +147,24 @@ impl TryFrom<RubyRequest> for ReleasedRubyVersion {
 
 impl From<ReleasedRubyVersion> for RubyRequest {
     fn from(version: ReleasedRubyVersion) -> Self {
-        Self {
+        Self::Released(ReleasedRubyRequest {
             engine: version.engine,
             major: Some(version.major),
             minor: Some(version.minor),
             patch: Some(version.patch),
             tiny: version.tiny,
             prerelease: version.prerelease,
-        }
+        })
     }
 }
 
 impl ReleasedRubyVersion {
     /// Does this version satisfy the given Ruby requested range?
     pub fn satisfies(&self, request: &RubyRequest) -> bool {
+        let request = match request {
+            RubyRequest::Dev => return false,
+            RubyRequest::Released(request) => request,
+        };
         if self.engine != request.engine {
             return false;
         }

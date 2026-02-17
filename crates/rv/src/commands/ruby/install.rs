@@ -6,13 +6,14 @@ use futures_util::StreamExt;
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
 use reqwest::StatusCode;
+use rv_ruby::version::RubyVersion;
 use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, info_span};
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 
 use rv_platform::HostPlatform;
-use rv_ruby::{request::RubyRequest, version::ReleasedRubyVersion};
+use rv_ruby::request::RubyRequest;
 
 use crate::progress::WorkProgress;
 use crate::{GlobalArgs, config::Config};
@@ -61,9 +62,7 @@ pub(crate) async fn install(
 
     let requested_range = config.ruby_request();
 
-    let selected_version = if let Ok(version) =
-        ReleasedRubyVersion::try_from(requested_range.clone())
-    {
+    let selected_version = if let Ok(version) = RubyVersion::try_from(requested_range.clone()) {
         debug!(
             "Skipping the rv-ruby releases fetch because the user has given a specific ruby version {version}"
         );
@@ -71,10 +70,11 @@ pub(crate) async fn install(
     } else {
         debug!("Fetching available rubies, because user gave an underspecified Ruby range");
         let remote_rubies = config.remote_rubies().await;
-        requested_range
+        let selected = requested_range
             .find_match_in(&remote_rubies)
             .ok_or(Error::NoMatchingRuby)?
-            .version
+            .version;
+        RubyVersion::Released(selected)
     };
 
     let install_dir = match install_dir {
@@ -85,12 +85,12 @@ pub(crate) async fn install(
         },
     };
 
-    match tarball_path {
-        Some(tarball_path) => {
-            extract_local_ruby_archive(tarball_path, &install_dir, &selected_version.number())
+    match (tarball_path, &selected_version) {
+        (Some(archive_path), RubyVersion::Released(selected_version)) => {
+            extract_local_ruby_archive(archive_path, &install_dir, &selected_version.number())
                 .await?
         }
-        None => {
+        (None, RubyVersion::Released(selected_version)) => {
             download_and_extract_remote_tarball(
                 config,
                 &install_dir,
@@ -99,6 +99,8 @@ pub(crate) async fn install(
             )
             .await?
         }
+        (None, RubyVersion::Dev) => todo!("Andre: install dev version"),
+        (Some(_archive_path), RubyVersion::Dev) => todo!("Andre: unpack dev version"),
     }
 
     println!(

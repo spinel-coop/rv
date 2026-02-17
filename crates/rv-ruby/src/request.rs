@@ -10,7 +10,33 @@ pub type VersionPart = u32;
 /// A range of possible Ruby versions. E.g. "3.4" spans the range 3.4.0, 3.4.1, etc.
 /// This is different to a RubyVersion, which is one specific version in this requested range.
 #[derive(Debug, Clone, DeserializeFromStr, SerializeDisplay)]
-pub struct RubyRequest {
+pub enum RubyRequest {
+    Dev,
+    Released(ReleasedRubyRequest),
+}
+
+impl FromStr for RubyRequest {
+    type Err = RequestError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "dev" {
+            return Ok(RubyRequest::Dev);
+        }
+        ReleasedRubyRequest::from_str(s).map(Self::Released)
+    }
+}
+
+impl std::fmt::Display for RubyRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RubyRequest::Dev => "dev".fmt(f),
+            RubyRequest::Released(req) => req.fmt(f),
+        }
+    }
+}
+
+#[derive(Debug, Clone, DeserializeFromStr, SerializeDisplay)]
+pub struct ReleasedRubyRequest {
     pub engine: RubyEngine,
     pub major: Option<VersionPart>,
     pub minor: Option<VersionPart>,
@@ -48,9 +74,9 @@ pub enum RequestError {
     InvalidPart(&'static str, String),
 }
 
-impl Default for RubyRequest {
+impl Default for ReleasedRubyRequest {
     fn default() -> Self {
-        RubyRequest {
+        Self {
             engine: RubyEngine::Ruby,
             major: None,
             minor: None,
@@ -58,6 +84,12 @@ impl Default for RubyRequest {
             tiny: None,
             prerelease: None,
         }
+    }
+}
+
+impl Default for RubyRequest {
+    fn default() -> Self {
+        RubyRequest::Released(Default::default())
     }
 }
 
@@ -78,7 +110,7 @@ impl RubyRequest {
     }
 }
 
-impl FromStr for RubyRequest {
+impl FromStr for ReleasedRubyRequest {
     type Err = RequestError;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         let input = input.trim();
@@ -119,7 +151,7 @@ impl FromStr for RubyRequest {
         };
 
         let Some(mut segments) = segments else {
-            return Ok(RubyRequest {
+            return Ok(Self {
                 engine: engine.into(),
                 major: None,
                 minor: None,
@@ -166,7 +198,7 @@ impl FromStr for RubyRequest {
             return Err(RequestError::TooManySegments(input.to_string()));
         }
 
-        Ok(RubyRequest {
+        Ok(Self {
             engine: engine.into(),
             major,
             minor,
@@ -177,7 +209,7 @@ impl FromStr for RubyRequest {
     }
 }
 
-impl Display for RubyRequest {
+impl Display for ReleasedRubyRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.engine)?;
 
@@ -202,7 +234,7 @@ impl Display for RubyRequest {
     }
 }
 
-impl CacheKey for RubyRequest {
+impl CacheKey for ReleasedRubyRequest {
     fn cache_key(&self, state: &mut CacheKeyHasher) {
         // Cache key includes all version components that define a unique Ruby request
         self.engine.cache_key(state);
@@ -211,6 +243,17 @@ impl CacheKey for RubyRequest {
         self.patch.cache_key(state);
         self.tiny.cache_key(state);
         self.prerelease.cache_key(state);
+    }
+}
+
+impl CacheKey for RubyRequest {
+    fn cache_key(&self, state: &mut CacheKeyHasher) {
+        match self {
+            // Assume all dev versions can share a cache key.
+            // i.e. there's only one "dev" version, no separate dev versions for each day.
+            RubyRequest::Dev => "dev".cache_key(state),
+            RubyRequest::Released(req) => req.cache_key(state),
+        }
     }
 }
 
@@ -225,8 +268,8 @@ mod tests {
     }
 
     #[track_caller]
-    fn r(version: &str) -> RubyRequest {
-        RubyRequest::from_str(version).unwrap()
+    fn r(version: &str) -> ReleasedRubyRequest {
+        ReleasedRubyRequest::from_str(version).unwrap()
     }
 
     #[test]
