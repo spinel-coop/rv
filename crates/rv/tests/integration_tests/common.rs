@@ -548,6 +548,11 @@ impl RvTest {
         let _ = fs_err::write(lockfile_path, lockfile.replace(from, to));
     }
 
+    pub fn write_ruby_version_file(&self, version: &str) {
+        let path = self.temp_root().join(".ruby-version");
+        fs_err::write(path, format!("{version}\n")).expect("Failed to write .ruby-version file");
+    }
+
     fn make_tarball_file_name(&self, version: &str) -> String {
         let suffix = self.make_platform_suffix();
         format!("ruby-{version}.{suffix}.tar.gz")

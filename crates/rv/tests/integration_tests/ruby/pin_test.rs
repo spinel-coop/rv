@@ -166,16 +166,32 @@ fn test_ruby_pin_with_resolve() {
 }
 
 #[test]
-fn test_ruby_pin_with_latest_and_resolve() {
+fn test_ruby_pin_with_latest_and_resolved_it() {
     let mut test = RvTest::new();
 
     test.mock_releases(["3.4.6", "3.4.7"].to_vec());
 
-    let set_pin = test.ruby_pin(&["latest", "--resolved"]);
+    let set_pin = test.ruby_pin(&["latest"]);
     set_pin.assert_success();
 
     assert_eq!(
         set_pin.normalized_stdout(),
         "/tmp/.ruby-version pinned to 3.4.7\n"
+    );
+}
+
+#[test]
+fn test_ruby_pin_show_with_resolve() {
+    let mut test = RvTest::new();
+
+    test.mock_releases(["3.4.6", "3.4.7"].to_vec());
+    test.write_ruby_version_file("3");
+
+    let show_pin = test.ruby_pin(&["--resolved"]);
+
+    show_pin.assert_success();
+    assert_eq!(
+        show_pin.normalized_stdout(),
+        "/tmp/.ruby-version is pinned to 3.4.7\n"
     );
 }

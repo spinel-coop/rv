@@ -113,8 +113,12 @@ impl Config {
         let requested_range = self.ruby_request();
 
         if let Ok(version) = RubyVersion::try_from(requested_range.clone()) {
+            debug!(
+                "Skipping the rv-ruby releases fetch because the user has given a specific ruby version {version}"
+            );
             Ok(version)
         } else {
+            debug!("Fetching available rubies, because user gave an underspecified Ruby range");
             let remote_rubies = self.remote_rubies().await;
 
             let matched_ruby = requested_range

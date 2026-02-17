@@ -1,10 +1,12 @@
 use regex::Regex;
 use std::borrow::Cow;
+use std::str::FromStr;
 
 use anstream::println;
 use miette::Diagnostic;
 use once_cell::sync::Lazy;
 use owo_colors::OwoColorize;
+use tracing::debug;
 
 use rv_ruby::request::RubyRequest;
 use rv_ruby::request::Source;
@@ -24,33 +26,44 @@ pub enum Error {
     ConfigError(#[from] crate::config::Error),
     #[error(transparent)]
     IoError(#[from] std::io::Error),
+    #[error(transparent)]
+    VersionError(#[from] rv_ruby::request::RequestError),
 }
 
 type Result<T> = miette::Result<T, Error>;
 
 pub(crate) async fn pin(
     global_args: &GlobalArgs,
-    request: Option<RubyRequest>,
-    resolved: bool,
+    request: Option<String>,
+    mut resolved: bool,
 ) -> Result<()> {
+    let request = match request {
+        None => {
+            return show_pinned_ruby(&Config::new(global_args, None)?, resolved).await;
+        }
+        Some(request) => request,
+    };
+
+    if request.trim() == "latest" && !resolved {
+        debug!("Input is 'latest'; forcing resolved mode implicitly.");
+        resolved = true;
+    }
+
+    let ruby_request = RubyRequest::from_str(&request)?;
+
     let config = &Config::new(global_args, None)?;
 
-    match request {
-        None => show_pinned_ruby(config),
-        Some(request) => {
-            let version = if resolved {
-                let resolved = &Config::new(global_args, Some(request))?
-                    .find_matching_remote_ruby()
-                    .await?;
+    let version = if resolved {
+        let resolved = &Config::new(global_args, Some(ruby_request.clone()))?
+            .find_matching_remote_ruby()
+            .await?;
 
-                resolved.number()
-            } else {
-                request.to_tool_consumable_version()
-            };
+        resolved.to_tool_consumable_version()
+    } else {
+        ruby_request.to_tool_consumable_version()
+    };
 
-            set_pinned_ruby(config, version)
-        }
-    }
+    set_pinned_ruby(config, version)
 }
 
 fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
@@ -94,7 +107,7 @@ fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
     Ok(())
 }
 
-fn show_pinned_ruby(config: &Config) -> Result<()> {
+async fn show_pinned_ruby(config: &Config, resolved: bool) -> Result<()> {
     let (ruby, source) = match &config.requested_ruby {
         RequestedRuby::Project(duple) | RequestedRuby::User(duple) => duple,
         _ => return Err(Error::NoRubyRequest),
@@ -106,7 +119,13 @@ fn show_pinned_ruby(config: &Config) -> Result<()> {
         Source::GemfileLock(path) => Cow::Borrowed(path),
     };
 
-    let version = ruby.to_tool_consumable_version();
+    let version = if resolved {
+        let resolved_ruby = config.find_matching_remote_ruby().await?;
+        resolved_ruby.to_tool_consumable_version()
+    } else {
+        ruby.to_tool_consumable_version()
+    };
+
     println!("{0} is pinned to {1}", dir.as_ref().cyan(), version.cyan());
     Ok(())
 }
