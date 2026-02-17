@@ -61,35 +61,6 @@ impl Default for RubyRequest {
     }
 }
 
-impl PartialOrd for RubyRequest {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for RubyRequest {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        use std::cmp::Ordering;
-
-        if self.major != other.major {
-            self.major.cmp(&other.major)
-        } else if self.minor != other.minor {
-            self.minor.cmp(&other.minor)
-        } else if self.patch != other.patch {
-            self.patch.cmp(&other.patch)
-        } else if self.tiny != other.tiny {
-            self.tiny.cmp(&other.tiny)
-        } else {
-            match (&self.prerelease, &other.prerelease) {
-                (None, None) => Ordering::Equal,
-                (None, Some(_prerelease)) => Ordering::Greater,
-                (Some(_prerelease), None) => Ordering::Less,
-                (prerelease, other_prerelease) => prerelease.cmp(other_prerelease),
-            }
-        }
-    }
-}
-
 impl RubyRequest {
     /// Resolve the Ruby request to a specific version of ruby, chosen from
     /// the given list.
