@@ -41,7 +41,7 @@ pub fn find_ruby_executable(dir: &Utf8Path) -> Option<Utf8PathBuf> {
 }
 
 static RUBY_DESCRIPTION_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"ruby (?<version>[^ ]+) \((?<date>\d\d\d\d-\d\d-\d\d) (?<source>\S+) (?<revision>[0-9a-f]+)\) (?<prism>\+PRISM )?\[(?<arch>\w+)-(?<os>\w+)\]").unwrap()
+    Regex::new(r"ruby (?<version>[^ ]+) \((?<date>\d\d\d\d-\d\d-\d\d) (?<source>\S+) (?<revision>[0-9a-f]+)\) (?<zjit>\+ZJIT )?(?<yjit>\+YJIT )?(?<prism>\+PRISM )?\[(?<arch>\w+)-(?<os>\w+)\]").unwrap()
 });
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -545,6 +545,22 @@ mod tests {
         assert_eq!(&info["date"], "2025-11-17");
         assert_eq!(&info["source"], "master");
         assert_eq!(&info["revision"], "4fa6e9938c");
+        assert_eq!(&info["arch"], "arm64");
+        assert_eq!(&info["os"], "darwin23");
+    }
+
+    #[test]
+    fn test_parse_description_yjit() {
+        let info = parse_description(
+            "ruby 4.0.0 (2025-12-25 revision 553f1675f3) +YJIT +PRISM [arm64-darwin23]",
+        )
+        .unwrap();
+        assert_eq!(&info["version"], "4.0.0");
+        assert_eq!(&info["date"], "2025-12-25");
+        assert_eq!(&info["source"], "revision");
+        assert_eq!(&info["revision"], "553f1675f3");
+        assert_eq!(&info["yjit"], "+YJIT ");
+        assert_eq!(&info["prism"], "+PRISM ");
         assert_eq!(&info["arch"], "arm64");
         assert_eq!(&info["os"], "darwin23");
     }
