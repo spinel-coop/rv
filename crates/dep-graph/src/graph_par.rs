@@ -19,7 +19,7 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc, RwLock,
 };
-use std::thread;
+use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 /// Default timeout in milliseconds
@@ -154,6 +154,7 @@ where
     counter: Arc<AtomicUsize>,
     item_ready_rx: Receiver<I>,
     item_done_tx: Sender<I>,
+    dispatcher_thread: JoinHandle<Result<(), Error>>,
     /// Total number of nodes in the graph (used for rayon's len() hint)
     total_nodes: usize,
 }
@@ -195,7 +196,7 @@ where
         let loop_timeout = timeout.clone();
 
         // Start dispatcher thread
-        thread::spawn(move || {
+        let dispatcher_thread = thread::spawn(move || {
             loop {
                 crossbeam_channel::select! {
                     // Grab a processed node ID
@@ -245,6 +246,7 @@ where
             counter,
             item_ready_rx,
             item_done_tx,
+            dispatcher_thread,
             total_nodes,
         }
     }
@@ -301,6 +303,7 @@ where
             counter: self.counter,
             item_ready_rx: self.item_ready_rx,
             item_done_tx: self.item_done_tx,
+            dispatcher_thread: Some(self.dispatcher_thread),
         })
     }
 }
@@ -312,6 +315,7 @@ where
     counter: Arc<AtomicUsize>,
     item_ready_rx: Receiver<I>,
     item_done_tx: Sender<I>,
+    dispatcher_thread: Option<JoinHandle<Result<(), Error>>>,
 }
 
 impl<I> Iterator for DepGraphProducer<I>
@@ -328,7 +332,17 @@ where
                 self.counter.clone(),
                 self.item_done_tx.clone(),
             )),
-            Err(_) => None,
+            Err(_) => {
+                // Wait for dispatcher thread to finish and report any error
+                if let Some(thread) = self.dispatcher_thread.take() {
+                    thread
+                        .join()
+                        .unwrap_or_else(|err| panic!("could not join thread: {:?}", err))
+                        .unwrap();
+                }
+
+                None
+            }
         }
     }
 }
@@ -359,6 +373,7 @@ where
             counter: self.counter,
             item_ready_rx: self.item_ready_rx,
             item_done_tx: self.item_done_tx,
+            dispatcher_thread: self.dispatcher_thread,
         }
     }
 
@@ -368,11 +383,13 @@ where
                 counter: self.counter.clone(),
                 item_ready_rx: self.item_ready_rx.clone(),
                 item_done_tx: self.item_done_tx.clone(),
+                dispatcher_thread: self.dispatcher_thread,
             },
             Self {
                 counter: self.counter.clone(),
                 item_ready_rx: self.item_ready_rx.clone(),
                 item_done_tx: self.item_done_tx,
+                dispatcher_thread: None,
             },
         )
     }

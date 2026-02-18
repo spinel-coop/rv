@@ -336,21 +336,23 @@ mod tests {
         }
     }
 
-    // #[test]
-    // #[should_panic]
-    // fn par_circular_graph() {
-    //     let mut n1 = Node::new("1");
-    //     let mut n2 = Node::new("2");
-    //     let mut n3 = Node::new("3");
+    #[test]
+    #[should_panic]
+    fn par_circular_graph() {
+        let mut n1 = Node::new("1");
+        let mut n2 = Node::new("2");
+        let mut n3 = Node::new("3");
 
-    //     n1.add_dep(n2.id());
-    //     n2.add_dep(n3.id());
-    //     n3.add_dep(n1.id());
+        n1.add_dep(n2.id());
+        n2.add_dep(n3.id());
+        n3.add_dep(n1.id());
 
-    //     let deps = vec![n1, n2, n3];
+        let deps = vec![n1, n2, n3];
 
-    //     // This should return an exception
-    //     let r = DepGraph::new(&deps);
-    //     r.into_par_iter().for_each(|_node_id| {});
-    // }
+        // This should return an exception
+        let r = DepGraph::new(&deps);
+        r.into_par_iter()
+            .with_timeout(Duration::from_millis(10))
+            .for_each(|_node_id| {});
+    }
 }

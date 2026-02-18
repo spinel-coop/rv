@@ -936,7 +936,9 @@ fn compile_gems(
         .try_fold(
             || 0,
             |mut count, node| {
-                if let Some(spec) = nodes.get(&*node) {
+                if let Some(spec) = nodes.get(&*node)
+                    && !spec.extensions.is_empty()
+                {
                     span.pb_set_message(&spec.name);
                     let compile_stats = compile_gem(config, args, spec)?;
                     let compiled_ok = compile_stats.ok;
@@ -973,18 +975,20 @@ fn make_dep_graph(
     use dep_graph::Node;
     let mut nodes: HashMap<String, &GemSpecification> = HashMap::new();
 
+    specs.iter().for_each(|spec| {
+        let name = spec.name.clone();
+
+        nodes.insert(name, spec);
+    });
+
     let deps: Vec<_> = specs
         .iter()
         .map(|spec| {
             let name = spec.name.clone();
-            let mut node = Node::new(name.clone());
-
-            if !spec.extensions.is_empty() {
-                nodes.insert(name, spec);
-            }
+            let mut node = Node::new(name);
 
             for dep in &spec.dependencies {
-                if dep.is_runtime() {
+                if dep.is_runtime() && nodes.contains_key(&dep.name) {
                     node.add_dep(dep.name.clone());
                 }
             }
@@ -1872,22 +1876,38 @@ mod tests {
         insta::assert_snapshot!(dot);
     }
 
+    #[test]
+    fn test_dep_graph_missing_deps() {
+        let specs = [include_str!(
+            "../../../rv-gem-specification-yaml/tests/fixtures/llhttp-ffi-0.4.0.gemspec.yaml"
+        )];
+        let specs: Vec<GemSpecification> = specs
+            .into_iter()
+            .map(|s| rv_gem_specification_yaml::parse(s).unwrap())
+            .collect();
+        let (_nodes, deps) = make_dep_graph(&specs);
+        let dot = depgraph_to_graphviz(deps);
+        insta::assert_snapshot!(dot);
+    }
+
     /// View the dependency graph as a GraphViz file.
     fn depgraph_to_graphviz(deps: Vec<dep_graph::Node<String>>) -> String {
         let mut dot = "digraph G {\n".to_owned();
         for gem in deps {
-            // Get a stable ordering so that the snapshot doesn't randomly
-            // change order depending on hashset iteration.
             let mut this_gems_deps: Vec<_> = gem.deps().iter().collect();
-            this_gems_deps.sort();
+            let gem_name = gem.id().replace("-", "_");
 
-            // Write edges.
-            for dep in this_gems_deps {
-                dot.push_str(&format!(
-                    "  {} -> {};\n",
-                    gem.id().replace("-", "_"),
-                    dep.replace("-", "_")
-                ));
+            if this_gems_deps.is_empty() {
+                dot.push_str(&format!("  {gem_name};\n"));
+            } else {
+                // Get a stable ordering so that the snapshot doesn't randomly
+                // change order depending on hashset iteration.
+                this_gems_deps.sort();
+
+                // Write edges.
+                for dep in this_gems_deps {
+                    dot.push_str(&format!("  {gem_name} -> {};\n", dep.replace("-", "_")));
+                }
             }
         }
         dot.push('}');
