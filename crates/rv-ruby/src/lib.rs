@@ -41,7 +41,7 @@ pub fn find_ruby_executable(dir: &Utf8Path) -> Option<Utf8PathBuf> {
 }
 
 static RUBY_DESCRIPTION_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"ruby (?<version>[^ ]+) \((?<date>\d\d\d\d-\d\d-\d\d) (?<source>\S+) (?<revision>[0-9a-f]+)\) (?<zjit>\+ZJIT )?(?<yjit>\+YJIT )?(?<prism>\+PRISM )?\[(?<arch>\w+)-(?<os>\w+)\]").unwrap()
+    Regex::new(r"ruby (?<version>[^ ]+) \((?<date>\d\d\d\d-\d\d-\d\d)(?<time>T\d\d:\d\d:\d\dZ)? (?<source>\S+) (?<revision>[0-9a-f]+)\) (?<zjit>\+ZJIT )?(?<yjit>\+YJIT )?(?<prism>\+PRISM )?\[(?<arch>\w+)-(?<os>\w+)\]").unwrap()
 });
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -560,6 +560,21 @@ mod tests {
         assert_eq!(&info["source"], "revision");
         assert_eq!(&info["revision"], "553f1675f3");
         assert_eq!(&info["yjit"], "+YJIT ");
+        assert_eq!(&info["prism"], "+PRISM ");
+        assert_eq!(&info["arch"], "arm64");
+        assert_eq!(&info["os"], "darwin23");
+    }
+
+    #[test]
+    fn test_parse_description_dev() {
+        let info = parse_description(
+            "ruby 4.1.0dev (2026-02-12T03:11:10Z master 8f7c12830f) +PRISM [arm64-darwin23]",
+        )
+        .unwrap();
+        assert_eq!(&info["version"], "4.1.0dev");
+        assert_eq!(&info["date"], "2026-02-12");
+        assert_eq!(&info["source"], "master");
+        assert_eq!(&info["revision"], "8f7c12830f");
         assert_eq!(&info["prism"], "+PRISM ");
         assert_eq!(&info["arch"], "arm64");
         assert_eq!(&info["os"], "darwin23");
