@@ -340,15 +340,16 @@ fn extract_tarball(tarball_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str
     for e in archive.entries()? {
         let mut entry = e?;
         let entry_path = entry.path()?;
-        let path = entry_path
-            .to_str()
-            .ok_or_else(|| Error::InvalidTarballPath(entry_path.to_path_buf()))?
-            .replace(
-                &format!("rv-ruby@{version}/{version}"),
-                &format!("ruby-{version}"),
-            )
-            .replace('@', "-");
-        let dst = rubies_dir.join(path);
+
+        // Strip the first two path components
+        let mut path = entry_path.components();
+        path.next();
+        path.next();
+
+        let dst = rubies_dir
+            .as_std_path()
+            .join(format!("ruby-{version}"))
+            .join(path.as_path());
         entry.unpack(dst)?;
     }
     Ok(())
