@@ -39,7 +39,11 @@ pub enum RubyCommand {
     #[command(about = "Show or set the Ruby version for the current project")]
     Pin {
         /// The Ruby version to pin
-        version: Option<RubyRequest>,
+        version: Option<String>,
+
+        /// Write the resolved Ruby version instead of the request
+        #[arg(long)]
+        resolved: bool,
     },
 
     #[command(about = "Show the directory where all Ruby versions are installed")]
@@ -121,7 +125,7 @@ pub(crate) async fn ruby(global_args: &GlobalArgs, args: RubyArgs) -> Result<()>
             version_filter,
             no_color,
         } => list::list(global_args, format, version_filter, no_color).await?,
-        RubyCommand::Pin { version } => pin::pin(global_args, version)?,
+        RubyCommand::Pin { version, resolved } => pin::pin(global_args, version, resolved).await?,
         RubyCommand::Dir => dir::dir(global_args)?,
         RubyCommand::Install {
             version,

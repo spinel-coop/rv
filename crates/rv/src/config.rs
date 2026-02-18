@@ -38,6 +38,8 @@ pub enum Error {
     CouldNotParseGemfileLock(#[from] rv_lockfile::ParseErrors),
     #[error("Could not parse ruby version from Gemfile.lock: {0}")]
     CouldNotParseGemfileLockVersion(ParseVersionError),
+    #[error("no matching ruby version found")]
+    NoMatchingRuby,
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -105,6 +107,26 @@ impl Config {
 
     pub async fn remote_rubies(&self) -> Vec<Ruby> {
         self.discover_remote_rubies().await
+    }
+
+    pub async fn find_matching_remote_ruby(&self) -> Result<RubyVersion> {
+        let requested_range = self.ruby_request();
+
+        if let Ok(version) = RubyVersion::try_from(requested_range.clone()) {
+            debug!(
+                "Skipping the rv-ruby releases fetch because the user has given a specific ruby version {version}"
+            );
+            Ok(version)
+        } else {
+            debug!("Fetching available rubies, because user gave an underspecified Ruby range");
+            let remote_rubies = self.remote_rubies().await;
+
+            let matched_ruby = requested_range
+                .find_match_in(&remote_rubies)
+                .ok_or(Error::NoMatchingRuby)?;
+
+            Ok(matched_ruby.version)
+        }
     }
 
     pub fn current_ruby(&self) -> Option<Ruby> {
