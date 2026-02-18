@@ -1,0 +1,7 @@
+---
+source: crates/rv/src/commands/clean_install.rs
+expression: dot
+---
+digraph G {
+  llhttp_ffi;
+}
