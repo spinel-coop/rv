@@ -40,6 +40,11 @@ fn test_switch_rubies_bash() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(target_os = "linux")]
 #[test]
 fn test_switch_rubies_fish() -> Result<(), Box<dyn std::error::Error>> {
+    assert!(
+        crate::common::is_shell_installed("fish"),
+        "Test requires 'fish' shell to be installed"
+    );
+
     let shell = Shell {
         name: "fish",
         startup_flag: "--no-config",
@@ -52,6 +57,11 @@ fn test_switch_rubies_fish() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(unix)]
 #[test]
 fn test_switch_rubies_zsh() -> Result<(), Box<dyn std::error::Error>> {
+    assert!(
+        crate::common::is_shell_installed("zsh"),
+        "Test requires 'zsh' shell to be installed"
+    );
+
     let shell = Shell {
         name: "zsh",
         startup_flag: "--no-rcs",

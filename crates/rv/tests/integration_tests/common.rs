@@ -563,6 +563,10 @@ impl RvTest {
     }
 }
 
+pub fn is_shell_installed(shell_name: &str) -> bool {
+    Command::new(shell_name).arg("--version").output().is_ok()
+}
+
 #[derive(Debug)]
 pub struct RvOutput {
     pub output: std::process::Output,
