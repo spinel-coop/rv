@@ -4,6 +4,15 @@
 
 ### Added
 
+ - ´rv ruby install latest´ (#494, @a-chacon)
+
+### Fixed
+
+ - rv ci: Gems weren't being compiled if extension deps already installed (#522, @deivid-rodriguez)
+ - Tests fail faster when the required shell isn't installed (#521, @a-chacon)
+
+### Added
+
  - Full support for Linux musl on x86_64 and Arm64 (#507, @case, @indirect)
 
 ### Changed
