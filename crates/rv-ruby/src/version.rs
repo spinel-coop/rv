@@ -17,6 +17,15 @@ pub enum RubyVersion {
     Released(ReleasedRubyVersion),
 }
 
+impl RubyVersion {
+    pub fn number(&self) -> String {
+        match self {
+            RubyVersion::Dev => "dev".to_string(),
+            RubyVersion::Released(v) => v.number(),
+        }
+    }
+}
+
 impl FromStr for RubyVersion {
     type Err = ParseVersionError;
 
