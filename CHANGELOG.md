@@ -1,5 +1,22 @@
 # `rv` changelog
 
+## rv 0.5.1 (18 February, 2026)
+
+### Added
+
+ - Full support for Linux musl on x86_64 and Arm64 (#507, @case, @indirect)
+
+### Changed
+
+ - Enforce that gem versions must be ASCII (#515, @adamchalmers)
+ - Gem version comparison 4x-10x speedup (#512, @adamchalmers)
+
+### Fixed
+
+ - rv ci, rvx: Some native extensions were being compiled twice (#509, @deivid-rodriguez)
+ - Test improvements (#511, #510, @deivid-rodriguez)
+ - rv ruby list sort order fixed (#513, @deivid-rodriguez)
+
 ## rv 0.5.0 (12 February, 2026)
 
 Thank you to new contributors @a-chacon and @phromo!
