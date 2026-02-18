@@ -54,7 +54,7 @@ pub(crate) async fn install(
     global_args: &GlobalArgs,
     install_dir: Option<String>,
     request: Option<RubyRequest>,
-    tarball_path: Option<String>,
+    tarball_path: Option<Utf8PathBuf>,
 ) -> Result<()> {
     let config = &Config::new(global_args, request)?;
 
