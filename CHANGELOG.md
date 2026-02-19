@@ -1,6 +1,6 @@
 # `rv` changelog
 
-## rv 0.5.1 (18 February, 2026)
+## rv 0.5.2 (18 February, 2026)
 
 ### Added
 
@@ -10,6 +10,8 @@
 
  - rv ci: Gems weren't being compiled if extension deps already installed (#522, @deivid-rodriguez)
  - Tests fail faster when the required shell isn't installed (#521, @a-chacon)
+
+## rv 0.5.1 (18 February, 2026)
 
 ### Added
 
