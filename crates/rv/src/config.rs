@@ -210,28 +210,15 @@ pub fn find_requested_ruby(root: Utf8PathBuf) -> Result<RequestedRuby> {
 
 fn find_project_ruby(dir: Utf8PathBuf, root: Utf8PathBuf) -> Result<Option<(RubyRequest, Source)>> {
     debug!("Searching for project directory in {}", dir);
-    let mut project_dir = dir;
 
-    loop {
-        if let Some(ruby) = find_directory_ruby(&project_dir)? {
+    for project_dir in dir.ancestors().take_while(|d| Some(*d) != root.parent()) {
+        if let Some(ruby) = find_directory_ruby(&project_dir.to_path_buf())? {
             return Ok(Some(ruby));
-        };
-
-        if project_dir == root {
-            debug!("Reached {} without finding a project directory", root);
-            return Ok(None);
-        }
-
-        if let Some(parent_dir) = project_dir.parent() {
-            project_dir = parent_dir.to_owned();
-        } else {
-            debug!(
-                "Ran out of parents of {} without finding a project directory",
-                project_dir
-            );
-            return Ok(None);
         }
     }
+
+    debug!("Reached {} without finding a project directory", root);
+    Ok(None)
 }
 
 fn find_directory_ruby(dir: &Utf8PathBuf) -> Result<Option<(RubyRequest, Source)>> {
