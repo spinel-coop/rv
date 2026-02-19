@@ -71,11 +71,6 @@ impl RubyRequest {
             .find(|r| r.version.satisfies(self))
             .cloned()
     }
-
-    /// A version that toolfiles like .tool-version/.ruby-version/Gemfile/Gemfile.lock knows how to read.
-    pub fn to_tool_consumable_version(&self) -> String {
-        self.to_string().replace("ruby-", "")
-    }
 }
 
 impl FromStr for RubyRequest {
