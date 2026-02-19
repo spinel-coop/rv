@@ -62,11 +62,7 @@ pub enum RequestedRuby {
 
 impl Config {
     pub(crate) fn new(global_args: &GlobalArgs, version: Option<RubyRequest>) -> Result<Self> {
-        let root = global_args
-            .root_dir
-            .as_ref()
-            .unwrap_or(&"/".into())
-            .to_owned();
+        let root = Utf8PathBuf::from(env::var("RV_ROOT_DIR").unwrap_or("/".to_owned()));
 
         let ruby_dirs = if global_args.ruby_dir.is_empty() {
             default_ruby_dirs(&root)
