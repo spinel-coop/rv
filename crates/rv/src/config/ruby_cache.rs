@@ -174,7 +174,6 @@ mod tests {
 
         let config = Config {
             ruby_dirs: indexset![ruby_dir],
-            root: root.clone(),
             cache: Cache::temp().unwrap(),
             current_exe: root.join("bin").join("rv"),
             requested_ruby: RequestedRuby::Global,

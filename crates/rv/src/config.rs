@@ -47,7 +47,6 @@ type Result<T> = miette::Result<T, Error>;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub ruby_dirs: IndexSet<Utf8PathBuf>,
-    pub root: Utf8PathBuf,
     pub cache: rv_cache::Cache,
     pub current_exe: Utf8PathBuf,
     pub requested_ruby: RequestedRuby,
@@ -88,12 +87,11 @@ impl Config {
 
         let requested_ruby = match version {
             Some(request) => RequestedRuby::Explicit(request),
-            None => find_requested_ruby(root.clone())?,
+            None => find_requested_ruby(root)?,
         };
 
         Ok(Self {
             ruby_dirs,
-            root,
             cache,
             current_exe,
             requested_ruby,
@@ -382,7 +380,6 @@ mod tests {
             current_exe: root.join("bin").join("rv"),
             requested_ruby: RequestedRuby::Explicit("3.5.0".parse().unwrap()),
             cache: rv_cache::Cache::temp().unwrap(),
-            root,
         };
     }
 
