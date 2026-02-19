@@ -7,8 +7,6 @@ pub enum Error {
     IoError(#[from] std::io::Error),
     #[error(transparent)]
     ConfigError(#[from] config::Error),
-    #[error("No Ruby installations found in configuration.")]
-    NoRubyFound,
     #[error("Could not serialize JSON: {0}")]
     Serde(#[from] serde_json::Error),
 }
