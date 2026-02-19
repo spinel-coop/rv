@@ -11,7 +11,7 @@ use tracing::{debug, instrument};
 use rv_ruby::{
     Ruby,
     request::{RequestError, RubyRequest, Source},
-    version::{ParseVersionError, ReleasedRubyVersion},
+    version::{ParseVersionError, ReleasedRubyVersion, RubyVersion},
 };
 
 use crate::GlobalArgs;
@@ -111,7 +111,8 @@ impl Config {
         let request = &self.ruby_request();
 
         self.discover_rubies_matching(|dir_name| {
-            ReleasedRubyVersion::from_str(dir_name).is_ok_and(|v| v.satisfies(request))
+            let version_res = RubyVersion::from_str(dir_name);
+            version_res.is_ok_and(|v| v.satisfies(request))
         })
         .last()
         .cloned()

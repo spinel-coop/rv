@@ -24,6 +24,14 @@ impl RubyVersion {
             RubyVersion::Released(v) => v.number(),
         }
     }
+
+    pub fn satisfies(&self, request: &RubyRequest) -> bool {
+        match (self, request) {
+            (RubyVersion::Dev, RubyRequest::Dev) => true,
+            (RubyVersion::Dev, RubyRequest::Released(_)) => false,
+            (RubyVersion::Released(version), request) => version.satisfies(request),
+        }
+    }
 }
 
 impl FromStr for RubyVersion {
