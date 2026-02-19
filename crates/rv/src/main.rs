@@ -40,9 +40,6 @@ struct GlobalArgs {
     /// Cache related parameters
     cache_args: CacheArgs,
 
-    /// Root directory for testing
-    root_dir: Option<Utf8PathBuf>,
-
     /// Executable path for testing
     current_exe: Option<Utf8PathBuf>,
 }
@@ -92,10 +89,6 @@ struct Cli {
     #[command(subcommand)]
     command: Commands,
 
-    /// Root directory for testing (hidden)
-    #[arg(long, hide = true, env = "RV_ROOT_DIR")]
-    root_dir: Option<Utf8PathBuf>,
-
     /// Executable path for testing (hidden)
     #[arg(long, hide = true, env = "RV_TEST_EXE")]
     current_exe: Option<Utf8PathBuf>,
@@ -104,7 +97,6 @@ struct Cli {
 impl Cli {
     pub fn global_args(&self) -> GlobalArgs {
         GlobalArgs {
-            root_dir: self.root_dir.clone(),
             ruby_dir: self.ruby_dir.clone(),
             cache_args: self.cache_args.clone(),
             current_exe: self.current_exe.clone(),
