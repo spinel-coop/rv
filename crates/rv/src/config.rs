@@ -61,6 +61,9 @@ pub enum RequestedRuby {
 }
 
 pub struct ConfigSearch {
+    // explicit ruby request to be used, no need to search tool files if set
+    request: Option<RubyRequest>,
+
     // where global config search starts
     current_dir: Utf8PathBuf,
 
@@ -72,7 +75,7 @@ pub struct ConfigSearch {
 }
 
 impl Config {
-    pub(crate) fn new(global_args: &GlobalArgs, version: Option<RubyRequest>) -> Result<Self> {
+    pub(crate) fn new(global_args: &GlobalArgs, request: Option<RubyRequest>) -> Result<Self> {
         let root = Utf8PathBuf::from(env::var("RV_ROOT_DIR").unwrap_or("/".to_owned()));
 
         let ruby_dirs = if global_args.ruby_dir.is_empty() {
@@ -92,12 +95,8 @@ impl Config {
             std::env::current_exe()?.to_str().unwrap().into()
         };
 
-        let config_search = ConfigSearch::new(root)?;
-
-        let requested_ruby = match version {
-            Some(request) => RequestedRuby::Explicit(request),
-            None => config_search.find_requested_ruby()?,
-        };
+        let config_search = ConfigSearch::new(root, request)?;
+        let requested_ruby = config_search.find_requested_ruby()?;
 
         Ok(Self {
             ruby_dirs,
@@ -157,7 +156,7 @@ impl Config {
 }
 
 impl ConfigSearch {
-    pub fn new(root: Utf8PathBuf) -> Result<Self> {
+    pub fn new(root: Utf8PathBuf, request: Option<RubyRequest>) -> Result<Self> {
         let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
         let home_dir = rv_dirs::home_dir();
 
@@ -167,6 +166,7 @@ impl ConfigSearch {
             .map_or(root, |v| v.into());
 
         Ok(Self {
+            request,
             current_dir,
             root,
             home_dir,
@@ -174,6 +174,11 @@ impl ConfigSearch {
     }
 
     pub fn find_requested_ruby(&self) -> Result<RequestedRuby> {
+        if let Some(req) = self.request.clone() {
+            debug!("Explicit ruby request for {} recieved", req);
+            return Ok(RequestedRuby::Explicit(req));
+        }
+
         if let Some(req) = self.find_project_ruby()? {
             debug!("Found project ruby request for {} in {:?}", req.0, req.1);
             return Ok(RequestedRuby::Project(req));
@@ -399,6 +404,6 @@ mod tests {
     #[test]
     fn test_find_requested_ruby() {
         let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
-        ConfigSearch::new(root).unwrap();
+        ConfigSearch::new(root, None).unwrap();
     }
 }
