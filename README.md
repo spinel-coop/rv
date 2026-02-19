@@ -9,14 +9,33 @@ Manage your projects, including all their Ruby versions and gems, with `rv`.
 
 ## Install
 
-```bash
-# Homebrew or Linuxbrew
-brew install rv
+### Linux / macOS
+
+- Set up rv using the provided standalone installer script:
+
+  ```bash
+  curl -LsSf https://github.com/spinel-coop/rv/releases/latest/download/rv-installer.sh | sh
+  ```
+
+- Alternatively, you can install it with Homebrew or Linuxbrew:
+
+  ```bash
+  brew install rv
+  ```
+
+### Windows
+
+Open PowerShell as Administrator and run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/spinel-coop/rv/releases/latest/download/rv-installer.ps1 | iex"
 ```
 
-Or, visit [releases](https://github.com/spinel-coop/rv/releases) for installer scripts for macOS, Linux, and Windows.
+**Note: On Windows PowerShell, use `rvw` instead of `rv` because `rv` is an alias for the built-in `Remove-Variable`.**
 
-On Windows PowerShell, use `rvw` instead of `rv`. (`rv` conflicts with the built-in `Remove-Variable` alias)
+### Manual Downloads and Releases
+
+For other installation options or to download specific versions manually, visit the [releases page](https://github.com/spinel-coop/rv/releases).
 
 ## Quickstart
 
