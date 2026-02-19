@@ -910,13 +910,11 @@ fn compile_gems(
     use dep_graph::DepGraph;
     use rayon::prelude::*;
 
-    let (nodes, deps) = make_dep_graph(&specs);
+    let (nodes, deps, deps_count) = make_dep_graph(&specs);
 
-    if deps.is_empty() {
+    if deps_count == 0 {
         return Ok(Default::default());
     }
-
-    let deps_count = nodes.len();
 
     // Phase 3: Compiles (80-100%)
     progress.start_phase(deps_count as u64, 20);
@@ -971,12 +969,18 @@ fn make_dep_graph(
 ) -> (
     HashMap<String, &GemSpecification>,
     Vec<dep_graph::Node<String>>,
+    usize,
 ) {
     use dep_graph::Node;
     let mut nodes: HashMap<String, &GemSpecification> = HashMap::new();
+    let mut count = 0;
 
     specs.iter().for_each(|spec| {
         let name = spec.name.clone();
+
+        if !spec.extensions.is_empty() {
+            count += 1;
+        }
 
         nodes.insert(name, spec);
     });
@@ -996,7 +1000,7 @@ fn make_dep_graph(
             node
         })
         .collect();
-    (nodes, deps)
+    (nodes, deps, count)
 }
 
 fn install_binstub(
@@ -1871,7 +1875,8 @@ mod tests {
             .into_iter()
             .map(|s| rv_gem_specification_yaml::parse(s).unwrap())
             .collect();
-        let (_nodes, deps) = make_dep_graph(&specs);
+        let (_nodes, deps, count) = make_dep_graph(&specs);
+        assert_eq!(2, count);
         let dot = depgraph_to_graphviz(deps);
         insta::assert_snapshot!(dot);
     }
@@ -1885,7 +1890,8 @@ mod tests {
             .into_iter()
             .map(|s| rv_gem_specification_yaml::parse(s).unwrap())
             .collect();
-        let (_nodes, deps) = make_dep_graph(&specs);
+        let (_nodes, deps, count) = make_dep_graph(&specs);
+        assert_eq!(1, count);
         let dot = depgraph_to_graphviz(deps);
         insta::assert_snapshot!(dot);
     }
