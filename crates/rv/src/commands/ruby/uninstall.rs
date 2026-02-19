@@ -24,17 +24,14 @@ type Result<T> = miette::Result<T, Error>;
 pub(crate) async fn uninstall(global_args: &GlobalArgs, request: RubyRequest) -> Result<()> {
     let config = Config::new(global_args, Some(request))?;
 
-    if let Some(ruby) = config.current_ruby() {
-        let ruby_path = ruby.path;
-        println!("Deleting {}", ruby_path.cyan());
+    let ruby = config.current_ruby().ok_or(Error::NoMatchingRuby)?;
+    let ruby_path = ruby.path;
+    println!("Deleting {}", ruby_path.cyan());
 
-        // Delete the dir at this Ruby version's path.
-        fs_err::remove_dir_all(&ruby_path).map_err(|error| Error::IoError {
-            dir: ruby_path,
-            error,
-        })?;
-        Ok(())
-    } else {
-        Err(Error::NoMatchingRuby)
-    }
+    // Delete the dir at this Ruby version's path.
+    fs_err::remove_dir_all(&ruby_path).map_err(|error| Error::IoError {
+        dir: ruby_path,
+        error,
+    })?;
+    Ok(())
 }
