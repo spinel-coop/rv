@@ -1,6 +1,5 @@
 ---
 source: crates/rv/tests/integration_tests/shell.rs
-assertion_line: 31
 expression: output.normalized_stdout()
 ---
 Install rv's shell integration into fish by running the commands below,

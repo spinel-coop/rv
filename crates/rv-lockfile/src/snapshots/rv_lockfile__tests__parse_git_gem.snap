@@ -1,6 +1,5 @@
 ---
 source: crates/rv-lockfile/src/tests.rs
-assertion_line: 62
 expression: output
 ---
 git:
