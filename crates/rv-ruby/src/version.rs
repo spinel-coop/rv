@@ -30,7 +30,7 @@ impl FromStr for RubyVersion {
     type Err = ParseVersionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s == "dev" {
+        if s == "dev" || s == "ruby-dev" {
             return Ok(Self::Dev);
         }
         ReleasedRubyVersion::from_str(s).map(Self::Released)

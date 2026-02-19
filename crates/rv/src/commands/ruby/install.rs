@@ -156,7 +156,7 @@ fn ruby_url(version: &RubyVersion, host: &HostPlatform) -> String {
         .unwrap_or_else(|_| match version {
             RubyVersion::Dev => (
                 "https://github.com/spinel-coop/rv-ruby-dev/releases/latest/download".to_owned(),
-                format!("ruby-{version}"),
+                version.to_string(),
             ),
             RubyVersion::Released(_) => (
                 "https://github.com/spinel-coop/rv-ruby/releases/latest/download".to_owned(),
@@ -429,6 +429,16 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_ruby_url_unix_dev() {
+        let host = HostPlatform::from_target_triple("aarch64-apple-darwin").unwrap();
+        let url = ruby_url(&v("dev"), &host);
+
+        assert_eq!(
+            url,
+            "https://github.com/spinel-coop/rv-ruby-dev/releases/latest/download/ruby-dev.arm64_sonoma.tar.gz"
+        );
+    }
     #[test]
     fn test_extract_zip_creates_correct_structure() {
         let temp_dir = TempDir::new().unwrap();
