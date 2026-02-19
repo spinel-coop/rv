@@ -805,9 +805,9 @@ checksum = "26bf8fc351c5ed29b5c2f0cbbac1b209b74f60ecd62e675a998df72c49af5204"
 
 [[package]]
 name = "dep-graph"
-version = "0.2.1-rv"
+version = "0.2.1"
+source = "git+https://github.com/spinel-coop/dep-graph#6274ae4bffea44c09540619139540db02d9758da"
 dependencies = [
- "criterion",
  "crossbeam-channel",
  "num_cpus",
  "rayon",
@@ -2565,7 +2565,7 @@ dependencies = [
 
 [[package]]
 name = "rv"
-version = "0.5.0"
+version = "0.5.2"
 dependencies = [
  "anstream",
  "assert_fs",

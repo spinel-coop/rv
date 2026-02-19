@@ -82,7 +82,7 @@ rv-gem-types = { version = "0.1.0", path = "crates/rv-gem-types" }
 rv-platform = { version = "0.1.0", path = "crates/rv-platform" }
 rv-ruby = { version = "0.1.0", path = "crates/rv-ruby" }
 rv-version = { version = "0.1.0", path = "crates/rv-version" }
-dep-graph = { version = "0.2.1-rv", path = "crates/dep-graph" }
+dep-graph = { version = "0.2.1", git = "https://github.com/spinel-coop/dep-graph" }
 
 # The profile that 'dist' will build with
 [profile.dist]

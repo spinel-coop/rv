@@ -32,6 +32,13 @@ impl RubyVersion {
             (RubyVersion::Released(version), request) => version.satisfies(request),
         }
     }
+
+    pub fn to_tool_consumable_version(&self) -> String {
+        match self {
+            RubyVersion::Dev => "dev".to_string(),
+            RubyVersion::Released(v) => v.to_tool_consumable_version(),
+        }
+    }
 }
 
 impl FromStr for RubyVersion {
@@ -262,6 +269,10 @@ impl ReleasedRubyVersion {
         };
 
         version.parse()
+    }
+
+    pub fn to_tool_consumable_version(&self) -> String {
+        self.to_string().replace("ruby-", "")
     }
 }
 
