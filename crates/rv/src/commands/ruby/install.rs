@@ -151,16 +151,20 @@ fn ruby_url(version: &RubyVersion, host: &HostPlatform) -> String {
     }
 
     // macOS/Linux use rv-ruby
-    let download_base = std::env::var("RV_INSTALL_URL").unwrap_or_else(|_| match version {
-        RubyVersion::Dev => {
-            "https://github.com/spinel-coop/rv-ruby-dev/releases/latest/download".to_owned()
-        }
-        RubyVersion::Released(_) => {
-            "https://github.com/spinel-coop/rv-ruby/releases/latest/download".to_owned()
-        }
-    });
+    let (download_base, version_str) = std::env::var("RV_INSTALL_URL")
+        .map(|var| (var, version.to_string()))
+        .unwrap_or_else(|_| match version {
+            RubyVersion::Dev => (
+                "https://github.com/spinel-coop/rv-ruby-dev/releases/latest/download".to_owned(),
+                format!("ruby-{version}"),
+            ),
+            RubyVersion::Released(_) => (
+                "https://github.com/spinel-coop/rv-ruby/releases/latest/download".to_owned(),
+                version.to_string(),
+            ),
+        });
 
-    format!("{download_base}/{version}.{arch}.{ext}")
+    format!("{download_base}/{version_str}.{arch}.{ext}")
 }
 
 fn archive_cache_path(config: &Config, url: impl AsRef<str>, host: &HostPlatform) -> Utf8PathBuf {
