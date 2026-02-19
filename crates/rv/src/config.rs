@@ -181,13 +181,10 @@ pub fn find_requested_ruby(root: Utf8PathBuf) -> Result<RequestedRuby> {
     let home_dir = rv_dirs::home_dir();
     let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
 
-    let search_root = match current_dir
+    let search_root = current_dir
         .ancestors()
         .find(|d| d.parent() == Some(home_dir.as_path()))
-    {
-        Some(path) => path.into(),
-        None => root,
-    };
+        .map_or(root, |v| v.into());
 
     if let Some(req) = find_project_ruby(current_dir, search_root)? {
         debug!("Found project ruby request for {} in {:?}", req.0, req.1);
