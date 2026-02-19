@@ -47,6 +47,7 @@ type Result<T> = miette::Result<T, Error>;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub ruby_dirs: IndexSet<Utf8PathBuf>,
+    pub project_root: Utf8PathBuf,
     pub cache: rv_cache::Cache,
     pub current_exe: Utf8PathBuf,
     pub requested_ruby: RequestedRuby,
@@ -96,10 +97,12 @@ impl Config {
         };
 
         let config_search = ConfigSearch::new(root, request)?;
+        let project_root = config_search.find_project_root();
         let requested_ruby = config_search.find_requested_ruby()?;
 
         Ok(Self {
             ruby_dirs,
+            project_root,
             cache,
             current_exe,
             requested_ruby,
@@ -192,12 +195,26 @@ impl ConfigSearch {
         Ok(RequestedRuby::Global)
     }
 
-    fn find_project_ruby(&self) -> Result<Option<(RubyRequest, Source)>> {
-        for project_dir in self
+    fn find_project_root(&self) -> Utf8PathBuf {
+        let project_root = self
             .current_dir
             .ancestors()
             .take_while(|d| Some(*d) != self.root.parent())
-        {
+            .find(|d| d.join("Gemfile.lock").is_file())
+            .map(|p| p.to_path_buf())
+            .unwrap_or(self.current_dir.clone());
+
+        debug!("Found project directory in {}", project_root);
+
+        project_root
+    }
+
+    fn find_project_ruby(&self) -> Result<Option<(RubyRequest, Source)>> {
+        for project_dir in self.current_dir.ancestors() {
+            if Some(project_dir) == self.root.parent() {
+                break;
+            }
+
             if let Some(ruby) = self.find_directory_ruby(&project_dir.to_path_buf())? {
                 return Ok(Some(ruby));
             }
@@ -394,6 +411,7 @@ mod tests {
             current_exe: root.join("bin").join("rv"),
             requested_ruby: RequestedRuby::Explicit("3.5.0".parse().unwrap()),
             cache: rv_cache::Cache::temp().unwrap(),
+            project_root: root,
         };
     }
 
