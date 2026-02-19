@@ -314,20 +314,24 @@ fn extract_ruby_archive(
     // Determine archive type by extension
     let extension = archive_path.extension().unwrap_or("");
     match extension {
-        "zip" => extract_zip(archive_path, rubies_dir, &version.number()),
-        "7z" => extract_7z(archive_path, rubies_dir, &version.number(), &host),
-        _ => extract_tarball(archive_path, rubies_dir, &version.number()),
+        "zip" => extract_zip(archive_path, rubies_dir, version),
+        "7z" => extract_7z(archive_path, rubies_dir, version, &host),
+        _ => extract_tarball(archive_path, rubies_dir, version),
     }
 }
 
-fn extract_tarball(tarball_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> Result<()> {
+fn extract_tarball(
+    tarball_path: &Utf8Path,
+    rubies_dir: &Utf8Path,
+    version: &RubyVersion,
+) -> Result<()> {
     let tarball = fs_err::File::open(tarball_path)?;
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
     for e in archive.entries()? {
         let mut entry = e?;
         let entry_path = entry.path()?;
 
-        let dst: PathBuf = if version == "dev" {
+        let dst: PathBuf = if version.is_dev() {
             // Strip the first two path components
             let mut path = entry_path.components();
             path.next();
@@ -335,15 +339,15 @@ fn extract_tarball(tarball_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str
 
             rubies_dir
                 .as_std_path()
-                .join(format!("ruby-{version}"))
+                .join(format!("ruby-{}", version.number()))
                 .join(path.as_path())
         } else {
             let path = entry_path
                 .to_str()
                 .ok_or_else(|| Error::InvalidTarballPath(entry_path.to_path_buf()))?
                 .replace(
-                    &format!("rv-ruby@{version}/{version}"),
-                    &format!("ruby-{version}"),
+                    &format!("rv-ruby@{}/{version}", version.number()),
+                    &format!("ruby-{}", version.number()),
                 )
                 .replace('@', "-");
             rubies_dir.join(path).into()
@@ -354,7 +358,7 @@ fn extract_tarball(tarball_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str
     Ok(())
 }
 
-fn extract_zip(zip_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> Result<()> {
+fn extract_zip(zip_path: &Utf8Path, rubies_dir: &Utf8Path, version: &RubyVersion) -> Result<()> {
     let file = fs_err::File::open(zip_path)?;
     let mut archive = zip::ZipArchive::new(file)?;
 
@@ -365,8 +369,8 @@ fn extract_zip(zip_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> Res
         // Normalize path: repackage RubyInstaller format to rv format
         let path = entry_path
             .replace(
-                &format!("rubyinstaller-{version}"),
-                &format!("ruby-{version}"),
+                &format!("rubyinstaller-{}", version.number()),
+                &format!("ruby-{}", version.number()),
             )
             .replace('\\', "/"); // Normalize Windows path separators
 
@@ -388,7 +392,7 @@ fn extract_zip(zip_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> Res
 fn extract_7z(
     archive_path: &Utf8Path,
     rubies_dir: &Utf8Path,
-    version: &str,
+    version: &RubyVersion,
     host: &HostPlatform,
 ) -> Result<()> {
     // Extract 7z archive to rubies_dir
@@ -397,8 +401,8 @@ fn extract_7z(
     // RubyInstaller2 extracts to: rubyinstaller-{version}-1-{arch}/
     // We need to rename it to: ruby-{version}/
     let arch = host.ruby_arch_str();
-    let extracted_dir = rubies_dir.join(format!("rubyinstaller-{version}-1-{arch}"));
-    let target_dir = rubies_dir.join(format!("ruby-{version}"));
+    let extracted_dir = rubies_dir.join(format!("rubyinstaller-{}-1-{arch}", version.number()));
+    let target_dir = rubies_dir.join(format!("ruby-{}", version.number()));
 
     if extracted_dir.exists() {
         fs_err::rename(&extracted_dir, &target_dir)?;
@@ -478,7 +482,8 @@ mod tests {
 
         let rubies_path = Utf8Path::from_path(rubies_dir.path()).unwrap();
         let zip_utf8_path = Utf8Path::from_path(zip_path.path()).unwrap();
-        extract_zip(zip_utf8_path, rubies_path, "3.4.1").unwrap();
+        let version = RubyVersion::Released("3.4.1".parse().unwrap());
+        extract_zip(zip_utf8_path, rubies_path, &version).unwrap();
 
         let ruby_dir = rubies_dir.child("ruby-3.4.1");
         assert!(ruby_dir.exists(), "ruby-3.4.1 directory should exist");

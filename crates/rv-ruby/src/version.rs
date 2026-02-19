@@ -18,6 +18,10 @@ pub enum RubyVersion {
 }
 
 impl RubyVersion {
+    pub fn is_dev(&self) -> bool {
+        matches!(self, Self::Dev)
+    }
+
     pub fn number(&self) -> String {
         match self {
             RubyVersion::Dev => "dev".to_string(),
