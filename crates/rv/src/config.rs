@@ -60,6 +60,17 @@ pub enum RequestedRuby {
     Global,
 }
 
+pub struct ConfigSearch {
+    // where global config search starts
+    current_dir: Utf8PathBuf,
+
+    // where global config search ends
+    root: Utf8PathBuf,
+
+    // user config location
+    home_dir: Utf8PathBuf,
+}
+
 impl Config {
     pub(crate) fn new(global_args: &GlobalArgs, version: Option<RubyRequest>) -> Result<Self> {
         let root = Utf8PathBuf::from(env::var("RV_ROOT_DIR").unwrap_or("/".to_owned()));
@@ -81,9 +92,11 @@ impl Config {
             std::env::current_exe()?.to_str().unwrap().into()
         };
 
+        let config_search = ConfigSearch::new(root)?;
+
         let requested_ruby = match version {
             Some(request) => RequestedRuby::Explicit(request),
-            None => find_requested_ruby(root)?,
+            None => config_search.find_requested_ruby()?,
         };
 
         Ok(Self {
@@ -143,6 +156,98 @@ impl Config {
     }
 }
 
+impl ConfigSearch {
+    pub fn new(root: Utf8PathBuf) -> Result<Self> {
+        let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
+        let home_dir = rv_dirs::home_dir();
+
+        let root = current_dir
+            .ancestors()
+            .find(|d| d.parent() == Some(home_dir.as_path()))
+            .map_or(root, |v| v.into());
+
+        Ok(Self {
+            current_dir,
+            root,
+            home_dir,
+        })
+    }
+
+    pub fn find_requested_ruby(&self) -> Result<RequestedRuby> {
+        if let Some(req) = self.find_project_ruby()? {
+            debug!("Found project ruby request for {} in {:?}", req.0, req.1);
+            return Ok(RequestedRuby::Project(req));
+        }
+
+        if let Some(req) = self.find_directory_ruby(&self.home_dir)? {
+            debug!("Found user ruby request for {} in {:?}", req.0, req.1);
+            return Ok(RequestedRuby::User(req));
+        }
+
+        Ok(RequestedRuby::Global)
+    }
+
+    fn find_project_ruby(&self) -> Result<Option<(RubyRequest, Source)>> {
+        debug!("Searching for project directory in {}", self.current_dir);
+
+        for project_dir in self
+            .current_dir
+            .ancestors()
+            .take_while(|d| Some(*d) != self.root.parent())
+        {
+            if let Some(ruby) = self.find_directory_ruby(&project_dir.to_path_buf())? {
+                return Ok(Some(ruby));
+            }
+        }
+
+        debug!("Reached {} without finding a project directory", self.root);
+        Ok(None)
+    }
+
+    fn find_directory_ruby(&self, dir: &Utf8PathBuf) -> Result<Option<(RubyRequest, Source)>> {
+        let ruby_version = dir.join(".ruby-version");
+        if ruby_version.exists() {
+            let ruby_version_string = std::fs::read_to_string(&ruby_version)?;
+            return Ok(Some((
+                ruby_version_string.parse()?,
+                Source::DotRubyVersion(ruby_version),
+            )));
+        }
+
+        let tool_versions = dir.join(".tool-versions");
+        if tool_versions.exists() {
+            let tool_versions_string = std::fs::read_to_string(&tool_versions)?;
+            let tool_version = tool_versions_string
+                .lines()
+                .find_map(|l| l.trim_start().strip_prefix("ruby "));
+
+            if let Some(version) = tool_version {
+                return Ok(Some((
+                    version.parse()?,
+                    Source::DotToolVersions(tool_versions),
+                )));
+            }
+        }
+
+        let lockfile = dir.join("Gemfile.lock");
+        if lockfile.exists() {
+            let raw_contents = std::fs::read_to_string(&lockfile)?;
+            // Normalize Windows line endings (CRLF) to Unix (LF) for the parser
+            let lockfile_contents = rv_lockfile::normalize_line_endings(&raw_contents);
+            let lockfile_ruby = rv_lockfile::parse(&lockfile_contents)
+                .map_err(Error::CouldNotParseGemfileLock)?
+                .ruby_version;
+            if let Some(lockfile_ruby) = lockfile_ruby {
+                let version = RubyVersion::from_gemfile_lock(lockfile_ruby)
+                    .map_err(Error::CouldNotParseGemfileLockVersion)?;
+                return Ok(Some((version.into(), Source::GemfileLock(lockfile))));
+            }
+        }
+
+        Ok(None)
+    }
+}
+
 fn xdg_data_path() -> Utf8PathBuf {
     rv_dirs::user_state_dir("/".into()).join("rubies")
 }
@@ -175,84 +280,6 @@ pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
                 .or(always_include.then_some(path.into()))
         })
         .collect()
-}
-
-pub fn find_requested_ruby(root: Utf8PathBuf) -> Result<RequestedRuby> {
-    let home_dir = rv_dirs::home_dir();
-    let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
-
-    let search_root = current_dir
-        .ancestors()
-        .find(|d| d.parent() == Some(home_dir.as_path()))
-        .map_or(root, |v| v.into());
-
-    if let Some(req) = find_project_ruby(current_dir, search_root)? {
-        debug!("Found project ruby request for {} in {:?}", req.0, req.1);
-        return Ok(RequestedRuby::Project(req));
-    }
-
-    if let Some(req) = find_directory_ruby(&home_dir)? {
-        debug!("Found user ruby request for {} in {:?}", req.0, req.1);
-        return Ok(RequestedRuby::User(req));
-    }
-
-    Ok(RequestedRuby::Global)
-}
-
-fn find_project_ruby(dir: Utf8PathBuf, root: Utf8PathBuf) -> Result<Option<(RubyRequest, Source)>> {
-    debug!("Searching for project directory in {}", dir);
-
-    for project_dir in dir.ancestors().take_while(|d| Some(*d) != root.parent()) {
-        if let Some(ruby) = find_directory_ruby(&project_dir.to_path_buf())? {
-            return Ok(Some(ruby));
-        }
-    }
-
-    debug!("Reached {} without finding a project directory", root);
-    Ok(None)
-}
-
-fn find_directory_ruby(dir: &Utf8PathBuf) -> Result<Option<(RubyRequest, Source)>> {
-    let ruby_version = dir.join(".ruby-version");
-    if ruby_version.exists() {
-        let ruby_version_string = std::fs::read_to_string(&ruby_version)?;
-        return Ok(Some((
-            ruby_version_string.parse()?,
-            Source::DotRubyVersion(ruby_version),
-        )));
-    }
-
-    let tool_versions = dir.join(".tool-versions");
-    if tool_versions.exists() {
-        let tool_versions_string = std::fs::read_to_string(&tool_versions)?;
-        let tool_version = tool_versions_string
-            .lines()
-            .find_map(|l| l.trim_start().strip_prefix("ruby "));
-
-        if let Some(version) = tool_version {
-            return Ok(Some((
-                version.parse()?,
-                Source::DotToolVersions(tool_versions),
-            )));
-        }
-    }
-
-    let lockfile = dir.join("Gemfile.lock");
-    if lockfile.exists() {
-        let raw_contents = std::fs::read_to_string(&lockfile)?;
-        // Normalize Windows line endings (CRLF) to Unix (LF) for the parser
-        let lockfile_contents = rv_lockfile::normalize_line_endings(&raw_contents);
-        let lockfile_ruby = rv_lockfile::parse(&lockfile_contents)
-            .map_err(Error::CouldNotParseGemfileLock)?
-            .ruby_version;
-        if let Some(lockfile_ruby) = lockfile_ruby {
-            let version = RubyVersion::from_gemfile_lock(lockfile_ruby)
-                .map_err(Error::CouldNotParseGemfileLockVersion)?;
-            return Ok(Some((version.into(), Source::GemfileLock(lockfile))));
-        }
-    }
-
-    Ok(None)
 }
 
 const ENV_VARS: [&str; 8] = [
@@ -372,6 +399,6 @@ mod tests {
     #[test]
     fn test_find_requested_ruby() {
         let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
-        find_requested_ruby(root).unwrap();
+        ConfigSearch::new(root).unwrap();
     }
 }
