@@ -194,8 +194,8 @@ pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Resu
         .current_ruby()
         .expect("Ruby should be installed after the check above");
     let extensions_dir = find_exts_dir(config)?;
-    let (lockfile_dir, lockfile_path) = find_manifest_paths(&args.gemfile)?;
-    let install_path = find_install_path(config, &lockfile_dir, &ruby)?;
+    let lockfile_path = find_lockfile_path(&args.gemfile)?;
+    let install_path = find_install_path(config, &ruby)?;
     let inner_args = CiInnerArgs {
         max_concurrent_requests: args.max_concurrent_requests,
         max_concurrent_installs: args.max_concurrent_installs,
@@ -767,14 +767,14 @@ fn cache_gemspec_path(
     Ok(dep_gemspec)
 }
 
-fn find_manifest_paths(gemfile: &Option<Utf8PathBuf>) -> Result<(Utf8PathBuf, Utf8PathBuf)> {
+fn find_lockfile_path(gemfile: &Option<Utf8PathBuf>) -> Result<Utf8PathBuf> {
     let Some(gemfile) = gemfile else {
         let lockfile_path = rv_dirs::canonicalize_utf8(Utf8Path::new("Gemfile.lock"))
             .map_err(|_| Error::MissingImplicitLockfile)?;
         let lockfile_dir = lockfile_path.parent().unwrap();
 
         debug!("found Gemfile.lock file in {}", lockfile_dir);
-        return Ok((lockfile_dir.into(), lockfile_path));
+        return Ok(lockfile_path);
     };
 
     let gemfile_path = rv_dirs::canonicalize_utf8(gemfile)
@@ -793,12 +793,13 @@ fn find_manifest_paths(gemfile: &Option<Utf8PathBuf>) -> Result<(Utf8PathBuf, Ut
         })?;
 
     debug!("found lockfile_path {}", lockfile_path);
-    Ok((lockfile_dir.into(), lockfile_path))
+    Ok(lockfile_path)
 }
 
 /// Which path should `ci` install gems under?
 /// Uses Bundler's `configured_path.path`.
-fn find_install_path(config: &Config, lockfile_dir: &Utf8Path, ruby: &Ruby) -> Result<Utf8PathBuf> {
+fn find_install_path(config: &Config, ruby: &Ruby) -> Result<Utf8PathBuf> {
+    let lockfile_dir = &config.project_root;
     let bundle_path = match std::env::var("RV_PATH") {
         Ok(path) => Utf8PathBuf::from(path).join(ruby.gem_scope()),
         Err(_) => {
