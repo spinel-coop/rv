@@ -82,7 +82,10 @@ impl Config {
         };
 
         let requested_ruby = match request {
-            Some(request) => RequestedRuby::Explicit(request),
+            Some(req) => {
+                debug!("Explicit ruby request for {} received", req);
+                RequestedRuby::Explicit(req)
+            }
             None => {
                 let home_dir = rv_dirs::home_dir();
                 let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
