@@ -6,6 +6,7 @@ use anstream::println;
 use miette::Diagnostic;
 use once_cell::sync::Lazy;
 use owo_colors::OwoColorize;
+use rv_ruby::tool_consumable::ToolConsumable;
 use tracing::debug;
 
 use rv_ruby::request::RubyRequest;
@@ -58,9 +59,9 @@ pub(crate) async fn pin(
             .find_matching_remote_ruby()
             .await?;
 
-        resolved.to_tool_consumable_version()
+        resolved.to_tool_consumable_string()
     } else {
-        ruby_request.to_tool_consumable_version()
+        ruby_request.to_tool_consumable_string()
     };
 
     set_pinned_ruby(config, version)
@@ -121,9 +122,9 @@ async fn show_pinned_ruby(config: &Config, resolved: bool) -> Result<()> {
 
     let version = if resolved {
         let resolved_ruby = config.find_matching_remote_ruby().await?;
-        resolved_ruby.to_tool_consumable_version()
+        resolved_ruby.to_tool_consumable_string()
     } else {
-        ruby.to_tool_consumable_version()
+        ruby.to_tool_consumable_string()
     };
 
     println!("{0} is pinned to {1}", dir.as_ref().cyan(), version.cyan());

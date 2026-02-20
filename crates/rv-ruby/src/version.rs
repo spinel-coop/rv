@@ -186,10 +186,6 @@ impl RubyVersion {
 
         version.parse()
     }
-
-    pub fn to_tool_consumable_version(&self) -> String {
-        self.to_string().replace("ruby-", "")
-    }
 }
 
 impl std::fmt::Display for RubyVersion {
