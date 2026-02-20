@@ -35,10 +35,31 @@ jobs:
       - name: Build rv
         run: ./bin/build
 
-      - name: Test rv runs
+      - name: Run basic rv commands
         run: |
           ./target/release/rv --version
           ./target/release/rv --help
+
+      - name: Run rv ruby run (install Ruby)
+        run: ./bin/integration-tests/unix/ruby-run.sh ./target/release/rv
+
+      - name: Run rv ruby list
+        run: ./bin/integration-tests/unix/ruby-list.sh ./target/release/rv
+
+      - name: Run rv ruby find
+        run: ./bin/integration-tests/unix/ruby-find.sh ./target/release/rv
+
+      - name: Run rv ruby pin
+        run: ./bin/integration-tests/unix/ruby-pin.sh ./target/release/rv
+
+      - name: Run rv shell env
+        run: ./bin/integration-tests/unix/shell-env.sh ./target/release/rv
+
+      - name: Run rv cache dir
+        run: ./bin/integration-tests/unix/cache-dir.sh ./target/release/rv
+
+      - name: Run rv ruby uninstall
+        run: ./bin/integration-tests/unix/ruby-uninstall.sh ./target/release/rv
 
   arch-linux:
     name: Run on Arch Linux
@@ -51,6 +72,42 @@ jobs:
 
       - name: Install dependencies
         run: pacman -Syu --noconfirm rust
+
+      - name: Build rv
+        run: ./bin/build
+
+      - name: Run basic rv commands
+        run: |
+          ./target/release/rv --version
+          ./target/release/rv --help
+
+      - name: Run rv ruby run (install Ruby)
+        run: ./bin/integration-tests/unix/ruby-run.sh ./target/release/rv
+
+      - name: Run rv ruby list
+        run: ./bin/integration-tests/unix/ruby-list.sh ./target/release/rv
+
+      - name: Run rv ruby find
+        run: ./bin/integration-tests/unix/ruby-find.sh ./target/release/rv
+
+      - name: Run rv ruby pin
+        run: ./bin/integration-tests/unix/ruby-pin.sh ./target/release/rv
+
+      - name: Run rv shell env
+        run: ./bin/integration-tests/unix/shell-env.sh ./target/release/rv
+
+      - name: Run rv cache dir
+        run: ./bin/integration-tests/unix/cache-dir.sh ./target/release/rv
+
+      - name: Run rv ruby uninstall
+        run: ./bin/integration-tests/unix/ruby-uninstall.sh ./target/release/rv
+
+  ubuntu:
+    name: Run on Ubuntu Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
 
       - name: Build rv
         run: ./bin/build
