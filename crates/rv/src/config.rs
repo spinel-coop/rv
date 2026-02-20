@@ -1,11 +1,12 @@
 use std::{
     env::{self, JoinPathsError, join_paths, split_paths},
+    iter::zip,
     path::PathBuf,
     str::FromStr,
 };
 
 use camino::{FromPathBufError, Utf8Path, Utf8PathBuf};
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use tracing::{debug, instrument};
 
 use rv_ruby::{
@@ -317,26 +318,18 @@ const ENV_VARS: [&str; 8] = [
     "MANPATH",
 ];
 
-#[allow(clippy::type_complexity)]
-pub fn env_for(ruby: Option<&Ruby>) -> Result<(Vec<&'static str>, Vec<(&'static str, String)>)> {
+pub fn env_for(ruby: Option<&Ruby>) -> Result<IndexMap<&'static str, Option<String>>> {
     env_with_path_for(ruby, Default::default())
 }
 
-#[allow(clippy::type_complexity)]
 pub fn env_with_path_for(
     ruby: Option<&Ruby>,
     extra_paths: Vec<PathBuf>,
-) -> Result<(Vec<&'static str>, Vec<(&'static str, String)>)> {
-    let mut unset: Vec<_> = ENV_VARS.into();
-    let mut set: Vec<(&'static str, String)> = vec![];
+) -> Result<IndexMap<&'static str, Option<String>>> {
+    let mut set: IndexMap<&'static str, Option<String>> = zip(ENV_VARS, vec![None; 8]).collect();
 
     let mut insert = |var: &'static str, val: String| {
-        // PATH is never in the list to unset
-        if let Some(i) = unset.iter().position(|i| *i == var) {
-            unset.remove(i);
-        }
-
-        set.push((var, val));
+        set.insert(var, Some(val));
     };
 
     let pathstr = env::var("PATH").unwrap_or_else(|_| String::new());
@@ -390,7 +383,7 @@ pub fn env_with_path_for(
         insert("PATH", path.into());
     }
 
-    Ok((unset, set))
+    Ok(set)
 }
 
 #[cfg(test)]
