@@ -15,7 +15,16 @@ type Result<T> = miette::Result<T, Error>;
 
 pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
     let ruby = config.current_ruby();
-    let (unset, set) = config::env_for(ruby.as_ref())?;
+    let mut unset: Vec<&'static str> = vec![];
+    let mut set: Vec<(&'static str, String)> = vec![];
+    let env = config.env_for(ruby.as_ref())?;
+
+    for (k, v) in env {
+        match v {
+            None => unset.push(k),
+            Some(v) => set.push((k, v)),
+        }
+    }
 
     match shell {
         Shell::Zsh | Shell::Bash => {
@@ -139,7 +148,7 @@ mod tests {
             current_exe: root.join("bin").join("rv"),
             requested_ruby: RequestedRuby::Explicit("3.5.0".parse().unwrap()),
             cache: rv_cache::Cache::temp().unwrap(),
-            root,
+            project_root: root,
         };
 
         Ok(config)

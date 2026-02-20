@@ -2,6 +2,8 @@ use crate::common::{RvOutput, RvTest};
 
 impl RvTest {
     pub fn ci(&mut self, args: &[&str]) -> RvOutput {
+        self.env
+            .insert("BUNDLE_PATH".into(), self.current_dir().join("app").into());
         self.rv(&[&["ci"], args].concat())
     }
 }
@@ -43,14 +45,14 @@ fn test_clean_install_input_validation() {
     let output = test.ci(&[]);
     output.assert_success();
 
-    let gemfile_path = test.cwd.join("Gemfile.empty");
+    let gemfile_path = test.current_dir().join("Gemfile.empty");
     let gemfile = fs_err::read_to_string("../rv-lockfile/tests/inputs/Gemfile.empty").unwrap();
     let _ = fs_err::write(
         gemfile_path,
         gemfile.replace("https://rubygems.org", &test.server_url()),
     );
 
-    let lockfile_path = test.cwd.join("Gemfile.empty.lock");
+    let lockfile_path = test.current_dir().join("Gemfile.empty.lock");
     let lockfile =
         fs_err::read_to_string("../rv-lockfile/tests/inputs/Gemfile.empty.lock").unwrap();
     let _ = fs_err::write(
@@ -143,7 +145,7 @@ fn test_clean_install_native_macos_aarch64() {
     mock.assert();
 
     // Store a snapshot of all the files `rv ci` created.
-    let files_sorted = find_all_files_in_dir(test.cwd.as_ref());
+    let files_sorted = find_all_files_in_dir(test.current_dir().as_ref());
     insta::assert_snapshot!(files_sorted);
 }
 
@@ -166,7 +168,7 @@ fn test_clean_install_native_linux_x86_64() {
     mock.assert();
 
     // Store a snapshot of all the files `rv ci` created.
-    let files_sorted = find_all_files_in_dir(test.cwd.as_ref());
+    let files_sorted = find_all_files_in_dir(test.current_dir().as_ref());
     insta::assert_snapshot!(files_sorted);
 }
 

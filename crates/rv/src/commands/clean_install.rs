@@ -19,7 +19,7 @@ use rv_lockfile::datatypes::GemVersion;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_lockfile::datatypes::GitSection;
 use rv_lockfile::datatypes::Spec;
-use rv_ruby::{Ruby, request::RubyRequest};
+use rv_ruby::request::RubyRequest;
 use sha2::Digest;
 use tracing::debug;
 use tracing::info;
@@ -150,8 +150,8 @@ pub enum Error {
     },
     #[error(transparent)]
     UrlError(#[from] url::ParseError),
-    #[error("Could not read install directory from Bundler")]
-    BadBundlePath,
+    #[error("Could not read extensions directory from RubyGems")]
+    BadExtensionsDir,
     #[error("File {filename} did not match {algo} locked checksum in gem {gem_name}")]
     LockfileChecksumFail {
         filename: String,
@@ -192,8 +192,8 @@ pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Resu
         .current_ruby()
         .expect("Ruby should be installed after the check above");
     let extensions_dir = find_exts_dir(config)?;
-    let (lockfile_dir, lockfile_path) = find_manifest_paths(&args.gemfile)?;
-    let install_path = find_install_path(config, &lockfile_dir, &ruby)?;
+    let lockfile_path = find_lockfile_path(&args.gemfile)?;
+    let install_path = config.gem_home(&ruby);
     let inner_args = CiInnerArgs {
         max_concurrent_requests: args.max_concurrent_requests,
         max_concurrent_installs: args.max_concurrent_installs,
@@ -765,14 +765,14 @@ fn cache_gemspec_path(
     Ok(dep_gemspec)
 }
 
-fn find_manifest_paths(gemfile: &Option<Utf8PathBuf>) -> Result<(Utf8PathBuf, Utf8PathBuf)> {
+fn find_lockfile_path(gemfile: &Option<Utf8PathBuf>) -> Result<Utf8PathBuf> {
     let Some(gemfile) = gemfile else {
         let lockfile_path = rv_dirs::canonicalize_utf8(Utf8Path::new("Gemfile.lock"))
             .map_err(|_| Error::MissingImplicitLockfile)?;
         let lockfile_dir = lockfile_path.parent().unwrap();
 
         debug!("found Gemfile.lock file in {}", lockfile_dir);
-        return Ok((lockfile_dir.into(), lockfile_path));
+        return Ok(lockfile_path);
     };
 
     let gemfile_path = rv_dirs::canonicalize_utf8(gemfile)
@@ -791,45 +791,7 @@ fn find_manifest_paths(gemfile: &Option<Utf8PathBuf>) -> Result<(Utf8PathBuf, Ut
         })?;
 
     debug!("found lockfile_path {}", lockfile_path);
-    Ok((lockfile_dir.into(), lockfile_path))
-}
-
-/// Which path should `ci` install gems under?
-/// Uses Bundler's `configured_path.path`.
-fn find_install_path(config: &Config, lockfile_dir: &Utf8Path, ruby: &Ruby) -> Result<Utf8PathBuf> {
-    let bundle_path = match std::env::var("RV_PATH") {
-        Ok(path) => Utf8PathBuf::from(path).join(ruby.gem_scope()),
-        Err(_) => {
-            let args = [
-                "-rbundler",
-                "-e",
-                "puts Bundler.configured_bundle_path.path",
-            ];
-
-            let bundle_path = match crate::commands::ruby::run::run_no_install(
-                Invocation::ruby(vec![]),
-                config,
-                args.as_slice(),
-                CaptureOutput::Both,
-                Some(lockfile_dir),
-            ) {
-                Ok(output) => output.stdout,
-                Err(_) => Vec::from(".rv"),
-            };
-
-            if bundle_path.is_empty() {
-                return Err(Error::BadBundlePath);
-            }
-
-            String::from_utf8(bundle_path)
-                .map(|s| Utf8PathBuf::from(s.trim()))
-                .map_err(|_| Error::BadBundlePath)?
-        }
-    };
-
-    let install_path = lockfile_dir.join(bundle_path);
-    debug!("found install path {:?}", install_path);
-    Ok(install_path)
+    Ok(lockfile_path)
 }
 
 pub fn create_rayon_pool(
@@ -1380,7 +1342,7 @@ fn find_exts_dir(config: &Config) -> Result<Utf8PathBuf> {
 
     let extensions_dir = String::from_utf8(exts_dir)
         .map(|s| Utf8PathBuf::from(s.trim()))
-        .map_err(|_| Error::BadBundlePath)?;
+        .map_err(|_| Error::BadExtensionsDir)?;
     debug!("Found extensions dir: {extensions_dir}");
     Ok(extensions_dir)
 }
