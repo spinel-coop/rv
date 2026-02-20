@@ -19,7 +19,7 @@ use rv_lockfile::datatypes::GemVersion;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_lockfile::datatypes::GitSection;
 use rv_lockfile::datatypes::Spec;
-use rv_ruby::{Ruby, request::RubyRequest};
+use rv_ruby::request::RubyRequest;
 use sha2::Digest;
 use tracing::debug;
 use tracing::info;
@@ -150,8 +150,6 @@ pub enum Error {
     },
     #[error(transparent)]
     UrlError(#[from] url::ParseError),
-    #[error("Could not read install directory from Bundler")]
-    BadBundlePath,
     #[error("Could not read extensions directory from RubyGems")]
     BadExtensionsDir,
     #[error("File {filename} did not match {algo} locked checksum in gem {gem_name}")]
@@ -195,7 +193,7 @@ pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Resu
         .expect("Ruby should be installed after the check above");
     let extensions_dir = find_exts_dir(config)?;
     let lockfile_path = find_lockfile_path(&args.gemfile)?;
-    let install_path = find_install_path(config, &ruby)?;
+    let install_path = config.gem_home(&ruby);
     let inner_args = CiInnerArgs {
         max_concurrent_requests: args.max_concurrent_requests,
         max_concurrent_installs: args.max_concurrent_installs,
@@ -794,45 +792,6 @@ fn find_lockfile_path(gemfile: &Option<Utf8PathBuf>) -> Result<Utf8PathBuf> {
 
     debug!("found lockfile_path {}", lockfile_path);
     Ok(lockfile_path)
-}
-
-/// Which path should `ci` install gems under?
-/// Uses Bundler's `configured_path.path`.
-fn find_install_path(config: &Config, ruby: &Ruby) -> Result<Utf8PathBuf> {
-    let lockfile_dir = &config.project_root;
-    let bundle_path = match std::env::var("RV_PATH") {
-        Ok(path) => Utf8PathBuf::from(path).join(ruby.gem_scope()),
-        Err(_) => {
-            let args = [
-                "-rbundler",
-                "-e",
-                "puts Bundler.configured_bundle_path.path",
-            ];
-
-            let bundle_path = match crate::commands::ruby::run::run_no_install(
-                Invocation::ruby(vec![]),
-                config,
-                args.as_slice(),
-                CaptureOutput::Both,
-                Some(lockfile_dir),
-            ) {
-                Ok(output) => output.stdout,
-                Err(_) => Vec::from(".rv"),
-            };
-
-            if bundle_path.is_empty() {
-                return Err(Error::BadBundlePath);
-            }
-
-            String::from_utf8(bundle_path)
-                .map(|s| Utf8PathBuf::from(s.trim()))
-                .map_err(|_| Error::BadBundlePath)?
-        }
-    };
-
-    let install_path = lockfile_dir.join(bundle_path);
-    debug!("found install path {:?}", install_path);
-    Ok(install_path)
 }
 
 pub fn create_rayon_pool(

@@ -3,7 +3,7 @@ use crate::common::{RvOutput, RvTest};
 impl RvTest {
     pub fn ci(&mut self, args: &[&str]) -> RvOutput {
         self.env
-            .insert("RV_PATH".into(), self.current_dir().join("app").into());
+            .insert("BUNDLE_PATH".into(), self.current_dir().join("app").into());
         self.rv(&[&["ci"], args].concat())
     }
 }

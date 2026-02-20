@@ -7,6 +7,7 @@ use std::{
 
 use camino::{FromPathBufError, Utf8Path, Utf8PathBuf};
 use indexmap::{IndexMap, IndexSet};
+use settings::Settings;
 use tracing::{debug, instrument};
 
 use rv_ruby::{
@@ -20,6 +21,7 @@ use crate::GlobalArgs;
 pub mod github;
 mod ruby_cache;
 mod ruby_fetcher;
+mod settings;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -156,6 +158,17 @@ impl Config {
             RequestedRuby::User((request, _)) => request.clone(),
             RequestedRuby::Global => RubyRequest::default(),
         }
+    }
+
+    pub fn gem_home(&self, ruby: &Ruby) -> Utf8PathBuf {
+        let settings = Settings {
+            home_dir: rv_dirs::home_dir(),
+            project_dir: self.project_root.clone(),
+            gem_home: ruby.gem_home(),
+            gem_scope: ruby.gem_scope(),
+        };
+
+        settings.path()
     }
 }
 
