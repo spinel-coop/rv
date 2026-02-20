@@ -61,7 +61,7 @@ pub enum RequestedRuby {
 }
 
 impl Config {
-    pub(crate) fn new(global_args: &GlobalArgs, version: Option<RubyRequest>) -> Result<Self> {
+    pub(crate) fn new(global_args: &GlobalArgs, request: Option<RubyRequest>) -> Result<Self> {
         let root = Utf8PathBuf::from(env::var("RV_ROOT_DIR").unwrap_or("/".to_owned()));
 
         let ruby_dirs = if global_args.ruby_dir.is_empty() {
@@ -81,7 +81,7 @@ impl Config {
             std::env::current_exe()?.to_str().unwrap().into()
         };
 
-        let requested_ruby = match version {
+        let requested_ruby = match request {
             Some(request) => RequestedRuby::Explicit(request),
             None => find_requested_ruby(root)?,
         };
