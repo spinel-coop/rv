@@ -193,8 +193,6 @@ impl ConfigSearch {
     }
 
     fn find_project_ruby(&self) -> Result<Option<(RubyRequest, Source)>> {
-        debug!("Searching for project directory in {}", self.current_dir);
-
         for project_dir in self
             .current_dir
             .ancestors()
@@ -205,7 +203,11 @@ impl ConfigSearch {
             }
         }
 
-        debug!("Reached {} without finding a project directory", self.root);
+        debug!(
+            "Reached {} without finding a ruby request in a .ruby-version, .tool-versions or Gemfile.lock file",
+            self.root
+        );
+
         Ok(None)
     }
 
