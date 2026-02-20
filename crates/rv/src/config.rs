@@ -90,15 +90,16 @@ impl Config {
                 let home_dir = rv_dirs::home_dir();
                 let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
 
-                let search_root = match current_dir
+                let project_root = current_dir
                     .ancestors()
-                    .find(|d| d.parent() == Some(home_dir.as_path()))
-                {
-                    Some(path) => path.into(),
-                    None => root,
-                };
+                    .take_while(|d| Some(*d) != root.parent())
+                    .find(|d| d.join("Gemfile.lock").is_file())
+                    .map(|p| p.to_path_buf())
+                    .unwrap_or(current_dir.clone());
 
-                if let Some(req) = find_project_ruby(current_dir, search_root)? {
+                debug!("Found project directory in {}", project_root);
+
+                if let Some(req) = find_directory_ruby(&project_root)? {
                     debug!("Found project ruby request for {} in {:?}", req.0, req.1);
                     RequestedRuby::Project(req)
                 } else if let Some(req) = find_directory_ruby(&home_dir)? {
@@ -199,19 +200,6 @@ pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
                 .or(always_include.then_some(path.into()))
         })
         .collect()
-}
-
-fn find_project_ruby(dir: Utf8PathBuf, root: Utf8PathBuf) -> Result<Option<(RubyRequest, Source)>> {
-    debug!("Searching for project directory in {}", dir);
-
-    for project_dir in dir.ancestors().take_while(|d| Some(*d) != root.parent()) {
-        if let Some(ruby) = find_directory_ruby(&project_dir.to_path_buf())? {
-            return Ok(Some(ruby));
-        }
-    }
-
-    debug!("Reached {} without finding a project directory", root);
-    Ok(None)
 }
 
 fn find_directory_ruby(dir: &Utf8PathBuf) -> Result<Option<(RubyRequest, Source)>> {
