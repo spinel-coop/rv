@@ -47,7 +47,6 @@ type Result<T> = miette::Result<T, Error>;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub ruby_dirs: IndexSet<Utf8PathBuf>,
-    pub root: Utf8PathBuf,
     pub cache: rv_cache::Cache,
     pub current_exe: Utf8PathBuf,
     pub requested_ruby: RequestedRuby,
@@ -62,12 +61,8 @@ pub enum RequestedRuby {
 }
 
 impl Config {
-    pub(crate) fn new(global_args: &GlobalArgs, version: Option<RubyRequest>) -> Result<Self> {
-        let root = global_args
-            .root_dir
-            .as_ref()
-            .unwrap_or(&"/".into())
-            .to_owned();
+    pub(crate) fn new(global_args: &GlobalArgs, request: Option<RubyRequest>) -> Result<Self> {
+        let root = Utf8PathBuf::from(env::var("RV_ROOT_DIR").unwrap_or("/".to_owned()));
 
         let ruby_dirs = if global_args.ruby_dir.is_empty() {
             default_ruby_dirs(&root)
@@ -86,14 +81,38 @@ impl Config {
             std::env::current_exe()?.to_str().unwrap().into()
         };
 
-        let requested_ruby = match version {
-            Some(request) => RequestedRuby::Explicit(request),
-            None => find_requested_ruby(root.clone())?,
+        let requested_ruby = match request {
+            Some(req) => {
+                debug!("Explicit ruby request for {} received", req);
+                RequestedRuby::Explicit(req)
+            }
+            None => {
+                let home_dir = rv_dirs::home_dir();
+                let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
+
+                let project_root = current_dir
+                    .ancestors()
+                    .take_while(|d| Some(*d) != root.parent())
+                    .find(|d| d.join("Gemfile.lock").is_file())
+                    .map(|p| p.to_path_buf())
+                    .unwrap_or(current_dir.clone());
+
+                debug!("Found project directory in {}", project_root);
+
+                if let Some(req) = find_directory_ruby(&project_root)? {
+                    debug!("Found project ruby request for {} in {:?}", req.0, req.1);
+                    RequestedRuby::Project(req)
+                } else if let Some(req) = find_directory_ruby(&home_dir)? {
+                    debug!("Found user ruby request for {} in {:?}", req.0, req.1);
+                    RequestedRuby::User(req)
+                } else {
+                    RequestedRuby::Global
+                }
+            }
         };
 
         Ok(Self {
             ruby_dirs,
-            root,
             cache,
             current_exe,
             requested_ruby,
@@ -181,57 +200,6 @@ pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
                 .or(always_include.then_some(path.into()))
         })
         .collect()
-}
-
-pub fn find_requested_ruby(root: Utf8PathBuf) -> Result<RequestedRuby> {
-    let home_dir = rv_dirs::home_dir();
-    let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
-
-    let search_root = match current_dir
-        .ancestors()
-        .find(|d| d.parent() == Some(home_dir.as_path()))
-    {
-        Some(path) => path.into(),
-        None => root,
-    };
-
-    if let Some(req) = find_project_ruby(current_dir, search_root)? {
-        debug!("Found project ruby request for {} in {:?}", req.0, req.1);
-        return Ok(RequestedRuby::Project(req));
-    }
-
-    if let Some(req) = find_directory_ruby(&home_dir)? {
-        debug!("Found user ruby request for {} in {:?}", req.0, req.1);
-        return Ok(RequestedRuby::User(req));
-    }
-
-    Ok(RequestedRuby::Global)
-}
-
-fn find_project_ruby(dir: Utf8PathBuf, root: Utf8PathBuf) -> Result<Option<(RubyRequest, Source)>> {
-    debug!("Searching for project directory in {}", dir);
-    let mut project_dir = dir;
-
-    loop {
-        if let Some(ruby) = find_directory_ruby(&project_dir)? {
-            return Ok(Some(ruby));
-        };
-
-        if project_dir == root {
-            debug!("Reached {} without finding a project directory", root);
-            return Ok(None);
-        }
-
-        if let Some(parent_dir) = project_dir.parent() {
-            project_dir = parent_dir.to_owned();
-        } else {
-            debug!(
-                "Ran out of parents of {} without finding a project directory",
-                project_dir
-            );
-            return Ok(None);
-        }
-    }
 }
 
 fn find_directory_ruby(dir: &Utf8PathBuf) -> Result<Option<(RubyRequest, Source)>> {
@@ -382,7 +350,6 @@ mod tests {
             current_exe: root.join("bin").join("rv"),
             requested_ruby: RequestedRuby::Explicit("3.5.0".parse().unwrap()),
             cache: rv_cache::Cache::temp().unwrap(),
-            root,
         };
     }
 
@@ -390,11 +357,5 @@ mod tests {
     fn test_default_ruby_dirs() {
         let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
         default_ruby_dirs(&root);
-    }
-
-    #[test]
-    fn test_find_requested_ruby() {
-        let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
-        find_requested_ruby(root).unwrap();
     }
 }
