@@ -83,7 +83,28 @@ impl Config {
 
         let requested_ruby = match request {
             Some(request) => RequestedRuby::Explicit(request),
-            None => find_requested_ruby(root)?,
+            None => {
+                let home_dir = rv_dirs::home_dir();
+                let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
+
+                let search_root = match current_dir
+                    .ancestors()
+                    .find(|d| d.parent() == Some(home_dir.as_path()))
+                {
+                    Some(path) => path.into(),
+                    None => root,
+                };
+
+                if let Some(req) = find_project_ruby(current_dir, search_root)? {
+                    debug!("Found project ruby request for {} in {:?}", req.0, req.1);
+                    RequestedRuby::Project(req)
+                } else if let Some(req) = find_directory_ruby(&home_dir)? {
+                    debug!("Found user ruby request for {} in {:?}", req.0, req.1);
+                    RequestedRuby::User(req)
+                } else {
+                    RequestedRuby::Global
+                }
+            }
         };
 
         Ok(Self {
@@ -175,31 +196,6 @@ pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
                 .or(always_include.then_some(path.into()))
         })
         .collect()
-}
-
-pub fn find_requested_ruby(root: Utf8PathBuf) -> Result<RequestedRuby> {
-    let home_dir = rv_dirs::home_dir();
-    let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
-
-    let search_root = match current_dir
-        .ancestors()
-        .find(|d| d.parent() == Some(home_dir.as_path()))
-    {
-        Some(path) => path.into(),
-        None => root,
-    };
-
-    if let Some(req) = find_project_ruby(current_dir, search_root)? {
-        debug!("Found project ruby request for {} in {:?}", req.0, req.1);
-        return Ok(RequestedRuby::Project(req));
-    }
-
-    if let Some(req) = find_directory_ruby(&home_dir)? {
-        debug!("Found user ruby request for {} in {:?}", req.0, req.1);
-        return Ok(RequestedRuby::User(req));
-    }
-
-    Ok(RequestedRuby::Global)
 }
 
 fn find_project_ruby(dir: Utf8PathBuf, root: Utf8PathBuf) -> Result<Option<(RubyRequest, Source)>> {
@@ -370,11 +366,5 @@ mod tests {
     fn test_default_ruby_dirs() {
         let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
         default_ruby_dirs(&root);
-    }
-
-    #[test]
-    fn test_find_requested_ruby() {
-        let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
-        find_requested_ruby(root).unwrap();
     }
 }
