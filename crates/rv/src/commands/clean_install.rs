@@ -152,6 +152,8 @@ pub enum Error {
     UrlError(#[from] url::ParseError),
     #[error("Could not read install directory from Bundler")]
     BadBundlePath,
+    #[error("Could not read extensions directory from RubyGems")]
+    BadExtensionsDir,
     #[error("File {filename} did not match {algo} locked checksum in gem {gem_name}")]
     LockfileChecksumFail {
         filename: String,
@@ -1380,7 +1382,7 @@ fn find_exts_dir(config: &Config) -> Result<Utf8PathBuf> {
 
     let extensions_dir = String::from_utf8(exts_dir)
         .map(|s| Utf8PathBuf::from(s.trim()))
-        .map_err(|_| Error::BadBundlePath)?;
+        .map_err(|_| Error::BadExtensionsDir)?;
     debug!("Found extensions dir: {extensions_dir}");
     Ok(extensions_dir)
 }
