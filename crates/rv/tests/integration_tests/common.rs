@@ -53,8 +53,6 @@ impl RvTest {
         test.env.insert("APPDATA".into(), test.data_dir().into());
         test.env
             .insert("USERPROFILE".into(), test.temp_home().into());
-        test.env
-            .insert("RV_PATH".into(), test.current_dir().join("app").into());
 
         // Disable network requests by default
         test.env.insert(
