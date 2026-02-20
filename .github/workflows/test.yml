@@ -70,7 +70,7 @@ jobs:
 
       - name: Build tests
         shell: bash
-        run: cargo nextest run --no-run
+        run: ./bin/test --no-run
 
       - name: Run tests
         shell: bash
