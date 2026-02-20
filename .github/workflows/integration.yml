@@ -21,7 +21,6 @@ env:
 jobs:
   alpine-linux:
     name: Run on Alpine Linux
-    needs: lint
     runs-on: ubuntu-latest
     container:
       image: rust:alpine
@@ -43,7 +42,6 @@ jobs:
 
   arch-linux:
     name: Run on Arch Linux
-    needs: lint
     runs-on: ubuntu-latest
     container:
       image: archlinux:base-devel
@@ -85,7 +83,6 @@ jobs:
 
   macos:
     name: Run on macOS
-    needs: lint
     runs-on: macos-latest
     steps:
       - name: Check out repo
@@ -128,7 +125,6 @@ jobs:
 
   wsl-windows:
     name: Run on WSL (Windows)
-    needs: lint
     runs-on: windows-latest
     steps:
       - name: Check out repo
@@ -177,7 +173,6 @@ jobs:
 
   native-windows:
     name: Run on Native Windows
-    needs: lint
     runs-on: windows-latest
     steps:
       - name: Check out repo

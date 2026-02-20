@@ -45,11 +45,11 @@ jobs:
       fail-fast: false
       matrix:
         runs-on:
-          - ubuntu-latest # x86
-          - macos-latest # arm
-          - ubuntu-24.04-arm # arm
-          - macos-15-intel # x86
-          - windows-latest # x86
+          - macos-15-intel # mac-x86
+          - macos-latest # mac-arm
+          - ubuntu-latest # linux-x86
+          - ubuntu-24.04-arm # linux-arm
+          - windows-latest # win-x86
 
     steps:
       - name: Check out repo
