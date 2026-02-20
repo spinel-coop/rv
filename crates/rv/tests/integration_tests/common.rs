@@ -1,4 +1,4 @@
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use camino_tempfile_ext::camino_tempfile::Utf8TempDir;
 use mockito::Mock;
 use rv_platform::HostPlatform;
@@ -24,10 +24,6 @@ pub struct RvTest {
 impl RvTest {
     pub fn new() -> Self {
         let temp_dir = Utf8TempDir::new().expect("Failed to create temporary directory");
-        // Use dunce to canonicalize the cwd, avoiding Windows 8.3 short paths
-        // (e.g. RUNNER~1) that would mismatch with temp_root() in normalization.
-        let cwd: Utf8PathBuf =
-            Utf8PathBuf::try_from(dunce::canonicalize(temp_dir.path()).unwrap()).unwrap();
 
         // Platform is fixed during our integration tests to macOS, so some code paths are not
         // exercised on Windows, like the different ruby download URLs. Eventually we'll probably
@@ -35,8 +31,8 @@ impl RvTest {
         let platform = HostPlatform::MacosAarch64;
 
         let mut test = Self {
+            cwd: temp_dir.path().into(),
             temp_dir,
-            cwd,
             env: HashMap::new(),
             server: mockito::Server::new(),
             platform,
@@ -58,7 +54,7 @@ impl RvTest {
         test.env
             .insert("USERPROFILE".into(), test.temp_home().into());
         test.env
-            .insert("RV_PATH".into(), test.cwd.join("app").into());
+            .insert("RV_PATH".into(), test.current_dir().join("app").into());
 
         // Disable network requests by default
         test.env.insert(
@@ -97,9 +93,17 @@ impl RvTest {
     }
 
     pub fn temp_root(&self) -> Utf8PathBuf {
-        // Use dunce::canonicalize to avoid Windows 8.3 short paths (e.g. RUNNER~1)
-        // and \\?\ UNC prefix that std::fs::canonicalize produces on Windows.
-        Utf8PathBuf::try_from(dunce::canonicalize(self.temp_dir.path()).unwrap()).unwrap()
+        Self::canonicalize(self.temp_dir.path())
+    }
+
+    pub fn current_dir(&self) -> Utf8PathBuf {
+        Self::canonicalize(&self.cwd)
+    }
+
+    // Use dunce::canonicalize to avoid Windows 8.3 short paths (e.g. RUNNER~1)
+    // and \\?\ UNC prefix that std::fs::canonicalize produces on Windows.
+    pub fn canonicalize(dir: &Utf8Path) -> Utf8PathBuf {
+        Utf8PathBuf::try_from(dunce::canonicalize(dir).unwrap()).unwrap()
     }
 
     pub fn enable_cache(&mut self) -> Utf8PathBuf {
@@ -187,7 +191,7 @@ impl RvTest {
 
     pub fn command<S: AsRef<std::ffi::OsStr>>(&self, program: S) -> Command {
         let mut cmd = Command::new(program);
-        cmd.current_dir(&self.cwd);
+        cmd.current_dir(self.current_dir());
         cmd.env_clear();
 
         // On Windows, preserve essential system env vars. Without SystemRoot,
@@ -530,20 +534,20 @@ impl RvTest {
 
     pub fn use_gemfile(&self, path: &str) {
         let gemfile = fs_err::read_to_string(path).unwrap();
-        let _ = fs_err::write(self.cwd.join("Gemfile"), &gemfile);
+        let _ = fs_err::write(self.current_dir().join("Gemfile"), &gemfile);
     }
 
     pub fn use_lockfile(&self, path: &str) {
         let lockfile = fs_err::read_to_string(path).unwrap();
-        let _ = fs_err::write(self.cwd.join("Gemfile.lock"), &lockfile);
+        let _ = fs_err::write(self.current_dir().join("Gemfile.lock"), &lockfile);
     }
 
     pub fn replace_source(&self, from: &str, to: &str) {
-        let gemfile_path = self.cwd.join("Gemfile");
+        let gemfile_path = self.current_dir().join("Gemfile");
         let gemfile = fs_err::read_to_string(&gemfile_path).unwrap();
         let _ = fs_err::write(gemfile_path, gemfile.replace(from, to));
 
-        let lockfile_path = self.cwd.join("Gemfile.lock");
+        let lockfile_path = self.current_dir().join("Gemfile.lock");
         let lockfile = fs_err::read_to_string(&lockfile_path).unwrap();
         let _ = fs_err::write(lockfile_path, lockfile.replace(from, to));
     }
