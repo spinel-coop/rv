@@ -272,3 +272,25 @@ jobs:
 
       - name: Run rvw ci
         run: .\bin\integration-tests\windows\ci.ps1 .\target\release\rvw
+
+  manage-external-rubies:
+    name: External Ruby management
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ruby: [jruby-10.0.2.0, truffleruby-33.0.0]
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Install external Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+
+      - name: Build rv
+        run: bin/build
+
+      - name: Run external Ruby
+        run: bin/rv --ruby-dir "$(dirname $(dirname $(dirname $(which ruby))))" ruby run ${{ matrix.ruby }} -- --version

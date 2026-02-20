@@ -3,12 +3,8 @@ name: Test
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "README.md"
   pull_request:
     branches: [main]
-    paths-ignore:
-      - "README.md"
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
@@ -19,6 +15,24 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  cargo-deny:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        checks:
+          - advisories
+          - bans sources
+    # Prevent sudden announcement of a new advisory from failing ci:
+    continue-on-error: ${{ matrix.checks == 'advisories' }}
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Install cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check ${{ matrix.checks }}
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
