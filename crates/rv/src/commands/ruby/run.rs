@@ -8,10 +8,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use rv_ruby::request::RubyRequest;
 use tracing::debug;
 
-use crate::{
-    GlobalArgs,
-    config::{self, Config},
-};
+use crate::{GlobalArgs, config::Config};
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -115,12 +112,12 @@ pub(crate) fn run_no_install<A: AsRef<std::ffi::OsStr>>(
 ) -> Result<Output> {
     let ruby = config.current_ruby().ok_or(Error::NoMatchingRuby)?;
     let (env, executable_path) = match invocation.program {
-        Program::Ruby => (config::env_for(Some(&ruby))?, ruby.executable_path()),
+        Program::Ruby => (config.env_for(Some(&ruby))?, ruby.executable_path()),
         Program::Tool {
             executable_path,
             extra_paths,
         } => (
-            config::env_with_path_for(Some(&ruby), extra_paths)?,
+            config.env_with_path_for(Some(&ruby), extra_paths)?,
             executable_path,
         ),
     };

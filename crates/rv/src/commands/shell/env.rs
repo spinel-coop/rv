@@ -17,7 +17,7 @@ pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
     let ruby = config.current_ruby();
     let mut unset: Vec<&'static str> = vec![];
     let mut set: Vec<(&'static str, String)> = vec![];
-    let env = config::env_for(ruby.as_ref())?;
+    let env = config.env_for(ruby.as_ref())?;
 
     for (k, v) in env {
         match v {
