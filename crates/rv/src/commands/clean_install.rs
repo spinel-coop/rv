@@ -270,7 +270,8 @@ async fn ci_inner_work(
     progress: &WorkProgress,
     mut lockfile: GemfileDotLock<'_>,
 ) -> Result<InstallStats> {
-    let binstub_dir = args.install_path.join("bin");
+    let install_path = &args.install_path;
+    let binstub_dir = install_path.join("bin");
     tokio::fs::create_dir_all(&binstub_dir).await?;
 
     // Filter to gems matching local platform, preferring platform-specific gems
@@ -281,7 +282,7 @@ async fn ci_inner_work(
 
     if !args.force {
         let original_count = lockfile.spec_count();
-        lockfile.discard_installed_gems(&args.install_path);
+        lockfile.discard_installed_gems(install_path);
         let filtered_count = lockfile.spec_count();
 
         let already_installed = original_count.saturating_sub(filtered_count);
@@ -294,7 +295,7 @@ async fn ci_inner_work(
             };
 
             println!(
-                "{n_gems} already installed, skipping installation. Use --force if you want to install these gems again.",
+                "{n_gems} already installed in {install_path}, skipping installation. Use --force if you want to install these gems again.",
             );
         }
 
@@ -346,7 +347,7 @@ async fn ci_inner_work(
 
     let (cached_count, network_count) = stats.counts();
 
-    println!("{} gems installed:", total_gems);
+    println!("{} gems installed to {}:", total_gems, install_path);
     println!(
         " - {} fetching {} gems from gem servers ({} cached, {} downloaded), {} from git repos, {} from local paths",
         format_duration(fetch_elapsed),
