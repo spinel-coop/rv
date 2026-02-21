@@ -18,13 +18,13 @@ brew install rv
 Alternatively, use the standalone installer script:
 
 ```bash
-curl -LsSf https://github.com/spinel-coop/rv/releases/latest/download/rv-installer.sh | sh
+curl -LsSf https://rv.dev/install | sh
 ```
 
 On Windows, open PowerShell as Administrator and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://github.com/spinel-coop/rv/releases/latest/download/rv-installer.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://rv.dev/install.ps1 | iex"
 ```
 
 **Note: On Windows PowerShell, use `rvw` instead of `rv` because `rv` is an alias for the built-in `Remove-Variable`.**
