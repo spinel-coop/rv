@@ -92,7 +92,7 @@ jobs:
 
       - name: Run Windows integration tests
         if: ${{ startsWith(matrix.runs-on, 'windows') }}
-        run: ./win/test-integration
+        run: ./win/test-integration.ps1
 
       - name: Run Unix integration tests
         if: ${{ ! startsWith(matrix.runs-on, 'windows') }}

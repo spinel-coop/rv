@@ -4,15 +4,6 @@ $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
 $RV = (Resolve-Path ".\target\debug\rvw.exe").Path
 
-Write-Host "=== rv ruby list --installed-only ==="
-$list = & $RV ruby list --installed-only | Out-String
-Write-Host $list
-if ($list -notmatch [regex]::Escape($RUBY_VERSION)) {
-    throw "Expected $RUBY_VERSION in list output"
-}
-Write-Host "PASS: rv ruby list shows installed $RUBY_VERSION" -ForegroundColor Green
-
-
 Write-Host "=== rv ruby run $RUBY_VERSION (install + execute) ==="
 $output = & $RV ruby run $RUBY_VERSION -- -e "puts RUBY_DESCRIPTION" | Out-String
 Write-Host $output
@@ -21,6 +12,14 @@ if ($output -notmatch [regex]::Escape($RUBY_VERSION)) {
 }
 Write-Host "PASS: rv ruby run installed and executed Ruby $RUBY_VERSION" -ForegroundColor Green
 
+
+Write-Host "=== rv ruby list --installed-only ==="
+$list = & $RV ruby list --installed-only | Out-String
+Write-Host $list
+if ($list -notmatch [regex]::Escape($RUBY_VERSION)) {
+    throw "Expected $RUBY_VERSION in list output"
+}
+Write-Host "PASS: rv ruby list shows installed $RUBY_VERSION" -ForegroundColor Green
 
 Write-Host "=== rv ruby list --installed-only --format json ==="
 $json = & $RV ruby list --installed-only --format json | Out-String
