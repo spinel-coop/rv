@@ -91,9 +91,9 @@ jobs:
         run: ./bin/test
 
       - name: Run Windows integration tests
-        if: startsWith(matrix.runs-on, 'windows')
+        if: ${{ startsWith(matrix.runs-on, 'windows') }}
         run: ./win/test-integration
 
       - name: Run Unix integration tests
-        if: !startsWith(matrix.runs-on, 'windows')
+        if: ${{ ! startsWith(matrix.runs-on, 'windows') }}
         run: ./bin/test-integration
