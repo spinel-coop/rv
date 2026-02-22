@@ -124,6 +124,32 @@ fn test_clean_install_respects_ruby() {
     );
 }
 
+#[test]
+fn test_clean_install_ignores_ruby_requests_outside_of_the_current_project() {
+    let mut test = RvTest::new();
+
+    let project_parent = test.temp_root();
+    let project_dir = project_parent.join("project");
+    std::fs::create_dir_all(project_dir.as_path()).unwrap();
+    std::fs::write(project_parent.join(".ruby-version"), b"3.4.8").unwrap();
+    test.cwd = project_dir;
+
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.empty");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.empty.lock");
+    test.replace_source("https://rubygems.org", &test.server_url());
+
+    let ruby_mock = test.mock_ruby_download("4.0.1").create();
+    let mock = test.mock_releases(["3.4.8", "4.0.1"].to_vec());
+
+    let output = test.ci(&["--verbose"]);
+    output.assert_success();
+    ruby_mock.assert();
+    mock.assert();
+    output.assert_stdout_contains(
+        "Installed Ruby version ruby-4.0.1 to /tmp/home/.local/share/rv/rubies",
+    );
+}
+
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #[test]
 fn test_clean_install_native_macos_aarch64() {
@@ -199,7 +225,9 @@ fn test_clean_install_native_and_generic_reinstall() {
     let output = test.ci(&[]);
 
     output.assert_success();
-    output.assert_stdout_contains("1 gem already installed, skipping installation");
+    output.assert_stdout_contains(
+        "1 gem already installed in /tmp/app/ruby/4.0.0, skipping installation",
+    );
 }
 
 #[cfg(unix)]

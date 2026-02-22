@@ -1,5 +1,6 @@
 pub mod engine;
 pub mod request;
+pub mod tool_consumable;
 pub mod version;
 
 use camino::{Utf8Path, Utf8PathBuf};

@@ -276,7 +276,6 @@ mod tests {
 
         let global_args = GlobalArgs {
             ruby_dir: [ruby_dir].to_vec(),
-            root_dir: Some(root_dir),
             current_exe: Some(current_exe),
             cache_args,
         };

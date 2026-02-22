@@ -17,10 +17,7 @@ type Result<T> = miette::Result<T, Error>;
 pub(crate) fn find(global_args: &GlobalArgs, request: Option<RubyRequest>) -> Result<()> {
     let config = Config::new(global_args, request)?;
 
-    if let Some(ruby) = config.current_ruby() {
-        println!("{}", ruby.executable_path().cyan());
-        Ok(())
-    } else {
-        Err(Error::NoMatchingRuby)
-    }
+    let ruby = config.current_ruby().ok_or(Error::NoMatchingRuby)?;
+    println!("{}", ruby.executable_path().cyan());
+    Ok(())
 }

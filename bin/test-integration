@@ -1,0 +1,73 @@
+#!/bin/bash
+set -euo pipefail
+
+RUBY_VERSION="3.4.7"
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+RV="$SCRIPT_DIR/../target/debug/rv"
+
+echo "=== rv ruby run $RUBY_VERSION (install + execute) ==="
+output=$("$RV" ruby run "$RUBY_VERSION" -- -e 'puts RUBY_DESCRIPTION')
+echo "  $output"
+echo "$output" | grep -q "$RUBY_VERSION"
+echo "PASS: rv ruby run installed and executed Ruby $RUBY_VERSION"
+
+echo "=== rv ruby list --installed-only ==="
+list=$("$RV" ruby list --installed-only)
+echo "$list"
+echo "$list" | grep -q "$RUBY_VERSION"
+echo "PASS: rv ruby list shows installed $RUBY_VERSION"
+
+echo ""
+echo "=== rv ruby list --installed-only --format json ==="
+json=$("$RV" ruby list --installed-only --format json)
+echo "$json"
+echo "$json" | grep -q '"version"'
+echo "PASS: rv ruby list --format json outputs valid JSON"
+
+echo "=== rv ruby find $RUBY_VERSION ==="
+find_output=$("$RV" ruby find "$RUBY_VERSION")
+echo "  $find_output"
+echo "$find_output" | grep -q "ruby"
+echo "PASS: rv ruby find returns a path to ruby"
+
+echo "=== rv ruby pin $RUBY_VERSION ==="
+"$RV" ruby pin "$RUBY_VERSION"
+pin=$(cat .ruby-version)
+echo "  .ruby-version contains: $pin"
+echo "$pin" | grep -q "$RUBY_VERSION"
+echo "PASS: rv ruby pin writes correct .ruby-version"
+
+echo "=== rv shell env bash ==="
+env_out=$("$RV" shell env bash)
+echo "$env_out"
+echo "$env_out" | grep -q "RUBY_ROOT"
+echo "$env_out" | grep -q "export PATH="
+echo "PASS: rv shell env bash outputs RUBY_ROOT and PATH exports"
+
+echo "=== rv cache dir ==="
+cache=$("$RV" cache dir)
+echo "  $cache"
+[ -n "$cache" ]
+echo "PASS: rv cache dir prints a non-empty path"
+
+echo "=== rv ruby uninstall $RUBY_VERSION ==="
+"$RV" ruby uninstall "$RUBY_VERSION"
+echo "PASS: rv ruby uninstall exits without error"
+
+echo ""
+echo "=== Verify $RUBY_VERSION is no longer listed ==="
+list_after=$("$RV" ruby list --installed-only 2>/dev/null || true)
+if echo "$list_after" | grep -q "$RUBY_VERSION.*installed"; then
+  echo "FAIL: $RUBY_VERSION still appears as installed after uninstall"
+  exit 1
+fi
+echo "PASS: $RUBY_VERSION no longer listed after uninstall"
+
+echo ""
+echo "=== rv ruby run $RUBY_VERSION (re-install after uninstall) ==="
+"$RV" ruby run "$RUBY_VERSION" -- -e 'puts "re-installed"' | grep -q "re-installed"
+echo "PASS: re-installs and runs after uninstall"
+
+# Clean up .ruby-version left by ruby-pin.sh
+rm -f .ruby-version

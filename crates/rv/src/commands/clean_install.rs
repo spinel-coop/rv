@@ -270,7 +270,8 @@ async fn ci_inner_work(
     progress: &WorkProgress,
     mut lockfile: GemfileDotLock<'_>,
 ) -> Result<InstallStats> {
-    let binstub_dir = args.install_path.join("bin");
+    let install_path = &args.install_path;
+    let binstub_dir = install_path.join("bin");
     tokio::fs::create_dir_all(&binstub_dir).await?;
 
     // Filter to gems matching local platform, preferring platform-specific gems
@@ -281,7 +282,7 @@ async fn ci_inner_work(
 
     if !args.force {
         let original_count = lockfile.spec_count();
-        lockfile.discard_installed_gems(&args.install_path);
+        lockfile.discard_installed_gems(install_path);
         let filtered_count = lockfile.spec_count();
 
         let already_installed = original_count.saturating_sub(filtered_count);
@@ -294,7 +295,7 @@ async fn ci_inner_work(
             };
 
             println!(
-                "{n_gems} already installed, skipping installation. Use --force if you want to install these gems again.",
+                "{n_gems} already installed in {install_path}, skipping installation. Use --force if you want to install these gems again.",
             );
         }
 
@@ -346,7 +347,7 @@ async fn ci_inner_work(
 
     let (cached_count, network_count) = stats.counts();
 
-    println!("{} gems installed:", total_gems);
+    println!("{} gems installed to {}:", total_gems, install_path);
     println!(
         " - {} fetching {} gems from gem servers ({} cached, {} downloaded), {} from git repos, {} from local paths",
         format_duration(fetch_elapsed),
@@ -910,13 +911,11 @@ fn compile_gems(
     use dep_graph::DepGraph;
     use rayon::prelude::*;
 
-    let (nodes, deps) = make_dep_graph(&specs);
+    let (nodes, deps, deps_count) = make_dep_graph(&specs);
 
-    if deps.is_empty() {
+    if deps_count == 0 {
         return Ok(Default::default());
     }
-
-    let deps_count = nodes.len();
 
     // Phase 3: Compiles (80-100%)
     progress.start_phase(deps_count as u64, 20);
@@ -971,12 +970,18 @@ fn make_dep_graph(
 ) -> (
     HashMap<String, &GemSpecification>,
     Vec<dep_graph::Node<String>>,
+    usize,
 ) {
     use dep_graph::Node;
     let mut nodes: HashMap<String, &GemSpecification> = HashMap::new();
+    let mut count = 0;
 
     specs.iter().for_each(|spec| {
         let name = spec.name.clone();
+
+        if !spec.extensions.is_empty() {
+            count += 1;
+        }
 
         nodes.insert(name, spec);
     });
@@ -996,7 +1001,7 @@ fn make_dep_graph(
             node
         })
         .collect();
-    (nodes, deps)
+    (nodes, deps, count)
 }
 
 fn install_binstub(
@@ -1871,7 +1876,8 @@ mod tests {
             .into_iter()
             .map(|s| rv_gem_specification_yaml::parse(s).unwrap())
             .collect();
-        let (_nodes, deps) = make_dep_graph(&specs);
+        let (_nodes, deps, count) = make_dep_graph(&specs);
+        assert_eq!(2, count);
         let dot = depgraph_to_graphviz(deps);
         insta::assert_snapshot!(dot);
     }
@@ -1885,7 +1891,8 @@ mod tests {
             .into_iter()
             .map(|s| rv_gem_specification_yaml::parse(s).unwrap())
             .collect();
-        let (_nodes, deps) = make_dep_graph(&specs);
+        let (_nodes, deps, count) = make_dep_graph(&specs);
+        assert_eq!(1, count);
         let dot = depgraph_to_graphviz(deps);
         insta::assert_snapshot!(dot);
     }

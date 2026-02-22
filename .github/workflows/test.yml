@@ -3,12 +3,8 @@ name: Test
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "README.md"
   pull_request:
     branches: [main]
-    paths-ignore:
-      - "README.md"
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
@@ -19,6 +15,24 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  cargo-deny:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        checks:
+          - advisories
+          - bans sources
+    # Prevent sudden announcement of a new advisory from failing ci:
+    continue-on-error: ${{ matrix.checks == 'advisories' }}
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Install cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check ${{ matrix.checks }}
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -45,11 +59,11 @@ jobs:
       fail-fast: false
       matrix:
         runs-on:
-          - ubuntu-latest # x86
-          - macos-latest # arm
-          - ubuntu-24.04-arm # arm
-          - macos-15-intel # x86
-          - windows-latest # x86
+          - macos-15-intel # mac-x86
+          - macos-latest # mac-arm
+          - ubuntu-latest # linux-x86
+          - ubuntu-24.04-arm # linux-arm
+          - windows-latest # win-x86
 
     steps:
       - name: Check out repo
@@ -70,8 +84,16 @@ jobs:
 
       - name: Build tests
         shell: bash
-        run: cargo nextest run --no-run
+        run: ./bin/test --no-run
 
       - name: Run tests
         shell: bash
         run: ./bin/test
+
+      - name: Run Windows integration tests
+        if: ${{ startsWith(matrix.runs-on, 'windows') }}
+        run: ./win/test-integration.ps1
+
+      - name: Run Unix integration tests
+        if: ${{ ! startsWith(matrix.runs-on, 'windows') }}
+        run: ./bin/test-integration

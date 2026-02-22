@@ -7,8 +7,6 @@ pub enum Error {
     IoError(#[from] std::io::Error),
     #[error(transparent)]
     ConfigError(#[from] config::Error),
-    #[error("No Ruby installations found in configuration.")]
-    NoRubyFound,
     #[error("Could not serialize JSON: {0}")]
     Serde(#[from] serde_json::Error),
 }
@@ -141,7 +139,6 @@ mod tests {
             current_exe: root.join("bin").join("rv"),
             requested_ruby: RequestedRuby::Explicit("3.5.0".parse().unwrap()),
             cache: rv_cache::Cache::temp().unwrap(),
-            root,
         };
 
         Ok(config)
