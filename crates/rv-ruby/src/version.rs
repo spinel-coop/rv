@@ -3,6 +3,7 @@ use std::str::FromStr;
 use crate::{
     engine::RubyEngine,
     request::{ReleasedRubyRequest, RequestError, RubyRequest, VersionPart},
+    tool_consumable::ToolConsumable,
 };
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 
@@ -40,7 +41,7 @@ impl RubyVersion {
     pub fn to_tool_consumable_version(&self) -> String {
         match self {
             RubyVersion::Dev => "dev".to_string(),
-            RubyVersion::Released(v) => v.to_tool_consumable_version(),
+            RubyVersion::Released(v) => v.to_tool_consumable_string(),
         }
     }
 }
