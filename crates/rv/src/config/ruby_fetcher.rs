@@ -68,7 +68,7 @@ impl Config {
             }
         };
 
-        let (fetch_result, cache_file) = if host.is_windows() {
+        let ((fetch_result, url), cache_file) = if host.is_windows() {
             (
                 fetch_rubyinstaller2_rubies(&self.cache).await,
                 "rubyinstaller2.json",
@@ -84,7 +84,7 @@ impl Config {
             Ok(release) => release,
             Err(e) => {
                 warn!("Could not fetch available Ruby versions: {}", e);
-                stale_cache_fallback(&self.cache, cache_file)
+                stale_cache_fallback(&self.cache, cache_file, &url)
             }
         };
 
@@ -110,6 +110,14 @@ impl Config {
     }
 }
 
+fn cache_key_for(url: &str, cache_file: &str) -> String {
+    rv_cache::cache_digest(format!("{}-{}", url, cache_file))
+}
+
+fn url_for(env_var: &str, default_url: &str) -> String {
+    std::env::var(env_var).unwrap_or_else(|_| default_url.to_string())
+}
+
 /// Fetches a GitHub releases endpoint with ETag/TTL caching.
 ///
 /// The `transform` closure converts the raw JSON response body into a `Release`.
@@ -119,12 +127,11 @@ async fn fetch_cached_github_release(
     cache: &rv_cache::Cache,
     cache_file: &str,
     env_var: &str,
-    default_url: &str,
+    url: &str,
     transform: impl FnOnce(bytes::Bytes) -> Result<Release>,
 ) -> Result<Release> {
     let client = reqwest::Client::new();
 
-    let url = std::env::var(env_var).unwrap_or_else(|_| default_url.to_string());
     if url == "-" {
         debug!("{env_var} is '-', returning empty list without network request.");
         return Ok(Release {
@@ -133,7 +140,7 @@ async fn fetch_cached_github_release(
         });
     }
 
-    let cache_key = rv_cache::cache_digest(format!("{}-{}", url, cache_file));
+    let cache_key = cache_key_for(url, cache_file);
     let cache_entry = cache.entry(rv_cache::CacheBucket::Ruby, "releases", cache_key);
 
     // 1. Try to read from the disk cache.
@@ -155,7 +162,7 @@ async fn fetch_cached_github_release(
 
     // 3. Cache is stale or missing.
     let etag = cached_data.as_ref().and_then(|c| c.etag.clone());
-    let mut request_builder = super::github::github_api_get(&client, &url);
+    let mut request_builder = super::github::github_api_get(&client, url);
 
     if let Some(etag) = &etag {
         debug!("Using ETag for conditional request: {}", etag);
@@ -219,35 +226,36 @@ async fn fetch_cached_github_release(
 }
 
 /// Fetches available rubies from rv-ruby (macOS/Linux).
-async fn fetch_available_rubies(cache: &rv_cache::Cache) -> Result<Release> {
-    fetch_cached_github_release(
-        cache,
-        "available_rubies.json",
-        "RV_LIST_URL",
-        "https://api.github.com/repos/spinel-coop/rv-ruby/releases/latest",
-        |body| Ok(serde_json::from_slice(&body)?),
-    )
-    .await
+async fn fetch_available_rubies(cache: &rv_cache::Cache) -> (Result<Release>, String) {
+    let env_var = "RV_LIST_URL";
+    let default_url = "https://api.github.com/repos/spinel-coop/rv-ruby/releases/latest";
+    let url = url_for(env_var, default_url);
+    let release =
+        fetch_cached_github_release(cache, "available_rubies.json", env_var, &url, |body| {
+            Ok(serde_json::from_slice(&body)?)
+        })
+        .await;
+    (release, url)
 }
 
 /// Fetches available rubies from RubyInstaller2 (Windows).
-async fn fetch_rubyinstaller2_rubies(cache: &rv_cache::Cache) -> Result<Release> {
-    fetch_cached_github_release(
-        cache,
-        "rubyinstaller2.json",
-        "RV_WINDOWS_LIST_URL",
-        "https://api.github.com/repos/oneclick/rubyinstaller2/releases?per_page=100",
-        |body| {
+async fn fetch_rubyinstaller2_rubies(cache: &rv_cache::Cache) -> (Result<Release>, String) {
+    let env_var = "RV_WINDOWS_LIST_URL";
+    let default_url = "https://api.github.com/repos/oneclick/rubyinstaller2/releases?per_page=100";
+    let url = url_for(env_var, default_url);
+    let release =
+        fetch_cached_github_release(cache, "rubyinstaller2.json", env_var, &url, |body| {
             let releases: Vec<Release> = serde_json::from_slice(&body)?;
             Ok(combine_rubyinstaller2_releases(releases))
-        },
-    )
-    .await
+        })
+        .await;
+    (release, url)
 }
 
 /// Falls back to a stale cache file when a fresh fetch fails.
-fn stale_cache_fallback(cache: &rv_cache::Cache, cache_file: &str) -> Release {
-    let cache_entry = cache.entry(rv_cache::CacheBucket::Ruby, "releases", cache_file);
+fn stale_cache_fallback(cache: &rv_cache::Cache, cache_file: &str, url: &str) -> Release {
+    let cache_key = cache_key_for(url, cache_file);
+    let cache_entry = cache.entry(rv_cache::CacheBucket::Ruby, "releases", cache_key);
     if let Ok(content) = fs::read_to_string(cache_entry.path())
         && let Ok(cached_data) = serde_json::from_str::<CachedRelease>(&content)
     {
