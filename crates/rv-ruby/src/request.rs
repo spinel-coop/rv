@@ -19,7 +19,7 @@ impl FromStr for RubyRequest {
     type Err = RequestError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s == "dev" {
+        if s.trim() == "dev" {
             return Ok(RubyRequest::Dev);
         }
         ReleasedRubyRequest::from_str(s).map(Self::Released)
