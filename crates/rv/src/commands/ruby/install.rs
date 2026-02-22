@@ -342,13 +342,12 @@ fn extract_tarball(
                 .join(format!("ruby-{}", version.number()))
                 .join(path.as_path())
         } else {
+            let version_number = version.number();
+            let to_replace = format!("rv-ruby@{}/{}", version_number, version_number);
             let path = entry_path
                 .to_str()
                 .ok_or_else(|| Error::InvalidTarballPath(entry_path.to_path_buf()))?
-                .replace(
-                    &format!("rv-ruby@{}/{version}", version.number()),
-                    &format!("ruby-{}", version.number()),
-                )
+                .replace(&to_replace, &format!("ruby-{}", version_number))
                 .replace('@', "-");
             rubies_dir.join(path).into()
         };
