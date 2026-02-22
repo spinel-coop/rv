@@ -1,3 +1,4 @@
+use camino::Utf8PathBuf;
 use clap::{Args, Subcommand};
 
 use crate::output_format::OutputFormat;
@@ -68,7 +69,7 @@ pub enum RubyCommand {
 
         /// Path to a local ruby tarball
         #[arg(long, value_name = "TARBALL_PATH")]
-        tarball_path: Option<String>,
+        tarball_path: Option<Utf8PathBuf>,
     },
 
     #[command(about = "Uninstall a specific Ruby version")]

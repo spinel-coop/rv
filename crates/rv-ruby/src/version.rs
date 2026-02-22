@@ -2,7 +2,8 @@ use std::str::FromStr;
 
 use crate::{
     engine::RubyEngine,
-    request::{RequestError, RubyRequest, VersionPart},
+    request::{ReleasedRubyRequest, RequestError, RubyRequest, VersionPart},
+    tool_consumable::ToolConsumable,
 };
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 
@@ -10,7 +11,77 @@ use serde_with::{DeserializeFromStr, SerializeDisplay};
 /// This is different from a RubyRequest, which represents a range of possible
 /// Ruby versions.
 #[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay)]
-pub struct RubyVersion {
+pub enum RubyVersion {
+    /// The daily dev builds from rv-ruby-dev
+    Dev,
+    /// A proper released version like 4.0.1
+    Released(ReleasedRubyVersion),
+}
+
+impl RubyVersion {
+    pub fn is_dev(&self) -> bool {
+        matches!(self, Self::Dev)
+    }
+
+    pub fn number(&self) -> String {
+        match self {
+            RubyVersion::Dev => "dev".to_string(),
+            RubyVersion::Released(v) => v.number(),
+        }
+    }
+
+    pub fn satisfies(&self, request: &RubyRequest) -> bool {
+        match (self, request) {
+            (RubyVersion::Dev, RubyRequest::Dev) => true,
+            (RubyVersion::Dev, RubyRequest::Released(_)) => false,
+            (RubyVersion::Released(version), request) => version.satisfies(request),
+        }
+    }
+
+    pub fn to_tool_consumable_version(&self) -> String {
+        match self {
+            RubyVersion::Dev => "dev".to_string(),
+            RubyVersion::Released(v) => v.to_tool_consumable_string(),
+        }
+    }
+}
+
+impl FromStr for RubyVersion {
+    type Err = ParseVersionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "dev" || s == "ruby-dev" {
+            return Ok(Self::Dev);
+        }
+        ReleasedRubyVersion::from_str(s).map(Self::Released)
+    }
+}
+
+impl std::fmt::Display for RubyVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RubyVersion::Dev => write!(f, "ruby-dev"),
+            RubyVersion::Released(version) => version.fmt(f),
+        }
+    }
+}
+
+impl TryFrom<RubyRequest> for RubyVersion {
+    type Error = ParseVersionError;
+
+    fn try_from(request: RubyRequest) -> Result<Self, Self::Error> {
+        match request {
+            RubyRequest::Dev => Ok(Self::Dev),
+            RubyRequest::Released(released) => {
+                ReleasedRubyVersion::try_from(released).map(Self::Released)
+            }
+        }
+    }
+}
+
+/// A concrete, released version of Ruby that can be downloaded.
+#[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay)]
+pub struct ReleasedRubyVersion {
     pub engine: RubyEngine,
     pub major: VersionPart,
     pub minor: VersionPart,
@@ -19,7 +90,7 @@ pub struct RubyVersion {
     pub prerelease: Option<String>,
 }
 
-impl Ord for RubyVersion {
+impl Ord for ReleasedRubyVersion {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         use std::cmp::Ordering;
 
@@ -42,7 +113,7 @@ impl Ord for RubyVersion {
     }
 }
 
-impl PartialOrd for RubyVersion {
+impl PartialOrd for ReleasedRubyVersion {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
@@ -59,9 +130,11 @@ pub enum ParseVersionError {
     MissingMinor,
     #[error("Missing patch version")]
     MissingPatch,
+    #[error("Cannot use the dev version of Ruby here")]
+    CannotUseDev,
 }
 
-impl FromStr for RubyVersion {
+impl FromStr for ReleasedRubyVersion {
     type Err = ParseVersionError;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
@@ -70,10 +143,22 @@ impl FromStr for RubyVersion {
 }
 
 /// If the Ruby request is very specific, it can be made into a specific Ruby version.
-impl TryFrom<RubyRequest> for RubyVersion {
+impl TryFrom<RubyRequest> for ReleasedRubyVersion {
     type Error = ParseVersionError;
 
     fn try_from(request: RubyRequest) -> Result<Self, Self::Error> {
+        match request {
+            RubyRequest::Dev => Err(ParseVersionError::CannotUseDev),
+            RubyRequest::Released(request) => Self::try_from(request),
+        }
+    }
+}
+
+/// If the Ruby request is very specific, it can be made into a specific Ruby version.
+impl TryFrom<ReleasedRubyRequest> for ReleasedRubyVersion {
+    type Error = ParseVersionError;
+
+    fn try_from(request: ReleasedRubyRequest) -> Result<Self, Self::Error> {
         let major = request.major.ok_or(ParseVersionError::MissingMajor)?;
         let minor = request.minor.ok_or(ParseVersionError::MissingMinor)?;
         let patch = request.patch.ok_or(ParseVersionError::MissingPatch)?;
@@ -89,22 +174,26 @@ impl TryFrom<RubyRequest> for RubyVersion {
     }
 }
 
-impl From<RubyVersion> for RubyRequest {
-    fn from(version: RubyVersion) -> Self {
-        Self {
+impl From<ReleasedRubyVersion> for RubyRequest {
+    fn from(version: ReleasedRubyVersion) -> Self {
+        Self::Released(ReleasedRubyRequest {
             engine: version.engine,
             major: Some(version.major),
             minor: Some(version.minor),
             patch: Some(version.patch),
             tiny: version.tiny,
             prerelease: version.prerelease,
-        }
+        })
     }
 }
 
-impl RubyVersion {
+impl ReleasedRubyVersion {
     /// Does this version satisfy the given Ruby requested range?
     pub fn satisfies(&self, request: &RubyRequest) -> bool {
+        let request = match request {
+            RubyRequest::Dev => return false,
+            RubyRequest::Released(request) => request,
+        };
         if self.engine != request.engine {
             return false;
         }
@@ -188,7 +277,7 @@ impl RubyVersion {
     }
 }
 
-impl std::fmt::Display for RubyVersion {
+impl std::fmt::Display for ReleasedRubyVersion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.engine)?;
         write!(f, "-{}", self.major)?;
@@ -287,7 +376,7 @@ mod tests {
 
         for version_str in versions {
             // Invariant: all these strings should be valid Ruby versions.
-            let version = RubyVersion::from_str(version_str)
+            let version = ReleasedRubyVersion::from_str(version_str)
                 .unwrap_or_else(|_| panic!("Failed to parse version in {version_str}"));
             let output = version.to_string();
             assert_eq!(
@@ -297,7 +386,7 @@ mod tests {
             // Invariant: all Ruby versions should be convertible into RubyRequest
             // and back to RubyVersion, unchanged.
             let request = RubyRequest::from(version.clone());
-            let version_out = RubyVersion::try_from(request).unwrap();
+            let version_out = ReleasedRubyVersion::try_from(request).unwrap();
             assert_eq!(
                 version_out, version,
                 "Version did not survive the roundtrip to/from RubyRequest"
@@ -311,7 +400,7 @@ mod tests {
     #[test]
     fn test_from_gemfile_lock_with_patchlevel() {
         // Gemfile.lock format: "ruby 3.3.1p55"
-        let version = RubyVersion::from_gemfile_lock("ruby 3.3.1p55").unwrap();
+        let version = ReleasedRubyVersion::from_gemfile_lock("ruby 3.3.1p55").unwrap();
         assert_eq!(version.major, 3);
         assert_eq!(version.minor, 3);
         assert_eq!(version.patch, 1);
@@ -321,7 +410,7 @@ mod tests {
     #[test]
     fn test_from_gemfile_lock_without_patchlevel() {
         // Gemfile.lock format: "ruby 4.0.0" (no patchlevel)
-        let version = RubyVersion::from_gemfile_lock("ruby 4.0.0").unwrap();
+        let version = ReleasedRubyVersion::from_gemfile_lock("ruby 4.0.0").unwrap();
         assert_eq!(version.major, 4);
         assert_eq!(version.minor, 0);
         assert_eq!(version.patch, 0);
@@ -331,7 +420,7 @@ mod tests {
     #[test]
     fn test_from_gemfile_lock_with_p0() {
         // Gemfile.lock format: "ruby 3.2.0p0"
-        let version = RubyVersion::from_gemfile_lock("ruby 3.2.0p0").unwrap();
+        let version = ReleasedRubyVersion::from_gemfile_lock("ruby 3.2.0p0").unwrap();
         assert_eq!(version.major, 3);
         assert_eq!(version.minor, 2);
         assert_eq!(version.patch, 0);
@@ -341,7 +430,7 @@ mod tests {
     fn test_from_gemfile_lock_preserves_preview() {
         // Real format from GitHub: "ruby 3.3.0.preview2" (dot, not dash)
         // https://github.com/akitaonrails/rinhabackend-rails-api/blob/main/Gemfile.lock
-        let version = RubyVersion::from_gemfile_lock("ruby 3.3.0.preview2").unwrap();
+        let version = ReleasedRubyVersion::from_gemfile_lock("ruby 3.3.0.preview2").unwrap();
         assert_eq!(version.major, 3);
         assert_eq!(version.minor, 3);
         assert_eq!(version.patch, 0);
@@ -352,7 +441,7 @@ mod tests {
     fn test_from_gemfile_lock_preserves_rc() {
         // Real format from GitHub: "ruby 3.3.0.rc1" (dot, not dash)
         // https://github.com/pbstriker38/is_ruby_dead/blob/main/Gemfile.lock
-        let version = RubyVersion::from_gemfile_lock("ruby 3.3.0.rc1").unwrap();
+        let version = ReleasedRubyVersion::from_gemfile_lock("ruby 3.3.0.rc1").unwrap();
         assert_eq!(version.major, 3);
         assert_eq!(version.minor, 3);
         assert_eq!(version.patch, 0);

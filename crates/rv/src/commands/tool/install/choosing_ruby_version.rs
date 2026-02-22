@@ -1,6 +1,6 @@
 use owo_colors::OwoColorize;
 use rv_lockfile::datatypes::SemverConstraint;
-use rv_ruby::version::RubyVersion;
+use rv_ruby::version::ReleasedRubyVersion;
 use rv_version::VersionError;
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
 pub async fn ruby_to_use_for(
     config: &Config,
     ruby_constraints: &[VersionConstraint],
-) -> Result<RubyVersion> {
+) -> Result<ReleasedRubyVersion> {
     let installed_rubies = config.rubies();
 
     if let Ok(local_ruby) =
@@ -39,7 +39,7 @@ fn select_ruby_version_for(
     candidate_rubies: &[rv_ruby::Ruby],
     ruby_constraints: &[VersionConstraint],
     match_prereleases: MatchPrereleases,
-) -> std::result::Result<RubyVersion, Error> {
+) -> std::result::Result<ReleasedRubyVersion, Error> {
     // If the gem can be used with any Ruby version, then we'll use the latest available.
     if ruby_constraints.is_empty() {
         let chosen = candidate_rubies
@@ -68,7 +68,7 @@ fn select_ruby_version_for(
 }
 
 fn ruby_version_to_gem_version(
-    ruby_version: &RubyVersion,
+    ruby_version: &ReleasedRubyVersion,
 ) -> std::result::Result<rv_version::Version, VersionError> {
     // Convert the ruby version to a string,
     // but skip the engine. Do not put the engine into this string,
@@ -91,7 +91,7 @@ fn ruby_version_to_gem_version(
 
 /// Use pubgrub to check if this Ruby version satisfies these Ruby version constraints.
 pub fn does_ruby_version_satisfy(
-    ruby_version: &RubyVersion,
+    ruby_version: &ReleasedRubyVersion,
     ruby_constraints: &[VersionConstraint],
 ) -> bool {
     let Ok(version) = ruby_version_to_gem_version(ruby_version) else {
@@ -144,7 +144,7 @@ mod tests {
     }
 
     fn ruby(version: &str) -> rv_ruby::Ruby {
-        let version = RubyVersion::from_str(version).unwrap();
+        let version = ReleasedRubyVersion::from_str(version).unwrap();
         let version_str = version.to_string();
         rv_ruby::Ruby {
             key: format!("{version_str}-macos-aarch64"),
@@ -169,7 +169,7 @@ mod tests {
 
         let rubies = vec![ruby("ruby-3.2.10"), ruby("ruby-3.3.10"), ruby("ruby-3.4.8")];
 
-        let expected = RubyVersion::from_str("ruby-3.3.10").unwrap();
+        let expected = ReleasedRubyVersion::from_str("ruby-3.3.10").unwrap();
         let selected_ruby =
             select_ruby_version_for(&rubies, &constraints, MatchPrereleases::No).unwrap();
 
@@ -190,13 +190,13 @@ mod tests {
             ruby("3.5.0-preview1"),
         ];
 
-        let expected = RubyVersion::from_str("ruby-3.5.0-preview1").unwrap();
+        let expected = ReleasedRubyVersion::from_str("ruby-3.5.0-preview1").unwrap();
         let match_prereleases = MatchPrereleases::Yes;
         let selected_ruby =
             select_ruby_version_for(&rubies, &constraints, match_prereleases).unwrap();
         assert_eq!(expected, selected_ruby);
 
-        let expected = RubyVersion::from_str("ruby-3.4.8").unwrap();
+        let expected = ReleasedRubyVersion::from_str("ruby-3.4.8").unwrap();
         let match_prereleases = MatchPrereleases::No;
         let selected_ruby =
             select_ruby_version_for(&rubies, &constraints, match_prereleases).unwrap();

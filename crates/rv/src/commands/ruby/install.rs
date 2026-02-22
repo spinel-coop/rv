@@ -6,6 +6,7 @@ use futures_util::StreamExt;
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
 use reqwest::StatusCode;
+use rv_ruby::version::RubyVersion;
 use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, info_span};
@@ -53,13 +54,28 @@ pub(crate) async fn install(
     global_args: &GlobalArgs,
     install_dir: Option<String>,
     request: Option<RubyRequest>,
-    tarball_path: Option<String>,
+    tarball_path: Option<Utf8PathBuf>,
 ) -> Result<()> {
     let config = &Config::new(global_args, request)?;
 
     let progress = WorkProgress::new();
 
-    let selected_version = config.find_matching_remote_ruby().await?;
+    let requested_range = config.ruby_request();
+
+    let version = if let Ok(version) = RubyVersion::try_from(requested_range.clone()) {
+        debug!(
+            "Skipping the rv-ruby releases fetch because the user has given a specific ruby version {version}"
+        );
+        version
+    } else {
+        debug!("Fetching available rubies, because user gave an underspecified Ruby range");
+        let remote_rubies = config.remote_rubies().await;
+        let selected = requested_range
+            .find_match_in(&remote_rubies)
+            .ok_or(Error::NoMatchingRuby)?
+            .version;
+        RubyVersion::Released(selected)
+    };
 
     let install_dir = match install_dir {
         Some(dir) => Utf8PathBuf::from(dir),
@@ -69,25 +85,17 @@ pub(crate) async fn install(
         },
     };
 
-    match tarball_path {
-        Some(tarball_path) => {
-            extract_local_ruby_archive(tarball_path, &install_dir, &selected_version.number())
-                .await?
-        }
-        None => {
-            download_and_extract_remote_tarball(
-                config,
-                &install_dir,
-                &selected_version.number(),
-                &progress,
-            )
-            .await?
-        }
-    }
+    let archive_path = if let Some(path) = tarball_path {
+        path
+    } else {
+        download_tarball(config, &version, &progress).await?
+    };
+
+    extract_ruby_archive(&archive_path, &install_dir, &version)?;
 
     println!(
         "Installed Ruby version {} to {}",
-        selected_version.to_string().cyan(),
+        version.to_string().cyan(),
         install_dir.cyan()
     );
 
@@ -95,12 +103,11 @@ pub(crate) async fn install(
 }
 
 // downloads and extracts a remote ruby archive (tarball or zip)
-async fn download_and_extract_remote_tarball(
+async fn download_tarball(
     config: &Config,
-    install_dir: &Utf8PathBuf,
-    version: &str,
+    version: &RubyVersion,
     progress: &WorkProgress,
-) -> Result<()> {
+) -> Result<Utf8PathBuf> {
     let host = HostPlatform::current()?;
     let url = ruby_url(version, &host);
     let archive_path = archive_cache_path(config, &url, &host);
@@ -119,21 +126,7 @@ async fn download_and_extract_remote_tarball(
         download_ruby_archive(config, &url, &archive_path, version, progress, &host).await?;
     }
 
-    extract_ruby_archive(&archive_path, install_dir, version, &host)?;
-
-    Ok(())
-}
-
-// extract a local ruby archive (tarball or zip)
-async fn extract_local_ruby_archive(
-    archive_path: String,
-    install_dir: &Utf8PathBuf,
-    version: &str,
-) -> Result<()> {
-    let host = HostPlatform::current()?;
-    extract_ruby_archive(Utf8Path::new(&archive_path), install_dir, version, &host)?;
-
-    Ok(())
+    Ok(archive_path)
 }
 
 /// Does a usable archive already exist at this path?
@@ -141,26 +134,37 @@ fn valid_archive_exists(path: &Utf8Path) -> bool {
     fs_err::metadata(path).is_ok_and(|m| m.is_file() && m.len() > 0)
 }
 
-fn ruby_url(version: &str, host: &HostPlatform) -> String {
+fn ruby_url(version: &RubyVersion, host: &HostPlatform) -> String {
     let arch = host.ruby_arch_str();
     let ext = host.archive_ext();
+    let number = version.number();
 
     // Windows uses RubyInstaller2 directly
     if host.is_windows() {
         let download_base = std::env::var("RV_INSTALL_URL").unwrap_or_else(|_| {
             format!(
-                "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-{version}-1"
+                "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-{number}-1"
             )
         });
         // RubyInstaller2 URL pattern: rubyinstaller-{version}-1-x64.7z
-        return format!("{download_base}/rubyinstaller-{version}-1-{arch}.{ext}");
+        return format!("{download_base}/rubyinstaller-{number}-1-{arch}.{ext}");
     }
 
     // macOS/Linux use rv-ruby
-    let download_base = std::env::var("RV_INSTALL_URL")
-        .unwrap_or("https://github.com/spinel-coop/rv-ruby/releases/latest/download".to_owned());
+    let (download_base, version_str) = std::env::var("RV_INSTALL_URL")
+        .map(|var| (var, version.to_string()))
+        .unwrap_or_else(|_| match version {
+            RubyVersion::Dev => (
+                "https://github.com/spinel-coop/rv-ruby-dev/releases/latest/download".to_owned(),
+                version.to_string(),
+            ),
+            RubyVersion::Released(_) => (
+                "https://github.com/spinel-coop/rv-ruby/releases/latest/download".to_owned(),
+                version.to_string(),
+            ),
+        });
 
-    format!("{download_base}/ruby-{version}.{arch}.{ext}")
+    format!("{download_base}/{version_str}.{arch}.{ext}")
 }
 
 fn archive_cache_path(config: &Config, url: impl AsRef<str>, host: &HostPlatform) -> Utf8PathBuf {
@@ -226,7 +230,7 @@ async fn download_ruby_archive(
     config: &Config,
     url: &str,
     archive_path: &Utf8PathBuf,
-    version: &str,
+    version: &RubyVersion,
     progress: &WorkProgress,
     host: &HostPlatform,
 ) -> Result<()> {
@@ -269,7 +273,7 @@ async fn download_ruby_archive(
     // Set up progress tracking
     progress.start_phase(total_size, 100);
 
-    let span = info_span!("Downloading Ruby", version = version);
+    let span = info_span!("Downloading Ruby", version = version.number());
     span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name} {msg}").unwrap());
     let _guard = span.enter();
 
@@ -296,10 +300,10 @@ async fn download_ruby_archive(
 fn extract_ruby_archive(
     archive_path: &Utf8Path,
     rubies_dir: &Utf8Path,
-    version: &str,
-    host: &HostPlatform,
+    version: &RubyVersion,
 ) -> Result<()> {
-    let span = info_span!("Installing Ruby", version = version);
+    let host = HostPlatform::current()?;
+    let span = info_span!("Installing Ruby", version = version.number());
     span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name}").unwrap());
     let _guard = span.enter();
 
@@ -311,32 +315,49 @@ fn extract_ruby_archive(
     let extension = archive_path.extension().unwrap_or("");
     match extension {
         "zip" => extract_zip(archive_path, rubies_dir, version),
-        "7z" => extract_7z(archive_path, rubies_dir, version, host),
+        "7z" => extract_7z(archive_path, rubies_dir, version, &host),
         _ => extract_tarball(archive_path, rubies_dir, version),
     }
 }
 
-fn extract_tarball(tarball_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> Result<()> {
+fn extract_tarball(
+    tarball_path: &Utf8Path,
+    rubies_dir: &Utf8Path,
+    version: &RubyVersion,
+) -> Result<()> {
     let tarball = fs_err::File::open(tarball_path)?;
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
     for e in archive.entries()? {
         let mut entry = e?;
         let entry_path = entry.path()?;
-        let path = entry_path
-            .to_str()
-            .ok_or_else(|| Error::InvalidTarballPath(entry_path.to_path_buf()))?
-            .replace(
-                &format!("rv-ruby@{version}/{version}"),
-                &format!("ruby-{version}"),
-            )
-            .replace('@', "-");
-        let dst = rubies_dir.join(path);
+
+        let dst: PathBuf = if version.is_dev() {
+            // Strip the first two path components
+            let mut path = entry_path.components();
+            path.next();
+            path.next();
+
+            rubies_dir
+                .as_std_path()
+                .join(format!("ruby-{}", version.number()))
+                .join(path.as_path())
+        } else {
+            let version_number = version.number();
+            let to_replace = format!("rv-ruby@{}/{}", version_number, version_number);
+            let path = entry_path
+                .to_str()
+                .ok_or_else(|| Error::InvalidTarballPath(entry_path.to_path_buf()))?
+                .replace(&to_replace, &format!("ruby-{}", version_number))
+                .replace('@', "-");
+            rubies_dir.join(path).into()
+        };
+
         entry.unpack(dst)?;
     }
     Ok(())
 }
 
-fn extract_zip(zip_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> Result<()> {
+fn extract_zip(zip_path: &Utf8Path, rubies_dir: &Utf8Path, version: &RubyVersion) -> Result<()> {
     let file = fs_err::File::open(zip_path)?;
     let mut archive = zip::ZipArchive::new(file)?;
 
@@ -347,8 +368,8 @@ fn extract_zip(zip_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> Res
         // Normalize path: repackage RubyInstaller format to rv format
         let path = entry_path
             .replace(
-                &format!("rubyinstaller-{version}"),
-                &format!("ruby-{version}"),
+                &format!("rubyinstaller-{}", version.number()),
+                &format!("ruby-{}", version.number()),
             )
             .replace('\\', "/"); // Normalize Windows path separators
 
@@ -370,7 +391,7 @@ fn extract_zip(zip_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> Res
 fn extract_7z(
     archive_path: &Utf8Path,
     rubies_dir: &Utf8Path,
-    version: &str,
+    version: &RubyVersion,
     host: &HostPlatform,
 ) -> Result<()> {
     // Extract 7z archive to rubies_dir
@@ -379,8 +400,8 @@ fn extract_7z(
     // RubyInstaller2 extracts to: rubyinstaller-{version}-1-{arch}/
     // We need to rename it to: ruby-{version}/
     let arch = host.ruby_arch_str();
-    let extracted_dir = rubies_dir.join(format!("rubyinstaller-{version}-1-{arch}"));
-    let target_dir = rubies_dir.join(format!("ruby-{version}"));
+    let extracted_dir = rubies_dir.join(format!("rubyinstaller-{}-1-{arch}", version.number()));
+    let target_dir = rubies_dir.join(format!("ruby-{}", version.number()));
 
     if extracted_dir.exists() {
         fs_err::rename(&extracted_dir, &target_dir)?;
@@ -395,11 +416,17 @@ mod tests {
     use assert_fs::TempDir;
     use assert_fs::prelude::*;
     use std::io::Write as _;
+    use std::str::FromStr;
+
+    #[track_caller]
+    fn v(version: &str) -> RubyVersion {
+        RubyVersion::from_str(version).unwrap()
+    }
 
     #[test]
     fn test_ruby_url_unix() {
         let host = HostPlatform::from_target_triple("aarch64-apple-darwin").unwrap();
-        let url = ruby_url("3.4.1", &host);
+        let url = ruby_url(&v("3.4.1"), &host);
 
         assert_eq!(
             url,
@@ -410,7 +437,7 @@ mod tests {
     #[test]
     fn test_ruby_url_windows() {
         let host = HostPlatform::from_target_triple("x86_64-pc-windows-msvc").unwrap();
-        let url = ruby_url("3.4.1", &host);
+        let url = ruby_url(&v("3.4.1"), &host);
 
         assert_eq!(
             url,
@@ -418,6 +445,16 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_ruby_url_unix_dev() {
+        let host = HostPlatform::from_target_triple("aarch64-apple-darwin").unwrap();
+        let url = ruby_url(&v("dev"), &host);
+
+        assert_eq!(
+            url,
+            "https://github.com/spinel-coop/rv-ruby-dev/releases/latest/download/ruby-dev.arm64_sonoma.tar.gz"
+        );
+    }
     #[test]
     fn test_extract_zip_creates_correct_structure() {
         let temp_dir = TempDir::new().unwrap();
@@ -444,7 +481,8 @@ mod tests {
 
         let rubies_path = Utf8Path::from_path(rubies_dir.path()).unwrap();
         let zip_utf8_path = Utf8Path::from_path(zip_path.path()).unwrap();
-        extract_zip(zip_utf8_path, rubies_path, "3.4.1").unwrap();
+        let version = RubyVersion::Released("3.4.1".parse().unwrap());
+        extract_zip(zip_utf8_path, rubies_path, &version).unwrap();
 
         let ruby_dir = rubies_dir.child("ruby-3.4.1");
         assert!(ruby_dir.exists(), "ruby-3.4.1 directory should exist");
@@ -478,8 +516,7 @@ mod tests {
         let rubies_path = Utf8Path::from_path(rubies_dir.path()).unwrap();
         let zip_utf8_path = Utf8Path::from_path(zip_path.path()).unwrap();
 
-        let host = HostPlatform::from_target_triple("x86_64-pc-windows-msvc").unwrap();
-        let result = extract_ruby_archive(zip_utf8_path, rubies_path, "3.4.1", &host);
+        let result = extract_ruby_archive(zip_utf8_path, rubies_path, &v("3.4.1"));
         assert!(result.is_ok());
     }
 

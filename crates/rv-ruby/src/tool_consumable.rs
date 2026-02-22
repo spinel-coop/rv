@@ -1,4 +1,7 @@
-use crate::{request::RubyRequest, version::RubyVersion};
+use crate::{
+    request::{ReleasedRubyRequest, RubyRequest},
+    version::{ReleasedRubyVersion, RubyVersion},
+};
 use std::fmt::Display;
 
 pub trait ToolConsumable: Display {
@@ -8,4 +11,6 @@ pub trait ToolConsumable: Display {
 }
 
 impl ToolConsumable for RubyRequest {}
+impl ToolConsumable for ReleasedRubyRequest {}
 impl ToolConsumable for RubyVersion {}
+impl ToolConsumable for ReleasedRubyVersion {}

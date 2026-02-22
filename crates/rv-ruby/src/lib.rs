@@ -15,7 +15,7 @@ use std::env::{
 use std::process::Command;
 use tracing::instrument;
 
-use crate::version::RubyVersion;
+use crate::version::ReleasedRubyVersion;
 
 /// Returns the possible Ruby executable names for the current platform, in priority order.
 /// On Windows, checks `ruby.exe` (standard RubyInstaller2) then `ruby.cmd` (batch wrapper).
@@ -42,7 +42,7 @@ pub fn find_ruby_executable(dir: &Utf8Path) -> Option<Utf8PathBuf> {
 }
 
 static RUBY_DESCRIPTION_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"ruby (?<version>[^ ]+) \((?<date>\d\d\d\d-\d\d-\d\d) (?<source>\S+) (?<revision>[0-9a-f]+)\) (?<prism>\+PRISM )?\[(?<arch>\w+)-(?<os>\w+)\]").unwrap()
+    Regex::new(r"ruby (?<version>[^ ]+) \((?<date>\d\d\d\d-\d\d-\d\d)(?<time>T\d\d:\d\d:\d\dZ)? (?<source>\S+) (?<revision>[0-9a-f]+)\) (?<zjit>\+ZJIT )?(?<yjit>\+YJIT )?(?<prism>\+PRISM )?\[(?<arch>\w+)-(?<os>\w+)\]").unwrap()
 });
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -63,7 +63,7 @@ pub struct Ruby {
     pub key: String,
 
     /// Ruby version (e.g., "3.1.4", "9.4.0.0")
-    pub version: RubyVersion,
+    pub version: ReleasedRubyVersion,
 
     /// Path to the Ruby installation directory
     pub path: Utf8PathBuf,
@@ -271,7 +271,7 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
     let arch = normalize_arch(&host_cpu);
     let os = normalize_os(&host_os);
 
-    let version: RubyVersion = if let Some(d) = ruby_description {
+    let version: ReleasedRubyVersion = if let Some(d) = ruby_description {
         let desc_version = &d["version"];
         format!("{ruby_engine}-{desc_version}").parse()?
     } else {
@@ -409,7 +409,7 @@ mod tests {
 
         let ruby1 = Ruby {
             key: "ruby-3.1.4-macos-aarch64".to_string(),
-            version: RubyVersion::from_str("3.1.4").unwrap(),
+            version: ReleasedRubyVersion::from_str("3.1.4").unwrap(),
             path: dummy_path.clone(),
             managed: false,
             symlink: None,
@@ -420,7 +420,7 @@ mod tests {
 
         let ruby2 = Ruby {
             key: "ruby-3.2.0-macos-aarch64".to_string(),
-            version: RubyVersion::from_str("ruby-3.2.0").unwrap(),
+            version: ReleasedRubyVersion::from_str("ruby-3.2.0").unwrap(),
             path: dummy_path.clone(),
             managed: false,
             symlink: None,
@@ -431,7 +431,7 @@ mod tests {
 
         let ruby2_managed = Ruby {
             key: "ruby-3.2.0-macos-aarch64".to_string(),
-            version: RubyVersion::from_str("ruby-3.2.0").unwrap(),
+            version: ReleasedRubyVersion::from_str("ruby-3.2.0").unwrap(),
             path: dummy_path.clone(),
             managed: true,
             symlink: None,
@@ -442,7 +442,7 @@ mod tests {
 
         let jruby = Ruby {
             key: "jruby-9.4.0.0-macos-aarch64".to_string(),
-            version: RubyVersion::from_str("jruby-9.4.0.0").unwrap(),
+            version: ReleasedRubyVersion::from_str("jruby-9.4.0.0").unwrap(),
             path: dummy_path,
             managed: false,
             symlink: None,
@@ -546,6 +546,37 @@ mod tests {
         assert_eq!(&info["date"], "2025-11-17");
         assert_eq!(&info["source"], "master");
         assert_eq!(&info["revision"], "4fa6e9938c");
+        assert_eq!(&info["arch"], "arm64");
+        assert_eq!(&info["os"], "darwin23");
+    }
+
+    #[test]
+    fn test_parse_description_yjit() {
+        let info = parse_description(
+            "ruby 4.0.0 (2025-12-25 revision 553f1675f3) +YJIT +PRISM [arm64-darwin23]",
+        )
+        .unwrap();
+        assert_eq!(&info["version"], "4.0.0");
+        assert_eq!(&info["date"], "2025-12-25");
+        assert_eq!(&info["source"], "revision");
+        assert_eq!(&info["revision"], "553f1675f3");
+        assert_eq!(&info["yjit"], "+YJIT ");
+        assert_eq!(&info["prism"], "+PRISM ");
+        assert_eq!(&info["arch"], "arm64");
+        assert_eq!(&info["os"], "darwin23");
+    }
+
+    #[test]
+    fn test_parse_description_dev() {
+        let info = parse_description(
+            "ruby 4.1.0dev (2026-02-12T03:11:10Z master 8f7c12830f) +PRISM [arm64-darwin23]",
+        )
+        .unwrap();
+        assert_eq!(&info["version"], "4.1.0dev");
+        assert_eq!(&info["date"], "2026-02-12");
+        assert_eq!(&info["source"], "master");
+        assert_eq!(&info["revision"], "8f7c12830f");
+        assert_eq!(&info["prism"], "+PRISM ");
         assert_eq!(&info["arch"], "arm64");
         assert_eq!(&info["os"], "darwin23");
     }

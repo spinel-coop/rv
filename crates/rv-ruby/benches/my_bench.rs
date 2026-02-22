@@ -2,7 +2,7 @@ use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use rv_ruby::request::RubyRequest;
-use rv_ruby::version::RubyVersion;
+use rv_ruby::version::ReleasedRubyVersion;
 
 fn parse_ruby_req(c: &mut Criterion) {
     let req = "3.4.1".to_owned();
@@ -23,7 +23,7 @@ fn ruby_req_to_string(c: &mut Criterion) {
 }
 
 fn ruby_ver_number(c: &mut Criterion) {
-    let ver: RubyVersion = "3.4.1".parse().unwrap();
+    let ver: ReleasedRubyVersion = "3.4.1".parse().unwrap();
     c.bench_function(&format!("Call {ver}.number()"), |b| {
         b.iter(|| {
             let _ver = black_box(ver.number());
