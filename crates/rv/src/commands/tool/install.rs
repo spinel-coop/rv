@@ -263,7 +263,7 @@ impl LockfileBuilder {
         version: &'a str,
     ) -> rv_lockfile::datatypes::Spec<'a> {
         rv_lockfile::datatypes::Spec {
-            // We don't need to know the deps here, we've already resolved all depenendencies.
+            // We don't need to know the deps here, we've already resolved all dependencies.
             // A real Gemfile.lock would populate them, but for this command we don't need to.
             deps: Vec::new(),
             gem_version: rv_lockfile::datatypes::GemVersion {
