@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+#
+# Executable for the `{{ name }}` gem.
+#
+# Template variables:
+# - name: the gem name (e.g. "my-gem" or "foo/bar")
+# - namespaced_path: path to require the library (e.g. "foo/bar")
+# - module_decl: Ruby module constant (e.g. "Foo::Bar"), optional
+#
+# This is a minimal executable file. Make it executable after generation
+# (chmod +x bin/{{ name }}) or let the generator set the mode if possible.
+
+require_relative "../lib/{{ namespaced_path | default(name) }}"
+
+# If a module with a `.run` entrypoint exists, prefer calling it.
+{% if module_decl %}
+if defined?({{ module_decl }}) && {{ module_decl }}.respond_to?(:run)
+  exit {{ module_decl }}.run(ARGV)
+end
+{% endif %}
+
+# Otherwise provide a simple placeholder behavior.
+puts "This is the `{{ name }}` executable. Update `bin/{{ name }}` to implement CLI behavior."
+exit 0

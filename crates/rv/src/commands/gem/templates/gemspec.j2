@@ -1,0 +1,25 @@
+Gem::Specification.new do |spec|
+  spec.name          = "{{ name }}"
+  spec.version       = "{{ version }}"
+  spec.authors       = ["{{ author }}"]
+  spec.email         = ["{{ email }}"]
+  spec.summary       = "{{ description }}"
+  spec.homepage      = "{{ homepage }}"
+  spec.license       = "{{ license }}"
+
+  # Dynamic file listing
+  spec.files         = Dir.glob("lib/**/*")
+  spec.executables   = spec.files.grep(%r{\bin/}) { |f| File.basename(f) }
+  spec.require_paths = ["lib"]
+
+  {% if ruby_version %}
+  spec.required_ruby_version = ">= {{ ruby_version }}"
+  {% endif %}
+
+  {% if dependencies %}
+  spec.add_dependency "rake", "~> 13.0"
+  {% for dep in dependencies %}
+  spec.add_dependency "{{ dep.name }}", "{{ dep.version }}"
+  {% endfor %}
+  {% endif %}
+end
