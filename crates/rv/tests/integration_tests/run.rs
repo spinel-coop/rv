@@ -1,4 +1,5 @@
 use crate::common::{RvOutput, RvTest};
+use std::fs;
 
 impl RvTest {
     pub fn script_run(&self, script: &str, args: &[&str]) -> RvOutput {
@@ -27,6 +28,134 @@ impl RvTest {
         std::fs::write(&script_path, content).expect("Failed to write script");
         script_path.to_string()
     }
+
+    pub fn run_ruby(&self, version: Option<&str>, no_install: bool, args: &[&str]) -> RvOutput {
+        let mut run_args = vec!["run"];
+
+        if no_install {
+            run_args.push("--no-install");
+        }
+        if let Some(version) = version {
+            run_args.push("--ruby");
+            run_args.push(version);
+        }
+
+        self.rv(&[&run_args, ["ruby"].as_ref(), args].concat())
+    }
+}
+
+#[test]
+fn test_run_ruby_simple() {
+    let test = RvTest::new();
+    test.create_ruby_dir("ruby-3.3.5");
+    let output = test.run_ruby(
+        Some("3.3.5"),
+        Default::default(),
+        &["-e", "'puts \"Hello, World\"'"],
+    );
+
+    output.assert_success();
+    assert!(output.stderr().is_empty());
+    assert_eq!(
+        output.normalized_stdout(),
+        "ruby\n3.3.5\naarch64-darwin23\naarch64\ndarwin23\n\n"
+    );
+}
+
+#[test]
+fn test_run_ruby_interpreter_cache() {
+    let mut test = RvTest::new();
+
+    test.create_ruby_dir("ruby-3.3.5");
+    test.create_ruby_dir("ruby-3.4.1");
+
+    let cache_dir = test.enable_cache();
+
+    let output = test.run_ruby(
+        Some("3.4.1"),
+        Default::default(),
+        &["-e", "'puts \"Hello, World\"'"],
+    );
+
+    output.assert_success();
+
+    let interpreters_dir = cache_dir.join("ruby-v0").join("interpreters");
+    assert!(interpreters_dir.exists());
+
+    // it should cache a single version, not both versions
+    assert_eq!(
+        fs::read_dir(&interpreters_dir)
+            .unwrap()
+            .collect::<Vec<_>>()
+            .len(),
+        1
+    )
+}
+
+#[test]
+fn test_run_ruby_default() {
+    let test = RvTest::new();
+    test.create_ruby_dir("ruby-3.3.5");
+    let output = test.run_ruby(None, Default::default(), &["-e", "'puts \"Hello, World\"'"]);
+
+    output.assert_success();
+    assert!(output.stderr().is_empty());
+    assert_eq!(
+        output.normalized_stdout(),
+        "ruby\n3.3.5\naarch64-darwin23\naarch64\ndarwin23\n\n"
+    );
+}
+
+#[test]
+fn test_run_ruby_default_skips_prereleases() {
+    let test = RvTest::new();
+    test.create_ruby_dir("ruby-3.4.8");
+    test.create_ruby_dir("ruby-4.0.0-preview3");
+    let output = test.run_ruby(None, Default::default(), &["-e", "'puts \"Hello, World\"'"]);
+
+    output.assert_success();
+    assert!(output.stderr().is_empty());
+    assert_eq!(
+        output.normalized_stdout(),
+        "ruby\n3.4.8\naarch64-darwin23\naarch64\ndarwin23\n\n"
+    );
+}
+
+#[test]
+fn test_run_ruby_simple_no_install() {
+    let test = RvTest::new();
+    test.create_ruby_dir("ruby-3.3.5");
+
+    let no_install = true;
+    // This should pass because we already installed 3.3.5
+    let output = test.run_ruby(
+        Some("3.3.5"),
+        no_install,
+        &["-e", "'puts \"Hello, World\"'"],
+    );
+
+    output.assert_success();
+    assert!(output.stderr().is_empty());
+    assert_eq!(
+        output.normalized_stdout(),
+        "ruby\n3.3.5\naarch64-darwin23\naarch64\ndarwin23\n\n"
+    );
+}
+
+#[test]
+fn test_run_ruby_invalid_version() {
+    let test = RvTest::new();
+    let output = test.run_ruby(
+        Some("3.4.5.6.7"),
+        Default::default(),
+        &["-e", "'puts \"Hello, World\"'"],
+    );
+
+    output.assert_failure();
+    assert_eq!(
+        output.normalized_stderr(),
+        "error: invalid value '3.4.5.6.7' for '--ruby <RUBY>': Could not parse version 3.4.5.6.7, no more than 4 numbers are allowed\n\nFor more information, try '--help'.\n",
+    );
 }
 
 #[test]
