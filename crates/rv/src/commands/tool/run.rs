@@ -4,7 +4,7 @@ use rv_version::{Version, VersionError};
 use tracing::debug;
 
 use crate::GlobalArgs;
-use crate::commands::ruby::run::{Invocation, Program};
+use crate::commands::run::{Invocation, Program};
 use crate::commands::tool::{Installed, install as tool_install};
 use fs_err as fs;
 
@@ -33,7 +33,7 @@ pub enum Error {
     #[error("Invalid version in .ruby-version: {0}")]
     InvalidRubyVersion(rv_ruby::request::RequestError),
     #[error(transparent)]
-    RunningTool(#[from] crate::commands::ruby::run::Error),
+    RunningTool(#[from] crate::commands::run::Error),
 }
 
 /// A version of a gem, given by the user.
@@ -175,7 +175,7 @@ pub(crate) async fn run(
         },
         env: vec![("GEM_HOME", gem_home.to_string())],
     };
-    crate::commands::ruby::run::run(
+    crate::commands::run::run_command(
         invocation,
         global_args,
         Some(ruby_version),

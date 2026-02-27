@@ -143,15 +143,9 @@ pub(crate) async fn ruby(global_args: &GlobalArgs, args: RubyArgs) -> Result<()>
             version,
             no_install,
             args,
-        } => run::run(
-            run::Invocation::ruby(vec![]),
-            global_args,
-            version,
-            no_install,
-            args,
-        )
-        .await
-        .map(|_| ())?,
+        } => run::run(global_args, version, no_install, args)
+            .await
+            .map(|_| ())?,
     };
 
     Ok(())

@@ -6,11 +6,11 @@ RUBY_VERSION="3.4.7"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 RV="$SCRIPT_DIR/../target/debug/rv"
 
-echo "=== rv ruby run $RUBY_VERSION (install + execute) ==="
-output=$("$RV" ruby run "$RUBY_VERSION" -- -e 'puts RUBY_DESCRIPTION')
+echo "=== rv run --ruby $RUBY_VERSION ruby (install + execute) ==="
+output=$("$RV" run --ruby "$RUBY_VERSION" ruby -e 'puts RUBY_DESCRIPTION')
 echo "  $output"
 echo "$output" | grep -q "$RUBY_VERSION"
-echo "PASS: rv ruby run installed and executed Ruby $RUBY_VERSION"
+echo "PASS: rv run ruby installed and executed Ruby $RUBY_VERSION"
 
 echo "=== rv ruby list --installed-only ==="
 list=$("$RV" ruby list --installed-only)
@@ -65,8 +65,8 @@ fi
 echo "PASS: $RUBY_VERSION no longer listed after uninstall"
 
 echo ""
-echo "=== rv ruby run $RUBY_VERSION (re-install after uninstall) ==="
-"$RV" ruby run "$RUBY_VERSION" -- -e 'puts "re-installed"' | grep -q "re-installed"
+echo "=== rv run --ruby $RUBY_VERSION ruby (re-install after uninstall) ==="
+"$RV" run --ruby "$RUBY_VERSION" ruby -e 'puts "re-installed"' | grep -q "re-installed"
 echo "PASS: re-installs and runs after uninstall"
 
 # Clean up .ruby-version left by ruby-pin.sh

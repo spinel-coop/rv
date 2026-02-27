@@ -109,7 +109,7 @@ fn test_ruby_install_from_tarball() {
     output.assert_success();
 
     // Check mocked ruby from the tarball was actually installed by running it
-    let output = test.rv(&["ruby", "run"]);
+    let output = test.rv(&["run", "ruby"]);
     output.assert_stdout_contains("ruby\n3.4.5");
 }
 
