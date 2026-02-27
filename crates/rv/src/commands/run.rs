@@ -78,7 +78,6 @@ pub(crate) async fn run(global_args: &GlobalArgs, args: RunArgs) -> Result<()> {
         ruby_version,
         args.no_install,
         &cmd_args,
-        Default::default(),
     )
     .await?;
 

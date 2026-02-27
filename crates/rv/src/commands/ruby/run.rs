@@ -67,7 +67,6 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
     request: Option<RubyRequest>,
     no_install: bool,
     args: &[A],
-    cwd: Option<&Utf8Path>,
 ) -> Result<()> {
     let config = &Config::new(global_args, request)?;
 
@@ -90,7 +89,7 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
         .await?
     };
 
-    let cmd = prepare_command(invocation, config, args, cwd)?;
+    let cmd = prepare_command(invocation, config, args, None)?;
 
     debug!("Running command: {:?}", cmd);
     exec(cmd)

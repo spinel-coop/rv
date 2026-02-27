@@ -181,7 +181,6 @@ pub(crate) async fn run(
         Some(ruby_version),
         no_install,
         args,
-        None, // no cwd.
     )
     .await?;
     Ok(())

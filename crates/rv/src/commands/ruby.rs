@@ -149,7 +149,6 @@ pub(crate) async fn ruby(global_args: &GlobalArgs, args: RubyArgs) -> Result<()>
             version,
             no_install,
             &args,
-            Default::default(),
         )
         .await
         .map(|_| ())?,
