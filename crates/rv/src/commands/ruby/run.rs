@@ -1,7 +1,7 @@
 use std::{
     io,
     path::PathBuf,
-    process::{Command, ExitStatus, Output},
+    process::{Command, Output},
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -23,14 +23,6 @@ pub enum Error {
 }
 
 type Result<T> = miette::Result<T, Error>;
-
-#[derive(Debug, Default, Clone, Copy)]
-pub(crate) enum CaptureOutput {
-    #[default]
-    No,
-    /// Both stdout and stderr
-    Both,
-}
 
 pub(crate) enum Program {
     Ruby,
@@ -76,7 +68,7 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
     no_install: bool,
     args: &[A],
     cwd: Option<&Utf8Path>,
-) -> Result<Output> {
+) -> Result<()> {
     let config = &Config::new(global_args, request)?;
 
     let install = !no_install;
@@ -97,19 +89,33 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
         )
         .await?
     };
-    run_no_install(invocation, config, args, CaptureOutput::No, cwd)
+
+    let cmd = prepare_command(invocation, config, args, cwd)?;
+
+    debug!("Running command: {:?}", cmd);
+    exec(cmd)
 }
 
-/// Run, without installing the Ruby version if necessary.
-/// The ruby's output may be captured, depending on `capture_output`. If you pass
-/// `CaptureOutput::No`, this returns an empty `Output` struct.
-pub(crate) fn run_no_install<A: AsRef<std::ffi::OsStr>>(
+/// Run, without installing the Ruby version if necessary, and capturing output.
+pub(crate) fn capture_run_no_install<A: AsRef<std::ffi::OsStr>>(
     invocation: Invocation,
     config: &Config,
     args: &[A],
-    capture_output: CaptureOutput,
     cwd: Option<&Utf8Path>,
 ) -> Result<Output> {
+    let mut cmd = prepare_command(invocation, config, args, cwd)?;
+
+    debug!("Running command: {:?}, and capturing output", cmd);
+
+    Ok(cmd.output()?)
+}
+
+fn prepare_command<A: AsRef<std::ffi::OsStr>>(
+    invocation: Invocation,
+    config: &Config,
+    args: &[A],
+    cwd: Option<&Utf8Path>,
+) -> Result<Command> {
     let ruby = config.current_ruby().ok_or(Error::NoMatchingRuby)?;
     let ((unset, set), executable_path) = match invocation.program {
         Program::Ruby => (config.env_for(Some(&ruby))?.split(), ruby.executable_path()),
@@ -144,19 +150,7 @@ pub(crate) fn run_no_install<A: AsRef<std::ffi::OsStr>>(
         cmd.current_dir(path);
     }
 
-    debug!("Running command: {:?}", cmd);
-    match capture_output {
-        CaptureOutput::No => {
-            exec(cmd).map(|()| Output {
-                // Success
-                status: ExitStatus::default(),
-                // Both empty
-                stdout: Vec::new(),
-                stderr: Vec::new(),
-            })
-        }
-        CaptureOutput::Both => Ok(cmd.output()?),
-    }
+    Ok(cmd)
 }
 
 /// On Windows, resolve a tool name to its full path by searching PATH directories

@@ -32,7 +32,6 @@ use crate::commands::clean_install::checksums::ArchiveChecksums;
 use crate::commands::clean_install::checksums::HashReader;
 use crate::commands::clean_install::checksums::Hashed;
 use crate::commands::ruby::install::install as ruby_install;
-use crate::commands::ruby::run::CaptureOutput;
 use crate::commands::ruby::run::Invocation;
 use crate::progress::WorkProgress;
 use crate::{GlobalArgs, config::Config};
@@ -852,7 +851,7 @@ fn cache_gemspec_path(
 ) -> Result<GemSpecification> {
     let gemspec_path = Utf8PathBuf::try_from(path).expect("gemspec path not valid UTF-8");
     // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
-    let result = crate::commands::ruby::run::run_no_install(
+    let result = crate::commands::ruby::run::capture_run_no_install(
         Invocation::ruby(vec![]),
         config,
         &[
@@ -862,7 +861,6 @@ fn cache_gemspec_path(
                 rv_dirs::canonicalize_utf8(&gemspec_path)?,
             ),
         ],
-        CaptureOutput::Both,
         Some(path_dir),
     )?;
 
@@ -1491,14 +1489,13 @@ impl CompileNativeExtResult {
 
 fn find_exts_scope(config: &Config) -> Result<String> {
     debug!("Finding extensions scope");
-    let exts_scope = crate::commands::ruby::run::run_no_install(
+    let exts_scope = crate::commands::ruby::run::capture_run_no_install(
         Invocation::ruby(vec![]),
         config,
         &[
             "-e",
             "puts File.join(Gem::Platform.local.to_s, Gem.extension_api_version)",
         ],
-        CaptureOutput::Both,
         None,
     )?
     .stdout;
@@ -1635,11 +1632,10 @@ fn build_rakefile(
 
     // 1. Run mkrf if needed to create the Rakefile
     if ext_file.to_lowercase().contains("mkrf_conf") {
-        output = crate::commands::ruby::run::run_no_install(
+        output = crate::commands::ruby::run::capture_run_no_install(
             Invocation::ruby(vec![]),
             config,
             &[ext_file],
-            CaptureOutput::Both,
             Some(&ext_dir),
         )?;
         outputs.push(output);
@@ -1653,13 +1649,8 @@ fn build_rakefile(
 
     let rake = Invocation::tool("rake", vec![("GEM_HOME", gem_home.to_string())]);
 
-    output = crate::commands::ruby::run::run_no_install(
-        rake,
-        config,
-        &args,
-        CaptureOutput::Both,
-        Some(&ext_dir),
-    )?;
+    output =
+        crate::commands::ruby::run::capture_run_no_install(rake, config, &args, Some(&ext_dir))?;
     outputs.push(output);
 
     // 3. Copy the resulting files to ext and lib dirs
@@ -1687,11 +1678,10 @@ fn build_extconf(
     let mut outputs = vec![];
 
     // 1. Run the extconf.rb file with the current ruby
-    output = crate::commands::ruby::run::run_no_install(
+    output = crate::commands::ruby::run::capture_run_no_install(
         Invocation::ruby(vec![("GEM_HOME", gem_home.to_string())]),
         config,
         &[ext_file],
-        CaptureOutput::Both,
         Some(&ext_dir),
     )?;
     outputs.push(output);
@@ -1715,20 +1705,18 @@ fn build_extconf(
     let make_env = vec![("GEM_HOME", gem_home.to_string())];
 
     // make clean (ignore failures)
-    let _ = crate::commands::ruby::run::run_no_install(
+    let _ = crate::commands::ruby::run::capture_run_no_install(
         Invocation::tool("make", make_env.clone()),
         config,
         &[&["clean"], base_args.as_slice()].concat(),
-        CaptureOutput::Both,
         Some(&ext_dir),
     );
 
     // make
-    output = crate::commands::ruby::run::run_no_install(
+    output = crate::commands::ruby::run::capture_run_no_install(
         Invocation::tool("make", make_env.clone()),
         config,
         &base_args,
-        CaptureOutput::Both,
         Some(&ext_dir),
     )?;
     let success = output.status.success();
@@ -1738,21 +1726,19 @@ fn build_extconf(
     }
 
     // make install
-    output = crate::commands::ruby::run::run_no_install(
+    output = crate::commands::ruby::run::capture_run_no_install(
         Invocation::tool("make", make_env.clone()),
         config,
         &[&["install"], base_args.as_slice()].concat(),
-        CaptureOutput::Both,
         Some(&ext_dir),
     )?;
     outputs.push(output);
 
     // make clean (ignore failures)
-    let _ = crate::commands::ruby::run::run_no_install(
+    let _ = crate::commands::ruby::run::capture_run_no_install(
         Invocation::tool("make", make_env),
         config,
         &[&["clean"], base_args.as_slice()].concat(),
-        CaptureOutput::Both,
         Some(&ext_dir),
     );
 
