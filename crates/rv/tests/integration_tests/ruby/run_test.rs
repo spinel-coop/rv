@@ -28,7 +28,7 @@ fn test_ruby_run_simple() {
     );
 
     output.assert_success();
-    assert!(output.stderr().is_empty());
+    output.assert_stderr_contains("run --ruby 3.3.5 ruby <ARGS>");
     assert_eq!(
         output.normalized_stdout(),
         "ruby\n3.3.5\naarch64-darwin23\naarch64\ndarwin23\n\n"
@@ -72,7 +72,7 @@ fn test_ruby_run_default() {
     let output = test.ruby_run(None, Default::default(), &["-e", "'puts \"Hello, World\"'"]);
 
     output.assert_success();
-    assert!(output.stderr().is_empty());
+    output.assert_stderr_contains("run ruby <ARGS>");
     assert_eq!(
         output.normalized_stdout(),
         "ruby\n3.3.5\naarch64-darwin23\naarch64\ndarwin23\n\n"
@@ -87,7 +87,7 @@ fn test_ruby_run_default_skips_prereleases() {
     let output = test.ruby_run(None, Default::default(), &["-e", "'puts \"Hello, World\"'"]);
 
     output.assert_success();
-    assert!(output.stderr().is_empty());
+    output.assert_stderr_contains("run ruby <ARGS>");
     assert_eq!(
         output.normalized_stdout(),
         "ruby\n3.4.8\naarch64-darwin23\naarch64\ndarwin23\n\n"
@@ -108,7 +108,7 @@ fn test_ruby_run_simple_no_install() {
     );
 
     output.assert_success();
-    assert!(output.stderr().is_empty());
+    output.assert_stderr_contains("run --no-install --ruby 3.3.5 ruby <ARGS>");
     assert_eq!(
         output.normalized_stdout(),
         "ruby\n3.3.5\naarch64-darwin23\naarch64\ndarwin23\n\n"

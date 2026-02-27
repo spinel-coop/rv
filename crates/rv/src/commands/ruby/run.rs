@@ -1,3 +1,4 @@
+use owo_colors::OwoColorize;
 use rv_ruby::request::RubyRequest;
 
 use crate::GlobalArgs;
@@ -21,6 +22,48 @@ pub(crate) async fn run(
     args: Vec<String>,
 ) -> Result<()> {
     let args = [vec!["ruby".to_string()], args].concat();
+
+    let os_cmd: Vec<_> = std::env::args().collect::<Vec<_>>();
+
+    let mut orig_cmd = os_cmd.clone();
+
+    // Make arbritary args to ruby CLI generic in our suggested commands. We won't try give
+    // specific CLI for those since I'm not sure how to access original quoting and without that
+    // we'll suggest incorrect commands.
+    let arg_separator_position = orig_cmd.iter().position(|arg| arg == "--");
+
+    if let Some(arg_separator_position) = arg_separator_position {
+        orig_cmd[arg_separator_position + 1] = "<ARGS>".into();
+        orig_cmd.truncate(arg_separator_position + 2);
+    }
+
+    let mut new_cmd = orig_cmd.clone();
+
+    // Add "ruby" binary to the end, replacing "--" if given
+    if let Some(arg_separator_position) = arg_separator_position {
+        new_cmd[arg_separator_position] = "ruby".into();
+    } else {
+        new_cmd.push("ruby".into());
+    }
+
+    // Transform "ruby run" to "run"
+    new_cmd.remove(1);
+
+    // If a request was given, put `--ruby` flag to `rv run` before it
+    if request.is_some() {
+        let request_position = new_cmd[2..]
+            .iter()
+            .position(|arg| !arg.starts_with("-") && arg != "ruby")
+            .expect("we know a request was given");
+        new_cmd.insert(request_position + 2, "--ruby".into());
+    }
+
+    eprintln!(
+        "{}: The `{}` command is deprecated, use `{}` instead",
+        "DEPRECATION".red(),
+        orig_cmd.join(" ").yellow(),
+        new_cmd.join(" ").yellow()
+    );
 
     let run_args = crate::commands::run::RunArgs {
         ruby: request,
