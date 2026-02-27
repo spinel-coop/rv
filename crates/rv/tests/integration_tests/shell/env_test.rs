@@ -63,7 +63,30 @@ fn test_shell_env_with_path() {
     test.create_ruby_dir("ruby-3.3.5");
 
     // Prepends ruby dirs to PATH
-    let expected_path = "/tmp/home/.local/share/rv/gems/ruby/3.3.0/bin:/tmp/home/.local/share/rv/rubies/ruby-3.3.5/lib/ruby/gems/3.3.0/bin:/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin:/tmp/bin";
+    let expected_path = [
+        "/tmp/home/.local/share/rv/gems/ruby/3.3.0/bin",
+        "/tmp/home/.local/share/rv/rubies/ruby-3.3.5/lib/ruby/gems/3.3.0/bin",
+        "/tmp/home/.local/share/rv/rubies/ruby-3.3.5/bin",
+        "/tmp/bin",
+    ]
+    .join(":");
+    let output = test.rv(&["shell", "env", "zsh"]);
+    output.assert_success();
+    output.assert_stdout_contains(&format!("export PATH='{expected_path}'"));
+
+    // But does not duplicate entries the second time
+    let data_dir = test.data_dir();
+    let rubies_dir = test.rubies_dir();
+    let new_path = std::env::join_paths([
+        format!("{data_dir}/rv/gems/ruby/3.3.0/bin"),
+        format!("{rubies_dir}/ruby-3.3.5/lib/ruby/gems/3.3.0/bin"),
+        format!("{rubies_dir}/ruby-3.3.5/bin"),
+        "/tmp/bin".to_string(),
+    ])
+    .unwrap()
+    .into_string()
+    .unwrap();
+    test.env.insert("PATH".into(), new_path);
     let output = test.rv(&["shell", "env", "zsh"]);
     output.assert_success();
     output.assert_stdout_contains(&format!("export PATH='{expected_path}'"));
