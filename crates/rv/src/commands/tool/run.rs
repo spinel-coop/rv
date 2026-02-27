@@ -180,7 +180,7 @@ pub(crate) async fn run(
         global_args,
         Some(ruby_version),
         no_install,
-        args,
+        args.to_vec(),
     )
     .await?;
     Ok(())

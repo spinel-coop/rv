@@ -854,9 +854,9 @@ fn cache_gemspec_path(
     let result = crate::commands::ruby::run::capture_run_no_install(
         Invocation::ruby(vec![]),
         config,
-        &[
-            "-e",
-            &format!(
+        vec![
+            "-e".to_string(),
+            format!(
                 "puts Gem::Specification.load(\"{}\").to_yaml",
                 rv_dirs::canonicalize_utf8(&gemspec_path)?,
             ),
@@ -1492,9 +1492,9 @@ fn find_exts_scope(config: &Config) -> Result<String> {
     let exts_scope = crate::commands::ruby::run::capture_run_no_install(
         Invocation::ruby(vec![]),
         config,
-        &[
-            "-e",
-            "puts File.join(Gem::Platform.local.to_s, Gem.extension_api_version)",
+        vec![
+            "-e".to_string(),
+            "puts File.join(Gem::Platform.local.to_s, Gem.extension_api_version)".to_string(),
         ],
         None,
     )?
@@ -1635,7 +1635,7 @@ fn build_rakefile(
         output = crate::commands::ruby::run::capture_run_no_install(
             Invocation::ruby(vec![]),
             config,
-            &[ext_file],
+            vec![ext_file.to_string()],
             Some(&ext_dir),
         )?;
         outputs.push(output);
@@ -1650,7 +1650,7 @@ fn build_rakefile(
     let rake = Invocation::tool("rake", vec![("GEM_HOME", gem_home.to_string())]);
 
     output =
-        crate::commands::ruby::run::capture_run_no_install(rake, config, &args, Some(&ext_dir))?;
+        crate::commands::ruby::run::capture_run_no_install(rake, config, args, Some(&ext_dir))?;
     outputs.push(output);
 
     // 3. Copy the resulting files to ext and lib dirs
@@ -1681,7 +1681,7 @@ fn build_extconf(
     output = crate::commands::ruby::run::capture_run_no_install(
         Invocation::ruby(vec![("GEM_HOME", gem_home.to_string())]),
         config,
-        &[ext_file],
+        vec![ext_file.to_string()],
         Some(&ext_dir),
     )?;
     outputs.push(output);
@@ -1701,14 +1701,14 @@ fn build_extconf(
     let sitearchdir = format!("sitearchdir={}", tmp_dir.path());
     let sitelibdir = format!("sitelibdir={}", tmp_dir.path());
     let destdir = "DESTDIR=''".to_string();
-    let base_args = vec![destdir.as_str(), sitearchdir.as_str(), sitelibdir.as_str()];
+    let base_args = vec![destdir, sitearchdir, sitelibdir];
     let make_env = vec![("GEM_HOME", gem_home.to_string())];
 
     // make clean (ignore failures)
     let _ = crate::commands::ruby::run::capture_run_no_install(
         Invocation::tool("make", make_env.clone()),
         config,
-        &[&["clean"], base_args.as_slice()].concat(),
+        [vec!["clean".to_string()], base_args.clone()].concat(),
         Some(&ext_dir),
     );
 
@@ -1716,7 +1716,7 @@ fn build_extconf(
     output = crate::commands::ruby::run::capture_run_no_install(
         Invocation::tool("make", make_env.clone()),
         config,
-        &base_args,
+        base_args.clone(),
         Some(&ext_dir),
     )?;
     let success = output.status.success();
@@ -1729,7 +1729,7 @@ fn build_extconf(
     output = crate::commands::ruby::run::capture_run_no_install(
         Invocation::tool("make", make_env.clone()),
         config,
-        &[&["install"], base_args.as_slice()].concat(),
+        [vec!["install".to_string()], base_args.clone()].concat(),
         Some(&ext_dir),
     )?;
     outputs.push(output);
@@ -1738,7 +1738,7 @@ fn build_extconf(
     let _ = crate::commands::ruby::run::capture_run_no_install(
         Invocation::tool("make", make_env),
         config,
-        &[&["clean"], base_args.as_slice()].concat(),
+        [vec!["clean".to_string()], base_args].concat(),
         Some(&ext_dir),
     );
 

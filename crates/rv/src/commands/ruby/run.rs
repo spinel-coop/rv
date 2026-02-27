@@ -61,12 +61,12 @@ impl Invocation {
 /// If given `request` is `None`, shell out to whatever version is pinned in a version
 /// file, or to the default ruby version if no ruby version is found in version files.
 /// By default, if the ruby isn't installed, install it (disabled via `no_install`).
-pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
+pub(crate) async fn run(
     invocation: Invocation,
     global_args: &GlobalArgs,
     request: Option<RubyRequest>,
     no_install: bool,
-    args: &[A],
+    args: Vec<String>,
 ) -> Result<()> {
     let config = &Config::new(global_args, request)?;
 
@@ -96,10 +96,10 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
 }
 
 /// Run, without installing the Ruby version if necessary, and capturing output.
-pub(crate) fn capture_run_no_install<A: AsRef<std::ffi::OsStr>>(
+pub(crate) fn capture_run_no_install(
     invocation: Invocation,
     config: &Config,
-    args: &[A],
+    args: Vec<String>,
     cwd: Option<&Utf8Path>,
 ) -> Result<Output> {
     let mut cmd = prepare_command(invocation, config, args, cwd)?;
@@ -109,10 +109,10 @@ pub(crate) fn capture_run_no_install<A: AsRef<std::ffi::OsStr>>(
     Ok(cmd.output()?)
 }
 
-fn prepare_command<A: AsRef<std::ffi::OsStr>>(
+fn prepare_command(
     invocation: Invocation,
     config: &Config,
-    args: &[A],
+    args: Vec<String>,
     cwd: Option<&Utf8Path>,
 ) -> Result<Command> {
     let ruby = config.current_ruby().ok_or(Error::NoMatchingRuby)?;
