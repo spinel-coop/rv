@@ -79,7 +79,6 @@ pub(crate) async fn run(global_args: &GlobalArgs, args: RunArgs) -> Result<()> {
         args.no_install,
         &cmd_args,
         Default::default(),
-        Default::default(),
     )
     .await?;
 

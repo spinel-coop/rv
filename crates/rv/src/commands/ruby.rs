@@ -150,7 +150,6 @@ pub(crate) async fn ruby(global_args: &GlobalArgs, args: RubyArgs) -> Result<()>
             no_install,
             &args,
             Default::default(),
-            Default::default(),
         )
         .await
         .map(|_| ())?,

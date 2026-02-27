@@ -69,15 +69,12 @@ impl Invocation {
 /// If given `request` is `None`, shell out to whatever version is pinned in a version
 /// file, or to the default ruby version if no ruby version is found in version files.
 /// By default, if the ruby isn't installed, install it (disabled via `no_install`).
-/// The ruby's output may be captured, depending on `capture_output`. If you pass
-/// `CaptureOutput::No`, this returns an empty `Output` struct.
 pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
     invocation: Invocation,
     global_args: &GlobalArgs,
     request: Option<RubyRequest>,
     no_install: bool,
     args: &[A],
-    capture_output: CaptureOutput,
     cwd: Option<&Utf8Path>,
 ) -> Result<Output> {
     let config = &Config::new(global_args, request)?;
@@ -100,10 +97,12 @@ pub(crate) async fn run<A: AsRef<std::ffi::OsStr>>(
         )
         .await?
     };
-    run_no_install(invocation, config, args, capture_output, cwd)
+    run_no_install(invocation, config, args, CaptureOutput::No, cwd)
 }
 
 /// Run, without installing the Ruby version if necessary.
+/// The ruby's output may be captured, depending on `capture_output`. If you pass
+/// `CaptureOutput::No`, this returns an empty `Output` struct.
 pub(crate) fn run_no_install<A: AsRef<std::ffi::OsStr>>(
     invocation: Invocation,
     config: &Config,
