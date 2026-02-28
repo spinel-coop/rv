@@ -215,6 +215,11 @@ pub enum Error {
     InvalidGemfilePath(String),
     #[error(transparent)]
     UnpackError(#[from] UnpackError),
+    #[error("macOS Command Line Tools are not installed")]
+    #[diagnostic(help(
+        "Native gem extensions require a C compiler to build.\nInstall them by running:\n\n  xcode-select --install"
+    ))]
+    MissingMacosDevTools,
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -1003,6 +1008,23 @@ impl<'a> CompileNativeExtInfo<'a> {
     }
 }
 
+/// Check that macOS Command Line Tools are installed.
+/// Without these, native gem extensions cannot compile because there's no C compiler.
+/// Uses `xcode-select -p`, the same check used by Homebrew.
+#[cfg(target_os = "macos")]
+fn check_macos_dev_tools() -> Result<()> {
+    let status = std::process::Command::new("xcode-select")
+        .arg("-p")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status();
+
+    match status {
+        Ok(s) if s.success() => Ok(()),
+        _ => Err(Error::MissingMacosDevTools),
+    }
+}
+
 fn compile_gems(
     config: &Config,
     specs: Vec<GemSpecification>,
@@ -1020,6 +1042,12 @@ fn compile_gems(
     if deps_count == 0 {
         return Ok(Default::default());
     }
+
+    // On macOS, verify that Xcode Command Line Tools are installed before
+    // attempting to compile native extensions. Without a C compiler, every
+    // gem compilation will fail with cryptic mkmf.rb errors.
+    #[cfg(target_os = "macos")]
+    check_macos_dev_tools()?;
 
     // Phase 3: Compiles (80-100%)
     progress.start_phase(deps_count as u64, 20);
