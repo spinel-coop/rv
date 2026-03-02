@@ -579,14 +579,7 @@ fn install_path(
 
             path_specs.push(dep_gemspec.clone());
 
-            // pass the executable names to generate binstubs
-            let binstub_dir = args.install_layout.binstub_dir();
-            install_binstub(
-                &dep_gemspec.name,
-                &dep_gemspec.executables,
-                &binstub_dir,
-                &args.ruby_executable_path,
-            )?;
+            install_binstub(&dep_gemspec, args)?;
         }
     }
 
@@ -738,14 +731,7 @@ fn install_git_repo(
 
             git_specs.push(dep_gemspec.clone());
 
-            // pass the executable names to generate binstubs
-            let binstub_dir = args.install_layout.binstub_dir();
-            install_binstub(
-                &dep_gemspec.name,
-                &dep_gemspec.executables,
-                &binstub_dir,
-                &args.ruby_executable_path,
-            )?;
+            install_binstub(&dep_gemspec, args)?;
         }
     }
 
@@ -961,19 +947,12 @@ fn install_single_gem(
     args: &CiInnerArgs,
 ) -> Result<GemSpecification> {
     let full_name = download.spec.gem_version.to_string();
-    let install_layout = &args.install_layout;
-    let binstub_dir = install_layout.binstub_dir();
     // Actually unpack the tarball here.
     let dep_gemspec_res = download.unpack_tarball(args)?;
     debug!("Unpacked tarball {full_name}");
     let dep_gemspec = dep_gemspec_res.ok_or(UnpackError::MissingGemspec(full_name.to_string()))?;
     debug!("Installing binstubs for {full_name}");
-    install_binstub(
-        &dep_gemspec.name,
-        &dep_gemspec.executables,
-        &binstub_dir,
-        &args.ruby_executable_path,
-    )?;
+    install_binstub(&dep_gemspec, args)?;
     debug!("Installed {full_name}");
     Ok(dep_gemspec)
 }
@@ -1138,12 +1117,12 @@ fn make_dep_graph<'a>(
     Ok((info, deps))
 }
 
-fn install_binstub(
-    dep_name: &str,
-    executables: &[String],
-    binstub_dir: &Utf8Path,
-    ruby_executable_path: &Utf8Path,
-) -> Result<()> {
+fn install_binstub(gemspec: &GemSpecification, args: &CiInnerArgs) -> Result<()> {
+    let dep_name = &gemspec.name;
+    let executables = &gemspec.executables;
+    let binstub_dir = &args.install_layout.binstub_dir();
+    let ruby_executable_path = &args.ruby_executable_path;
+
     for exe_name in executables {
         debug!("Creating binstub {dep_name}-{exe_name}");
         if let Err(error) = write_binstub(dep_name, exe_name, binstub_dir, ruby_executable_path) {
