@@ -103,9 +103,13 @@ impl InstallLayout {
         self.install_path.join(format!("gems/{}", full_version))
     }
 
+    pub fn specifications_dir(&self) -> Utf8PathBuf {
+        self.install_path.join("specifications")
+    }
+
     pub fn spec_path(&self, full_version: &str) -> Utf8PathBuf {
-        self.install_path
-            .join(format!("specifications/{}.gemspec", full_version))
+        self.specifications_dir()
+            .join(format!("{}.gemspec", full_version))
     }
 
     pub fn git_gem_path(&self, git_section: &GitSection) -> Utf8PathBuf {
@@ -1810,9 +1814,9 @@ where
     R: Read,
 {
     // First, create the metadata's destination.
-    let dst_path = install_layout.spec_path(nameversion);
-    let metadata_dir = dst_path.parent().unwrap();
+    let metadata_dir = install_layout.specifications_dir();
     fs_err::create_dir_all(metadata_dir)?;
+    let dst_path = install_layout.spec_path(nameversion);
     let mut dst = fs_err::File::create(&dst_path)?;
 
     // Then write the (unzipped) source into the destination.
