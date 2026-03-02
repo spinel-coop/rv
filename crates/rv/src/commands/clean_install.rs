@@ -1119,6 +1119,10 @@ fn make_dep_graph<'a>(
 fn install_binstub(gemspec: &GemSpecification, args: &CiInnerArgs) -> Result<()> {
     let dep_name = &gemspec.name;
     let executables = &gemspec.executables;
+    if executables.is_empty() {
+        return Ok(());
+    }
+
     let binstub_dir = &args.install_layout.binstub_dir();
 
     if !binstub_dir.exists() {
