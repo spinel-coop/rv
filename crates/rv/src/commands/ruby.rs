@@ -84,6 +84,7 @@ pub enum RubyCommand {
 
     #[command(
         about = "Run Ruby with arguments, using the pinned version or a specific version",
+        hide = true,
         dont_delimit_trailing_values = true
     )]
     Run {
