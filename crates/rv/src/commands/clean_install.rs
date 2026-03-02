@@ -329,8 +329,7 @@ async fn ci_inner_work(
 ) -> Result<InstallStats> {
     let install_layout = &args.install_layout;
     let install_path = &install_layout.install_path;
-    let binstub_dir = install_layout.binstub_dir();
-    tokio::fs::create_dir_all(&binstub_dir).await?;
+    tokio::fs::create_dir_all(install_path).await?;
 
     // Filter to gems matching local platform, preferring platform-specific gems
     // over generic "ruby" platform gems. This ensures we use prebuilt binaries
@@ -1121,6 +1120,11 @@ fn install_binstub(gemspec: &GemSpecification, args: &CiInnerArgs) -> Result<()>
     let dep_name = &gemspec.name;
     let executables = &gemspec.executables;
     let binstub_dir = &args.install_layout.binstub_dir();
+
+    if !binstub_dir.exists() {
+        fs_err::create_dir(binstub_dir)?;
+    }
+
     let ruby_executable_path = &args.ruby_executable_path;
 
     for exe_name in executables {
