@@ -284,7 +284,7 @@ pub struct InstallStats {
     pub executables_installed: usize,
 }
 
-pub(crate) async fn install_from_lockfile(
+pub(crate) async fn install_tool_lockfile(
     global_args: &GlobalArgs,
     request: Option<RubyRequest>,
     lockfile: GemfileDotLock<'_>,

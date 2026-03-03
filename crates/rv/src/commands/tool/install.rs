@@ -224,7 +224,7 @@ pub(crate) async fn install(
 
     let InstallStats {
         executables_installed,
-    } = crate::commands::clean_install::install_from_lockfile(
+    } = crate::commands::clean_install::install_tool_lockfile(
         global_args,
         Some(ruby_to_use.clone().into()),
         lockfile,
