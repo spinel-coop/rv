@@ -9,7 +9,8 @@ on:
     types: [checks_requested]
   workflow_dispatch:
 
-permissions: read-all
+permissions:
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -27,6 +28,8 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Install cargo-deny
         uses: EmbarkStudios/cargo-deny-action@v2
@@ -39,6 +42,8 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -69,6 +74,8 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -104,6 +111,8 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Install additional shells
         if: startsWith(matrix.runs-on, 'ubuntu')
@@ -155,6 +164,8 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Download rv binary
         uses: actions/download-artifact@v5
