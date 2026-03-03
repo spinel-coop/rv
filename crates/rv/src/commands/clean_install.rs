@@ -1132,10 +1132,7 @@ fn install_binstub(gemspec: &GemSpecification, args: &CiInnerArgs) -> Result<()>
     }
 
     let binstub_dir = &args.install_layout.binstub_dir();
-
-    if !binstub_dir.exists() {
-        fs_err::create_dir(binstub_dir)?;
-    }
+    fs_err::create_dir_all(binstub_dir)?;
 
     let ruby_executable_path = &args.ruby_executable_path;
 
@@ -2216,7 +2213,6 @@ SHA512:
     #[test]
     fn test_discard_installed_gems() {
         use camino::Utf8PathBuf;
-        use std::fs;
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
@@ -2232,7 +2228,7 @@ SHA512:
 
         // A fake installed gem (We check based on dir, so just a dir with the name is enough)
         let installed_gem_dir = install_path.join("gems").join("rake-13.3.0");
-        fs::create_dir_all(&installed_gem_dir).unwrap();
+        fs_err::create_dir_all(&installed_gem_dir).unwrap();
 
         discard_installed_gems(&mut lockfile, &install_layout);
 
@@ -2244,9 +2240,9 @@ SHA512:
 
         // A fake installed specification (We check based on file presence, so just an empty file is enough)
         let specifications_dir = install_path.join("specifications");
-        fs::create_dir_all(&specifications_dir).unwrap();
+        fs_err::create_dir_all(&specifications_dir).unwrap();
         let installed_specification = specifications_dir.join("rake-13.3.0.gemspec");
-        fs::write(&installed_specification, "").unwrap();
+        fs_err::write(&installed_specification, "").unwrap();
 
         discard_installed_gems(&mut lockfile, &install_layout);
 
