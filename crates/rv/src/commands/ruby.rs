@@ -84,6 +84,7 @@ pub enum RubyCommand {
 
     #[command(
         about = "Run Ruby with arguments, using the pinned version or a specific version",
+        hide = true,
         dont_delimit_trailing_values = true
     )]
     Run {
@@ -143,17 +144,15 @@ pub(crate) async fn ruby(global_args: &GlobalArgs, args: RubyArgs) -> Result<()>
             version,
             no_install,
             args,
-        } => run::run(
-            run::Invocation::ruby(vec![]),
-            global_args,
-            version,
-            no_install,
-            &args,
-            Default::default(),
-            Default::default(),
-        )
-        .await
-        .map(|_| ())?,
+        } => {
+            if env!("CARGO_PKG_VERSION_MINOR").parse::<u8>().unwrap() >= 7 {
+                panic!("Remove this subcommand before releasing 0.7.0");
+            };
+
+            run::run(global_args, version, no_install, args)
+                .await
+                .map(|_| ())?
+        }
     };
 
     Ok(())

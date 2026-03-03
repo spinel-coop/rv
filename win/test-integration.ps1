@@ -4,13 +4,13 @@ $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
 $RV = (Resolve-Path ".\target\debug\rvw.exe").Path
 
-Write-Host "=== rv ruby run $RUBY_VERSION (install + execute) ==="
-$output = & $RV ruby run $RUBY_VERSION -- -e "puts RUBY_DESCRIPTION" | Out-String
+Write-Host "=== rv run --ruby $RUBY_VERSION ruby (install + execute) ==="
+$output = & $RV run --ruby $RUBY_VERSION ruby -e "puts RUBY_DESCRIPTION" | Out-String
 Write-Host $output
 if ($output -notmatch [regex]::Escape($RUBY_VERSION)) {
     throw "Expected output to contain $RUBY_VERSION, got: $output"
 }
-Write-Host "PASS: rv ruby run installed and executed Ruby $RUBY_VERSION" -ForegroundColor Green
+Write-Host "PASS: rv run ruby installed and executed Ruby $RUBY_VERSION" -ForegroundColor Green
 
 
 Write-Host "=== rv ruby list --installed-only ==="
@@ -84,8 +84,8 @@ if ($list_after -match [regex]::Escape($RUBY_VERSION)) {
 Write-Host "PASS: $RUBY_VERSION no longer listed after uninstall" -ForegroundColor Green
 
 
-Write-Host "=== rv ruby run $RUBY_VERSION (re-install after uninstall) ==="
-$reinstall = & $RV ruby run $RUBY_VERSION -- -e "puts 're-installed'" | Out-String
+Write-Host "=== rv run --ruby $RUBY_VERSION ruby (re-install after uninstall) ==="
+$reinstall = & $RV run --ruby $RUBY_VERSION ruby -e "puts 're-installed'" | Out-String
 if ($reinstall -notmatch "re-installed") {
     throw "Re-install failed: $reinstall"
 }

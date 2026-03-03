@@ -1,17 +1,11 @@
 use crate::common::{RvOutput, RvTest};
 use std::fs;
 
-#[derive(Debug, Default)]
-pub struct RunOptions {
-    pub set_no_install: bool,
-}
-
 impl RvTest {
-    pub fn ruby_run(&self, version: Option<&str>, options: RunOptions, args: &[&str]) -> RvOutput {
-        let RunOptions { set_no_install } = options;
+    pub fn ruby_run(&self, version: Option<&str>, no_install: bool, args: &[&str]) -> RvOutput {
         let mut run_args = vec!["ruby", "run"];
 
-        if set_no_install {
+        if no_install {
             run_args.push("--no-install");
         }
         if let Some(version) = version {
@@ -34,7 +28,7 @@ fn test_ruby_run_simple() {
     );
 
     output.assert_success();
-    assert!(output.stderr().is_empty());
+    output.assert_stderr_contains("run --ruby 3.3.5 ruby <ARGS>");
     assert_eq!(
         output.normalized_stdout(),
         "ruby\n3.3.5\naarch64-darwin23\naarch64\ndarwin23\n\n"
@@ -78,7 +72,7 @@ fn test_ruby_run_default() {
     let output = test.ruby_run(None, Default::default(), &["-e", "'puts \"Hello, World\"'"]);
 
     output.assert_success();
-    assert!(output.stderr().is_empty());
+    output.assert_stderr_contains("run ruby <ARGS>");
     assert_eq!(
         output.normalized_stdout(),
         "ruby\n3.3.5\naarch64-darwin23\naarch64\ndarwin23\n\n"
@@ -93,7 +87,7 @@ fn test_ruby_run_default_skips_prereleases() {
     let output = test.ruby_run(None, Default::default(), &["-e", "'puts \"Hello, World\"'"]);
 
     output.assert_success();
-    assert!(output.stderr().is_empty());
+    output.assert_stderr_contains("run ruby <ARGS>");
     assert_eq!(
         output.normalized_stdout(),
         "ruby\n3.4.8\naarch64-darwin23\naarch64\ndarwin23\n\n"
@@ -105,17 +99,16 @@ fn test_ruby_run_simple_no_install() {
     let test = RvTest::new();
     test.create_ruby_dir("ruby-3.3.5");
 
+    let no_install = true;
     // This should pass because we already installed 3.3.5
     let output = test.ruby_run(
         Some("3.3.5"),
-        RunOptions {
-            set_no_install: true,
-        },
+        no_install,
         &["-e", "'puts \"Hello, World\"'"],
     );
 
     output.assert_success();
-    assert!(output.stderr().is_empty());
+    output.assert_stderr_contains("run --no-install --ruby 3.3.5 ruby <ARGS>");
     assert_eq!(
         output.normalized_stdout(),
         "ruby\n3.3.5\naarch64-darwin23\naarch64\ndarwin23\n\n"
