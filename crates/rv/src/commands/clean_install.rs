@@ -103,9 +103,13 @@ impl InstallLayout {
         self.install_path.join(format!("gems/{}", full_version))
     }
 
+    pub fn specifications_dir(&self) -> Utf8PathBuf {
+        self.install_path.join("specifications")
+    }
+
     pub fn spec_path(&self, full_version: &str) -> Utf8PathBuf {
-        self.install_path
-            .join(format!("specifications/{}.gemspec", full_version))
+        self.specifications_dir()
+            .join(format!("{}.gemspec", full_version))
     }
 
     pub fn git_gem_path(&self, git_section: &GitSection) -> Utf8PathBuf {
@@ -280,7 +284,7 @@ pub struct InstallStats {
     pub executables_installed: usize,
 }
 
-pub(crate) async fn install_from_lockfile(
+pub(crate) async fn install_tool_lockfile(
     global_args: &GlobalArgs,
     request: Option<RubyRequest>,
     lockfile: GemfileDotLock<'_>,
@@ -303,7 +307,7 @@ pub(crate) async fn install_from_lockfile(
         max_concurrent_installs: 20,
         validate_checksums: true,
         install_layout: InstallLayout {
-            install_path,
+            install_path: install_path.clone(),
             extensions_scope,
         },
         ruby_executable_path: ruby.executable_path(),
@@ -314,7 +318,15 @@ pub(crate) async fn install_from_lockfile(
     let progress = WorkProgress::new();
 
     // Do the work.
-    ci_inner_work(config, &inner_args, &progress, lockfile).await
+    let result = ci_inner_work(config, &inner_args, &progress, lockfile).await;
+
+    // Cleanup tool dir in case of errors, so retrying tool install is not skipped as "already
+    // installed"
+    if result.is_err() {
+        tokio::fs::remove_dir_all(&install_path).await.unwrap();
+    }
+
+    result
 }
 
 async fn ci_inner_work(
@@ -325,8 +337,7 @@ async fn ci_inner_work(
 ) -> Result<InstallStats> {
     let install_layout = &args.install_layout;
     let install_path = &install_layout.install_path;
-    let binstub_dir = install_layout.binstub_dir();
-    tokio::fs::create_dir_all(&binstub_dir).await?;
+    tokio::fs::create_dir_all(install_path).await?;
 
     // Filter to gems matching local platform, preferring platform-specific gems
     // over generic "ruby" platform gems. This ensures we use prebuilt binaries
@@ -575,14 +586,7 @@ fn install_path(
 
             path_specs.push(dep_gemspec.clone());
 
-            // pass the executable names to generate binstubs
-            let binstub_dir = args.install_layout.binstub_dir();
-            install_binstub(
-                &dep_gemspec.name,
-                &dep_gemspec.executables,
-                &binstub_dir,
-                &args.ruby_executable_path,
-            )?;
+            install_binstub(&dep_gemspec, args)?;
         }
     }
 
@@ -734,14 +738,7 @@ fn install_git_repo(
 
             git_specs.push(dep_gemspec.clone());
 
-            // pass the executable names to generate binstubs
-            let binstub_dir = args.install_layout.binstub_dir();
-            install_binstub(
-                &dep_gemspec.name,
-                &dep_gemspec.executables,
-                &binstub_dir,
-                &args.ruby_executable_path,
-            )?;
+            install_binstub(&dep_gemspec, args)?;
         }
     }
 
@@ -957,19 +954,12 @@ fn install_single_gem(
     args: &CiInnerArgs,
 ) -> Result<GemSpecification> {
     let full_name = download.spec.gem_version.to_string();
-    let install_layout = &args.install_layout;
-    let binstub_dir = install_layout.binstub_dir();
     // Actually unpack the tarball here.
     let dep_gemspec_res = download.unpack_tarball(args)?;
     debug!("Unpacked tarball {full_name}");
     let dep_gemspec = dep_gemspec_res.ok_or(UnpackError::MissingGemspec(full_name.to_string()))?;
     debug!("Installing binstubs for {full_name}");
-    install_binstub(
-        &dep_gemspec.name,
-        &dep_gemspec.executables,
-        &binstub_dir,
-        &args.ruby_executable_path,
-    )?;
+    install_binstub(&dep_gemspec, args)?;
     debug!("Installed {full_name}");
     Ok(dep_gemspec)
 }
@@ -1134,12 +1124,21 @@ fn make_dep_graph<'a>(
     Ok((info, deps))
 }
 
-fn install_binstub(
-    dep_name: &str,
-    executables: &[String],
-    binstub_dir: &Utf8Path,
-    ruby_executable_path: &Utf8Path,
-) -> Result<()> {
+fn install_binstub(gemspec: &GemSpecification, args: &CiInnerArgs) -> Result<()> {
+    let dep_name = &gemspec.name;
+    let executables = &gemspec.executables;
+    if executables.is_empty() {
+        return Ok(());
+    }
+
+    let binstub_dir = &args.install_layout.binstub_dir();
+
+    if !binstub_dir.exists() {
+        fs_err::create_dir(binstub_dir)?;
+    }
+
+    let ruby_executable_path = &args.ruby_executable_path;
+
     for exe_name in executables {
         debug!("Creating binstub {dep_name}-{exe_name}");
         if let Err(error) = write_binstub(dep_name, exe_name, binstub_dir, ruby_executable_path) {
@@ -1810,9 +1809,9 @@ where
     R: Read,
 {
     // First, create the metadata's destination.
-    let dst_path = install_layout.spec_path(nameversion);
-    let metadata_dir = dst_path.parent().unwrap();
+    let metadata_dir = install_layout.specifications_dir();
     fs_err::create_dir_all(metadata_dir)?;
+    let dst_path = install_layout.spec_path(nameversion);
     let mut dst = fs_err::File::create(&dst_path)?;
 
     // Then write the (unzipped) source into the destination.
