@@ -29,7 +29,7 @@ precise-builds = true
 # Whether to sign macOS executables
 macos-sign = true
 # Provide sigstore attestations from GitHub
-github-attestions = true
+github-attestations = true
 
 # Which binaries to include per target platform
 [dist.binaries]
@@ -49,3 +49,4 @@ aarch64-pc-windows-msvc = "windows-11-arm"
 "actions/checkout" = "v6"
 "actions/upload-artifact" = "v5"
 "actions/download-artifact" = "v6"
+"actions/attest-build-provenance" = "v3"
