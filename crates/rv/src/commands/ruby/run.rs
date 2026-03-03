@@ -37,6 +37,9 @@ pub(crate) async fn run(
         orig_cmd.truncate(arg_separator_position + 2);
     }
 
+    // Also make path to `rv` generic to simplify suggestions
+    orig_cmd[0] = "rv".into();
+
     let mut new_cmd = orig_cmd.clone();
 
     // Add "ruby" binary to the end, replacing "--" if given
