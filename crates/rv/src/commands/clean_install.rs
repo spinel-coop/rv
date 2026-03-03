@@ -1132,10 +1132,7 @@ fn install_binstub(gemspec: &GemSpecification, args: &CiInnerArgs) -> Result<()>
     }
 
     let binstub_dir = &args.install_layout.binstub_dir();
-
-    if !binstub_dir.exists() {
-        fs_err::create_dir(binstub_dir)?;
-    }
+    fs_err::create_dir_all(binstub_dir)?;
 
     let ruby_executable_path = &args.ruby_executable_path;
 
