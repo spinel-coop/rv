@@ -144,9 +144,15 @@ pub(crate) async fn ruby(global_args: &GlobalArgs, args: RubyArgs) -> Result<()>
             version,
             no_install,
             args,
-        } => run::run(global_args, version, no_install, args)
-            .await
-            .map(|_| ())?,
+        } => {
+            if env!("CARGO_PKG_VERSION_MINOR").parse::<u8>().unwrap() >= 7 {
+                panic!("Remove this subcommand before releasing 0.7.0");
+            };
+
+            run::run(global_args, version, no_install, args)
+                .await
+                .map(|_| ())?
+        }
     };
 
     Ok(())
