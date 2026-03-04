@@ -16,6 +16,7 @@ pub mod http_client;
 pub mod output_format;
 pub mod progress;
 pub mod script_metadata;
+pub mod update;
 
 use crate::commands::cache::{CacheCommandArgs, cache};
 use crate::commands::clean_install::{CleanInstallArgs, ci};
@@ -24,6 +25,7 @@ use crate::commands::run::{RunArgs, run};
 use crate::commands::selfupdate::selfupdate;
 use crate::commands::shell::{ShellArgs, shell};
 use crate::commands::tool::{ToolArgs, tool};
+use crate::update::update_if_needed;
 
 const STYLES: Styles = Styles::styled()
     .header(AnsiColor::Green.on_default().bold())
@@ -283,6 +285,8 @@ async fn main_inner() -> Result<()> {
         .with(indicatif_layer);
 
     reg.init();
+
+    update_if_needed().await;
 
     run_cmd(&cli.global_args(), cli.command).await
 }
