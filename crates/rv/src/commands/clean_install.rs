@@ -1689,7 +1689,7 @@ fn build_extconf(
 
     // 3. Run make clean / make / make install / make clean
     //
-    // Use run_no_install with Invocation::tool to ensure Ruby is in PATH.
+    // We run `make` through `rv run` command instead of directly to ensure Ruby is in PATH.
     // This is needed for gems that use rb-sys (Rust-based extensions) because
     // their Cargo build scripts call `ruby` to query RbConfig.
     let tmp_dir = camino_tempfile::tempdir_in(gem_path)?;
