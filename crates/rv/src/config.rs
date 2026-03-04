@@ -249,8 +249,10 @@ impl Config<'_> {
         let mut env = Env::default();
 
         let pathstr = env::var("PATH").unwrap_or_else(|_| String::new());
-        let mut paths = split_paths(&pathstr).collect::<Vec<_>>();
-        paths.extend(extra_paths);
+        let mut paths = split_paths(&pathstr).collect::<IndexSet<_>>();
+        for extra_path in extra_paths {
+            paths.insert(extra_path);
+        }
 
         let old_ruby_paths: Vec<PathBuf> = ["RUBY_ROOT", "GEM_HOME"]
             .iter()
@@ -266,16 +268,16 @@ impl Config<'_> {
 
         if let Some(ruby) = ruby {
             let mut gem_paths = vec![];
-            paths.insert(0, ruby.bin_path().into());
+            paths.insert_before(0, ruby.bin_path().into());
             env.insert("RUBY_ROOT", ruby.path.to_string());
             env.insert("RUBY_ENGINE", ruby.version.engine.name().into());
             env.insert("RUBY_VERSION", ruby.version.number());
             let gem_home = self.gem_home(ruby);
-            paths.insert(0, gem_home.join("bin").into());
+            paths.insert_before(0, gem_home.join("bin").into());
             gem_paths.insert(0, gem_home.clone());
             env.insert("GEM_HOME", gem_home.into_string());
             let user_home = ruby.user_home();
-            paths.insert(0, user_home.join("bin").into());
+            paths.insert_before(0, user_home.join("bin").into());
             gem_paths.insert(0, user_home);
             let gem_path = join_paths(gem_paths)?;
             if let Some(gem_path) = gem_path.to_str() {
