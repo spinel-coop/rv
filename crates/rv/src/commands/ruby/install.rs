@@ -40,8 +40,6 @@ pub enum Error {
         status: reqwest::StatusCode,
         body: String,
     },
-    #[error("Could not get latest Ruby release")]
-    GetLatestReleaseFailed { error: super::list::Error },
     #[error("Failed to unpack archive path {0}")]
     InvalidTarballPath(PathBuf),
     #[error(transparent)]
