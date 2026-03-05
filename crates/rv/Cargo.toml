@@ -74,6 +74,7 @@ base64 = "0.22.1"
 dep-graph = { workspace = true }
 pubgrub = "0.3.0"
 tabled = { version = "0.20.0", features = ["ansi"] }
+config = "0.15.19"
 
 [dev-dependencies]
 insta = { workspace = true }
