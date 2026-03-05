@@ -114,6 +114,17 @@ jobs:
 
       - name: Install nextest
         uses: taiki-e/install-action@nextest
+        if: matrix.runs-on != 'windows-11-arm'
+
+      # Workaround https://github.com/actions/partner-runner-images/issues/169
+      - name: Install nextest (windows-11-arm)
+        run: |
+          $tmp = New-TemporaryFile | Rename-Item -NewName { $_ -replace 'tmp$', 'zip' } -PassThru
+          Invoke-WebRequest -OutFile $tmp https://get.nexte.st/latest/windows-arm
+          $outputDir = Join-Path $Env:CARGO_HOME "bin"
+          $tmp | Expand-Archive -DestinationPath $outputDir -Force
+          $tmp | Remove-Item
+        if: matrix.runs-on == 'windows-11-arm'
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
