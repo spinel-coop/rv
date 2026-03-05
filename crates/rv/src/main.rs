@@ -25,6 +25,7 @@ use crate::commands::run::{RunArgs, run};
 use crate::commands::self_cmd::{SelfArgs, self_cmd};
 use crate::commands::shell::{ShellArgs, shell};
 use crate::commands::tool::{ToolArgs, tool};
+use crate::config::RvSettings;
 
 const STYLES: Styles = Styles::styled()
     .header(AnsiColor::Green.on_default().bold())
@@ -89,7 +90,7 @@ struct Cli {
 }
 
 impl Cli {
-    pub fn global_args(&self) -> GlobalArgs {
+    pub fn global_args(&self, rv_settings: RvSettings) -> GlobalArgs {
         GlobalArgs {
             ruby_dir: self.ruby_dir.clone(),
             cache_args: self.cache_args.clone(),
@@ -216,6 +217,18 @@ async fn main_inner() -> Result<()> {
         Cli::parse()
     };
 
+    let rv_settings = config::RvSettings::load().unwrap_or_else(|err| {
+        eprintln!("Warning: Failed to load rv settings: {}", err);
+
+        RvSettings::default() // or should we exit?
+    });
+
+    rv_settings.validate().unwrap_or_else(|err| {
+        eprintln!("Settings validation failed: {}", err);
+
+        std::process::exit(1);
+    });
+
     let indicatif_layer = IndicatifLayer::new();
 
     let color_mode = match cli.color {
@@ -282,7 +295,7 @@ async fn main_inner() -> Result<()> {
 
     reg.init();
 
-    run_cmd(&cli.global_args(), cli.command).await
+    run_cmd(&cli.global_args(rv_settings), cli.command).await
 }
 
 /// Run an `rv` subcommand.

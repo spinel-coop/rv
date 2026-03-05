@@ -6,6 +6,7 @@ use std::{
 
 use bundler_settings::BundlerSettings;
 use camino::{FromPathBufError, Utf8Path, Utf8PathBuf};
+use config::{Config as ConfigRs, Environment, File};
 use indexmap::IndexSet;
 use tracing::{debug, instrument};
 
@@ -36,6 +37,8 @@ pub enum Error {
     JoinPathsError(#[from] JoinPathsError),
     #[error("no matching ruby version found")]
     NoMatchingRuby,
+    #[error("{} is not a valid value for {}", value, setting)]
+    SettingsValidationError { value: String, setting: String },
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -47,6 +50,7 @@ pub struct Config<'input> {
     pub cache: rv_cache::Cache,
     pub requested_ruby: RequestedRuby,
     pub bundler_settings: BundlerSettings<'input>,
+    pub rv_settings: RvSettings,
 }
 
 #[derive(Debug, Clone)]
@@ -148,6 +152,7 @@ impl Config<'_> {
             cache,
             requested_ruby,
             bundler_settings,
+            rv_settings: global_args.rv_settings.clone(),
         })
     }
 
@@ -169,6 +174,7 @@ impl Config<'_> {
             cache: Cache::temp().unwrap(),
             requested_ruby: RequestedRuby::Global,
             bundler_settings: BundlerSettings::default(),
+            rv_settings: RvSettings::default(),
         }
     }
 
