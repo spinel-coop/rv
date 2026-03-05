@@ -125,45 +125,39 @@ fn valid_archive_exists(path: &Utf8Path) -> bool {
 }
 
 fn ruby_url(version: &RubyVersion, host: &HostPlatform) -> String {
+    let download_base =
+        std::env::var("RV_INSTALL_URL").unwrap_or_else(|_| download_base_for(version, host));
+    let download_path = download_path_for(version, host);
+
+    format!("{download_base}/{download_path}")
+}
+
+fn download_base_for(version: &RubyVersion, host: &HostPlatform) -> String {
+    if host.is_windows() {
+        "https://github.com/oneclick/rubyinstaller2/releases/download".to_owned()
+    } else if version.is_dev() {
+        "https://github.com/spinel-coop/rv-ruby-dev/releases/latest/download".to_owned()
+    } else {
+        "https://github.com/spinel-coop/rv-ruby/releases/latest/download".to_owned()
+    }
+}
+
+fn download_path_for(version: &RubyVersion, host: &HostPlatform) -> String {
     let arch = host.ruby_arch_str();
     let ext = host.archive_ext();
     let number = version.number();
 
-    // Windows uses RubyInstaller2 directly
     if host.is_windows() {
         if version.is_dev() {
             // Dev builds use the rubyinstaller-head release (no revision number)
-            let download_base = std::env::var("RV_INSTALL_URL").unwrap_or_else(|_| {
-                "https://github.com/oneclick/rubyinstaller2/releases/download/rubyinstaller-head"
-                    .to_owned()
-            });
-            return format!("{download_base}/rubyinstaller-head-{arch}.{ext}");
+            format!("rubyinstaller-head/rubyinstaller-head-{arch}.{ext}")
+        } else {
+            // RubyInstaller2 URL pattern: rubyinstaller-{version}-1-x64.7z
+            format!("RubyInstaller-{number}-1/rubyinstaller-{number}-1-{arch}.{ext}")
         }
-
-        let download_base = std::env::var("RV_INSTALL_URL").unwrap_or_else(|_| {
-            format!(
-                "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-{number}-1"
-            )
-        });
-        // RubyInstaller2 URL pattern: rubyinstaller-{version}-1-x64.7z
-        return format!("{download_base}/rubyinstaller-{number}-1-{arch}.{ext}");
+    } else {
+        format!("{version}.{arch}.{ext}")
     }
-
-    // macOS/Linux use rv-ruby
-    let (download_base, version_str) = std::env::var("RV_INSTALL_URL")
-        .map(|var| (var, version.to_string()))
-        .unwrap_or_else(|_| match version {
-            RubyVersion::Dev => (
-                "https://github.com/spinel-coop/rv-ruby-dev/releases/latest/download".to_owned(),
-                version.to_string(),
-            ),
-            RubyVersion::Released(_) => (
-                "https://github.com/spinel-coop/rv-ruby/releases/latest/download".to_owned(),
-                version.to_string(),
-            ),
-        });
-
-    format!("{download_base}/{version_str}.{arch}.{ext}")
 }
 
 fn archive_cache_path(config: &Config, url: impl AsRef<str>, host: &HostPlatform) -> Utf8PathBuf {
