@@ -261,7 +261,7 @@ fn print_entries(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::GlobalArgs;
+    use crate::{GlobalArgs, config::RvSettings};
     use assert_fs::TempDir;
     use camino::Utf8PathBuf;
     use rv_cache::CacheArgs;
@@ -281,6 +281,7 @@ mod tests {
         let global_args = GlobalArgs {
             ruby_dir: [ruby_dir].to_vec(),
             cache_args,
+            rv_settings: RvSettings::default(),
         };
 
         Ok(global_args)
