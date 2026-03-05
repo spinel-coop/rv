@@ -94,7 +94,7 @@ pub(crate) async fn install(
     Ok(())
 }
 
-// downloads and extracts a remote ruby archive (tarball or zip)
+// downloads a remote ruby archive (tarball or zip)
 async fn download_tarball(
     config: &Config<'_>,
     version: &RubyVersion,
