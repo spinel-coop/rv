@@ -80,7 +80,7 @@ pub(crate) async fn install(
     let archive_path = if let Some(path) = tarball_path {
         path
     } else {
-        download_tarball(config, &version, &progress).await?
+        download_tarball(config, &version, force, &progress).await?
     };
 
     extract_ruby_archive(&archive_path, &install_dir, &version)?;
@@ -98,6 +98,7 @@ pub(crate) async fn install(
 async fn download_tarball(
     config: &Config<'_>,
     version: &RubyVersion,
+    force: bool,
     progress: &WorkProgress,
 ) -> Result<Utf8PathBuf> {
     let host = HostPlatform::current()?;
@@ -109,7 +110,7 @@ async fn download_tarball(
         fs_err::create_dir_all(cache_dir)?;
     }
 
-    if valid_archive_exists(&archive_path) {
+    if !force && valid_archive_exists(&archive_path) {
         println!(
             "Archive {} already exists, skipping download.",
             archive_path.cyan()
