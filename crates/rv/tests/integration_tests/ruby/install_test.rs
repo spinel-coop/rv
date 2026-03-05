@@ -63,7 +63,7 @@ fn test_ruby_install_successful_download() {
     let tarball_content = test.create_mock_tarball("3.4.5");
     let download_path = test.ruby_tarball_download_path("3.4.5");
     let ruby_mock = test
-        .mock_tarball_download(download_path, &tarball_content)
+        .mock_tarball_download(&download_path, &tarball_content)
         .create();
 
     let cache_dir = test.enable_cache();
@@ -267,7 +267,7 @@ fn test_ruby_install_atomic_rename_behavior() {
     let tarball_content = test.create_mock_tarball("3.4.5");
     let download_path = test.ruby_tarball_download_path("3.4.5");
     let ruby_mock = test
-        .mock_tarball_download(download_path, &tarball_content)
+        .mock_tarball_download(&download_path, &tarball_content)
         .create();
 
     let cache_dir = test.enable_cache();

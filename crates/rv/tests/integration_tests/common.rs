@@ -343,19 +343,19 @@ impl RvTest {
     pub fn mock_ruby_download(&mut self, version: &str) -> Mock {
         let path = self.ruby_tarball_download_path(version);
         let content = self.create_mock_tarball(version);
-        self.mock_tarball_download(path, &content)
+        self.mock_tarball_download(&path, &content)
     }
 
     pub fn mock_gem_download(&mut self, package: &str) -> Mock {
         let path = self.gem_package_download_path(package);
         let content = fs_err::read(format!("../rv-gem-package/tests/fixtures/{package}")).unwrap();
-        self.mock_tarball_download(path, &content)
+        self.mock_tarball_download(&path, &content)
     }
 
     /// Mock a tarball download for testing
-    pub fn mock_tarball_download(&mut self, path: String, content: &[u8]) -> Mock {
+    pub fn mock_tarball_download(&mut self, path: &str, content: &[u8]) -> Mock {
         self.server
-            .mock("GET", path.as_str())
+            .mock("GET", path)
             .with_status(200)
             .with_header("content-type", "application/gzip")
             .with_body(content)
