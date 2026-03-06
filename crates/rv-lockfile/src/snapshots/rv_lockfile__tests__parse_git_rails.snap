@@ -9,6 +9,7 @@ git:
     ref: ~
     tag: ~
     submodules: ~
+    glob: ~
     specs:
       - gem_version:
           name: indirect
@@ -25,6 +26,7 @@ git:
     ref: ~
     tag: ~
     submodules: ~
+    glob: ~
     specs:
       - gem_version:
           name: actioncable

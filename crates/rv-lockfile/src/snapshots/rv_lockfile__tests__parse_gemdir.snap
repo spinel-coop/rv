@@ -9,6 +9,7 @@ git:
     ref: ~
     tag: ~
     submodules: ~
+    glob: ~
     specs:
       - gem_version:
           name: omniauth-github

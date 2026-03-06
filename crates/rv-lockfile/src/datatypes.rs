@@ -67,6 +67,8 @@ pub struct GitSection<'i> {
     /// Includes git submodules, or not.
     /// Optional, defaults to false.
     pub submodules: Option<bool>,
+    /// Optional gemspec glob
+    pub glob: Option<&'i str>,
     /// All gems which came from this source in particular.
     pub specs: Vec<Spec<'i>>,
 }

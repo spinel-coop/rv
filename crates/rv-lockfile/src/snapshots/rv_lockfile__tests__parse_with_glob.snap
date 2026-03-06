@@ -1,0 +1,283 @@
+---
+source: crates/rv-lockfile/src/tests.rs
+expression: output
+---
+git:
+  - remote: "https://github.com/rspec/rspec.git"
+    revision: 712e3ca92458b1bbd28931604fac2bb15d304cd2
+    branch: 3-13-maintenance
+    ref: ~
+    tag: ~
+    submodules: ~
+    glob: rspec/*.gemspec
+    specs:
+      - gem_version:
+          name: rspec
+          version: 3.13.2
+        deps:
+          - name: rspec-core
+            semver:
+              - semver_constraint: Pessimistic
+                version: 3.13.0
+            nonstandard: false
+          - name: rspec-expectations
+            semver:
+              - semver_constraint: Pessimistic
+                version: 3.13.0
+            nonstandard: false
+          - name: rspec-mocks
+            semver:
+              - semver_constraint: Pessimistic
+                version: 3.13.0
+            nonstandard: false
+gem:
+  - remote: "https://rubygems.org/"
+    specs:
+      - gem_version:
+          name: diff-lcs
+          version: 1.6.2
+        deps: []
+      - gem_version:
+          name: rspec-core
+          version: 3.13.6
+        deps:
+          - name: rspec-support
+            semver:
+              - semver_constraint: Pessimistic
+                version: 3.13.0
+            nonstandard: false
+      - gem_version:
+          name: rspec-expectations
+          version: 3.13.5
+        deps:
+          - name: diff-lcs
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.2.0
+              - semver_constraint: LessThan
+                version: "2.0"
+            nonstandard: false
+          - name: rspec-support
+            semver:
+              - semver_constraint: Pessimistic
+                version: 3.13.0
+            nonstandard: false
+      - gem_version:
+          name: rspec-mocks
+          version: 3.13.8
+        deps:
+          - name: diff-lcs
+            semver:
+              - semver_constraint: GreaterThanOrEqual
+                version: 1.2.0
+              - semver_constraint: LessThan
+                version: "2.0"
+            nonstandard: false
+          - name: rspec-support
+            semver:
+              - semver_constraint: Pessimistic
+                version: 3.13.0
+            nonstandard: false
+      - gem_version:
+          name: rspec-support
+          version: 3.13.7
+        deps: []
+platforms:
+  - arm64-darwin-23
+  - ruby
+dependencies:
+  - name: rspec
+    semver: ~
+    nonstandard: true
+bundled_with: 4.0.3
+checksums:
+  - gem_version:
+      name: diff-lcs
+      version: 1.6.2
+    algorithm: SHA256
+    value:
+      - 154
+      - 224
+      - 210
+      - 203
+      - 167
+      - 212
+      - 223
+      - 48
+      - 117
+      - 254
+      - 140
+      - 216
+      - 96
+      - 42
+      - 134
+      - 4
+      - 153
+      - 62
+      - 252
+      - 13
+      - 250
+      - 147
+      - 76
+      - 255
+      - 86
+      - 137
+      - 105
+      - 239
+      - 177
+      - 144
+      - 153
+      - 98
+  - gem_version:
+      name: rspec
+      version: 3.13.2
+    algorithm: None
+    value: []
+  - gem_version:
+      name: rspec-core
+      version: 3.13.6
+    algorithm: SHA256
+    value:
+      - 168
+      - 130
+      - 60
+      - 100
+      - 17
+      - 102
+      - 123
+      - 96
+      - 168
+      - 188
+      - 161
+      - 53
+      - 54
+      - 67
+      - 81
+      - 221
+      - 163
+      - 76
+      - 213
+      - 94
+      - 68
+      - 255
+      - 148
+      - 196
+      - 190
+      - 70
+      - 51
+      - 179
+      - 125
+      - 130
+      - 139
+      - 45
+  - gem_version:
+      name: rspec-expectations
+      version: 3.13.5
+    algorithm: SHA256
+    value:
+      - 51
+      - 164
+      - 211
+      - 161
+      - 217
+      - 80
+      - 96
+      - 174
+      - 164
+      - 201
+      - 78
+      - 159
+      - 35
+      - 112
+      - 48
+      - 168
+      - 249
+      - 234
+      - 229
+      - 97
+      - 94
+      - 155
+      - 216
+      - 87
+      - 24
+      - 254
+      - 58
+      - 9
+      - 228
+      - 181
+      - 136
+      - 54
+  - gem_version:
+      name: rspec-mocks
+      version: 3.13.8
+    algorithm: SHA256
+    value:
+      - 8
+      - 106
+      - 211
+      - 211
+      - 209
+      - 117
+      - 51
+      - 244
+      - 35
+      - 118
+      - 67
+      - 222
+      - 11
+      - 92
+      - 66
+      - 240
+      - 75
+      - 102
+      - 52
+      - 140
+      - 40
+      - 191
+      - 107
+      - 156
+      - 45
+      - 63
+      - 74
+      - 59
+      - 1
+      - 175
+      - 29
+      - 71
+  - gem_version:
+      name: rspec-support
+      version: 3.13.7
+    algorithm: SHA256
+    value:
+      - 6
+      - 64
+      - 229
+      - 87
+      - 8
+      - 114
+      - 170
+      - 254
+      - 253
+      - 121
+      - 134
+      - 121
+      - 1
+      - 222
+      - 238
+      - 235
+      - 64
+      - 176
+      - 201
+      - 135
+      - 90
+      - 54
+      - 185
+      - 131
+      - 216
+      - 95
+      - 84
+      - 251
+      - 115
+      - 129
+      - 196
+      - 124

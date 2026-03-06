@@ -9,6 +9,7 @@ git:
     ref: ~
     tag: v3.1.1
     submodules: ~
+    glob: ~
     specs:
       - gem_version:
           name: possibly

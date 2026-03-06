@@ -9,6 +9,7 @@ git:
     ref: 9631ac63045cfabddacc69fc06e919b4c13eb913
     tag: ~
     submodules: ~
+    glob: ~
     specs:
       - gem_version:
           name: webpush

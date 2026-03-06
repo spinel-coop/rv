@@ -9,6 +9,7 @@ git:
     ref: ~
     tag: ~
     submodules: true
+    glob: ~
     specs:
       - gem_version:
           name: rugged
