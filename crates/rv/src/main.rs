@@ -212,7 +212,7 @@ async fn main_inner() -> Result<()> {
         Cli::parse()
     };
 
-    let rv_settings = config::RvSettings::load().unwrap_or_else(|err| {
+    let rv_settings = config::RvSettings::new().unwrap_or_else(|err| {
         eprintln!("Warning: Failed to load rv settings: {}", err);
 
         RvSettings::default() // or should we exit?
