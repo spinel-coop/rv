@@ -1,0 +1,16 @@
+GEM
+  remote: http://gems.example.com/
+  specs:
+    symlink-test (1.0.0)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  symlink-test
+
+CHECKSUMS
+  symlink-test (1.0.0)
+
+BUNDLED WITH
+   2.7.2

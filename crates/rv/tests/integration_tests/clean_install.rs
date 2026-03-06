@@ -232,6 +232,67 @@ fn test_clean_install_native_and_generic_reinstall() {
     );
 }
 
+/// Test that `rv ci` can install a gem containing symlinks.
+///
+/// The `symlink-test` gem contains both a file symlink (`default.txt → v1/template.txt`)
+/// and a directory symlink (`v2 → v1`). On Windows without Developer Mode, symlink
+/// creation fails — our `tar_utils::unpack_tar` falls back to copying. This test
+/// verifies the symlinked content is readable regardless of platform.
+///
+/// Regression test for https://github.com/spinel-coop/rv/issues/586
+/// Mirrors the real-world problem from haml-rails 3.0.0.
+#[test]
+fn test_clean_install_gem_with_symlinks() {
+    let mut test = RvTest::new();
+    test.create_ruby_dir("ruby-4.0.1");
+
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.symlink-test");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.symlink-test.lock");
+    test.replace_source("http://gems.example.com", &test.server_url());
+
+    let mock = test.mock_gem_download("symlink-test-1.0.0.gem").create();
+
+    let output = test.ci(&["--verbose"]);
+    output.assert_success();
+    mock.assert();
+
+    // Verify the gem was unpacked and symlinked content is readable.
+    let gem_dir = find_gem_dir(test.current_dir().as_ref(), "symlink-test-1.0.0");
+
+    // Real file
+    let real_content = fs_err::read_to_string(gem_dir.join("lib/templates/v1/template.txt"))
+        .expect("real file should exist");
+    assert_eq!(real_content, "template content v1\n");
+
+    // File symlink (or copy on unprivileged Windows): default.txt → v1/template.txt
+    let symlink_content = fs_err::read_to_string(gem_dir.join("lib/templates/default.txt"))
+        .expect("file symlink target should be readable");
+    assert_eq!(symlink_content, "template content v1\n");
+
+    // Directory symlink (or copy on unprivileged Windows): v2 → v1
+    let dir_symlink_content = fs_err::read_to_string(gem_dir.join("lib/templates/v2/template.txt"))
+        .expect("directory symlink target should be readable");
+    assert_eq!(dir_symlink_content, "template content v1\n");
+
+    let dir_symlink_helper = fs_err::read_to_string(gem_dir.join("lib/templates/v2/helper.txt"))
+        .expect("directory symlink should include all files");
+    assert_eq!(dir_symlink_helper, "helper content\n");
+}
+
+/// Find the unpacked gem directory under BUNDLE_PATH.
+/// Gems are installed to `<cwd>/app/ruby/<version>/gems/<gem-full-name>/`.
+fn find_gem_dir(cwd: &std::path::Path, gem_full_name: &str) -> camino::Utf8PathBuf {
+    let app_dir = cwd.join("app");
+    // Find the ruby version directory (e.g., "4.0.0")
+    let ruby_dir = std::fs::read_dir(app_dir.join("ruby"))
+        .expect("app/ruby should exist")
+        .filter_map(|e| e.ok())
+        .find(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
+        .expect("should have a ruby version directory");
+    let gem_path = ruby_dir.path().join("gems").join(gem_full_name);
+    camino::Utf8PathBuf::try_from(gem_path).expect("path should be UTF-8")
+}
+
 #[cfg(unix)]
 fn find_all_files_in_dir(cwd: &std::path::Path) -> String {
     let test_dir_contents = std::process::Command::new("find")
