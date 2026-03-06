@@ -1,5 +1,49 @@
 # `rv` changelog
 
+## rv 0.5.3 (6 March, 2026)
+
+### Added
+
+ - `rv ruby install --force` to force reinstalling ruby (#536, @a-chacon)
+ - `rv clean-install` now supports installing gems from private sources (#550, @deivid-rodriguez)
+ - `rv ruby list` now shows information about why active ruby is active (#551, @deivid-rodriguez)
+ - Windows ARM support (#556, @case)
+ - Support for installing daily builds of Ruby on Windows (#557, @case)
+
+### Fixed
+
+  - `rv clean-install` claiming to be compiling extensions for all gems (#527, @deivid-rodriguez)
+  - `rv run` not finding gems installed by `rv clean-install` (#532, @deivid-rodriguez)
+  - `rv clean-install` reinstalling git gems every time (#541, @deivid-rodriguez)
+  - `rv clean-install` not reinstalling gems with broken extensions (#545, @deivid-rodriguez)
+  - `rv clean-install` not reinstalling dependencies of gems with broken extensions (#549, @deivid-rodriguez)
+  - Shell integration duplicating entries in `MANPATH` (#553, @deivid-rodriguez)
+  - `rv run` not finding commands on Windows (#555, @case)
+  - Shell integration duplicating entries in `PATH` (#558, @deivid-rodriguez)
+  - Reinstalling tools after a failed previous install (#570, @deivid-rodriguez)
+  - No attestations getting created for releases due to a typo in cargo-dist configuration (#576, @shaanmajid)
+
+### Improved
+
+  - Don't look outside of current project for tool files (#534, @deivid-rodriguez)
+  - Make default `GEM_HOME` version dependent and compatible with RubyGems (#538, @deivid-rodriguez)
+  - We now print a better error in MacOS if failing to compile extensions because dev tools are not installed (#561, @case)
+
+### Deprecated
+
+  - `rv ruby run` in favor of `rv run ruby` (#559, @deivid-rodriguez)
+
+### Internal
+
+ - Configure that tests that are too slow abort nextest run (#525, @kaspth)
+ - Streamline CI workflows (#531, @indirect)
+ - `bin/rv --quiet` is now really quiet (#539, @deivid-rodriguez)
+ - Smoke tests now run for every PR (#547, @deivid-rodriguez)
+
+### Documentation
+
+ - Windows and standalone installer instructions now live right in our README (#526, @a-chacon)
+
 ## rv 0.5.2 (18 February, 2026)
 
 ### Added
