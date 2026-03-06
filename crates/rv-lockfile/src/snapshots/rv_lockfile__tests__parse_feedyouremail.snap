@@ -8,7 +8,7 @@ git:
     branch: ~
     ref: ~
     tag: ~
-    submodules: false
+    submodules: ~
     specs:
       - gem_version:
           name: guard-erb_lint
@@ -30,7 +30,7 @@ git:
     branch: ~
     ref: ~
     tag: ~
-    submodules: false
+    submodules: ~
     specs:
       - gem_version:
           name: code-scanning-rubocop
@@ -46,7 +46,7 @@ git:
     branch: ~
     ref: ~
     tag: ~
-    submodules: false
+    submodules: ~
     specs:
       - gem_version:
           name: cloudflare
@@ -62,7 +62,7 @@ git:
     branch: ~
     ref: ~
     tag: ~
-    submodules: false
+    submodules: ~
     specs:
       - gem_version:
           name: litestack

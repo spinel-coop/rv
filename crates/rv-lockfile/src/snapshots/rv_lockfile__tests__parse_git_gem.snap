@@ -8,7 +8,7 @@ git:
     branch: ~
     ref: ~
     tag: ~
-    submodules: false
+    submodules: ~
     specs:
       - gem_version:
           name: indirect

@@ -1285,7 +1285,7 @@ impl<'i> DownloadedGitRepo<'i> {
     }
 
     pub fn submodules(&self) -> bool {
-        self.source.submodules
+        self.source.submodules.unwrap_or_default()
     }
 }
 
