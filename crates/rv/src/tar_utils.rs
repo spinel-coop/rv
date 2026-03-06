@@ -1,6 +1,5 @@
 use std::io::{self, Read};
 use std::path::Path;
-use tracing::debug;
 
 /// Windows error code for "A required privilege is not held by the client."
 /// Symlink creation requires either Developer Mode or admin privileges.
@@ -119,7 +118,7 @@ fn create_symlink_or_copy(
         return Ok(());
     }
 
-    debug!(
+    tracing::debug!(
         "Symlink creation failed for {} -> {}, falling back to copy: {}",
         dst.display(),
         link_target.display(),
