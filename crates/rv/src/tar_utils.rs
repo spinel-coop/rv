@@ -12,7 +12,7 @@ pub fn unpack_tar<R: Read>(archive: &mut tar::Archive<R>, dst: &Path) -> io::Res
     #[cfg(not(windows))]
     {
         archive.unpack(dst)?;
-        return Ok(());
+        Ok(())
     }
 
     #[cfg(windows)]
@@ -48,7 +48,7 @@ pub fn unpack_entry<R: Read>(entry: &mut tar::Entry<'_, R>, dst: &Path) -> io::R
     #[cfg(not(windows))]
     {
         entry.unpack(dst)?;
-        return Ok(());
+        Ok(())
     }
 
     #[cfg(windows)]
@@ -66,22 +66,13 @@ pub fn unpack_entry<R: Read>(entry: &mut tar::Entry<'_, R>, dst: &Path) -> io::R
 /// Extract the symlink target from a tar entry and either create a symlink
 /// or fall back to copying the target on Windows.
 #[cfg(windows)]
-fn handle_symlink_entry<R: Read>(
-    entry: &tar::Entry<'_, R>,
-    dest_path: &Path,
-) -> io::Result<()> {
-    let link_target = entry
-        .link_name()?
-        .map(|l| l.into_owned())
-        .ok_or_else(|| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "symlink entry {} has no target",
-                    dest_path.display()
-                ),
-            )
-        })?;
+fn handle_symlink_entry<R: Read>(entry: &tar::Entry<'_, R>, dest_path: &Path) -> io::Result<()> {
+    let link_target = entry.link_name()?.map(|l| l.into_owned()).ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("symlink entry {} has no target", dest_path.display()),
+        )
+    })?;
 
     let parent = dest_path.parent().ok_or_else(|| {
         io::Error::new(
@@ -302,10 +293,7 @@ mod tests {
         let dst = temp_dir.path().join("link.txt");
         unpack_entry(&mut entry, &dst).unwrap();
 
-        assert_eq!(
-            std::fs::read_to_string(&dst).unwrap(),
-            "target content"
-        );
+        assert_eq!(std::fs::read_to_string(&dst).unwrap(), "target content");
     }
 
     // -- Windows-only tests --
