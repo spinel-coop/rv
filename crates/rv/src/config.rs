@@ -6,7 +6,9 @@ use std::{
 
 use bundler_settings::BundlerSettings;
 use camino::{FromPathBufError, Utf8Path, Utf8PathBuf};
-use config::{Config as ConfigRs, Environment, File};
+use config::{
+    Config as ConfigRs, Environment, File, FileStoredFormat, Format, Map, Value, ValueKind,
+};
 use indexmap::IndexSet;
 use tracing::{debug, instrument};
 
