@@ -17,6 +17,10 @@ pub fn unpack_tar<R: Read>(archive: &mut tar::Archive<R>, dst: &Path) -> io::Res
 
     #[cfg(windows)]
     {
+        // Collect symlink entries and process them in a second pass, because
+        // symlink targets may appear later in the archive than the symlink itself.
+        let mut deferred_symlinks: Vec<(std::path::PathBuf, std::path::PathBuf)> = Vec::new();
+
         for entry_result in archive.entries()? {
             let mut entry = entry_result?;
             let entry_path = entry.path()?.into_owned();
@@ -29,11 +33,30 @@ pub fn unpack_tar<R: Read>(archive: &mut tar::Archive<R>, dst: &Path) -> io::Res
             }
 
             if entry.header().entry_type().is_symlink() {
-                handle_symlink_entry(&entry, &dest_path)?;
+                let link_target =
+                    entry.link_name()?.map(|l| l.into_owned()).ok_or_else(|| {
+                        io::Error::new(
+                            io::ErrorKind::InvalidData,
+                            format!("symlink entry {} has no target", dest_path.display()),
+                        )
+                    })?;
+                deferred_symlinks.push((dest_path, link_target));
             } else {
                 // Hard links work without admin on Windows (within the same volume).
                 entry.unpack(&dest_path)?;
             }
+        }
+
+        // Second pass: all regular files are now on disk, so symlink targets exist.
+        for (dest_path, link_target) in deferred_symlinks {
+            let parent = dest_path.parent().ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("path {} has no parent directory", dest_path.display()),
+                )
+            })?;
+            let resolved_target = parent.join(&link_target);
+            create_symlink_or_copy(&link_target, &dest_path, &resolved_target)?;
         }
 
         Ok(())
@@ -237,6 +260,23 @@ mod tests {
             std::fs::read_to_string(temp_dir.path().join("subdir/nested.txt")).unwrap(),
             "nested content"
         );
+    }
+
+    #[test]
+    fn test_unpack_tar_symlink_before_target() {
+        // Symlinks can appear in tar archives before their targets.
+        // The fallback copy must still work (deferred to a second pass).
+        let temp_dir = TempDir::new().unwrap();
+        let data = TarBuilder::new()
+            .add_symlink("link.txt", "real.txt")
+            .add_file("real.txt", b"forward ref")
+            .build();
+
+        let mut archive = tar::Archive::new(Cursor::new(data));
+        unpack_tar(&mut archive, temp_dir.path()).unwrap();
+
+        let content = std::fs::read_to_string(temp_dir.path().join("link.txt")).unwrap();
+        assert_eq!(content, "forward ref");
     }
 
     #[test]
