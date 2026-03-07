@@ -116,9 +116,15 @@ fn create_symlink_or_copy(
     dst: &Path,
     resolved_target: &Path,
 ) -> io::Result<()> {
+    // Tar archives store paths with forward slashes, but Windows symlinks
+    // need backslashes to resolve targets correctly. Rebuilding from
+    // components uses the platform's native separator automatically.
+    // See: https://github.com/dotnet/runtime/issues/79031
+    let native_target: std::path::PathBuf = link_target.components().collect();
+
     // Try symlink_file first. On Windows, both symlink_file and symlink_dir
     // require Developer Mode or admin privileges.
-    let symlink_err = match std::os::windows::fs::symlink_file(link_target, dst) {
+    let symlink_err = match std::os::windows::fs::symlink_file(&native_target, dst) {
         Ok(()) => return Ok(()),
         Err(e) => e,
     };
@@ -126,7 +132,7 @@ fn create_symlink_or_copy(
     // If the error isn't a privilege issue, try symlink_dir in case the
     // target is a directory (symlink_file won't work for directories).
     if symlink_err.raw_os_error() != Some(ERROR_PRIVILEGE_NOT_HELD)
-        && std::os::windows::fs::symlink_dir(link_target, dst).is_ok()
+        && std::os::windows::fs::symlink_dir(&native_target, dst).is_ok()
     {
         return Ok(());
     }
@@ -359,6 +365,30 @@ mod tests {
                 std::fs::read_to_string(dst.join("sub").join("b.txt")).unwrap(),
                 "bbb"
             );
+        }
+
+        #[test]
+        fn test_create_symlink_or_copy_normalizes_forward_slashes() {
+            // Tar archives use forward slashes, but Windows symlinks need
+            // backslashes to resolve targets. This test verifies the fix for
+            // https://github.com/dotnet/runtime/issues/79031
+            let temp_dir = TempDir::new().unwrap();
+            let base = temp_dir.path();
+
+            // Create a nested target file
+            std::fs::create_dir_all(base.join("sub")).unwrap();
+            std::fs::write(base.join("sub").join("target.txt"), b"found it").unwrap();
+
+            // Symlink with forward-slash target (as tar archives produce)
+            let link_target = Path::new("sub/target.txt");
+            let dst = base.join("link.txt");
+            let resolved = base.join("sub").join("target.txt");
+
+            create_symlink_or_copy(link_target, &dst, &resolved).unwrap();
+
+            // Whether via symlink or copy, the content must be readable.
+            let content = std::fs::read_to_string(&dst).unwrap();
+            assert_eq!(content, "found it");
         }
 
         #[test]
