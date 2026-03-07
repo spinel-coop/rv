@@ -33,13 +33,12 @@ pub fn unpack_tar<R: Read>(archive: &mut tar::Archive<R>, dst: &Path) -> io::Res
             }
 
             if entry.header().entry_type().is_symlink() {
-                let link_target =
-                    entry.link_name()?.map(|l| l.into_owned()).ok_or_else(|| {
-                        io::Error::new(
-                            io::ErrorKind::InvalidData,
-                            format!("symlink entry {} has no target", dest_path.display()),
-                        )
-                    })?;
+                let link_target = entry.link_name()?.map(|l| l.into_owned()).ok_or_else(|| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!("symlink entry {} has no target", dest_path.display()),
+                    )
+                })?;
                 deferred_symlinks.push((dest_path, link_target));
             } else {
                 // Hard links work without admin on Windows (within the same volume).
