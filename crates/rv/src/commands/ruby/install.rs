@@ -353,7 +353,7 @@ fn extract_tarball(
             rubies_dir.join(path).into()
         };
 
-        entry.unpack(dst)?;
+        crate::tar_utils::unpack_entry(&mut entry, &dst)?;
     }
     Ok(())
 }

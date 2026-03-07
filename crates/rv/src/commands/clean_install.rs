@@ -1766,9 +1766,9 @@ where
     // First, create the data's destination.
     let data_dir: PathBuf = install_layout.gem_path(nameversion).into();
     fs_err::create_dir_all(&data_dir)?;
-    // Unpack it:
+    // Unpack it (with symlink fallback on Windows):
     let mut gem_data_archive = tar::Archive::new(GzDecoder::new(data_tar_gz));
-    gem_data_archive.unpack(data_dir)?;
+    crate::tar_utils::unpack_tar(&mut gem_data_archive, &data_dir)?;
     // Get the HashReader back, so we can tell what the hash is for the contents of this tar.
     let h = gem_data_archive.into_inner().into_inner();
     let hashed = h.finalize();

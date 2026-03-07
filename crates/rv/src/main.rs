@@ -16,6 +16,7 @@ pub mod http_client;
 pub mod output_format;
 pub mod progress;
 pub mod script_metadata;
+pub mod tar_utils;
 
 use crate::commands::cache::{CacheCommandArgs, cache};
 use crate::commands::clean_install::{CleanInstallArgs, ci};
