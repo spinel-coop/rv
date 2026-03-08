@@ -27,12 +27,12 @@ jobs:
     continue-on-error: ${{ matrix.checks == 'advisories' }}
     steps:
       - name: Check out repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
       - name: Install cargo-deny
-        uses: EmbarkStudios/cargo-deny-action@v2
+        uses: EmbarkStudios/cargo-deny-action@3fd3802e88374d3fe9159b834c7714ec57d6c979 # v2.0.15
         with:
           command: check ${{ matrix.checks }}
 
@@ -41,21 +41,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@stable # zizmor: ignore[unpinned-uses]
 
       - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
 
       - name: Build rv
         run: bin/build
 
       - name: Upload rv binary
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: rv-binary
           path: target/release/rv
@@ -73,17 +73,17 @@ jobs:
             runs-on: windows-latest
     steps:
       - name: Check out repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@stable # zizmor: ignore[unpinned-uses]
         with:
           components: rustfmt, clippy
 
       - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
 
       - name: Run linters (Unix)
         if: matrix.os == 'linux'
@@ -110,7 +110,7 @@ jobs:
 
     steps:
       - name: Check out repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
@@ -119,10 +119,12 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y zsh fish
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@stable # zizmor: ignore[unpinned-uses]
 
       - name: Install nextest
-        uses: taiki-e/install-action@nextest
+        uses: taiki-e/install-action@5faf876256ccfc7ba64a4f87314c3457cc374b98 # v2.68.22
+        with:
+          tool: cargo-nextest
         if: matrix.runs-on != 'windows-11-arm'
 
       # Workaround https://github.com/actions/partner-runner-images/issues/169
@@ -136,7 +138,7 @@ jobs:
         if: matrix.runs-on == 'windows-11-arm'
 
       - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
 
       - name: Build tests
         shell: bash
@@ -174,12 +176,12 @@ jobs:
           - mastodon
     steps:
       - name: Check out repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
       - name: Download rv binary
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: rv-binary
           path: ~/bin
