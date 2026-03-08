@@ -1,5 +1,7 @@
 use camino::Utf8PathBuf;
 use clap::{Args, Subcommand};
+use indoc::formatdoc;
+use owo_colors::OwoColorize;
 
 use crate::output_format::OutputFormat;
 use rv_ruby::request::RubyRequest;
@@ -58,7 +60,35 @@ pub enum RubyCommand {
         version: Option<RubyRequest>,
     },
 
-    #[command(about = "Install the pinned Ruby version or a specific version")]
+    #[command(
+        about = "Install Ruby",
+        after_help = {
+            let header = "Examples:";
+            let install_default = "rv ruby install";
+            let install_latest = "rv ruby install latest";
+            let install_fuzzy = "rv ruby install 3.4";
+            let install_specific = "rv ruby install 4.0.1";
+            let install_dev = "rv ruby install dev";
+            let width = install_latest.len();
+            formatdoc!(
+                r#"
+                    {}
+                      {:width$}  # Install the latest Ruby release
+                      {:width$}  # Install the latest Ruby release that matches a version
+                      {:width$}  # Install a specific Ruby release
+                      {:width$}  # Install the latest development version of Ruby
+                      {:width$}  # Discover version to install from tool files (.ruby-version, .tool-versions, or Gemfile.lock)
+                "#,
+                header.green().bold(),
+                install_latest.cyan(),
+                install_fuzzy.cyan(),
+                install_specific.cyan(),
+                install_dev.cyan(),
+                install_default.cyan(),
+            )
+        }
+
+    )]
     Install {
         /// Directory to install into
         #[arg(short, long, value_name = "DIR")]
