@@ -6,6 +6,9 @@ use std::{
 
 use bundler_settings::BundlerSettings;
 use camino::{FromPathBufError, Utf8Path, Utf8PathBuf};
+use config::{
+    Config as ConfigRs, Environment, File, FileStoredFormat, Format, Map, Value, ValueKind,
+};
 use indexmap::IndexSet;
 use tracing::{debug, instrument};
 
@@ -42,6 +45,8 @@ pub enum Error {
     CouldNotParseGemfileLockVersion(ParseVersionError),
     #[error("no matching ruby version found")]
     NoMatchingRuby,
+    #[error("{} is not a valid value for {}", value, setting)]
+    SettingsValidationError { value: String, setting: String },
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -54,6 +59,7 @@ pub struct Config<'input> {
     pub current_exe: Utf8PathBuf,
     pub requested_ruby: RequestedRuby,
     pub bundler_settings: BundlerSettings<'input>,
+    pub rv_settings: RvSettings,
 }
 
 #[derive(Debug, Clone)]
@@ -145,6 +151,7 @@ impl Config<'_> {
             current_exe,
             requested_ruby,
             bundler_settings,
+            rv_settings: global_args.rv_settings.clone(),
         })
     }
 
@@ -170,6 +177,7 @@ impl Config<'_> {
             cache: Cache::temp().unwrap(),
             current_exe: root.join("bin").join("rv"),
             requested_ruby: RequestedRuby::Global,
+            rv_settings: RvSettings::default(),
         }
     }
 
@@ -446,6 +454,139 @@ impl Env {
 
     pub fn split(&self) -> (Vec<&'static str>, Vec<(&'static str, String)>) {
         (self.unset.clone(), self.set.clone())
+    }
+}
+
+fn default_ruby() -> Option<String> {
+    Some(String::from("latest"))
+}
+
+fn default_gem_home() -> Option<String> {
+    Some(String::from("bundle/vendor"))
+}
+
+fn default_update_mode() -> Option<String> {
+    Some(String::from("auto-install"))
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone, knus::Decode)]
+pub struct RvSettings {
+    #[serde(default = "default_ruby")]
+    #[knus(child, unwrap(argument))]
+    pub ruby: Option<String>,
+
+    #[serde(default = "default_gem_home")]
+    #[knus(child, unwrap(argument))]
+    pub gem_home: Option<String>,
+
+    #[serde(default = "default_update_mode")]
+    #[knus(child, unwrap(argument))]
+    pub update_mode: Option<String>,
+}
+
+impl Default for RvSettings {
+    fn default() -> Self {
+        Self {
+            ruby: default_ruby(),
+            gem_home: default_gem_home(),
+            update_mode: default_update_mode(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RvSettingsKdl;
+
+impl Format for RvSettingsKdl {
+    fn parse(
+        &self,
+        _uri: Option<&String>,
+        text: &str,
+    ) -> std::result::Result<Map<String, Value>, Box<dyn std::error::Error + Send + Sync>> {
+        let parsed_settings: RvSettings = knus::parse::<RvSettings>("rv.kdl", text).unwrap();
+
+        let mut map = Map::new();
+
+        if let Some(ruby) = parsed_settings.ruby {
+            map.insert(
+                "ruby".to_string(),
+                Value::new(None, ValueKind::String(ruby)),
+            );
+        }
+
+        if let Some(gem_home) = parsed_settings.gem_home {
+            map.insert(
+                "gem_home".to_string(),
+                Value::new(None, ValueKind::String(gem_home)),
+            );
+        }
+
+        if let Some(update_mode) = parsed_settings.update_mode {
+            map.insert(
+                "update_mode".to_string(),
+                Value::new(None, ValueKind::String(update_mode)),
+            );
+        }
+        Ok(map)
+    }
+}
+
+impl FileStoredFormat for RvSettingsKdl {
+    fn file_extensions(&self) -> &'static [&'static str] {
+        &["kdl"]
+    }
+}
+
+impl RvSettings {
+    pub fn new() -> Result<Self> {
+        let home_dir = rv_dirs::home_dir();
+
+        let file_rv = File::new("rv", RvSettingsKdl).required(false);
+        let file_config_rv = File::new(".config/rv", RvSettingsKdl).required(false);
+        let file_config_rv_rv = File::new(".config/rv/rv", RvSettingsKdl).required(false);
+        let file_home_rv = File::new(home_dir.join(".rv").as_str(), RvSettingsKdl).required(false);
+        let file_home_config_rv =
+            File::new(home_dir.join(".config/rv").as_str(), RvSettingsKdl).required(false);
+        let file_home_config_rv_rv =
+            File::new(home_dir.join(".config/rv/rv").as_str(), RvSettingsKdl).required(false);
+
+        let builder = ConfigRs::builder()
+            .add_source(file_rv)
+            .add_source(file_config_rv)
+            .add_source(file_config_rv_rv)
+            .add_source(file_home_rv)
+            .add_source(file_home_config_rv)
+            .add_source(file_home_config_rv_rv)
+            .add_source(Environment::with_prefix("RV"));
+
+        let s = builder
+            .build()
+            .map_err(|e| {
+                eprintln!("Failed to build config: {:?}", e);
+                e
+            })
+            .unwrap();
+
+        let settings: RvSettings = s.try_deserialize().unwrap();
+
+        Ok(settings)
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        const VALID_UPDATE_MODES: &[&str] = &["none", "warning", "auto-install"];
+
+        if let Some(update_mode) = &self.update_mode
+            && !VALID_UPDATE_MODES.contains(&update_mode.as_str())
+        {
+            return Err(Error::SettingsValidationError {
+                value: update_mode.clone(),
+                setting: String::from("update_mode"),
+            });
+        }
+
+        // Then we can add more validations here
+
+        Ok(())
     }
 }
 
