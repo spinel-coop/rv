@@ -40,8 +40,8 @@ pub enum Error {
         status: reqwest::StatusCode,
         body: String,
     },
-    #[error("Could not get latest Ruby release")]
-    GetLatestReleaseFailed { error: super::list::Error },
+    #[error("Could not get latest ruby-dev release")]
+    GetLatestDevReleaseFailed,
     #[error("Failed to unpack archive path {0}")]
     InvalidTarballPath(PathBuf),
     #[error(transparent)]
@@ -94,14 +94,18 @@ pub(crate) async fn install(
     Ok(())
 }
 
-// downloads and extracts a remote ruby archive (tarball or zip)
+// downloads a remote ruby archive (tarball or zip)
 async fn download_tarball(
     config: &Config<'_>,
     version: &RubyVersion,
     progress: &WorkProgress,
 ) -> Result<Utf8PathBuf> {
     let host = HostPlatform::current()?;
-    let url = ruby_url(version, &host);
+    let mut url = ruby_url(version, &host);
+
+    if version.is_dev() && !host.is_windows() {
+        url = find_latest_ruby_dev_url(&url).await?;
+    }
     let archive_path = archive_cache_path(config, &url, &host);
 
     let cache_dir = archive_path.parent().unwrap();
@@ -127,45 +131,56 @@ fn valid_archive_exists(path: &Utf8Path) -> bool {
 }
 
 fn ruby_url(version: &RubyVersion, host: &HostPlatform) -> String {
+    let download_base =
+        std::env::var("RV_INSTALL_URL").unwrap_or_else(|_| download_base_for(version, host));
+    let download_path = download_path_for(version, host);
+
+    format!("{download_base}/{download_path}")
+}
+
+fn download_base_for(version: &RubyVersion, host: &HostPlatform) -> String {
+    if host.is_windows() {
+        "https://github.com/oneclick/rubyinstaller2/releases/download".to_owned()
+    } else if version.is_dev() {
+        "https://github.com/spinel-coop/rv-ruby-dev/releases/latest/download".to_owned()
+    } else {
+        "https://github.com/spinel-coop/rv-ruby/releases/latest/download".to_owned()
+    }
+}
+
+fn download_path_for(version: &RubyVersion, host: &HostPlatform) -> String {
     let arch = host.ruby_arch_str();
     let ext = host.archive_ext();
     let number = version.number();
 
-    // Windows uses RubyInstaller2 directly
     if host.is_windows() {
         if version.is_dev() {
             // Dev builds use the rubyinstaller-head release (no revision number)
-            let download_base = std::env::var("RV_INSTALL_URL").unwrap_or_else(|_| {
-                "https://github.com/oneclick/rubyinstaller2/releases/download/rubyinstaller-head"
-                    .to_owned()
-            });
-            return format!("{download_base}/rubyinstaller-head-{arch}.{ext}");
+            format!("rubyinstaller-head/rubyinstaller-head-{arch}.{ext}")
+        } else {
+            // RubyInstaller2 URL pattern: rubyinstaller-{version}-1-x64.7z
+            format!("RubyInstaller-{number}-1/rubyinstaller-{number}-1-{arch}.{ext}")
         }
-
-        let download_base = std::env::var("RV_INSTALL_URL").unwrap_or_else(|_| {
-            format!(
-                "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-{number}-1"
-            )
-        });
-        // RubyInstaller2 URL pattern: rubyinstaller-{version}-1-x64.7z
-        return format!("{download_base}/rubyinstaller-{number}-1-{arch}.{ext}");
+    } else {
+        format!("{version}.{arch}.{ext}")
     }
+}
 
-    // macOS/Linux use rv-ruby
-    let (download_base, version_str) = std::env::var("RV_INSTALL_URL")
-        .map(|var| (var, version.to_string()))
-        .unwrap_or_else(|_| match version {
-            RubyVersion::Dev => (
-                "https://github.com/spinel-coop/rv-ruby-dev/releases/latest/download".to_owned(),
-                version.to_string(),
-            ),
-            RubyVersion::Released(_) => (
-                "https://github.com/spinel-coop/rv-ruby/releases/latest/download".to_owned(),
-                version.to_string(),
-            ),
-        });
+async fn find_latest_ruby_dev_url(url: &str) -> Result<String> {
+    let redirects = false;
+    let response = fetch_url(url, redirects).await?;
 
-    format!("{download_base}/{version_str}.{arch}.{ext}")
+    if response.status() == StatusCode::FOUND {
+        Ok(response
+            .headers()
+            .get(reqwest::header::LOCATION)
+            .expect("a redirect response should have a location header")
+            .to_str()
+            .expect("location header should be a valid UTF-8 string")
+            .to_string())
+    } else {
+        Err(Error::GetLatestDevReleaseFailed)
+    }
 }
 
 fn archive_cache_path(config: &Config, url: impl AsRef<str>, host: &HostPlatform) -> Utf8PathBuf {
@@ -236,22 +251,9 @@ async fn download_ruby_archive(
     host: &HostPlatform,
 ) -> Result<()> {
     debug!("Downloading archive from {url}");
-    // Build the request with optional GitHub authentication
-    let client = reqwest::Client::new();
-    let mut request_builder = client.get(url);
+    let redirects = true;
+    let response = fetch_url(url, redirects).await?;
 
-    // Add GitHub token authentication if available and URL is from GitHub
-    // Check GITHUB_TOKEN first (GitHub Actions), then GH_TOKEN (GitHub CLI/general use)
-    if crate::config::github::is_github_url(url) {
-        if let Some(token) = crate::config::github::github_token() {
-            debug!("Using authenticated GitHub request for archive download");
-            request_builder = request_builder.header("Authorization", format!("Bearer {}", token));
-        } else {
-            debug!("No GitHub token found, using unauthenticated request for archive download");
-        }
-    }
-    // Start downloading the archive.
-    let response = request_builder.send().await?;
     if !response.status().is_success() {
         let status = response.status();
         if status == StatusCode::NOT_FOUND {
@@ -296,6 +298,32 @@ async fn download_ruby_archive(
     }
 
     Ok(())
+}
+
+async fn fetch_url(url: &str, redirects: bool) -> Result<reqwest::Response> {
+    // Build the request with optional GitHub authentication
+    let client = if !redirects {
+        reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()?
+    } else {
+        reqwest::Client::new()
+    };
+
+    let mut request_builder = client.get(url);
+
+    // Add GitHub token authentication if available and URL is from GitHub
+    // Check GITHUB_TOKEN first (GitHub Actions), then GH_TOKEN (GitHub CLI/general use)
+    if crate::config::github::is_github_url(url) {
+        if let Some(token) = crate::config::github::github_token() {
+            debug!("Using authenticated GitHub request for archive download");
+            request_builder = request_builder.header("Authorization", format!("Bearer {}", token));
+        } else {
+            debug!("No GitHub token found, using unauthenticated request for archive download");
+        }
+    }
+
+    Ok(request_builder.send().await?)
 }
 
 fn extract_ruby_archive(

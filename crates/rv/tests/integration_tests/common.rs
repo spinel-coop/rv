@@ -343,22 +343,45 @@ impl RvTest {
     pub fn mock_ruby_download(&mut self, version: &str) -> Mock {
         let path = self.ruby_tarball_download_path(version);
         let content = self.create_mock_tarball(version);
-        self.mock_tarball_download(path, &content)
+        self.mock_tarball_download(&path, &content)
+    }
+
+    /// Mock a ruby dev tarball download for testing
+    pub fn mock_ruby_dev_download(&mut self) -> (Mock, Mock) {
+        let path = self.ruby_dev_tarball_download_path();
+        let redirect_url = self.ruby_dev_tarball_redirect_url();
+        let redirect_path = self.ruby_dev_tarball_redirect_path();
+        let redirect_mock = self
+            .mock_dev_tarball_redirect(&path, &redirect_url)
+            .create();
+        let content = self.create_mock_tarball("dev");
+        let download_mock = self
+            .mock_tarball_download(&redirect_path, &content)
+            .create();
+
+        (redirect_mock, download_mock)
     }
 
     pub fn mock_gem_download(&mut self, package: &str) -> Mock {
         let path = self.gem_package_download_path(package);
         let content = fs_err::read(format!("../rv-gem-package/tests/fixtures/{package}")).unwrap();
-        self.mock_tarball_download(path, &content)
+        self.mock_tarball_download(&path, &content)
     }
 
     /// Mock a tarball download for testing
-    pub fn mock_tarball_download(&mut self, path: String, content: &[u8]) -> Mock {
+    pub fn mock_tarball_download(&mut self, path: &str, content: &[u8]) -> Mock {
         self.server
-            .mock("GET", path.as_str())
+            .mock("GET", path)
             .with_status(200)
             .with_header("content-type", "application/gzip")
             .with_body(content)
+    }
+
+    pub fn mock_dev_tarball_redirect(&mut self, path: &str, location: &str) -> Mock {
+        self.server
+            .mock("GET", path)
+            .with_status(302)
+            .with_header("location", location)
     }
 
     pub fn mock_info_endpoint(&mut self, name: &str, content: &[u8]) -> Mock {
@@ -443,9 +466,26 @@ impl RvTest {
         )
     }
 
+    pub fn ruby_dev_tarball_redirect_url(&self) -> String {
+        format!(
+            "{}{}",
+            self.server_url(),
+            self.ruby_dev_tarball_redirect_path()
+        )
+    }
+
     pub fn ruby_tarball_download_path(&self, version: &str) -> String {
         let filename = self.make_tarball_file_name(version);
         format!("/latest/download/{filename}")
+    }
+
+    pub fn ruby_dev_tarball_download_path(&self) -> String {
+        let filename = self.make_dev_tarball_file_name();
+        format!("/latest/download/{filename}")
+    }
+    pub fn ruby_dev_tarball_redirect_path(&self) -> String {
+        let filename = self.make_dev_tarball_file_name();
+        format!("/download/20260305/{filename}")
     }
 
     pub fn gem_package_download_path(&self, package: &str) -> String {
@@ -587,6 +627,11 @@ impl RvTest {
     fn make_tarball_file_name(&self, version: &str) -> String {
         let suffix = self.make_platform_suffix();
         format!("ruby-{version}.{suffix}.tar.gz")
+    }
+
+    fn make_dev_tarball_file_name(&self) -> String {
+        let suffix = self.make_platform_suffix();
+        format!("ruby-dev.{suffix}.tar.gz")
     }
 
     /// Returns the ruby arch string matching the default test platform (`MacosAarch64`).

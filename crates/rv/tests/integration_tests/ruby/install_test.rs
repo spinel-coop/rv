@@ -63,7 +63,7 @@ fn test_ruby_install_successful_download() {
     let tarball_content = test.create_mock_tarball("3.4.5");
     let download_path = test.ruby_tarball_download_path("3.4.5");
     let ruby_mock = test
-        .mock_tarball_download(download_path, &tarball_content)
+        .mock_tarball_download(&download_path, &tarball_content)
         .create();
 
     let cache_dir = test.enable_cache();
@@ -267,7 +267,7 @@ fn test_ruby_install_atomic_rename_behavior() {
     let tarball_content = test.create_mock_tarball("3.4.5");
     let download_path = test.ruby_tarball_download_path("3.4.5");
     let ruby_mock = test
-        .mock_tarball_download(download_path, &tarball_content)
+        .mock_tarball_download(&download_path, &tarball_content)
         .create();
 
     let cache_dir = test.enable_cache();
@@ -340,6 +340,31 @@ fn test_ruby_install_with_latest() {
     );
 
     let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("4.0.1"));
+    let tarball_path = cache_dir
+        .join("ruby-v0")
+        .join("tarballs")
+        .join(format!("{}.tar.gz", cache_key));
+    assert!(tarball_path.exists(), "Tarball should be cached");
+}
+
+#[test]
+fn test_ruby_install_with_dev() {
+    let mut test = RvTest::new();
+
+    let (redirect_mock, download_mock) = test.mock_ruby_dev_download();
+
+    let cache_dir = test.enable_cache();
+
+    let output = test.rv(&["ruby", "install", "dev"]);
+
+    redirect_mock.assert();
+    download_mock.assert();
+    output.assert_success();
+    output.assert_stdout_contains(
+        "Installed Ruby version ruby-dev to /tmp/home/.local/share/rv/rubies",
+    );
+
+    let cache_key = rv_cache::cache_digest(test.ruby_dev_tarball_redirect_url());
     let tarball_path = cache_dir
         .join("ruby-v0")
         .join("tarballs")
