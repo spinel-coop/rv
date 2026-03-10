@@ -293,7 +293,10 @@ fn find_gem_dir(cwd: &std::path::Path, gem_full_name: &str) -> camino::Utf8PathB
     camino::Utf8PathBuf::try_from(gem_path).expect("path should be UTF-8")
 }
 
-#[cfg(unix)]
+#[cfg(any(
+    all(target_os = "macos", target_arch = "aarch64"),
+    all(target_os = "linux", target_arch = "x86_64")
+))]
 fn find_all_files_in_dir(cwd: &std::path::Path) -> String {
     let test_dir_contents = std::process::Command::new("find")
         .args([".", "-type", "f"])

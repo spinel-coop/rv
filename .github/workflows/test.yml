@@ -151,10 +151,14 @@ jobs:
       - name: Run Windows integration tests
         if: ${{ startsWith(matrix.runs-on, 'windows') }}
         run: ./win/test-integration.ps1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Unix integration tests
         if: ${{ ! startsWith(matrix.runs-on, 'windows') }}
         run: ./bin/test-integration
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   smoke-test:
     name: ${{ matrix.project }}
