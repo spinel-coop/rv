@@ -12,7 +12,7 @@ use tracing::{debug, instrument};
 use rv_ruby::{
     Ruby,
     request::{RequestError, RubyRequest, Source},
-    version::{ParseVersionError, ReleasedRubyVersion, RubyVersion},
+    version::{ReleasedRubyVersion, RubyVersion},
 };
 
 use crate::GlobalArgs;
@@ -36,10 +36,6 @@ pub enum Error {
     EnvError(#[from] env::VarError),
     #[error(transparent)]
     JoinPathsError(#[from] JoinPathsError),
-    #[error("Tried to parse ruby version from Gemfile.lock, but that file was invalid: {0}")]
-    CouldNotParseGemfileLock(#[from] rv_lockfile::ParseErrors),
-    #[error("Could not parse ruby version from Gemfile.lock: {0}")]
-    CouldNotParseGemfileLockVersion(ParseVersionError),
     #[error("no matching ruby version found")]
     NoMatchingRuby,
 }
@@ -404,13 +400,25 @@ fn find_directory_ruby(dir: &Utf8PathBuf) -> Result<Option<(RubyRequest, Source)
         let raw_contents = std::fs::read_to_string(&lockfile)?;
         // Normalize Windows line endings (CRLF) to Unix (LF) for the parser
         let lockfile_contents = rv_lockfile::normalize_line_endings(&raw_contents);
-        let lockfile_ruby = rv_lockfile::parse(&lockfile_contents)
-            .map_err(Error::CouldNotParseGemfileLock)?
-            .ruby_version;
-        if let Some(lockfile_ruby) = lockfile_ruby {
-            let version = ReleasedRubyVersion::from_gemfile_lock(lockfile_ruby)
-                .map_err(Error::CouldNotParseGemfileLockVersion)?;
-            return Ok(Some((version.into(), Source::GemfileLock(lockfile))));
+
+        if let Ok(parsed_lockfile) = rv_lockfile::parse(&lockfile_contents) {
+            let lockfile_ruby = parsed_lockfile.ruby_version;
+
+            if let Some(lockfile_ruby) = lockfile_ruby {
+                if let Ok(version) = ReleasedRubyVersion::from_gemfile_lock(lockfile_ruby) {
+                    return Ok(Some((version.into(), Source::GemfileLock(lockfile))));
+                } else {
+                    debug!(
+                        "Ignoring ruby version in {} because it could not be parsed",
+                        lockfile
+                    );
+                }
+            }
+        } else {
+            debug!(
+                "Ignoring {} while discovering ruby version to use because it could not be parsed",
+                lockfile
+            );
         }
     }
 
