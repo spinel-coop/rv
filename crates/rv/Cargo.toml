@@ -57,7 +57,7 @@ bytesize = { workspace = true }
 shell-escape = { workspace = true }
 once_cell = { workspace = true }
 rayon-tracing = { workspace = true }
-clap_complete = "4.5.61"
+clap_complete = "4.5.66"
 clap_complete_nushell = "4.5.10"
 url = "2.5.8"
 bytes = "1.11.0"
