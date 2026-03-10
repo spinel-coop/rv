@@ -281,7 +281,7 @@ mod tests {
         let global_args = GlobalArgs {
             ruby_dir: [ruby_dir].to_vec(),
             cache_args,
-            rv_settings: RvSettings::default(),
+            rv_settings: Some(RvSettings::default()),
         };
 
         Ok(global_args)

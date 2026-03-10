@@ -5,6 +5,7 @@ use clap::builder::styling::AnsiColor;
 use clap::{ArgAction, CommandFactory, Parser, Subcommand};
 use clap_verbosity_flag::tracing::LevelFilter;
 use miette::Report;
+use owo_colors::OwoColorize;
 use rv_cache::CacheArgs;
 use tokio::main;
 use tracing_indicatif::IndicatifLayer;
@@ -90,7 +91,7 @@ struct Cli {
 }
 
 impl Cli {
-    pub fn global_args(&self, rv_settings: RvSettings) -> GlobalArgs {
+    pub fn global_args(&self, rv_settings: Option<RvSettings>) -> GlobalArgs {
         GlobalArgs {
             ruby_dir: self.ruby_dir.clone(),
             cache_args: self.cache_args.clone(),
@@ -184,6 +185,8 @@ pub enum Error {
     ShellError(#[from] commands::shell::Error),
     #[error(transparent)]
     ToolError(#[from] commands::tool::Error),
+    #[error(transparent)]
+    ConfigError(#[from] crate::config::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -211,18 +214,6 @@ async fn main_inner() -> Result<()> {
     } else {
         Cli::parse()
     };
-
-    let rv_settings = config::RvSettings::new().unwrap_or_else(|err| {
-        eprintln!("Warning: Failed to load rv settings: {}", err);
-
-        RvSettings::default() // or should we exit?
-    });
-
-    rv_settings.validate().unwrap_or_else(|err| {
-        eprintln!("Settings validation failed: {}", err);
-
-        std::process::exit(1);
-    });
 
     let indicatif_layer = IndicatifLayer::new();
 
@@ -289,6 +280,22 @@ async fn main_inner() -> Result<()> {
         .with(indicatif_layer);
 
     reg.init();
+
+    // Shell commands dont require settings. Otherwise it can be raising warnings in every terminal
+    // session. (init and completion commands)
+    let rv_settings = if let Commands::Shell(_) = cli.command {
+        None
+    } else {
+        let settings = config::RvSettings::new().unwrap();
+        settings.validate().unwrap_or_else(|err| {
+            eprintln!(
+                "{}: Settings validation failed: {}",
+                "Warning".yellow(),
+                err
+            );
+        });
+        Some(settings)
+    };
 
     run_cmd(&cli.global_args(rv_settings), cli.command).await
 }
