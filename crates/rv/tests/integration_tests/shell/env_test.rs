@@ -111,6 +111,29 @@ fn test_shell_env_clears_ruby_and_gem_vars_when_no_rubies_available() {
     output.assert_success();
 }
 
+#[test]
+fn test_shell_env_fallback_to_highest_installed_ruby_if_no_rubies_matching_pin_installed() {
+    let mut test = RvTest::new();
+    test.env.insert("PATH".into(), "/tmp/bin".into());
+    test.create_ruby_dir("ruby-4.0.1");
+
+    let project_dir = test.temp_root().join("project");
+    std::fs::create_dir_all(project_dir.as_path()).unwrap();
+    std::fs::write(project_dir.join(".ruby-version"), b"3.4.8").unwrap();
+    test.cwd = project_dir;
+
+    let expected_path = [
+        "/tmp/home/.local/share/rv/gems/ruby/4.0.0/bin",
+        "/tmp/home/.local/share/rv/rubies/ruby-4.0.1/lib/ruby/gems/4.0.0/bin",
+        "/tmp/home/.local/share/rv/rubies/ruby-4.0.1/bin",
+        "/tmp/bin",
+    ]
+    .join(":");
+    let output = test.rv(&["shell", "env", "zsh"]);
+    output.assert_success();
+    output.assert_stdout_contains(&format!("export PATH='{expected_path}'"));
+}
+
 // MANPATH is a Unix concept — on Windows, the #[cfg(not(windows))] guard in config.rs
 // means MANPATH is never exported. These tests use dual inline snapshots so the Ruby
 // env setup (RUBY_ROOT, GEM_HOME, PATH, etc.) is verified on ALL platforms.
