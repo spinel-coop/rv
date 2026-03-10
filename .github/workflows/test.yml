@@ -131,7 +131,8 @@ jobs:
         run: |
           $tmp = New-TemporaryFile | Rename-Item -NewName { $_ -replace 'tmp$', 'zip' } -PassThru
           Invoke-WebRequest -OutFile $tmp https://get.nexte.st/latest/windows-arm
-          $outputDir = Join-Path $Env:CARGO_HOME "bin"
+          $cargoHome = if ($Env:CARGO_HOME) { $Env:CARGO_HOME } else { Join-Path $Env:USERPROFILE ".cargo" }
+          $outputDir = Join-Path $cargoHome "bin"
           $tmp | Expand-Archive -DestinationPath $outputDir -Force
           $tmp | Remove-Item
         if: matrix.runs-on == 'windows-11-arm'
