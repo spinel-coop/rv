@@ -34,6 +34,13 @@ fn test_parse_with_paths() {
 }
 
 #[test]
+fn test_parse_with_glob() {
+    let input = include_str!("../tests/inputs/Gemfile.withglob.lock");
+    let output = must_parse(input);
+    insta::assert_yaml_snapshot!(output);
+}
+
+#[test]
 fn test_parse_feedyouremail() {
     let input = include_str!("../tests/inputs/Gemfile.feedyouremail.lock");
     let output = must_parse(input);

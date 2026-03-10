@@ -377,8 +377,28 @@ fn parse_git_section<'i>(i: &mut Input<'i>) -> Res<GitSection<'i>> {
         line_ending,
     ))
     .parse_next(i)?;
-    let submodules: Option<bool> =
-        opt(delimited("  submodules: ", parse_bool, line_ending)).parse_next(i)?;
+    let submodules = opt(delimited("  submodules: ", parse_bool, line_ending)).parse_next(i)?;
+    let glob = opt(delimited(
+        "  glob: ",
+        take_while(1.., |c: char| {
+            c.is_alphanumeric()
+                || c == '.'
+                || c == '-'
+                || c == '_'
+                || c == '/'
+                || c == '*'
+                || c == '?'
+                || c == '['
+                || c == ']'
+                || c == '^'
+                || c == '\\'
+                || c == '{'
+                || c == '}'
+                || c == ','
+        }),
+        line_ending,
+    ))
+    .parse_next(i)?;
     "  specs:\n".parse_next(i)?;
     let specs = repeat(0.., parse_spec).parse_next(i)?;
     Ok(GitSection {
@@ -387,7 +407,8 @@ fn parse_git_section<'i>(i: &mut Input<'i>) -> Res<GitSection<'i>> {
         tag,
         remote,
         revision,
-        submodules: submodules.unwrap_or_default(),
+        submodules,
+        glob,
         specs,
     })
 }
