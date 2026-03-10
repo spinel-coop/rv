@@ -78,7 +78,7 @@ pub struct GitSection<'i> {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GemSection<'i> {
     /// Location of the RubyGems server.
-    pub remote: &'i str,
+    pub remote: Option<&'i str>,
     /// All gems which came from this source in particular.
     pub specs: Vec<Spec<'i>>,
 }
