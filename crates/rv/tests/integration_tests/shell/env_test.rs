@@ -93,23 +93,13 @@ fn test_shell_env_with_path() {
 }
 
 #[test]
-fn test_shell_env_clears_ruby_vars() {
+fn test_shell_env_clears_ruby_and_gem_vars_when_no_rubies_available() {
     let mut test = RvTest::new();
     test.env.insert("PATH".into(), "/tmp/bin".into());
     test.env.insert("RUBY_ROOT".into(), "/tmp/ruby".into());
     test.env.insert("RUBY_ENGINE".into(), "ruby".into());
     test.env.insert("RUBY_VERSION".into(), "3.4.5".into());
     test.env.insert("RUBYOPT".into(), "--verbose".into());
-    let output = test.rv(&["shell", "env", "zsh"]);
-
-    assert_snapshot!(output.normalized_stdout());
-    output.assert_success();
-}
-
-#[test]
-fn test_shell_env_clear_gem_vars() {
-    let mut test = RvTest::new();
-    test.env.insert("PATH".into(), "/tmp/bin".into());
     test.env.insert("GEM_HOME".into(), "/tmp/root/.gems".into());
     test.env.insert(
         "GEM_PATH".into(),
