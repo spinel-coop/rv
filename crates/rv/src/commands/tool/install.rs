@@ -283,7 +283,7 @@ impl LockfileBuilder {
     pub fn lockfile(&self) -> GemfileDotLock<'_> {
         let mut lockfile = rv_lockfile::datatypes::GemfileDotLock::default();
         let mut gem_section = rv_lockfile::datatypes::GemSection {
-            remote: &self.gemserver_remote,
+            remote: Some(&self.gemserver_remote),
             specs: Vec::new(),
         };
         for (gem_name, version) in &self.versions_needed {

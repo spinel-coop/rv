@@ -1837,6 +1837,10 @@ async fn download_gem_source<'i>(
     span: &tracing::Span,
 ) -> Result<Vec<DownloadedRubygems<'i>>> {
     let client = rv_http_client()?;
+    let Some(remote) = gem_source.remote else {
+        debug!("Skipping download of gems attached to the global source, because it has no remote");
+        return Ok(vec![]);
+    };
 
     // Download them all, concurrently.
     let spec_stream = futures_util::stream::iter(&gem_source.specs);
@@ -1844,16 +1848,8 @@ async fn download_gem_source<'i>(
         .map(|spec| {
             let client = &client;
             async move {
-                let result = download_gem(
-                    config,
-                    gem_source.remote,
-                    spec,
-                    client,
-                    checksums,
-                    stats,
-                    span,
-                )
-                .await;
+                let result =
+                    download_gem(config, remote, spec, client, checksums, stats, span).await;
                 span.pb_inc(1);
                 progress.complete_one();
                 result
@@ -1862,10 +1858,7 @@ async fn download_gem_source<'i>(
         .buffered(args.max_concurrent_requests)
         .try_collect()
         .await?;
-    debug!(
-        "Finished downloading gems from source {}",
-        gem_source.remote
-    );
+    debug!("Finished downloading gems from source {}", remote);
     Ok(downloaded_gems)
 }
 
