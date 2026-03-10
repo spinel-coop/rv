@@ -14,7 +14,7 @@ pub enum Error {
 type Result<T> = miette::Result<T, Error>;
 
 pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
-    let ruby = config.current_ruby();
+    let ruby = config.best_ruby();
     let (unset, set) = config.env_for(ruby.as_ref())?.split();
 
     match shell {

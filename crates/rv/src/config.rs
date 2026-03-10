@@ -202,15 +202,13 @@ impl Config<'_> {
         }
     }
 
-    pub fn current_ruby(&self) -> Option<Ruby> {
-        let request = &self.ruby_request();
+    pub fn best_ruby(&self) -> Option<Ruby> {
+        self.current_ruby()
+            .or_else(|| self.highest_ruby_matching(&RubyRequest::default()))
+    }
 
-        self.discover_rubies_matching(|dir_name| {
-            let version_res = RubyVersion::from_str(dir_name);
-            version_res.is_ok_and(|v| v.satisfies(request))
-        })
-        .last()
-        .cloned()
+    pub fn current_ruby(&self) -> Option<Ruby> {
+        self.highest_ruby_matching(&self.ruby_request())
     }
 
     pub fn ruby_request(&self) -> RubyRequest {
@@ -304,6 +302,15 @@ impl Config<'_> {
         }
 
         Ok(env)
+    }
+
+    fn highest_ruby_matching(&self, request: &RubyRequest) -> Option<Ruby> {
+        self.discover_rubies_matching(|dir_name| {
+            let version_res = RubyVersion::from_str(dir_name);
+            version_res.is_ok_and(|v| v.satisfies(request))
+        })
+        .last()
+        .cloned()
     }
 }
 
