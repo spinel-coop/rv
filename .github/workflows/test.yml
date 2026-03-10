@@ -13,6 +13,7 @@ permissions:
   contents: read
 
 env:
+  CARGO_INCREMENTAL: 0
   CARGO_TERM_COLOR: always
 
 jobs:
@@ -46,7 +47,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable # zizmor: ignore[unpinned-uses]
+        run: rustup show
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
@@ -78,9 +79,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable # zizmor: ignore[unpinned-uses]
-        with:
-          components: rustfmt, clippy
+        run: rustup show
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
@@ -119,7 +118,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y zsh fish
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable # zizmor: ignore[unpinned-uses]
+        run: rustup show
 
       - name: Install nextest
         uses: taiki-e/install-action@5faf876256ccfc7ba64a4f87314c3457cc374b98 # v2.68.22
