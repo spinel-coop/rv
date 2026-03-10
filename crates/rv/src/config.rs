@@ -10,6 +10,7 @@ use config::{
     Config as ConfigRs, Environment, File, FileStoredFormat, Format, Map, Value, ValueKind,
 };
 use indexmap::IndexSet;
+use owo_colors::OwoColorize;
 use tracing::{debug, instrument};
 
 use rv_ruby::{
@@ -52,7 +53,7 @@ pub struct Config<'input> {
     pub cache: rv_cache::Cache,
     pub requested_ruby: RequestedRuby,
     pub bundler_settings: BundlerSettings<'input>,
-    pub rv_settings: RvSettings,
+    pub rv_settings: Option<RvSettings>,
 }
 
 #[derive(Debug, Clone)]
