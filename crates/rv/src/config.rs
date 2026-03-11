@@ -45,7 +45,6 @@ pub struct Config<'input> {
     pub ruby_dirs: IndexSet<Utf8PathBuf>,
     pub project_root: Utf8PathBuf,
     pub cache: rv_cache::Cache,
-    pub current_exe: Utf8PathBuf,
     pub requested_ruby: RequestedRuby,
     pub bundler_settings: BundlerSettings<'input>,
 }
@@ -109,11 +108,6 @@ impl Config<'_> {
         let root = rv_dirs::root_dir();
         let ruby_dirs = rv_dirs::canonical_ruby_dirs(&global_args.ruby_dir, &root)?;
         let cache = global_args.cache_args.to_cache()?;
-        let current_exe = if let Some(exe) = global_args.current_exe.clone() {
-            exe
-        } else {
-            std::env::current_exe()?.to_str().unwrap().into()
-        };
 
         let project_root = rv_dirs::project_root(&root)?;
         debug!("Found project directory in {}", project_root);
@@ -127,7 +121,6 @@ impl Config<'_> {
             ruby_dirs,
             project_root,
             cache,
-            current_exe,
             requested_ruby,
             bundler_settings,
         })
@@ -151,9 +144,8 @@ impl Config<'_> {
         Self {
             bundler_settings: BundlerSettings::new(&home_dir, &project_dir),
             ruby_dirs: indexset![ruby_dir],
-            project_root: root.clone(),
+            project_root: root,
             cache: Cache::temp().unwrap(),
-            current_exe: root.join("bin").join("rv"),
             requested_ruby: RequestedRuby::Global,
         }
     }

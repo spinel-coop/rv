@@ -40,9 +40,6 @@ struct GlobalArgs {
 
     /// Cache related parameters
     cache_args: CacheArgs,
-
-    /// Executable path for testing
-    current_exe: Option<Utf8PathBuf>,
 }
 
 /// An extremely fast Ruby version manager.
@@ -89,10 +86,6 @@ struct Cli {
 
     #[command(subcommand)]
     command: Commands,
-
-    /// Executable path for testing (hidden)
-    #[arg(long, hide = true, env = "RV_TEST_EXE")]
-    current_exe: Option<Utf8PathBuf>,
 }
 
 impl Cli {
@@ -100,7 +93,6 @@ impl Cli {
         GlobalArgs {
             ruby_dir: self.ruby_dir.clone(),
             cache_args: self.cache_args.clone(),
-            current_exe: self.current_exe.clone(),
         }
     }
 }
@@ -296,7 +288,7 @@ async fn run_cmd(global_args: &GlobalArgs, command: Commands) -> Result<()> {
         Commands::Ruby(ruby_args) => ruby(global_args, ruby_args).await?,
         Commands::CleanInstall(ci_args) => ci(global_args, ci_args).await?,
         Commands::Cache(cache_args) => cache(global_args, cache_args)?,
-        Commands::Selfupdate => selfupdate(global_args).await?,
+        Commands::Selfupdate => selfupdate().await?,
         Commands::Shell(shell_args) => shell(global_args, &mut Cli::command(), shell_args)?,
         Commands::Tool(tool_args) => tool(global_args, tool_args).await?,
         Commands::Run(run_args) => run(global_args, run_args).await?,

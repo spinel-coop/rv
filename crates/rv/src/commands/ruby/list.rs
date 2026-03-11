@@ -272,7 +272,6 @@ mod tests {
         let root_dir = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
         let ruby_dir = root_dir.join("opt/rubies");
         fs_err::create_dir_all(&ruby_dir)?;
-        let current_exe = root_dir.join("bin").join("rv");
 
         let cache_args = CacheArgs {
             no_cache: false,
@@ -281,7 +280,6 @@ mod tests {
 
         let global_args = GlobalArgs {
             ruby_dir: [ruby_dir].to_vec(),
-            current_exe: Some(current_exe),
             cache_args,
         };
 

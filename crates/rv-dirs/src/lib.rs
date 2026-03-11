@@ -20,6 +20,12 @@ pub fn canonical_ruby_dirs(
     Ok(dirs.into_iter().collect())
 }
 
+pub fn current_exe() -> io::Result<Utf8PathBuf> {
+    let exe = env::var("RV_TEST_EXE").unwrap_or(env::current_exe()?.to_str().unwrap().to_string());
+
+    Ok(Utf8PathBuf::from(exe))
+}
+
 pub fn relativize(path: &Utf8Path) -> String {
     let Some(current_dir) = std::env::current_dir().ok() else {
         return path.to_string();

@@ -76,8 +76,8 @@ pub(crate) fn shell(
     let config = &Config::new(global_args, None)?;
 
     match args.command {
-        None => setup(config, args.shell.unwrap())?,
-        Some(ShellCommand::Init { shell }) => init(config, shell)?,
+        None => setup(args.shell.unwrap())?,
+        Some(ShellCommand::Init { shell }) => init(shell)?,
         Some(ShellCommand::Completions { shell }) => completions(cmd, shell),
         Some(ShellCommand::Env { shell }) => env(config, shell)?,
     }
@@ -85,7 +85,7 @@ pub(crate) fn shell(
     Ok(())
 }
 
-fn setup(config: &Config, shell: Shell) -> Result<()> {
+fn setup(shell: Shell) -> Result<()> {
     use indoc::{formatdoc, printdoc};
 
     let name = shell.to_string();
@@ -95,7 +95,7 @@ fn setup(config: &Config, shell: Shell) -> Result<()> {
         or configuring your shell to do the equivalent."
     };
 
-    let rv = &config.current_exe;
+    let rv = rv_dirs::current_exe()?;
 
     match shell {
         Shell::Zsh => {
