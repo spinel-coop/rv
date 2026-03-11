@@ -310,29 +310,20 @@ fn parse_ruby_version_contents<'i>(i: &mut Input<'i>) -> Res<InconsistentlyInden
     Ok(section)
 }
 
-fn alphanumdash<'i>(i: &mut Input<'i>) -> Res<&'i str> {
-    take_while(1.., |c: char| c.is_alphanumeric() || c == '-' || c == '_').parse_next(i)
-}
-
 fn parse_version<'i>(i: &mut Input<'i>) -> Res<&'i str> {
     parse_version_inner.take().parse_next(i)
 }
 
-/// Equivalent to the regex
-/// `[0-9]+(?>\.[0-9a-zA-Z]+)*(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?`,
-/// except that we allow underscores in the last section where
-/// prereleases or version architectures might go.
 fn parse_version_inner<'i>(i: &mut Input<'i>) -> Res<()> {
     // [0-9]+
     let _major = parse_num.parse_next(i)?;
 
     // (?>\.[0-9a-zA-Z]+)*
-    let _minor: Vec<_> =
+    let _other_segments: Vec<_> =
         repeat(0.., ('.', take_while(1.., |c: char| c.is_alphanumeric()))).parse_next(i)?;
 
-    // (-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?
-    let _prerelease: Option<(char, &str, Vec<_>)> =
-        opt(('-', alphanumdash, repeat(0.., ('.', alphanumdash)))).parse_next(i)?;
+    // (-[0-9A-Za-z_-]+)?
+    let _platform: Option<(char, &str)> = opt(('-', parse_platform)).parse_next(i)?;
 
     Ok(())
 }
@@ -653,9 +644,9 @@ PATH
             "1",
             "1.0",
             "2.3a.4B",
-            "1.0.0-beta",
-            "1.2.3-beta.2-release-1",
-            "1.0-rc.1",
+            "1.0.0.pre.beta",
+            "1.2.3.pre.beta.2.pre.release.pre.1",
+            "1.0.pre.rc.1",
         ] {
             let i = LocatingSlice::new(input);
             let _out = parse_version.parse(i).unwrap();
