@@ -1,19 +1,19 @@
 use super::Shell;
-use crate::config;
+use crate::config::Config;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error(transparent)]
     IoError(#[from] std::io::Error),
     #[error(transparent)]
-    ConfigError(#[from] config::Error),
+    ConfigError(#[from] crate::config::Error),
     #[error("Could not serialize JSON: {0}")]
     Serde(#[from] serde_json::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
 
-pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
+pub fn env(config: &Config, shell: Shell) -> Result<()> {
     let ruby = config.best_ruby();
     let (unset, set) = config.env_for(ruby.as_ref())?.split();
 
