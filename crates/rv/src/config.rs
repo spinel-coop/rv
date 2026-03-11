@@ -405,7 +405,8 @@ fn find_directory_ruby(dir: &Utf8PathBuf) -> Result<Option<(RubyRequest, Source)
             let lockfile_ruby = parsed_lockfile.ruby_version;
 
             if let Some(lockfile_ruby) = lockfile_ruby {
-                if let Ok(version) = ReleasedRubyVersion::from_gemfile_lock(lockfile_ruby) {
+                if let Ok(version) = ReleasedRubyVersion::from_gemfile_lock(lockfile_ruby.content())
+                {
                     return Ok(Some((version.into(), Source::GemfileLock(lockfile))));
                 } else {
                     debug!(
