@@ -66,11 +66,11 @@ impl RequestedRuby {
             Self::Explicit(_) => "* Default version explicitly selected".to_string(),
             Self::Project((_, source)) => format!(
                 "* Default version pinned by {}",
-                crate::config::relativize(source.path())
+                rv_dirs::relativize(source.path())
             ),
             Self::User((_, source)) => format!(
                 "* Default version pinned by {}",
-                crate::config::unexpand(source.path())
+                rv_dirs::unexpand(source.path())
             ),
             Self::Global => {
                 let installed_or_available = if installed { "installed" } else { "available" };
@@ -82,18 +82,8 @@ impl RequestedRuby {
 
 impl Config<'_> {
     pub(crate) fn new(global_args: &GlobalArgs, request: Option<RubyRequest>) -> Result<Self> {
-        let root = Utf8PathBuf::from(env::var("RV_ROOT_DIR").unwrap_or("/".to_owned()));
-
-        let ruby_dirs = if global_args.ruby_dir.is_empty() {
-            default_ruby_dirs(&root)
-        } else {
-            global_args
-                .ruby_dir
-                .iter()
-                .map(|path: &Utf8PathBuf| Ok(root.join(rv_dirs::canonicalize_utf8(path)?)))
-                .collect::<Result<Vec<_>>>()?
-        };
-        let ruby_dirs: IndexSet<Utf8PathBuf> = ruby_dirs.into_iter().collect();
+        let root = rv_dirs::root_dir();
+        let ruby_dirs = rv_dirs::canonical_ruby_dirs(&global_args.ruby_dir, &root)?;
         let cache = global_args.cache_args.to_cache()?;
         let current_exe = if let Some(exe) = global_args.current_exe.clone() {
             exe
@@ -101,15 +91,7 @@ impl Config<'_> {
             std::env::current_exe()?.to_str().unwrap().into()
         };
 
-        let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
-
-        let project_root = current_dir
-            .ancestors()
-            .take_while(|d| Some(*d) != root.parent())
-            .find(|d| d.join("Gemfile.lock").is_file())
-            .map(|p| p.to_path_buf())
-            .unwrap_or(current_dir.clone());
-
+        let project_root = rv_dirs::project_root(&root)?;
         debug!("Found project directory in {}", project_root);
 
         let home_dir = rv_dirs::home_dir();
@@ -308,66 +290,6 @@ impl Config<'_> {
         .last()
         .cloned()
     }
-}
-
-pub fn relativize(path: &Utf8Path) -> String {
-    let Some(current_dir) = std::env::current_dir().ok() else {
-        return path.to_string();
-    };
-
-    let Some(file_name) = path.file_name().map(|f| f.to_string()) else {
-        return path.to_string();
-    };
-
-    let mut relative_path = file_name.clone();
-
-    for dir in current_dir.ancestors() {
-        if dir.join(&file_name).is_file() {
-            return relative_path;
-        }
-
-        relative_path.insert_str(0, "../");
-    }
-
-    relative_path
-}
-
-pub fn unexpand(path: &Utf8Path) -> String {
-    path.as_str().replace(rv_dirs::home_dir().as_str(), "~")
-}
-
-fn xdg_data_path() -> Utf8PathBuf {
-    rv_dirs::user_state_dir("/".into()).join("rubies")
-}
-
-fn legacy_default_data_path() -> Utf8PathBuf {
-    rv_dirs::home_dir().join(".data/rv/.rubies")
-}
-
-fn legacy_default_path() -> Utf8PathBuf {
-    rv_dirs::home_dir().join(".rubies")
-}
-
-/// Default Ruby installation directories
-pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
-    let paths: [(_, _); 6] = [
-        (true, xdg_data_path()),
-        (false, legacy_default_data_path()),
-        (false, legacy_default_path()),
-        (false, "/opt/rubies".into()),
-        (false, "/usr/local/rubies".into()),
-        (false, "/opt/homebrew/Cellar/ruby".into()),
-    ];
-
-    paths
-        .iter()
-        .filter_map(|(always_include, path)| {
-            let join = root.join(path.strip_prefix("/").unwrap_or(path));
-            rv_dirs::canonicalize_utf8(&join)
-                .ok()
-                .or(always_include.then_some(path.into()))
-        })
-        .collect()
 }
 
 fn find_directory_ruby(dir: &Utf8PathBuf) -> Result<Option<(RubyRequest, Source)>> {

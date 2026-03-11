@@ -59,7 +59,7 @@ impl tabled::Tabled for JsonRubyEntry {
         };
 
         let installed = if self.installed {
-            let short_executable_path = crate::config::unexpand(&self.ruby.executable_path());
+            let short_executable_path = rv_dirs::unexpand(&self.ruby.executable_path());
 
             if self.color {
                 short_executable_path.cyan().to_string().into()

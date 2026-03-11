@@ -2658,6 +2658,7 @@ dependencies = [
  "dunce",
  "etcetera",
  "fs-err",
+ "indexmap",
  "indoc",
  "tracing",
 ]

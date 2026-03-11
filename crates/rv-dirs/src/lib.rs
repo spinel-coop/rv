@@ -2,6 +2,83 @@ use std::{env, ffi::OsString, io};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use etcetera::BaseStrategy;
+use indexmap::IndexSet;
+
+pub fn canonical_ruby_dirs(
+    ruby_dir: &[Utf8PathBuf],
+    root: &Utf8Path,
+) -> io::Result<IndexSet<Utf8PathBuf>> {
+    let dirs = if ruby_dir.is_empty() {
+        default_ruby_dirs(root)
+    } else {
+        ruby_dir
+            .iter()
+            .map(|path: &Utf8PathBuf| Ok(root.join(canonicalize_utf8(path)?)))
+            .collect::<io::Result<Vec<_>>>()?
+    };
+
+    Ok(dirs.into_iter().collect())
+}
+
+pub fn relativize(path: &Utf8Path) -> String {
+    let Some(current_dir) = std::env::current_dir().ok() else {
+        return path.to_string();
+    };
+
+    let Some(file_name) = path.file_name().map(|f| f.to_string()) else {
+        return path.to_string();
+    };
+
+    let mut relative_path = file_name.clone();
+
+    for dir in current_dir.ancestors() {
+        if dir.join(&file_name).is_file() {
+            return relative_path;
+        }
+
+        relative_path.insert_str(0, "../");
+    }
+
+    relative_path
+}
+
+pub fn unexpand(path: &Utf8Path) -> String {
+    path.as_str().replace(home_dir().as_str(), "~")
+}
+
+/// Default Ruby installation directories
+pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
+    let paths: [(_, _); 6] = [
+        (true, xdg_data_path()),
+        (false, legacy_default_data_path()),
+        (false, legacy_default_path()),
+        (false, "/opt/rubies".into()),
+        (false, "/usr/local/rubies".into()),
+        (false, "/opt/homebrew/Cellar/ruby".into()),
+    ];
+
+    paths
+        .iter()
+        .filter_map(|(always_include, path)| {
+            let join = root.join(path.strip_prefix("/").unwrap_or(path));
+            canonicalize_utf8(&join)
+                .ok()
+                .or(always_include.then_some(path.into()))
+        })
+        .collect()
+}
+
+fn xdg_data_path() -> Utf8PathBuf {
+    user_state_dir("/".into()).join("rubies")
+}
+
+fn legacy_default_data_path() -> Utf8PathBuf {
+    home_dir().join(".data/rv/.rubies")
+}
+
+fn legacy_default_path() -> Utf8PathBuf {
+    home_dir().join(".rubies")
+}
 
 /// Canonicalize a path without the Windows `\\?\` extended-length prefix.
 ///
@@ -13,6 +90,22 @@ pub fn canonicalize_utf8(path: impl AsRef<Utf8Path>) -> io::Result<Utf8PathBuf> 
     dunce::canonicalize(path.as_ref()).and_then(|p| {
         Utf8PathBuf::try_from(p).map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))
     })
+}
+
+pub fn project_root(root: &Utf8PathBuf) -> io::Result<Utf8PathBuf> {
+    let current_dir = Utf8PathBuf::try_from(std::env::current_dir()?)
+        .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
+
+    Ok(current_dir
+        .ancestors()
+        .take_while(|d| Some(*d) != root.parent())
+        .find(|d| d.join("Gemfile.lock").is_file())
+        .map(|p| p.to_path_buf())
+        .unwrap_or(current_dir))
+}
+
+pub fn root_dir() -> Utf8PathBuf {
+    Utf8PathBuf::from(env::var("RV_ROOT_DIR").unwrap_or("/".to_owned()))
 }
 
 /// Returns an appropriate user-home directory, or the system temporary directory if the platform
