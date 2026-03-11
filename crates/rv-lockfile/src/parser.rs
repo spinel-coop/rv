@@ -281,7 +281,7 @@ fn parse_bundled_with_contents<'i>(i: &mut Input<'i>) -> Res<InconsistentlyInden
     let third_space = opt(' ').parse_next(i)?;
 
     let bundler_version = take_while(0.., |c: char| {
-        c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.'
+        c.is_ascii_alphanumeric() || c == '-' || c == '.'
     })
     .parse_next(i)?;
 
@@ -298,7 +298,7 @@ fn parse_ruby_version_contents<'i>(i: &mut Input<'i>) -> Res<InconsistentlyInden
     let third_space = opt(' ').parse_next(i)?;
 
     let ruby_version = take_while(0.., |c: char| {
-        c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.' || c == ' '
+        c.is_ascii_alphanumeric() || c == '-' || c == '.' || c == ' '
     })
     .parse_next(i)?;
 
