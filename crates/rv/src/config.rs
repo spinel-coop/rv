@@ -59,6 +59,32 @@ pub enum RequestedRuby {
 }
 
 impl RequestedRuby {
+    pub fn new(
+        request: Option<RubyRequest>,
+        home_dir: &Utf8PathBuf,
+        project_root: &Utf8PathBuf,
+    ) -> Result<Self> {
+        let requested_ruby = match request {
+            Some(req) => {
+                debug!("Explicit ruby request for {} received", req);
+                Self::Explicit(req)
+            }
+            None => {
+                if let Some(req) = find_directory_ruby(project_root)? {
+                    debug!("Found project ruby request for {} in {:?}", req.0, req.1);
+                    Self::Project(req)
+                } else if let Some(req) = find_directory_ruby(home_dir)? {
+                    debug!("Found user ruby request for {} in {:?}", req.0, req.1);
+                    Self::User(req)
+                } else {
+                    Self::Global
+                }
+            }
+        };
+
+        Ok(requested_ruby)
+    }
+
     pub fn explain(&self, installed: bool) -> String {
         match self {
             Self::Explicit(_) => "* Default version explicitly selected".to_string(),
@@ -94,24 +120,7 @@ impl Config<'_> {
 
         let home_dir = rv_dirs::home_dir();
 
-        let requested_ruby = match request {
-            Some(req) => {
-                debug!("Explicit ruby request for {} received", req);
-                RequestedRuby::Explicit(req)
-            }
-            None => {
-                if let Some(req) = find_directory_ruby(&project_root)? {
-                    debug!("Found project ruby request for {} in {:?}", req.0, req.1);
-                    RequestedRuby::Project(req)
-                } else if let Some(req) = find_directory_ruby(&home_dir)? {
-                    debug!("Found user ruby request for {} in {:?}", req.0, req.1);
-                    RequestedRuby::User(req)
-                } else {
-                    RequestedRuby::Global
-                }
-            }
-        };
-
+        let requested_ruby = RequestedRuby::new(request, &home_dir, &project_root)?;
         let bundler_settings = BundlerSettings::new(&home_dir, &project_root);
 
         Ok(Self {
