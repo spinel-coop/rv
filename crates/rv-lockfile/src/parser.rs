@@ -269,6 +269,13 @@ fn parse_gem_name<'i>(i: &mut Input<'i>) -> Res<&'i str> {
     .parse_next(i)
 }
 
+fn parse_platform<'i>(i: &mut Input<'i>) -> Res<&'i str> {
+    take_while(0.., |c: char| {
+        c.is_ascii_alphanumeric() || c == '_' || c == '-'
+    })
+    .parse_next(i)
+}
+
 fn parse_bundled_with_contents<'i>(i: &mut Input<'i>) -> Res<InconsistentlyIndentedSection<'i>> {
     "  ".parse_next(i)?;
     let third_space = opt(' ').parse_next(i)?;
@@ -435,7 +442,7 @@ fn parse_git_section<'i>(i: &mut Input<'i>) -> Res<GitSection<'i>> {
 
 fn parse_platforms<'i>(i: &mut Input<'i>) -> Res<Vec<&'i str>> {
     "PLATFORMS\n".parse_next(i)?;
-    repeat(1.., delimited(space1, parse_gem_name, line_ending)).parse_next(i)
+    repeat(1.., delimited(space1, parse_platform, line_ending)).parse_next(i)
 }
 
 fn parse_dependencies<'i>(i: &mut Input<'i>) -> Res<Vec<GemRange<'i>>> {
