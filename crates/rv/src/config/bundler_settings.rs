@@ -12,7 +12,7 @@ pub struct BundlerSettings<'a> {
 }
 
 impl BundlerSettings<'_> {
-    pub fn new(home_dir: Utf8PathBuf, project_dir: Utf8PathBuf) -> Self {
+    pub fn new(home_dir: &Utf8PathBuf, project_dir: &Utf8PathBuf) -> Self {
         Self {
             local: Self::config_for_dir(project_dir),
             global: Self::config_for_dir(home_dir),
@@ -119,7 +119,7 @@ impl BundlerSettings<'_> {
             .map(|v| bool::from_str(v).unwrap_or_default())
     }
 
-    fn config_for_dir(dir: Utf8PathBuf) -> Option<Yaml<'static>> {
+    fn config_for_dir(dir: &Utf8PathBuf) -> Option<Yaml<'static>> {
         let config_file = dir.join(".bundle/config");
 
         if !config_file.is_file() {
@@ -194,7 +194,7 @@ BUNDLE_PATH: foo
 
         std::fs::write(&config_file, config_content).expect("Failed to write config");
 
-        let bundler_settings = BundlerSettings::new(home_dir, project_dir);
+        let bundler_settings = BundlerSettings::new(&home_dir, &project_dir);
 
         assert_eq!(
             cwd.join("foo"),
@@ -222,7 +222,7 @@ BUNDLE_PATH: foo
 
         std::fs::write(&config_file, config_content).expect("Failed to write config");
 
-        let bundler_settings = BundlerSettings::new(home_dir, project_dir);
+        let bundler_settings = BundlerSettings::new(&home_dir, &project_dir);
 
         assert_eq!(
             cwd.join("foo"),
@@ -261,7 +261,7 @@ BUNDLE_PATH: bar
 
         std::fs::write(&local_config_file, local_config_content).expect("Failed to write config");
 
-        let bundler_settings = BundlerSettings::new(home_dir, project_dir);
+        let bundler_settings = BundlerSettings::new(&home_dir, &project_dir);
 
         assert_eq!(
             cwd.join("bar"),
@@ -287,7 +287,7 @@ BUNDLE_PATH__SYSTEM: true
 
         std::fs::write(&local_config_file, local_config_content).expect("Failed to write config");
 
-        let bundler_settings = BundlerSettings::new(home_dir, project_dir);
+        let bundler_settings = BundlerSettings::new(&home_dir, &project_dir);
 
         assert_eq!(None, bundler_settings.path())
     }
@@ -312,7 +312,7 @@ BUNDLE_DEPLOYMENT: true
 
         std::fs::write(&local_config_file, local_config_content).expect("Failed to write config");
 
-        let bundler_settings = BundlerSettings::new(home_dir, project_dir);
+        let bundler_settings = BundlerSettings::new(&home_dir, &project_dir);
 
         assert_eq!(
             cwd.join("vendor/bundle"),
@@ -335,7 +335,7 @@ BUNDLE_DEPLOYMENT: true
 
         std::fs::write(&local_config_file, local_config_content).expect("Failed to write config");
 
-        let bundler_settings = BundlerSettings::new(home_dir, project_dir);
+        let bundler_settings = BundlerSettings::new(&home_dir, &project_dir);
 
         assert_eq!(None, bundler_settings.path())
     }

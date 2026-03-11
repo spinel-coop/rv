@@ -112,7 +112,7 @@ impl Config<'_> {
             }
         };
 
-        let bundler_settings = BundlerSettings::new(home_dir, project_root.clone());
+        let bundler_settings = BundlerSettings::new(&home_dir, &project_root);
 
         Ok(Self {
             ruby_dirs,
@@ -140,7 +140,7 @@ impl Config<'_> {
         let project_dir = root.join("project");
 
         Self {
-            bundler_settings: BundlerSettings::new(home_dir, project_dir),
+            bundler_settings: BundlerSettings::new(&home_dir, &project_dir),
             ruby_dirs: indexset![ruby_dir],
             project_root: root.clone(),
             cache: Cache::temp().unwrap(),
