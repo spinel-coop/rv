@@ -29,6 +29,7 @@ pub struct GemfileDotLock<'i> {
     pub ruby_version: Option<&'i str>,
 
     /// Which version of Bundler this lockfile was built with.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bundled_with: Option<&'i str>,
 
     /// Checksums for each dependency.
