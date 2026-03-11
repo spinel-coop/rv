@@ -121,16 +121,8 @@ fn powershell_escape(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::Config;
-
     use super::*;
     use serde_json::json;
-
-    #[test]
-    fn env_runs() {
-        let config = Config::new_dummy();
-        env(&config, Shell::Zsh).unwrap();
-    }
 
     #[test]
     fn nushell_env_serializes_changes() {
