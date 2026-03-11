@@ -129,6 +129,11 @@ impl BundlerSettings<'_> {
         let config_content = std::fs::read_to_string(&config_file).ok()?;
 
         let doc = Yaml::load_from_str(&config_content).unwrap();
+
+        if doc.is_empty() {
+            return None;
+        }
+
         let settings = doc[0].clone();
 
         if !settings.is_mapping() {
@@ -313,5 +318,25 @@ BUNDLE_DEPLOYMENT: true
             cwd.join("vendor/bundle"),
             bundler_settings.path().unwrap().to_string()
         )
+    }
+
+    #[test]
+    fn test_empty_config() {
+        let temp_dir = Utf8TempDir::new().expect("Failed to create temporary directory");
+
+        let home_dir = temp_dir.path().join("home");
+        let project_dir = temp_dir.path().join("project");
+
+        let local_config_dir = project_dir.join(".bundle");
+        std::fs::create_dir_all(&local_config_dir).unwrap();
+        let local_config_file = local_config_dir.join("config");
+
+        let local_config_content = "";
+
+        std::fs::write(&local_config_file, local_config_content).expect("Failed to write config");
+
+        let bundler_settings = BundlerSettings::new(home_dir, project_dir);
+
+        assert_eq!(None, bundler_settings.path())
     }
 }
