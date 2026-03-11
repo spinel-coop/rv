@@ -33,8 +33,6 @@ pub enum Error {
     #[error(transparent)]
     RequestError(#[from] RequestError),
     #[error(transparent)]
-    EnvError(#[from] env::VarError),
-    #[error(transparent)]
     JoinPathsError(#[from] JoinPathsError),
     #[error("no matching ruby version found")]
     NoMatchingRuby,
