@@ -50,6 +50,54 @@ impl GemfileDotLock<'_> {
     }
 }
 
+impl std::fmt::Display for GemfileDotLock<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for path_section in &self.path {
+            writeln!(f, "{path_section}")?;
+        }
+
+        for git_section in &self.git {
+            writeln!(f, "{git_section}")?;
+        }
+
+        for gem_section in &self.gem {
+            writeln!(f, "{gem_section}")?;
+        }
+
+        writeln!(f, "PLATFORMS")?;
+        for platform in &self.platforms {
+            writeln!(f, "  {platform}")?;
+        }
+
+        writeln!(f, "\nDEPENDENCIES")?;
+        for dep in &self.dependencies {
+            writeln!(f, "  {dep}")?;
+        }
+
+        if let Some(checksums) = &self.checksums {
+            writeln!(f, "\nCHECKSUMS")?;
+
+            for checksum in checksums {
+                writeln!(f, "{checksum}")?;
+            }
+        }
+
+        if let Some(ruby_version) = &self.ruby_version {
+            writeln!(f, "\nRUBY VERSION")?;
+
+            writeln!(f, "{ruby_version}")?;
+        }
+
+        if let Some(bundled_with) = &self.bundled_with {
+            writeln!(f, "\nBUNDLED WITH")?;
+
+            writeln!(f, "{bundled_with}")?;
+        }
+
+        Ok(())
+    }
+}
+
 /// Git source that gems could come from.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -74,6 +122,35 @@ pub struct GitSection<'i> {
     pub specs: Vec<Spec<'i>>,
 }
 
+impl std::fmt::Display for GitSection<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "GIT")?;
+        writeln!(f, "  remote: {}", self.remote)?;
+        writeln!(f, "  revision: {}", self.revision)?;
+        if let Some(git_ref) = self.git_ref {
+            writeln!(f, "  ref: {git_ref}")?;
+        }
+        if let Some(branch) = self.branch {
+            writeln!(f, "  branch: {branch}")?;
+        }
+        if let Some(glob) = self.glob {
+            writeln!(f, "  glob: {glob}")?;
+        }
+        if let Some(tag) = self.tag {
+            writeln!(f, "  tag: {tag}")?;
+        }
+        if let Some(submodules) = self.submodules {
+            writeln!(f, "  submodules: {submodules}")?;
+        }
+        writeln!(f, "  specs:")?;
+        for spec in &self.specs {
+            write!(f, "{spec}")?;
+        }
+
+        Ok(())
+    }
+}
+
 /// Rubygems server source that gems could come from.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -84,6 +161,21 @@ pub struct GemSection<'i> {
     pub specs: Vec<Spec<'i>>,
 }
 
+impl std::fmt::Display for GemSection<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "GEM")?;
+        if let Some(remote) = self.remote {
+            writeln!(f, "  remote: {remote}")?;
+        }
+        writeln!(f, "  specs:")?;
+        for spec in &self.specs {
+            write!(f, "{spec}")?;
+        }
+
+        Ok(())
+    }
+}
+
 /// Filesystem path that gems could come from.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -92,6 +184,19 @@ pub struct PathSection<'i> {
     pub remote: &'i str,
     /// All gems which came from this source in particular.
     pub specs: Vec<Spec<'i>>,
+}
+
+impl std::fmt::Display for PathSection<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "PATH")?;
+        writeln!(f, "  remote: {}", self.remote)?;
+        writeln!(f, "  specs:")?;
+        for spec in &self.specs {
+            write!(f, "{spec}")?;
+        }
+
+        Ok(())
+    }
 }
 
 /// A (gem, version) pair.
@@ -110,6 +215,12 @@ impl<'i> GemVersion<'i> {
     }
 }
 
+impl std::fmt::Display for GemVersion<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} ({})", self.name, self.version)
+    }
+}
+
 /// A range of possible versions of a certain gem.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -121,6 +232,28 @@ pub struct GemRange<'i> {
     pub nonstandard: bool,
 }
 
+impl std::fmt::Display for GemRange<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)?;
+
+        if let Some(semver) = &self.semver {
+            let gem_ranges = semver
+                .iter()
+                .map(|gem_range| gem_range.to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
+
+            write!(f, " ({})", gem_ranges)?;
+        }
+
+        if self.nonstandard {
+            write!(f, "!")?;
+        }
+
+        Ok(())
+    }
+}
+
 /// A range of possible versions of a gem.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -128,6 +261,12 @@ pub struct GemRangeSemver<'i> {
     pub semver_constraint: SemverConstraint,
     #[serde(borrow)]
     pub version: &'i str,
+}
+
+impl std::fmt::Display for GemRangeSemver<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {}", self.semver_constraint, self.version)
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -148,6 +287,15 @@ impl<'i> InconsistentlyIndentedSection<'i> {
     }
 }
 
+impl std::fmt::Display for InconsistentlyIndentedSection<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ThreeSpaces(v) => write!(f, "   {v}"),
+            Self::Standard(v) => write!(f, "  {v}"),
+        }
+    }
+}
+
 /// Gem which has been locked and came from some particular source.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -156,6 +304,25 @@ pub struct Spec<'i> {
     pub gem_version: GemVersion<'i>,
     #[serde(borrow)]
     pub deps: Vec<GemRange<'i>>,
+}
+
+impl std::fmt::Display for Spec<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "    {}", self.gem_version)?;
+
+        if !self.deps.is_empty() {
+            let dep_strs = self
+                .deps
+                .iter()
+                .map(|d| d.to_string())
+                .collect::<Vec<_>>()
+                .join("\n      ");
+
+            writeln!(f, "      {dep_strs}")?;
+        }
+
+        Ok(())
+    }
 }
 
 /// Checksum of a particular gem version.
@@ -168,6 +335,21 @@ pub struct Checksum<'i> {
     pub value: Vec<u8>,
 }
 
+impl std::fmt::Display for Checksum<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.algorithm {
+            ChecksumAlgorithm::None => write!(f, "  {}", self.gem_version),
+            other => write!(
+                f,
+                "  {} {}={}",
+                self.gem_version,
+                other,
+                hex::encode(&self.value)
+            ),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ChecksumAlgorithm<'i> {
@@ -176,6 +358,16 @@ pub enum ChecksumAlgorithm<'i> {
     Unknown(&'i str),
     #[default]
     SHA256,
+}
+
+impl std::fmt::Display for ChecksumAlgorithm<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => write!(f, ""),
+            Self::Unknown(algo) => write!(f, "{algo}"),
+            Self::SHA256 => write!(f, "sha256"),
+        }
+    }
 }
 
 /// Constrains the range of possible versions of a gem which could be selected.

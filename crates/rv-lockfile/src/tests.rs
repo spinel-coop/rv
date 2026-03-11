@@ -138,7 +138,10 @@ fn test_parse_mastodon() {
 
 fn must_parse(input: &str) -> crate::datatypes::GemfileDotLock<'_> {
     match crate::parse(input) {
-        Ok(o) => o,
+        Ok(o) => {
+            assert_eq!(input, o.to_string());
+            o
+        }
         Err(e) => {
             let report = miette::Report::new(e);
             panic!("{report:?}")
