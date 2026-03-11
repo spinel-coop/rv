@@ -5,7 +5,7 @@ use miette::SourceSpan;
 use winnow::{
     LocatingSlice, ModalResult, Parser,
     ascii::{line_ending, space0, space1},
-    combinator::{alt, delimited, dispatch, opt, peek, preceded, repeat, separated, terminated},
+    combinator::{alt, delimited, dispatch, opt, peek, repeat, separated, terminated},
     error::{ContextError, ErrMode},
     stream::{AsChar, Location, Stream},
     token::{take_until, take_while},
@@ -31,8 +31,8 @@ enum Section<'i> {
     Path(PathSection<'i>),
     Platforms(Vec<&'i str>),
     Dependencies(Vec<GemRange<'i>>),
-    RubyVersion(&'i str),
-    BundledWith(&'i str),
+    RubyVersion(InconsistentlyIndentedSection<'i>),
+    BundledWith(InconsistentlyIndentedSection<'i>),
     Checksums(Vec<Checksum<'i>>),
 }
 
@@ -269,18 +269,38 @@ fn parse_gem_name<'i>(i: &mut Input<'i>) -> Res<&'i str> {
     .parse_next(i)
 }
 
-fn parse_bundled_with_contents<'i>(i: &mut Input<'i>) -> Res<&'i str> {
-    take_while(0.., |c: char| {
+fn parse_bundled_with_contents<'i>(i: &mut Input<'i>) -> Res<InconsistentlyIndentedSection<'i>> {
+    "  ".parse_next(i)?;
+    let third_space = opt(' ').parse_next(i)?;
+
+    let bundler_version = take_while(0.., |c: char| {
         c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.'
     })
-    .parse_next(i)
+    .parse_next(i)?;
+
+    let section = match third_space {
+        None => InconsistentlyIndentedSection::Standard(bundler_version),
+        Some(_) => InconsistentlyIndentedSection::ThreeSpaces(bundler_version),
+    };
+
+    Ok(section)
 }
 
-fn parse_ruby_version_contents<'i>(i: &mut Input<'i>) -> Res<&'i str> {
-    take_while(0.., |c: char| {
+fn parse_ruby_version_contents<'i>(i: &mut Input<'i>) -> Res<InconsistentlyIndentedSection<'i>> {
+    "  ".parse_next(i)?;
+    let third_space = opt(' ').parse_next(i)?;
+
+    let ruby_version = take_while(0.., |c: char| {
         c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.' || c == ' '
     })
-    .parse_next(i)
+    .parse_next(i)?;
+
+    let section = match third_space {
+        None => InconsistentlyIndentedSection::Standard(ruby_version),
+        Some(_) => InconsistentlyIndentedSection::ThreeSpaces(ruby_version),
+    };
+
+    Ok(section)
 }
 
 fn alphanumdash<'i>(i: &mut Input<'i>) -> Res<&'i str> {
@@ -428,18 +448,18 @@ fn parse_checksums<'i>(i: &mut Input<'i>) -> Res<Vec<Checksum<'i>>> {
     repeat(0.., delimited(space1, parse_checksum, line_ending)).parse_next(i)
 }
 
-fn parse_bundled_with<'i>(i: &mut Input<'i>) -> Res<&'i str> {
+fn parse_bundled_with<'i>(i: &mut Input<'i>) -> Res<InconsistentlyIndentedSection<'i>> {
     "BUNDLED WITH".parse_next(i)?;
     space0.parse_next(i)?;
     "\n".parse_next(i)?;
-    preceded(space1, parse_bundled_with_contents).parse_next(i)
+    parse_bundled_with_contents(i)
 }
 
-fn parse_ruby_version<'i>(i: &mut Input<'i>) -> Res<&'i str> {
+fn parse_ruby_version<'i>(i: &mut Input<'i>) -> Res<InconsistentlyIndentedSection<'i>> {
     "RUBY VERSION".parse_next(i)?;
     space0.parse_next(i)?;
     "\n".parse_next(i)?;
-    preceded(space1, terminated(parse_ruby_version_contents, line_ending)).parse_next(i)
+    parse_ruby_version_contents(i)
 }
 
 fn parse_gem<'i>(i: &mut Input<'i>) -> Res<GemSection<'i>> {

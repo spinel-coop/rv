@@ -123,7 +123,7 @@ fn test_parse_lobsters() {
     // https://github.com/lobsters/lobsters/blob/main/Gemfile.lock
     let input = include_str!("../tests/inputs/Gemfile.lobsters.lock");
     let output = must_parse(input);
-    assert_eq!(output.ruby_version, Some("ruby 4.0.0"));
+    assert_eq!(output.ruby_version.clone().unwrap().content(), "ruby 4.0.0");
     insta::assert_yaml_snapshot!(output);
 }
 

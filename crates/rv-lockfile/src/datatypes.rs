@@ -25,12 +25,12 @@ pub struct GemfileDotLock<'i> {
     pub dependencies: Vec<GemRange<'i>>,
 
     /// Which version of Ruby this lockfile was built with.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub ruby_version: Option<&'i str>,
+    #[serde(default, skip_serializing_if = "Option::is_none", borrow)]
+    pub ruby_version: Option<InconsistentlyIndentedSection<'i>>,
 
     /// Which version of Bundler this lockfile was built with.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub bundled_with: Option<&'i str>,
+    #[serde(default, skip_serializing_if = "Option::is_none", borrow)]
+    pub bundled_with: Option<InconsistentlyIndentedSection<'i>>,
 
     /// Checksums for each dependency.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -128,6 +128,24 @@ pub struct GemRangeSemver<'i> {
     pub semver_constraint: SemverConstraint,
     #[serde(borrow)]
     pub version: &'i str,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum InconsistentlyIndentedSection<'i> {
+    #[serde(untagged)]
+    ThreeSpaces(&'i str),
+    #[serde(untagged)]
+    Standard(&'i str),
+}
+
+impl<'i> InconsistentlyIndentedSection<'i> {
+    pub fn content(&self) -> &'i str {
+        match self {
+            Self::ThreeSpaces(v) => v,
+            Self::Standard(v) => v,
+        }
+    }
 }
 
 /// Gem which has been locked and came from some particular source.
