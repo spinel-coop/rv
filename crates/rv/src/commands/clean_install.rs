@@ -483,10 +483,10 @@ fn discard_installed_gems(lockfile: &mut GemfileDotLock, install_layout: &Instal
         use std::path::Path;
 
         gem_section.specs.retain(|spec| {
-            let full_version = &spec.gem_version.to_string();
-            let gem_path = install_layout.gem_path(full_version);
-            let spec_path = install_layout.spec_path(full_version);
-            let extensions_dir = install_layout.extensions_dir(full_version);
+            let full_name = &spec.gem_version.full_name();
+            let gem_path = install_layout.gem_path(full_name);
+            let spec_path = install_layout.spec_path(full_name);
+            let extensions_dir = install_layout.extensions_dir(full_name);
             let ext_path = cached_compile_path(&extensions_dir);
 
             !Path::new(&gem_path).exists()
@@ -562,8 +562,8 @@ fn install_path(
         });
 
         if let Some(dep) = dep {
-            let gemname = dep.gem_version;
-            let cache_key = format!("{path_key}-{gemname}.gemspec");
+            let full_name = dep.gem_version.full_name();
+            let cache_key = format!("{path_key}-{full_name}.gemspec");
             let cached_gemspec_path = cached_gemspecs_dir.join(&cache_key);
 
             let cached = std::fs::exists(&cached_gemspec_path).is_ok_and(|exists| exists) && {
@@ -719,9 +719,9 @@ fn install_git_repo(
                 .contains(&format!("{}.gemspec", s.gem_version.name))
         });
         if let Some(dep) = dep {
-            // check the cache for "gitsha-gemname.gemspec", if not:
-            let gemname = dep.gem_version;
-            let cache_key = format!("{gitsha}-{gemname}.gemspec");
+            // check the cache for "gitsha-full_name.gemspec", if not:
+            let full_name = dep.gem_version.full_name();
+            let cache_key = format!("{gitsha}-{full_name}.gemspec");
             let cached_gemspec_path = cached_gemspecs_dir.join(&cache_key);
             let cached = std::fs::exists(&cached_gemspec_path).is_ok_and(|exists| exists);
             let dep_gemspec = if cached {
@@ -951,11 +951,11 @@ fn install_single_gem(
     download: DownloadedRubygems,
     args: &CiInnerArgs,
 ) -> Result<GemSpecification> {
-    let full_name = download.spec.gem_version.to_string();
+    let full_name = download.spec.gem_version.full_name();
     // Actually unpack the tarball here.
     let dep_gemspec_res = download.unpack_tarball(args)?;
     debug!("Unpacked tarball {full_name}");
-    let dep_gemspec = dep_gemspec_res.ok_or(UnpackError::MissingGemspec(full_name.to_string()))?;
+    let dep_gemspec = dep_gemspec_res.ok_or(UnpackError::MissingGemspec(full_name.clone()))?;
     debug!("Installing binstubs for {full_name}");
     install_binstub(&dep_gemspec, args)?;
     debug!("Installed {full_name}");
@@ -1310,7 +1310,7 @@ impl<'i> DownloadedRubygems<'i> {
         // Unpack the tarball into DIR/gems/
         // It should contain a metadata zip, and a data zip
         // (and optionally, a checksum zip).
-        let full_name = self.spec.gem_version.to_string();
+        let full_name = self.spec.gem_version.full_name();
         debug!("Unpacking {full_name}");
 
         // Then unpack the tarball into it.
@@ -1909,7 +1909,7 @@ async fn download_gem<'i>(
     span.pb_set_message(&format!("{cached} cached, {downloaded} downloaded"));
 
     let gem_version = spec.gem_version;
-    let full_name = gem_version.to_string();
+    let full_name = gem_version.full_name();
 
     // Validate the checksums.
     if let Some(checksum) = checksums.get(&gem_version) {
