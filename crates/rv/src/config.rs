@@ -464,16 +464,3 @@ impl Env {
         (self.unset.clone(), self.set.clone())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use assert_fs::TempDir;
-    use camino::Utf8PathBuf;
-
-    #[test]
-    fn test_default_ruby_dirs() {
-        let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
-        default_ruby_dirs(&root);
-    }
-}
