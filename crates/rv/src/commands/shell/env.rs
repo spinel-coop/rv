@@ -1,5 +1,5 @@
 use super::Shell;
-use crate::config::Config;
+use crate::{GlobalArgs, config::Config};
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -13,7 +13,8 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
-pub fn env(config: &Config, shell: Shell) -> Result<()> {
+pub(crate) fn env(global_args: &GlobalArgs, shell: Shell) -> Result<()> {
+    let config = Config::new(global_args, None)?;
     let ruby = config.best_ruby();
     let (unset, set) = config.env_for(ruby.as_ref())?.split();
 

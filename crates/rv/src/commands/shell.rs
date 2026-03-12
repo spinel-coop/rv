@@ -2,7 +2,7 @@ pub mod completions;
 pub mod env;
 pub mod init;
 
-use crate::{GlobalArgs, config::Config};
+use crate::GlobalArgs;
 use clap::{Args, Subcommand};
 use serde::Serialize;
 
@@ -59,8 +59,6 @@ pub enum Error {
     #[error(transparent)]
     IoError(#[from] std::io::Error),
     #[error(transparent)]
-    ConfigError(#[from] crate::config::Error),
-    #[error(transparent)]
     InitError(#[from] crate::commands::shell::init::Error),
     #[error(transparent)]
     EnvError(#[from] crate::commands::shell::env::Error),
@@ -73,13 +71,11 @@ pub(crate) fn shell(
     cmd: &mut clap::Command,
     args: ShellArgs,
 ) -> Result<()> {
-    let config = &Config::new(global_args, None)?;
-
     match args.command {
         None => setup(args.shell.unwrap())?,
         Some(ShellCommand::Init { shell }) => init(shell)?,
         Some(ShellCommand::Completions { shell }) => completions(cmd, shell),
-        Some(ShellCommand::Env { shell }) => env(config, shell)?,
+        Some(ShellCommand::Env { shell }) => env(global_args, shell)?,
     }
 
     Ok(())
