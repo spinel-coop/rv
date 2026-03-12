@@ -8,7 +8,7 @@ use tabled::{
 
 use anstream::println;
 use owo_colors::OwoColorize;
-use rv_ruby::{Ruby, version::ReleasedRubyVersion};
+use rv_ruby::{Ruby, canonical_name::CanonicalName, version::ReleasedRubyVersion};
 use serde::Serialize;
 use tracing::{info, warn};
 
@@ -52,10 +52,12 @@ impl tabled::Tabled for JsonRubyEntry {
     const LENGTH: usize = 2;
 
     fn fields(&self) -> Vec<Cow<'_, str>> {
+        let canonical_name = self.ruby.version.canonical_name();
+
         let name = if self.active {
-            format!("* {}", self.ruby.version)
+            format!("* {canonical_name}")
         } else {
-            format!("  {}", self.ruby.version)
+            format!("  {canonical_name}")
         };
 
         let installed = if self.installed {
