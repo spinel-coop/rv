@@ -38,11 +38,10 @@ pub(crate) async fn pin(
     request: Option<String>,
     mut resolved: bool,
 ) -> Result<()> {
-    let request = match request {
-        None => {
-            return show_pinned_ruby(&Config::new(global_args, None)?, resolved).await;
-        }
-        Some(request) => request,
+    let config = &Config::new(global_args, None)?;
+
+    let Some(request) = request else {
+        return show_pinned_ruby(config, resolved).await;
     };
 
     if request.trim() == "latest" && !resolved {
@@ -51,8 +50,6 @@ pub(crate) async fn pin(
     }
 
     let ruby_request = RubyRequest::from_str(&request)?;
-
-    let config = &Config::new(global_args, None)?;
 
     let version = if resolved {
         let resolved = &Config::new(global_args, Some(ruby_request.clone()))?
