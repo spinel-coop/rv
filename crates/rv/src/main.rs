@@ -5,7 +5,6 @@ use clap::builder::styling::AnsiColor;
 use clap::{ArgAction, CommandFactory, Parser, Subcommand};
 use clap_verbosity_flag::tracing::LevelFilter;
 use miette::Report;
-use owo_colors::OwoColorize;
 use rv_cache::CacheArgs;
 use tokio::main;
 use tracing_indicatif::IndicatifLayer;
@@ -26,7 +25,6 @@ use crate::commands::run::{RunArgs, run};
 use crate::commands::selfupdate::selfupdate;
 use crate::commands::shell::{ShellArgs, shell};
 use crate::commands::tool::{ToolArgs, tool};
-use crate::config::RvSettings;
 
 const STYLES: Styles = Styles::styled()
     .header(AnsiColor::Green.on_default().bold())
@@ -91,7 +89,7 @@ struct Cli {
 }
 
 impl Cli {
-    pub fn global_args(&self, rv_settings: Option<RvSettings>) -> GlobalArgs {
+    pub fn global_args(&self) -> GlobalArgs {
         GlobalArgs {
             ruby_dir: self.ruby_dir.clone(),
             cache_args: self.cache_args.clone(),
@@ -281,23 +279,7 @@ async fn main_inner() -> Result<()> {
 
     reg.init();
 
-    // Shell commands dont require settings. Otherwise it can be raising warnings in every terminal
-    // session. (init and completion commands)
-    let rv_settings = if let Commands::Shell(_) = cli.command {
-        None
-    } else {
-        let settings = config::RvSettings::new().unwrap();
-        settings.validate().unwrap_or_else(|err| {
-            eprintln!(
-                "{}: Settings validation failed: {}",
-                "Warning".yellow(),
-                err
-            );
-        });
-        Some(settings)
-    };
-
-    run_cmd(&cli.global_args(rv_settings), cli.command).await
+    run_cmd(&cli.global_args(), cli.command).await
 }
 
 /// Run an `rv` subcommand.

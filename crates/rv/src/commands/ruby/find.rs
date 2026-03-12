@@ -15,7 +15,7 @@ pub enum Error {
 type Result<T> = miette::Result<T, Error>;
 
 pub(crate) fn find(global_args: &GlobalArgs, request: Option<RubyRequest>) -> Result<()> {
-    let config = Config::new(global_args, request)?;
+    let config = Config::new(global_args, request, true)?;
 
     let ruby = config.current_ruby().ok_or(Error::NoMatchingRuby)?;
     println!("{}", ruby.executable_path().cyan());

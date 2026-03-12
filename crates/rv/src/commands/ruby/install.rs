@@ -57,7 +57,7 @@ pub(crate) async fn install(
     tarball_path: Option<Utf8PathBuf>,
     force: bool,
 ) -> Result<()> {
-    let config = &Config::new(global_args, request)?;
+    let config = &Config::new(global_args, request, true)?;
 
     let progress = WorkProgress::new();
 

@@ -98,7 +98,7 @@ pub(crate) async fn list(
     version_filter: VersionFilter,
     no_color: bool,
 ) -> Result<()> {
-    let config = Config::new(global_args, None)?;
+    let config = Config::new(global_args, None, true)?;
 
     let installed_rubies = config.rubies();
 
@@ -261,7 +261,7 @@ fn print_entries(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{GlobalArgs, config::RvSettings};
+    use crate::GlobalArgs;
     use assert_fs::TempDir;
     use camino::Utf8PathBuf;
     use rv_cache::CacheArgs;
@@ -281,7 +281,6 @@ mod tests {
         let global_args = GlobalArgs {
             ruby_dir: [ruby_dir].to_vec(),
             cache_args,
-            rv_settings: Some(RvSettings::default()),
         };
 
         Ok(global_args)

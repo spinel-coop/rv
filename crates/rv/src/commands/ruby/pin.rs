@@ -40,7 +40,7 @@ pub(crate) async fn pin(
 ) -> Result<()> {
     let request = match request {
         None => {
-            return show_pinned_ruby(&Config::new(global_args, None)?, resolved).await;
+            return show_pinned_ruby(&Config::new(global_args, None, true)?, resolved).await;
         }
         Some(request) => request,
     };
@@ -52,10 +52,10 @@ pub(crate) async fn pin(
 
     let ruby_request = RubyRequest::from_str(&request)?;
 
-    let config = &Config::new(global_args, None)?;
+    let config = &Config::new(global_args, None, true)?;
 
     let version = if resolved {
-        let resolved = &Config::new(global_args, Some(ruby_request.clone()))?
+        let resolved = &Config::new(global_args, Some(ruby_request.clone()), true)?
             .find_matching_remote_ruby()
             .await?;
 
