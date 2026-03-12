@@ -8,7 +8,7 @@ use tabled::{
 
 use anstream::println;
 use owo_colors::OwoColorize;
-use rv_ruby::{Ruby, canonical_name::CanonicalName, version::ReleasedRubyVersion};
+use rv_ruby::{Ruby, canonical_name::CanonicalName, version::RubyVersion};
 use serde::Serialize;
 use tracing::{info, warn};
 
@@ -116,7 +116,7 @@ pub(crate) async fn list(
     let active_installed = active_ruby.is_some();
 
     // Might have multiple installed rubies with the same version (e.g., "ruby-3.2.0" and "mruby-3.2.0").
-    let mut rubies_map: BTreeMap<ReleasedRubyVersion, Vec<JsonRubyEntry>> = BTreeMap::new();
+    let mut rubies_map: BTreeMap<RubyVersion, Vec<JsonRubyEntry>> = BTreeMap::new();
 
     for ruby in installed_rubies {
         rubies_map
@@ -198,8 +198,8 @@ fn latest_patch_version(remote_rubies: &Vec<Ruby>) -> Vec<Ruby> {
         minor: rv_ruby::request::VersionPart,
     }
 
-    impl From<ReleasedRubyVersion> for NonPatchRelease {
-        fn from(value: ReleasedRubyVersion) -> Self {
+    impl From<RubyVersion> for NonPatchRelease {
+        fn from(value: RubyVersion) -> Self {
             Self {
                 engine: value.engine,
                 major: value.major,
@@ -267,7 +267,7 @@ mod tests {
     use assert_fs::TempDir;
     use camino::Utf8PathBuf;
     use rv_cache::CacheArgs;
-    use rv_ruby::version::ReleasedRubyVersion;
+    use rv_ruby::version::RubyVersion;
     use std::str::FromStr as _;
 
     fn global_args() -> Result<GlobalArgs> {
@@ -301,7 +301,7 @@ mod tests {
     }
 
     fn ruby(version: &str) -> Ruby {
-        let version = ReleasedRubyVersion::from_str(version).unwrap();
+        let version = RubyVersion::from_str(version).unwrap();
         let version_str = version.to_string();
         Ruby {
             key: format!("{version_str}-macos-aarch64"),

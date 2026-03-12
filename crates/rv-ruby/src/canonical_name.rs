@@ -1,6 +1,6 @@
 use crate::{
     request::{ReleasedRubyRequest, RubyRequest},
-    version::{ReleasedRubyVersion, RubyVersion},
+    version::RubyVersion,
 };
 use std::fmt::Display;
 
@@ -13,4 +13,3 @@ pub trait CanonicalName: Display {
 impl CanonicalName for RubyRequest {}
 impl CanonicalName for ReleasedRubyRequest {}
 impl CanonicalName for RubyVersion {}
-impl CanonicalName for ReleasedRubyVersion {}

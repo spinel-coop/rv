@@ -361,7 +361,7 @@ fn ruby_from_asset(asset: &Asset) -> Result<Ruby> {
         Some(m) => &asset.name[..m.start() - 1],
         None => asset.name.as_str(),
     };
-    let version: rv_ruby::version::ReleasedRubyVersion = version_str.parse()?;
+    let version: rv_ruby::version::RubyVersion = version_str.parse()?;
     let display_name = version.to_string();
 
     Ok(Ruby {
@@ -379,7 +379,7 @@ fn ruby_from_asset(asset: &Asset) -> Result<Ruby> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rv_ruby::version::ReleasedRubyVersion;
+    use rv_ruby::version::RubyVersion;
 
     #[test]
     fn test_parse_cache_header() {
@@ -396,7 +396,7 @@ mod tests {
         let actual = ruby_from_asset(&release.assets[0]).unwrap();
         let expected = Ruby {
             key: "ruby-3.3.0-linux-aarch64".to_owned(),
-            version: ReleasedRubyVersion {
+            version: RubyVersion {
                 engine: rv_ruby::engine::RubyEngine::Ruby,
                 major: 3,
                 minor: 3,
