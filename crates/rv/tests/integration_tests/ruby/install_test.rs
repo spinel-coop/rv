@@ -16,9 +16,8 @@ fn test_ruby_install_no_specific_version() {
     ruby_mock.assert();
     mock.assert();
     output.assert_success();
-    output.assert_stdout_contains(
-        "Installed Ruby version ruby-3.4.5 to /tmp/home/.local/share/rv/rubies",
-    );
+    output
+        .assert_stdout_contains("Installed Ruby version 3.4.5 to /tmp/home/.local/share/rv/rubies");
 
     let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("3.4.5"));
     let tarball_path = cache_dir
@@ -44,9 +43,8 @@ fn test_ruby_install_incomplete_request() {
     mock.assert();
     output.assert_success();
 
-    output.assert_stdout_contains(
-        "Installed Ruby version ruby-4.0.0 to /tmp/home/.local/share/rv/rubies",
-    );
+    output
+        .assert_stdout_contains("Installed Ruby version 4.0.0 to /tmp/home/.local/share/rv/rubies");
 
     let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("4.0.0"));
     let tarball_path = cache_dir
@@ -335,9 +333,8 @@ fn test_ruby_install_with_latest() {
     ruby_mock.assert();
     mock.assert();
     output.assert_success();
-    output.assert_stdout_contains(
-        "Installed Ruby version ruby-4.0.1 to /tmp/home/.local/share/rv/rubies",
-    );
+    output
+        .assert_stdout_contains("Installed Ruby version 4.0.1 to /tmp/home/.local/share/rv/rubies");
 
     let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("4.0.1"));
     let tarball_path = cache_dir
@@ -360,9 +357,7 @@ fn test_ruby_install_with_dev() {
     redirect_mock.assert();
     download_mock.assert();
     output.assert_success();
-    output.assert_stdout_contains(
-        "Installed Ruby version ruby-dev to /tmp/home/.local/share/rv/rubies",
-    );
+    output.assert_stdout_contains("Installed ruby-dev to /tmp/home/.local/share/rv/rubies");
 
     let cache_key = rv_cache::cache_digest(test.ruby_dev_tarball_redirect_url());
     let tarball_path = cache_dir

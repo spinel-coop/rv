@@ -85,11 +85,13 @@ pub(crate) async fn install(
 
     extract_ruby_archive(&archive_path, &install_dir, &version)?;
 
-    println!(
-        "Installed Ruby version {} to {}",
-        version.to_string().cyan(),
-        install_dir.cyan()
-    );
+    let installed_version = if version.is_dev() {
+        "ruby-dev".cyan().to_string()
+    } else {
+        format!("Ruby version {}", version.number().cyan())
+    };
+
+    println!("Installed {installed_version} to {}", install_dir.cyan());
 
     Ok(())
 }
