@@ -176,6 +176,9 @@ impl RvSettings {
 mod tests {
     use super::*;
     use camino_tempfile::Utf8TempDir;
+    use std::fs::File;
+    use std::io::Write;
+    use tempfile::tempdir;
 
     #[test]
     fn test_local_config() {
@@ -236,6 +239,58 @@ rv{
                 }
                 _ => panic!("Expected SettingsValidationError"),
             }
+        }
+    }
+
+    #[test]
+    fn test_collect_single_file_none_found() {
+        let paths = vec!["nonexistent/path1", "nonexistent/path2"];
+        let result = RvSettings::collect_single_file(&paths).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_collect_single_file_one_found() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("config.kdl");
+        let file_str = file_path.to_str().unwrap();
+        // create the file without .kdl, so collect_single_file adds it
+        let base_path = &file_str[..file_str.len() - 4];
+        let mut file = File::create(file_str).unwrap();
+        writeln!(file, "rv {{ gem-home \"/valid/path\" }}").unwrap();
+
+        let paths = vec![base_path];
+        let result = RvSettings::collect_single_file(&paths).unwrap();
+        assert_eq!(result.unwrap(), format!("{}.kdl", base_path));
+    }
+
+    #[test]
+    fn test_collect_single_file_multiple_found() {
+        let dir = tempdir().unwrap();
+
+        let file1_path = dir.path().join("config1.kdl");
+        let file2_path = dir.path().join("config2.kdl");
+
+        std::fs::write(&file1_path, "rv { gem-home \"/path1\" }").unwrap();
+        std::fs::write(&file2_path, "rv { gem-home \"/path2\" }").unwrap();
+
+        let base1 = file1_path.to_str().unwrap();
+        let base2 = file2_path.to_str().unwrap();
+
+        // Remove the trailing ".kdl" to simulate input without extension
+        let base1_trimmed = &base1[..base1.len() - 4];
+        let base2_trimmed = &base2[..base2.len() - 4];
+
+        let paths = vec![base1_trimmed, base2_trimmed];
+        let result = RvSettings::collect_single_file(&paths);
+        assert!(result.is_err());
+
+        if let Err(Error::MultipleConfigFiles(files)) = result {
+            assert_eq!(files.len(), 2);
+            assert!(files.contains(&format!("{}.kdl", base1_trimmed)));
+            assert!(files.contains(&format!("{}.kdl", base2_trimmed)));
+        } else {
+            panic!("Expected MultipleConfigFiles error");
         }
     }
 }
