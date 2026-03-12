@@ -2,7 +2,7 @@ use camino::Utf8PathBuf;
 use saphyr::{LoadableYamlNode, Yaml};
 use std::{path::absolute, str::FromStr};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct BundlerSettings<'a> {
     // Project specific Bundler configuration, if any
     pub local: Option<Yaml<'a>>,

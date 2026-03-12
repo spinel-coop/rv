@@ -115,6 +115,31 @@ impl Config<'_> {
         let home_dir = rv_dirs::home_dir();
 
         let requested_ruby = RequestedRuby::new(request, &home_dir, &project_root)?;
+        let bundler_settings = BundlerSettings::default();
+
+        Ok(Self {
+            ruby_dirs,
+            project_root,
+            cache,
+            requested_ruby,
+            bundler_settings,
+        })
+    }
+
+    pub(crate) fn with_settings(
+        global_args: &GlobalArgs,
+        request: Option<RubyRequest>,
+    ) -> Result<Self> {
+        let root = rv_dirs::root_dir();
+        let ruby_dirs = rv_dirs::canonical_ruby_dirs(&global_args.ruby_dir, &root)?;
+        let cache = global_args.cache_args.to_cache()?;
+
+        let project_root = rv_dirs::project_root(&root)?;
+        debug!("Found project directory in {}", project_root);
+
+        let home_dir = rv_dirs::home_dir();
+
+        let requested_ruby = RequestedRuby::new(request, &home_dir, &project_root)?;
         let bundler_settings = BundlerSettings::new(&home_dir, &project_root);
 
         Ok(Self {
@@ -138,15 +163,12 @@ impl Config<'_> {
         let ruby_dir = root.join("rubies");
         fs::create_dir_all(&ruby_dir).unwrap();
 
-        let home_dir = root.join("home");
-        let project_dir = root.join("project");
-
         Self {
-            bundler_settings: BundlerSettings::new(&home_dir, &project_dir),
             ruby_dirs: indexset![ruby_dir],
             project_root: root,
             cache: Cache::temp().unwrap(),
             requested_ruby: RequestedRuby::Global,
+            bundler_settings: BundlerSettings::default(),
         }
     }
 
