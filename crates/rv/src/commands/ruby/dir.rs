@@ -12,7 +12,7 @@ pub enum Error {
 type Result<T> = miette::Result<T, Error>;
 
 pub(crate) fn dir(global_args: &GlobalArgs) -> Result<()> {
-    let config = Config::new(global_args, None)?;
+    let config = Config::new(global_args, None, true)?;
 
     let Some(ruby_dir) = config.ruby_dirs.first() else {
         tracing::error!("No Ruby directories found");
