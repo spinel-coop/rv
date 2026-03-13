@@ -3,7 +3,7 @@ use std::str::FromStr;
 use crate::{ParseError, ParseErrors, datatypes::*};
 use miette::SourceSpan;
 use winnow::{
-    LocatingSlice, ModalResult, Parser,
+    LocatingSlice, ModalParser, ModalResult, Parser,
     ascii::{line_ending, space0, space1},
     combinator::{alt, delimited, dispatch, opt, peek, repeat, separated, terminated},
     error::{ContextError, ErrMode},
@@ -62,7 +62,7 @@ pub fn parse<'i>(file: &'i str) -> Result<GemfileDotLock<'i>, ParseErrors> {
             Ok(sec) => sec,
             Err(e) => {
                 // OK, there was an error. Let's figure out where, to highlight it.
-                let byte_offset = i.location();
+                let byte_offset = i.previous_token_end();
                 let char_offset = file[..byte_offset.min(file.len())].chars().count();
 
                 // Then find the error message.
@@ -157,9 +157,9 @@ pub fn parse<'i>(file: &'i str) -> Result<GemfileDotLock<'i>, ParseErrors> {
 }
 
 /// Parse a paragraph, i.e. something ending in a new line.
-fn paragraph<'i, O, F>(parser: F) -> impl Parser<Input<'i>, O, ContextError>
+fn paragraph<'i, O, F>(parser: F) -> impl ModalParser<Input<'i>, O, ContextError>
 where
-    F: Parser<Input<'i>, O, ContextError>,
+    F: Parser<Input<'i>, O, ErrMode<ContextError>>,
 {
     terminated(parser, parse_empty_lines)
 }

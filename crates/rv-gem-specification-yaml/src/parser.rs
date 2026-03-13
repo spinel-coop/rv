@@ -136,7 +136,7 @@ fn document_end<'a>(input: &mut &'a [(Event<'a>, Span)]) -> ModalResult<(), Cont
 
 fn tagged_mapping_start<'a>(
     expected_tag: &'static str,
-) -> impl winnow::Parser<&'a [(Event<'a>, Span)], usize, ContextError> + 'a {
+) -> impl winnow::ModalParser<&'a [(Event<'a>, Span)], usize, ContextError> + 'a {
     move |input: &mut &'a [(Event<'a>, Span)]| {
         any.verify_map(|(event, _span)| match event {
             Event::MappingStart(anchor_id, Some(tag))
@@ -392,7 +392,7 @@ fn parse_constraint_pair<'a>(
     {
         Ok((Event::Alias(anchor_id), _)) => {
             // Consume the alias event
-            let _ = any::<_, ContextError>.parse_next(input)?;
+            let _ = any::<_, ErrMode<ContextError>>.parse_next(input)?;
             match anchors.get(&anchor_id) {
                 Some(source) => Ok(source.to_string()),
                 _ => Err(ErrMode::Backtrack(ContextError::new())),
