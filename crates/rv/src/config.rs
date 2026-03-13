@@ -4,9 +4,12 @@ use std::{
     str::FromStr,
 };
 
+use rv_settings::Error as RvSettingsError;
+
 use bundler_settings::BundlerSettings;
 use camino::{FromPathBufError, Utf8Path, Utf8PathBuf};
 use indexmap::IndexSet;
+use rv_settings::RvSettings;
 use tracing::{debug, instrument};
 
 use rv_ruby::{
@@ -21,6 +24,7 @@ pub mod bundler_settings;
 pub mod github;
 mod ruby_cache;
 mod ruby_fetcher;
+pub mod rv_settings;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -34,6 +38,8 @@ pub enum Error {
     RequestError(#[from] RequestError),
     #[error(transparent)]
     JoinPathsError(#[from] JoinPathsError),
+    #[error(transparent)]
+    RvSettingsError(#[from] RvSettingsError),
     #[error("no matching ruby version found")]
     NoMatchingRuby,
 }
@@ -47,6 +53,7 @@ pub struct Config<'input> {
     pub cache: rv_cache::Cache,
     pub requested_ruby: RequestedRuby,
     pub bundler_settings: BundlerSettings<'input>,
+    pub rv_settings: RvSettings,
 }
 
 #[derive(Debug, Clone)]
@@ -116,6 +123,7 @@ impl Config<'_> {
 
         let requested_ruby = RequestedRuby::new(request, &home_dir, &project_root)?;
         let bundler_settings = BundlerSettings::default();
+        let rv_settings = RvSettings::default();
 
         Ok(Self {
             ruby_dirs,
@@ -123,6 +131,7 @@ impl Config<'_> {
             cache,
             requested_ruby,
             bundler_settings,
+            rv_settings,
         })
     }
 
@@ -141,6 +150,9 @@ impl Config<'_> {
 
         let requested_ruby = RequestedRuby::new(request, &home_dir, &project_root)?;
         let bundler_settings = BundlerSettings::new(&home_dir, &project_root);
+        let rv_settings = RvSettings::new(&home_dir, &project_root)?;
+
+        rv_settings.validate()?;
 
         Ok(Self {
             ruby_dirs,
@@ -148,6 +160,7 @@ impl Config<'_> {
             cache,
             requested_ruby,
             bundler_settings,
+            rv_settings,
         })
     }
 
@@ -169,6 +182,7 @@ impl Config<'_> {
             cache: Cache::temp().unwrap(),
             requested_ruby: RequestedRuby::Global,
             bundler_settings: BundlerSettings::default(),
+            rv_settings: RvSettings::default(),
         }
     }
 
@@ -232,10 +246,15 @@ impl Config<'_> {
     }
 
     pub fn gem_home(&self, ruby: &Ruby) -> Utf8PathBuf {
-        self.bundler_settings
-            .path()
-            .map(|p| p.join(ruby.gem_scope()))
-            .unwrap_or(ruby.gem_home())
+        if let Some(install_path) = &self.rv_settings.install_path {
+            return Utf8PathBuf::from(install_path).join(ruby.gem_scope());
+        }
+
+        if let Some(path) = self.bundler_settings.path() {
+            return path.join(ruby.gem_scope());
+        }
+
+        ruby.gem_home()
     }
 
     pub fn env_for(&self, ruby: Option<&Ruby>) -> Result<Env> {
