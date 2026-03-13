@@ -229,7 +229,7 @@ type Result<T> = std::result::Result<T, Error>;
 type UnpackResult<T> = std::result::Result<T, UnpackError>;
 
 pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Result<()> {
-    let config = &Config::new(global_args, None)?;
+    let config = &Config::with_settings(global_args, None)?;
 
     // We need some Ruby installed, because we need to run Ruby code when installing
     // gems. Ensure Ruby is installed here so we can use it later.

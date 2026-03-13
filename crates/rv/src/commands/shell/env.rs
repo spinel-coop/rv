@@ -1,19 +1,20 @@
 use super::Shell;
-use crate::config;
+use crate::{GlobalArgs, config::Config};
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error(transparent)]
     IoError(#[from] std::io::Error),
     #[error(transparent)]
-    ConfigError(#[from] config::Error),
+    ConfigError(#[from] crate::config::Error),
     #[error("Could not serialize JSON: {0}")]
     Serde(#[from] serde_json::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
 
-pub fn env(config: &config::Config, shell: Shell) -> Result<()> {
+pub(crate) fn env(global_args: &GlobalArgs, shell: Shell) -> Result<()> {
+    let config = Config::new(global_args, None)?;
     let ruby = config.best_ruby();
     let (unset, set) = config.env_for(ruby.as_ref())?.split();
 
@@ -121,16 +122,8 @@ fn powershell_escape(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::Config;
-
     use super::*;
     use serde_json::json;
-
-    #[test]
-    fn env_runs() {
-        let config = Config::new_dummy();
-        env(&config, Shell::Zsh).unwrap();
-    }
 
     #[test]
     fn nushell_env_serializes_changes() {

@@ -1,4 +1,3 @@
-use crate::{GlobalArgs, config::Config};
 use axoupdater::AxoUpdater;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -6,17 +5,13 @@ pub enum Error {
     #[error(transparent)]
     IoError(#[from] std::io::Error),
     #[error(transparent)]
-    ConfigError(#[from] crate::config::Error),
-    #[error(transparent)]
     AxoupdateError(#[from] axoupdater::AxoupdateError),
 }
 
 type Result<T> = miette::Result<T, Error>;
 
-pub(crate) async fn selfupdate(global_args: &GlobalArgs) -> Result<()> {
-    let config = Config::new(global_args, None)?;
-
-    if homebrew_install(config)? {
+pub(crate) async fn selfupdate() -> Result<()> {
+    if homebrew_install()? {
         println!(
             "Your copy of `rv` was installed via Homebrew. Run `brew upgrade rv` to update it."
         );
@@ -41,12 +36,12 @@ pub(crate) async fn selfupdate(global_args: &GlobalArgs) -> Result<()> {
     Ok(())
 }
 
-fn homebrew_install(config: Config) -> Result<bool> {
+fn homebrew_install() -> Result<bool> {
     if cfg!(target_family = "windows") {
         return Ok(false);
     }
 
-    let current_exe = rv_dirs::canonicalize_utf8(config.current_exe)?;
+    let current_exe = rv_dirs::canonicalize_utf8(rv_dirs::current_exe()?)?;
 
     Ok(current_exe.starts_with("/usr/local/Cellar")
         || current_exe.starts_with("/opt/homebrew/Cellar"))

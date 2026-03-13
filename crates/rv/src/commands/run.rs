@@ -141,7 +141,7 @@ pub(crate) async fn run_command(
     no_install: bool,
     args: Vec<String>,
 ) -> Result<()> {
-    let config = &Config::new(global_args, request)?;
+    let config = &Config::with_settings(global_args, request)?;
 
     let install = !no_install;
     if config.current_ruby().is_none() && install {

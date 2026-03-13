@@ -7,6 +7,7 @@ edition = "2024"
 camino = { workspace = true }
 dunce = { workspace = true }
 etcetera = { workspace = true }
+indexmap = { workspace = true }
 tracing = { workspace = true }
 
 [dev-dependencies]

@@ -1,5 +1,4 @@
 use super::Shell;
-use crate::config::Config;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -9,7 +8,9 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
-pub fn init(config: &Config, shell: Shell) -> Result<()> {
+pub fn init(shell: Shell) -> Result<()> {
+    let current_exe = rv_dirs::current_exe()?;
+
     match shell {
         Shell::Zsh => {
             print!(
@@ -21,7 +22,7 @@ pub fn init(config: &Config, shell: Shell) -> Result<()> {
                     "add-zsh-hook preexec _rv_autoload_hook\n",
                     "_rv_autoload_hook\n",
                 ),
-                config.current_exe
+                current_exe
             );
             Ok(())
         }
@@ -34,7 +35,7 @@ pub fn init(config: &Config, shell: Shell) -> Result<()> {
                     "trap '[[ \"$BASH_COMMAND\" != \"$PROMPT_COMMAND\" ]] && _rv_autoload_hook' DEBUG\n",
                     "_rv_autoload_hook\n",
                 ),
-                config.current_exe
+                current_exe
             );
             Ok(())
         }
@@ -46,7 +47,7 @@ pub fn init(config: &Config, shell: Shell) -> Result<()> {
                     "end\n",
                     "_rv_autoload_hook\n"
                 ),
-                config.current_exe
+                current_exe
             );
             Ok(())
         }
@@ -61,7 +62,7 @@ pub fn init(config: &Config, shell: Shell) -> Result<()> {
                     "    ]\n",
                     "}})\n",
                 ),
-                config.current_exe
+                current_exe
             );
             Ok(())
         }
@@ -81,7 +82,7 @@ pub fn init(config: &Config, shell: Shell) -> Result<()> {
                     "}}\n",
                     "Invoke-Expression (& '{}' shell env powershell)\n",
                 ),
-                config.current_exe, config.current_exe
+                current_exe, current_exe
             );
             Ok(())
         }

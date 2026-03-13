@@ -33,8 +33,6 @@ pub enum Error {
     #[error(transparent)]
     RequestError(#[from] RequestError),
     #[error(transparent)]
-    EnvError(#[from] env::VarError),
-    #[error(transparent)]
     JoinPathsError(#[from] JoinPathsError),
     #[error("no matching ruby version found")]
     NoMatchingRuby,
@@ -47,7 +45,6 @@ pub struct Config<'input> {
     pub ruby_dirs: IndexSet<Utf8PathBuf>,
     pub project_root: Utf8PathBuf,
     pub cache: rv_cache::Cache,
-    pub current_exe: Utf8PathBuf,
     pub requested_ruby: RequestedRuby,
     pub bundler_settings: BundlerSettings<'input>,
 }
@@ -61,16 +58,42 @@ pub enum RequestedRuby {
 }
 
 impl RequestedRuby {
+    pub fn new(
+        request: Option<RubyRequest>,
+        home_dir: &Utf8PathBuf,
+        project_root: &Utf8PathBuf,
+    ) -> Result<Self> {
+        let requested_ruby = match request {
+            Some(req) => {
+                debug!("Explicit ruby request for {} received", req);
+                Self::Explicit(req)
+            }
+            None => {
+                if let Some(req) = find_directory_ruby(project_root)? {
+                    debug!("Found project ruby request for {} in {:?}", req.0, req.1);
+                    Self::Project(req)
+                } else if let Some(req) = find_directory_ruby(home_dir)? {
+                    debug!("Found user ruby request for {} in {:?}", req.0, req.1);
+                    Self::User(req)
+                } else {
+                    Self::Global
+                }
+            }
+        };
+
+        Ok(requested_ruby)
+    }
+
     pub fn explain(&self, installed: bool) -> String {
         match self {
             Self::Explicit(_) => "* Default version explicitly selected".to_string(),
             Self::Project((_, source)) => format!(
                 "* Default version pinned by {}",
-                crate::config::relativize(source.path())
+                rv_dirs::relativize(source.path())
             ),
             Self::User((_, source)) => format!(
                 "* Default version pinned by {}",
-                crate::config::unexpand(source.path())
+                rv_dirs::unexpand(source.path())
             ),
             Self::Global => {
                 let installed_or_available = if installed { "installed" } else { "available" };
@@ -82,63 +105,47 @@ impl RequestedRuby {
 
 impl Config<'_> {
     pub(crate) fn new(global_args: &GlobalArgs, request: Option<RubyRequest>) -> Result<Self> {
-        let root = Utf8PathBuf::from(env::var("RV_ROOT_DIR").unwrap_or("/".to_owned()));
-
-        let ruby_dirs = if global_args.ruby_dir.is_empty() {
-            default_ruby_dirs(&root)
-        } else {
-            global_args
-                .ruby_dir
-                .iter()
-                .map(|path: &Utf8PathBuf| Ok(root.join(rv_dirs::canonicalize_utf8(path)?)))
-                .collect::<Result<Vec<_>>>()?
-        };
-        let ruby_dirs: IndexSet<Utf8PathBuf> = ruby_dirs.into_iter().collect();
+        let root = rv_dirs::root_dir();
+        let ruby_dirs = rv_dirs::canonical_ruby_dirs(&global_args.ruby_dir, &root)?;
         let cache = global_args.cache_args.to_cache()?;
-        let current_exe = if let Some(exe) = global_args.current_exe.clone() {
-            exe
-        } else {
-            std::env::current_exe()?.to_str().unwrap().into()
-        };
 
-        let current_dir: Utf8PathBuf = std::env::current_dir()?.try_into()?;
-
-        let project_root = current_dir
-            .ancestors()
-            .take_while(|d| Some(*d) != root.parent())
-            .find(|d| d.join("Gemfile.lock").is_file())
-            .map(|p| p.to_path_buf())
-            .unwrap_or(current_dir.clone());
-
+        let project_root = rv_dirs::project_root(&root)?;
         debug!("Found project directory in {}", project_root);
 
         let home_dir = rv_dirs::home_dir();
 
-        let requested_ruby = match request {
-            Some(req) => {
-                debug!("Explicit ruby request for {} received", req);
-                RequestedRuby::Explicit(req)
-            }
-            None => {
-                if let Some(req) = find_directory_ruby(&project_root)? {
-                    debug!("Found project ruby request for {} in {:?}", req.0, req.1);
-                    RequestedRuby::Project(req)
-                } else if let Some(req) = find_directory_ruby(&home_dir)? {
-                    debug!("Found user ruby request for {} in {:?}", req.0, req.1);
-                    RequestedRuby::User(req)
-                } else {
-                    RequestedRuby::Global
-                }
-            }
-        };
-
-        let bundler_settings = BundlerSettings::new(home_dir, project_root.clone());
+        let requested_ruby = RequestedRuby::new(request, &home_dir, &project_root)?;
+        let bundler_settings = BundlerSettings::default();
 
         Ok(Self {
             ruby_dirs,
             project_root,
             cache,
-            current_exe,
+            requested_ruby,
+            bundler_settings,
+        })
+    }
+
+    pub(crate) fn with_settings(
+        global_args: &GlobalArgs,
+        request: Option<RubyRequest>,
+    ) -> Result<Self> {
+        let root = rv_dirs::root_dir();
+        let ruby_dirs = rv_dirs::canonical_ruby_dirs(&global_args.ruby_dir, &root)?;
+        let cache = global_args.cache_args.to_cache()?;
+
+        let project_root = rv_dirs::project_root(&root)?;
+        debug!("Found project directory in {}", project_root);
+
+        let home_dir = rv_dirs::home_dir();
+
+        let requested_ruby = RequestedRuby::new(request, &home_dir, &project_root)?;
+        let bundler_settings = BundlerSettings::new(&home_dir, &project_root);
+
+        Ok(Self {
+            ruby_dirs,
+            project_root,
+            cache,
             requested_ruby,
             bundler_settings,
         })
@@ -156,16 +163,12 @@ impl Config<'_> {
         let ruby_dir = root.join("rubies");
         fs::create_dir_all(&ruby_dir).unwrap();
 
-        let home_dir = root.join("home");
-        let project_dir = root.join("project");
-
         Self {
-            bundler_settings: BundlerSettings::new(home_dir, project_dir),
             ruby_dirs: indexset![ruby_dir],
-            project_root: root.clone(),
+            project_root: root,
             cache: Cache::temp().unwrap(),
-            current_exe: root.join("bin").join("rv"),
             requested_ruby: RequestedRuby::Global,
+            bundler_settings: BundlerSettings::default(),
         }
     }
 
@@ -310,66 +313,6 @@ impl Config<'_> {
     }
 }
 
-pub fn relativize(path: &Utf8Path) -> String {
-    let Some(current_dir) = std::env::current_dir().ok() else {
-        return path.to_string();
-    };
-
-    let Some(file_name) = path.file_name().map(|f| f.to_string()) else {
-        return path.to_string();
-    };
-
-    let mut relative_path = file_name.clone();
-
-    for dir in current_dir.ancestors() {
-        if dir.join(&file_name).is_file() {
-            return relative_path;
-        }
-
-        relative_path.insert_str(0, "../");
-    }
-
-    relative_path
-}
-
-pub fn unexpand(path: &Utf8Path) -> String {
-    path.as_str().replace(rv_dirs::home_dir().as_str(), "~")
-}
-
-fn xdg_data_path() -> Utf8PathBuf {
-    rv_dirs::user_state_dir("/".into()).join("rubies")
-}
-
-fn legacy_default_data_path() -> Utf8PathBuf {
-    rv_dirs::home_dir().join(".data/rv/.rubies")
-}
-
-fn legacy_default_path() -> Utf8PathBuf {
-    rv_dirs::home_dir().join(".rubies")
-}
-
-/// Default Ruby installation directories
-pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
-    let paths: [(_, _); 6] = [
-        (true, xdg_data_path()),
-        (false, legacy_default_data_path()),
-        (false, legacy_default_path()),
-        (false, "/opt/rubies".into()),
-        (false, "/usr/local/rubies".into()),
-        (false, "/opt/homebrew/Cellar/ruby".into()),
-    ];
-
-    paths
-        .iter()
-        .filter_map(|(always_include, path)| {
-            let join = root.join(path.strip_prefix("/").unwrap_or(path));
-            rv_dirs::canonicalize_utf8(&join)
-                .ok()
-                .or(always_include.then_some(path.into()))
-        })
-        .collect()
-}
-
 fn find_directory_ruby(dir: &Utf8PathBuf) -> Result<Option<(RubyRequest, Source)>> {
     let ruby_version = dir.join(".ruby-version");
     if ruby_version.exists() {
@@ -462,18 +405,5 @@ impl Env {
 
     pub fn split(&self) -> (Vec<&'static str>, Vec<(&'static str, String)>) {
         (self.unset.clone(), self.set.clone())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use assert_fs::TempDir;
-    use camino::Utf8PathBuf;
-
-    #[test]
-    fn test_default_ruby_dirs() {
-        let root = Utf8PathBuf::from(TempDir::new().unwrap().path().to_str().unwrap());
-        default_ruby_dirs(&root);
     }
 }
