@@ -6,7 +6,7 @@ use anstream::println;
 use miette::Diagnostic;
 use once_cell::sync::Lazy;
 use owo_colors::OwoColorize;
-use rv_ruby::tool_consumable::ToolConsumable;
+use rv_ruby::canonical_name::CanonicalName;
 use tracing::debug;
 
 use rv_ruby::request::RubyRequest;
@@ -38,11 +38,10 @@ pub(crate) async fn pin(
     request: Option<String>,
     mut resolved: bool,
 ) -> Result<()> {
-    let request = match request {
-        None => {
-            return show_pinned_ruby(&Config::new(global_args, None)?, resolved).await;
-        }
-        Some(request) => request,
+    let config = &Config::new(global_args, None)?;
+
+    let Some(request) = request else {
+        return show_pinned_ruby(config, resolved).await;
     };
 
     if request.trim() == "latest" && !resolved {
@@ -52,16 +51,14 @@ pub(crate) async fn pin(
 
     let ruby_request = RubyRequest::from_str(&request)?;
 
-    let config = &Config::new(global_args, None)?;
-
     let version = if resolved {
         let resolved = &Config::new(global_args, Some(ruby_request.clone()))?
             .find_matching_remote_ruby()
             .await?;
 
-        resolved.to_tool_consumable_string()
+        resolved.canonical_name()
     } else {
-        ruby_request.to_tool_consumable_string()
+        ruby_request.canonical_name()
     };
 
     set_pinned_ruby(config, version)
@@ -122,9 +119,9 @@ async fn show_pinned_ruby(config: &Config<'_>, resolved: bool) -> Result<()> {
 
     let version = if resolved {
         let resolved_ruby = config.find_matching_remote_ruby().await?;
-        resolved_ruby.to_tool_consumable_string()
+        resolved_ruby.canonical_name()
     } else {
-        ruby.to_tool_consumable_string()
+        ruby.canonical_name()
     };
 
     println!("{0} is pinned to {1}", dir.as_ref().cyan(), version.cyan());

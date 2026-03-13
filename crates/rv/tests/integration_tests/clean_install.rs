@@ -121,9 +121,8 @@ fn test_clean_install_respects_ruby() {
     let output = test.ci(&["--verbose"]);
     output.assert_success();
     mock.assert();
-    output.assert_stdout_contains(
-        "Installed Ruby version ruby-3.4.8 to /tmp/home/.local/share/rv/rubies",
-    );
+    output
+        .assert_stdout_contains("Installed Ruby version 3.4.8 to /tmp/home/.local/share/rv/rubies");
 }
 
 #[test]
@@ -147,9 +146,8 @@ fn test_clean_install_ignores_ruby_requests_outside_of_the_current_project() {
     output.assert_success();
     ruby_mock.assert();
     mock.assert();
-    output.assert_stdout_contains(
-        "Installed Ruby version ruby-4.0.1 to /tmp/home/.local/share/rv/rubies",
-    );
+    output
+        .assert_stdout_contains("Installed Ruby version 4.0.1 to /tmp/home/.local/share/rv/rubies");
 }
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]

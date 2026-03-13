@@ -12,7 +12,7 @@ use tracing::{debug, instrument};
 use rv_ruby::{
     Ruby,
     request::{RequestError, RubyRequest, Source},
-    version::{ReleasedRubyVersion, RubyVersion},
+    version::RubyVersion,
 };
 
 use crate::GlobalArgs;
@@ -197,7 +197,7 @@ impl Config<'_> {
                 .find_match_in(&remote_rubies)
                 .ok_or(Error::NoMatchingRuby)?;
 
-            Ok(RubyVersion::Released(matched_ruby.version))
+            Ok(matched_ruby.version)
         }
     }
 
@@ -305,8 +305,11 @@ impl Config<'_> {
 
     fn highest_ruby_matching(&self, request: &RubyRequest) -> Option<Ruby> {
         self.discover_rubies_matching(|dir_name| {
-            let version_res = RubyVersion::from_str(dir_name);
-            version_res.is_ok_and(|v| v.satisfies(request))
+            if dir_name == "ruby-dev" {
+                request.is_dev()
+            } else {
+                RubyVersion::from_str(dir_name).is_ok_and(|v| v.satisfies(request))
+            }
         })
         .last()
         .cloned()
@@ -348,8 +351,7 @@ fn find_directory_ruby(dir: &Utf8PathBuf) -> Result<Option<(RubyRequest, Source)
             let lockfile_ruby = parsed_lockfile.ruby_version;
 
             if let Some(lockfile_ruby) = lockfile_ruby {
-                if let Ok(version) = ReleasedRubyVersion::from_gemfile_lock(lockfile_ruby.content())
-                {
+                if let Ok(version) = RubyVersion::from_gemfile_lock(lockfile_ruby.content()) {
                     return Ok(Some((version.into(), Source::GemfileLock(lockfile))));
                 } else {
                     debug!(

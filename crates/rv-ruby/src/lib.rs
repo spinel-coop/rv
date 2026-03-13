@@ -1,6 +1,6 @@
+pub mod canonical_name;
 pub mod engine;
 pub mod request;
-pub mod tool_consumable;
 pub mod version;
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -15,7 +15,7 @@ use std::env::{
 use std::process::Command;
 use tracing::instrument;
 
-use crate::version::ReleasedRubyVersion;
+use crate::version::RubyVersion;
 
 /// Returns the possible Ruby executable names for the current platform, in priority order.
 /// On Windows, checks `ruby.exe` (standard RubyInstaller2) then `ruby.cmd` (batch wrapper).
@@ -63,7 +63,7 @@ pub struct Ruby {
     pub key: String,
 
     /// Ruby version (e.g., "3.1.4", "9.4.0.0")
-    pub version: ReleasedRubyVersion,
+    pub version: RubyVersion,
 
     /// Path to the Ruby installation directory
     pub path: Utf8PathBuf,
@@ -281,7 +281,7 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
     let arch = normalize_arch(&host_cpu);
     let os = normalize_os(&host_os);
 
-    let version: ReleasedRubyVersion = if let Some(d) = ruby_description {
+    let version: RubyVersion = if let Some(d) = ruby_description {
         let desc_version = &d["version"];
         format!("{ruby_engine}-{desc_version}").parse()?
     } else {
@@ -419,7 +419,7 @@ mod tests {
 
         let ruby1 = Ruby {
             key: "ruby-3.1.4-macos-aarch64".to_string(),
-            version: ReleasedRubyVersion::from_str("3.1.4").unwrap(),
+            version: RubyVersion::from_str("3.1.4").unwrap(),
             path: dummy_path.clone(),
             managed: false,
             symlink: None,
@@ -430,7 +430,7 @@ mod tests {
 
         let ruby2 = Ruby {
             key: "ruby-3.2.0-macos-aarch64".to_string(),
-            version: ReleasedRubyVersion::from_str("ruby-3.2.0").unwrap(),
+            version: RubyVersion::from_str("ruby-3.2.0").unwrap(),
             path: dummy_path.clone(),
             managed: false,
             symlink: None,
@@ -441,7 +441,7 @@ mod tests {
 
         let ruby2_managed = Ruby {
             key: "ruby-3.2.0-macos-aarch64".to_string(),
-            version: ReleasedRubyVersion::from_str("ruby-3.2.0").unwrap(),
+            version: RubyVersion::from_str("ruby-3.2.0").unwrap(),
             path: dummy_path.clone(),
             managed: true,
             symlink: None,
@@ -452,7 +452,7 @@ mod tests {
 
         let jruby = Ruby {
             key: "jruby-9.4.0.0-macos-aarch64".to_string(),
-            version: ReleasedRubyVersion::from_str("jruby-9.4.0.0").unwrap(),
+            version: RubyVersion::from_str("jruby-9.4.0.0").unwrap(),
             path: dummy_path,
             managed: false,
             symlink: None,

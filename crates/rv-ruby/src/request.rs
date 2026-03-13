@@ -113,6 +113,13 @@ impl RubyRequest {
             .find(|r| r.version.satisfies(self))
             .cloned()
     }
+
+    pub fn is_dev(&self) -> bool {
+        match self {
+            Self::Dev => true,
+            Self::Released(req) => req.prerelease == Some("dev".to_string()),
+        }
+    }
 }
 
 impl ReleasedRubyRequest {
@@ -280,11 +287,11 @@ impl CacheKey for RubyRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ReleasedRubyVersion;
+    use crate::RubyVersion;
 
     #[track_caller]
-    fn v(version: &str) -> ReleasedRubyVersion {
-        ReleasedRubyVersion::from_str(version).unwrap()
+    fn v(version: &str) -> RubyVersion {
+        RubyVersion::from_str(version).unwrap()
     }
 
     #[track_caller]
@@ -340,7 +347,7 @@ mod tests {
 
     #[test]
     fn test_major_only_version() {
-        let request = ReleasedRubyVersion::from_str("3");
+        let request = RubyVersion::from_str("3");
         let _err = request.unwrap_err();
     }
 
