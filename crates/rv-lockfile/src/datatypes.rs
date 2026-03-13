@@ -19,10 +19,10 @@ pub struct GemfileDotLock<'i> {
     pub dependencies: Vec<GemRange<'i>>,
 
     /// Which version of Ruby this lockfile was built with.
-    pub ruby_version: Option<InconsistentlyIndentedSection<'i>>,
+    pub ruby_version: Option<RubyVersionSection<'i>>,
 
     /// Which version of Bundler this lockfile was built with.
-    pub bundled_with: Option<InconsistentlyIndentedSection<'i>>,
+    pub bundled_with: Option<BundledWithSection<'i>>,
 
     /// Checksums for each dependency.
     pub checksums: Option<Vec<Checksum<'i>>>,
@@ -253,26 +253,41 @@ impl std::fmt::Display for GemRangeSemver<'_> {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub enum InconsistentlyIndentedSection<'i> {
-    ThreeSpaces(&'i str),
-    Standard(&'i str),
+pub enum LockfileIndentation {
+    Standard,
+    ThreeSpaces,
 }
 
-impl<'i> InconsistentlyIndentedSection<'i> {
-    pub fn content(&self) -> &'i str {
+impl std::fmt::Display for LockfileIndentation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::ThreeSpaces(v) => v,
-            Self::Standard(v) => v,
+            Self::Standard => write!(f, "  "),
+            Self::ThreeSpaces => write!(f, "   "),
         }
     }
 }
 
-impl std::fmt::Display for InconsistentlyIndentedSection<'_> {
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct RubyVersionSection<'i> {
+    pub indentation: LockfileIndentation,
+    pub ruby_version: &'i str,
+}
+
+impl std::fmt::Display for RubyVersionSection<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::ThreeSpaces(v) => write!(f, "   {v}"),
-            Self::Standard(v) => write!(f, "  {v}"),
-        }
+        write!(f, "{}{}", self.indentation, self.ruby_version)
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct BundledWithSection<'i> {
+    pub indentation: LockfileIndentation,
+    pub bundler_version: &'i str,
+}
+
+impl std::fmt::Display for BundledWithSection<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}{}", self.indentation, self.bundler_version)
     }
 }
 
