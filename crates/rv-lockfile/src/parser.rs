@@ -276,44 +276,6 @@ fn parse_platform<'i>(i: &mut Input<'i>) -> Res<&'i str> {
     .parse_next(i)
 }
 
-fn parse_bundled_with_contents<'i>(i: &mut Input<'i>) -> Res<BundledWithSection<'i>> {
-    "  ".parse_next(i)?;
-    let third_space = opt(' ').parse_next(i)?;
-
-    let bundler_version = take_while(0.., |c: char| {
-        c.is_ascii_alphanumeric() || c == '-' || c == '.'
-    })
-    .parse_next(i)?;
-
-    let indentation = match third_space {
-        None => LockfileIndentation::Standard,
-        Some(_) => LockfileIndentation::ThreeSpaces,
-    };
-    Ok(BundledWithSection {
-        indentation,
-        bundler_version,
-    })
-}
-
-fn parse_ruby_version_contents<'i>(i: &mut Input<'i>) -> Res<RubyVersionSection<'i>> {
-    "  ".parse_next(i)?;
-    let third_space = opt(' ').parse_next(i)?;
-
-    let ruby_version = take_while(0.., |c: char| {
-        c.is_ascii_alphanumeric() || c == '-' || c == '.' || c == ' '
-    })
-    .parse_next(i)?;
-
-    let indentation = match third_space {
-        None => LockfileIndentation::Standard,
-        Some(_) => LockfileIndentation::ThreeSpaces,
-    };
-    Ok(RubyVersionSection {
-        indentation,
-        ruby_version,
-    })
-}
-
 fn parse_version<'i>(i: &mut Input<'i>) -> Res<&'i str> {
     parse_version_inner.take().parse_next(i)
 }
@@ -454,14 +416,42 @@ fn parse_bundled_with<'i>(i: &mut Input<'i>) -> Res<BundledWithSection<'i>> {
     "BUNDLED WITH".parse_next(i)?;
     space0.parse_next(i)?;
     "\n".parse_next(i)?;
-    parse_bundled_with_contents(i)
+    "  ".parse_next(i)?;
+    let third_space = opt(' ').parse_next(i)?;
+
+    let bundler_version = take_while(0.., |c: char| {
+        c.is_ascii_alphanumeric() || c == '-' || c == '.'
+    })
+    .parse_next(i)?;
+
+    let indentation = match third_space {
+        None => LockfileIndentation::Standard,
+        Some(_) => LockfileIndentation::ThreeSpaces,
+    };
+    Ok(BundledWithSection {
+        indentation,
+        bundler_version,
+    })
 }
 
 fn parse_ruby_version<'i>(i: &mut Input<'i>) -> Res<RubyVersionSection<'i>> {
     "RUBY VERSION".parse_next(i)?;
     space0.parse_next(i)?;
     "\n".parse_next(i)?;
-    parse_ruby_version_contents(i)
+    "  ".parse_next(i)?;
+    let third_space = opt(' ').parse_next(i)?;
+    let ruby_version = take_while(0.., |c: char| {
+        c.is_ascii_alphanumeric() || c == '-' || c == '.' || c == ' '
+    })
+    .parse_next(i)?;
+    let indentation = match third_space {
+        None => LockfileIndentation::Standard,
+        Some(_) => LockfileIndentation::ThreeSpaces,
+    };
+    Ok(RubyVersionSection {
+        indentation,
+        ruby_version,
+    })
 }
 
 fn parse_gem<'i>(i: &mut Input<'i>) -> Res<GemSection<'i>> {
