@@ -271,7 +271,7 @@ fn parse_gem_name<'i>(i: &mut Input<'i>) -> Res<&'i str> {
 
 fn parse_platform<'i>(i: &mut Input<'i>) -> Res<&'i str> {
     take_while(0.., |c: char| {
-        c.is_ascii_alphanumeric() || c == '_' || c == '-'
+        c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.'
     })
     .parse_next(i)
 }
