@@ -97,7 +97,7 @@ pub(crate) async fn install(
     gem_server: String,
     force: bool,
 ) -> Result<Installed> {
-    let config = &Config::new(global_args, None, true)?;
+    let config = &Config::new(global_args, None)?;
 
     // Check if 'gem' is in 'gem@version' format.
     // If `gem_version` is None, it means "latest". Otherwise it's a specific version.

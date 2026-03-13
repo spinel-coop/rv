@@ -98,7 +98,7 @@ pub(crate) async fn list(
     version_filter: VersionFilter,
     no_color: bool,
 ) -> Result<()> {
-    let config = Config::new(global_args, None, true)?;
+    let config = Config::new(global_args, None)?;
 
     let installed_rubies = config.rubies();
 

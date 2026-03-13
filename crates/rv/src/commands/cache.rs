@@ -32,7 +32,7 @@ pub enum Error {
 type Result<T> = miette::Result<T, Error>;
 
 pub(crate) fn cache(global_args: &GlobalArgs, args: CacheCommandArgs) -> Result<()> {
-    let config = &Config::new(global_args, None, true)?;
+    let config = &Config::new(global_args, None)?;
 
     match args.command {
         CacheCommand::Dir => cache_dir(config)?,

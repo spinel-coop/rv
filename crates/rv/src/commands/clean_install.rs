@@ -289,7 +289,7 @@ pub(crate) async fn install_tool_lockfile(
     lockfile: GemfileDotLock<'_>,
     install_path: Utf8PathBuf,
 ) -> Result<InstallStats> {
-    let config = &Config::new(global_args, request.clone(), true)?;
+    let config = &Config::new(global_args, request.clone())?;
 
     // We need some Ruby installed, because we need to run Ruby code when installing
     // gems. Ensure Ruby is installed here so we can use it later.
