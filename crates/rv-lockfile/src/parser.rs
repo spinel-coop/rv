@@ -31,8 +31,8 @@ enum Section<'i> {
     Path(PathSection<'i>),
     Platforms(Vec<&'i str>),
     Dependencies(Vec<GemRange<'i>>),
-    RubyVersion(InconsistentlyIndentedSection<'i>),
-    BundledWith(InconsistentlyIndentedSection<'i>),
+    RubyVersion(RubyVersionSection<'i>),
+    BundledWith(BundledWithSection<'i>),
     Checksums(Vec<Checksum<'i>>),
 }
 
@@ -276,7 +276,7 @@ fn parse_platform<'i>(i: &mut Input<'i>) -> Res<&'i str> {
     .parse_next(i)
 }
 
-fn parse_bundled_with_contents<'i>(i: &mut Input<'i>) -> Res<InconsistentlyIndentedSection<'i>> {
+fn parse_bundled_with_contents<'i>(i: &mut Input<'i>) -> Res<BundledWithSection<'i>> {
     "  ".parse_next(i)?;
     let third_space = opt(' ').parse_next(i)?;
 
@@ -285,15 +285,17 @@ fn parse_bundled_with_contents<'i>(i: &mut Input<'i>) -> Res<InconsistentlyInden
     })
     .parse_next(i)?;
 
-    let section = match third_space {
-        None => InconsistentlyIndentedSection::Standard(bundler_version),
-        Some(_) => InconsistentlyIndentedSection::ThreeSpaces(bundler_version),
+    let indentation = match third_space {
+        None => LockfileIndentation::Standard,
+        Some(_) => LockfileIndentation::ThreeSpaces,
     };
-
-    Ok(section)
+    Ok(BundledWithSection {
+        indentation,
+        bundler_version,
+    })
 }
 
-fn parse_ruby_version_contents<'i>(i: &mut Input<'i>) -> Res<InconsistentlyIndentedSection<'i>> {
+fn parse_ruby_version_contents<'i>(i: &mut Input<'i>) -> Res<RubyVersionSection<'i>> {
     "  ".parse_next(i)?;
     let third_space = opt(' ').parse_next(i)?;
 
@@ -302,12 +304,14 @@ fn parse_ruby_version_contents<'i>(i: &mut Input<'i>) -> Res<InconsistentlyInden
     })
     .parse_next(i)?;
 
-    let section = match third_space {
-        None => InconsistentlyIndentedSection::Standard(ruby_version),
-        Some(_) => InconsistentlyIndentedSection::ThreeSpaces(ruby_version),
+    let indentation = match third_space {
+        None => LockfileIndentation::Standard,
+        Some(_) => LockfileIndentation::ThreeSpaces,
     };
-
-    Ok(section)
+    Ok(RubyVersionSection {
+        indentation,
+        ruby_version,
+    })
 }
 
 fn parse_version<'i>(i: &mut Input<'i>) -> Res<&'i str> {
@@ -446,14 +450,14 @@ fn parse_checksums<'i>(i: &mut Input<'i>) -> Res<Vec<Checksum<'i>>> {
     repeat(0.., delimited(space1, parse_checksum, line_ending)).parse_next(i)
 }
 
-fn parse_bundled_with<'i>(i: &mut Input<'i>) -> Res<InconsistentlyIndentedSection<'i>> {
+fn parse_bundled_with<'i>(i: &mut Input<'i>) -> Res<BundledWithSection<'i>> {
     "BUNDLED WITH".parse_next(i)?;
     space0.parse_next(i)?;
     "\n".parse_next(i)?;
     parse_bundled_with_contents(i)
 }
 
-fn parse_ruby_version<'i>(i: &mut Input<'i>) -> Res<InconsistentlyIndentedSection<'i>> {
+fn parse_ruby_version<'i>(i: &mut Input<'i>) -> Res<RubyVersionSection<'i>> {
     "RUBY VERSION".parse_next(i)?;
     space0.parse_next(i)?;
     "\n".parse_next(i)?;
