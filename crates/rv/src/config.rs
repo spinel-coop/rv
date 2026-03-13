@@ -352,7 +352,7 @@ fn find_directory_ruby(dir: &Utf8PathBuf) -> Result<Option<(RubyRequest, Source)
 
             if let Some(lockfile_ruby) = lockfile_ruby {
                 return Ok(Some((
-                    lockfile_ruby.ruby_version.into(),
+                    lockfile_ruby.cruby_version.into(),
                     Source::GemfileLock(lockfile),
                 )));
             }

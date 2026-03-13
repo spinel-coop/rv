@@ -470,14 +470,16 @@ fn parse_ruby_version<'i>(i: &mut Input<'i>) -> Res<RubyVersionSection> {
     "\n".parse_next(i)?;
     "  ".parse_next(i)?;
     let third_space = opt(' ').parse_next(i)?;
-    let ruby_version = parse_ruby_version_inner.parse_next(i)?;
+    let cruby_version = parse_ruby_version_inner.parse_next(i)?;
+    let engine_version = opt(delimited(" (", parse_ruby_version_inner, ")\n")).parse_next(i)?;
     let indentation = match third_space {
         None => LockfileIndentation::Standard,
         Some(_) => LockfileIndentation::ThreeSpaces,
     };
     Ok(RubyVersionSection {
         indentation,
-        ruby_version,
+        cruby_version,
+        engine_version,
     })
 }
 

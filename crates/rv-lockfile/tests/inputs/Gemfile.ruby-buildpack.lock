@@ -1,0 +1,38 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    base64 (0.3.0)
+    mustermann (3.0.4)
+      ruby2_keywords (~> 0.0.1)
+    rack (2.2.21)
+    rack-protection (3.2.0)
+      base64 (>= 0.1.0)
+      rack (~> 2.2, >= 2.2.4)
+    rackup (1.0.1)
+      rack (< 3)
+      webrick
+    ruby2_keywords (0.0.5)
+    sinatra (3.2.0)
+      mustermann (~> 3.0)
+      rack (~> 2.2, >= 2.2.4)
+      rack-protection (= 3.2.0)
+      tilt (~> 2.0)
+    tilt (2.7.0)
+    webrick (1.9.2)
+
+PLATFORMS
+  java
+  universal-java-1.8
+  universal-java-25
+  universal-java-8
+
+DEPENDENCIES
+  rackup
+  sinatra (~> 3.0)
+  webrick
+
+RUBY VERSION
+   ruby 3.1.7p0 (jruby 9.4.14.0)
+
+BUNDLED WITH
+   2.6.3
