@@ -22,7 +22,7 @@ type Result<T> = miette::Result<T, Error>;
 
 /// Uninstall the given Ruby version.
 pub(crate) async fn uninstall(global_args: &GlobalArgs, request: RubyRequest) -> Result<()> {
-    let config = Config::new(global_args, Some(request), true)?;
+    let config = Config::new(global_args, Some(request))?;
 
     let ruby = config.current_ruby().ok_or(Error::NoMatchingRuby)?;
     let ruby_path = ruby.path;

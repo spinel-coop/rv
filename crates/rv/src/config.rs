@@ -53,7 +53,7 @@ pub struct Config<'input> {
     pub cache: rv_cache::Cache,
     pub requested_ruby: RequestedRuby,
     pub bundler_settings: BundlerSettings<'input>,
-    pub rv_settings: Option<RvSettings>,
+    pub rv_settings: RvSettings,
 }
 
 #[derive(Debug, Clone)]
@@ -131,7 +131,7 @@ impl Config<'_> {
             cache,
             requested_ruby,
             bundler_settings,
-            rv_settings
+            rv_settings,
         })
     }
 
@@ -246,18 +246,15 @@ impl Config<'_> {
     }
 
     pub fn gem_home(&self, ruby: &Ruby) -> Utf8PathBuf {
-        if let Some(rv_settings) = &self.rv_settings
-            && let Some(gem_home_path) = &rv_settings.gem_home
-        {
-            let path = Utf8PathBuf::from(gem_home_path.clone());
-            // Should we join the gem_scope too?
-            return path;
+        if let Some(install_path) = &self.rv_settings.install_path {
+            return Utf8PathBuf::from(install_path).join(ruby.gem_scope());
         }
 
-        self.bundler_settings
-            .path()
-            .map(|p| p.join(ruby.gem_scope()))
-            .unwrap_or(ruby.gem_home())
+        if let Some(path) = self.bundler_settings.path() {
+            return path.join(ruby.gem_scope());
+        }
+
+        ruby.gem_home()
     }
 
     pub fn env_for(&self, ruby: Option<&Ruby>) -> Result<Env> {

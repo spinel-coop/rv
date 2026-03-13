@@ -18,7 +18,7 @@ type Result<T> = miette::Result<T, Error>;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, Default)]
 pub struct RvSettings {
-    pub gem_home: Option<String>,
+    pub install_path: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -42,7 +42,7 @@ impl Format for RvSettingsFormat {
             .children()
             .ok_or("Missing children in 'rv' node")?;
 
-        const ALLOWED_KEYS: &[&str] = &["gem-home"];
+        const ALLOWED_KEYS: &[&str] = &["install-path"];
 
         let mut map = Map::new();
 
@@ -100,7 +100,7 @@ impl RvSettings {
         Ok(found_files.into_iter().next())
     }
 
-    pub fn new(home_dir: Utf8PathBuf, project_dir: Utf8PathBuf) -> Result<Self> {
+    pub fn new(home_dir: &Utf8PathBuf, project_dir: &Utf8PathBuf) -> Result<Self> {
         // Possible Project Paths
         let local_paths = [
             project_dir.join("rv"),
@@ -158,12 +158,12 @@ impl RvSettings {
     }
 
     pub fn validate(&self) -> Result<()> {
-        if let Some(ref gem_home_path_str) = self.gem_home {
-            let path = std::path::Path::new(&gem_home_path_str);
+        if let Some(ref install_path_path_str) = self.install_path {
+            let path = std::path::Path::new(&install_path_path_str);
             if !path.is_dir() {
                 return Err(Error::SettingsValidationError {
-                    value: gem_home_path_str.clone(),
-                    setting: "gem_home".to_string(),
+                    value: install_path_path_str.clone(),
+                    setting: "install_path".to_string(),
                 });
             }
         }
@@ -193,17 +193,17 @@ mod tests {
 
         let config_content = r#"
 rv{
-  gem-home "/home/path"
+  install-path "/home/path"
 }
 "#;
 
         std::fs::write(&config_file, config_content).expect("Failed to write config");
 
-        let rv_settings = RvSettings::new(home_dir, project_dir);
+        let rv_settings = RvSettings::new(&home_dir, &project_dir);
 
         assert_eq!(
             String::from("/home/path"),
-            rv_settings.unwrap().gem_home.unwrap()
+            rv_settings.unwrap().install_path.unwrap()
         )
     }
 
@@ -214,17 +214,18 @@ rv{
         let home_dir = temp_dir.path().join("home");
         let project_dir = temp_dir.path().join("project");
 
-        let rv_settings = RvSettings::new(home_dir, project_dir).expect("Failed to load settings");
+        let rv_settings =
+            RvSettings::new(&home_dir, &project_dir).expect("Failed to load settings");
 
-        assert!(rv_settings.gem_home.is_none());
+        assert!(rv_settings.install_path.is_none());
     }
 
     #[test]
-    fn test_validate_raises_error_for_invalid_gem_home() {
+    fn test_validate_raises_error_for_invalid_install_path() {
         let invalid_path = "/non/existent/path/rv_test";
 
         let settings = RvSettings {
-            gem_home: Some(invalid_path.to_string()),
+            install_path: Some(invalid_path.to_string()),
         };
 
         let result = settings.validate();
@@ -235,7 +236,7 @@ rv{
             match err {
                 Error::SettingsValidationError { value, setting } => {
                     assert_eq!(value, invalid_path);
-                    assert_eq!(setting, "gem_home");
+                    assert_eq!(setting, "install_path");
                 }
                 _ => panic!("Expected SettingsValidationError"),
             }
@@ -257,7 +258,7 @@ rv{
         // create the file without .kdl, so collect_single_file adds it
         let base_path = &file_str[..file_str.len() - 4];
         let mut file = File::create(file_str).unwrap();
-        writeln!(file, "rv {{ gem-home \"/valid/path\" }}").unwrap();
+        writeln!(file, "rv {{ install-path \"/valid/path\" }}").unwrap();
 
         let paths = vec![base_path];
         let result = RvSettings::collect_single_file(&paths).unwrap();
@@ -271,8 +272,8 @@ rv{
         let file1_path = dir.path().join("config1.kdl");
         let file2_path = dir.path().join("config2.kdl");
 
-        std::fs::write(&file1_path, "rv { gem-home \"/path1\" }").unwrap();
-        std::fs::write(&file2_path, "rv { gem-home \"/path2\" }").unwrap();
+        std::fs::write(&file1_path, "rv { install-path \"/path1\" }").unwrap();
+        std::fs::write(&file2_path, "rv { install-path \"/path2\" }").unwrap();
 
         let base1 = file1_path.to_str().unwrap();
         let base2 = file2_path.to_str().unwrap();
