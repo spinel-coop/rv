@@ -5,11 +5,13 @@ use miette::SourceSpan;
 use winnow::{
     LocatingSlice, ModalParser, ModalResult, Parser,
     ascii::{line_ending, space0, space1},
-    combinator::{alt, delimited, dispatch, opt, peek, repeat, separated, terminated},
+    combinator::{alt, delimited, dispatch, opt, peek, preceded, repeat, separated, terminated},
     error::{ContextError, ErrMode},
     stream::{AsChar, Location, Stream},
     token::{take_until, take_while},
 };
+
+use rv_ruby::version::ReleasedRubyVersion;
 
 const GIT: &str = "GIT";
 const GEM: &str = "GEM";
@@ -31,7 +33,7 @@ enum Section<'i> {
     Path(PathSection<'i>),
     Platforms(Vec<&'i str>),
     Dependencies(Vec<GemRange<'i>>),
-    RubyVersion(RubyVersionSection<'i>),
+    RubyVersion(RubyVersionSection),
     BundledWith(BundledWithSection<'i>),
     Checksums(Vec<Checksum<'i>>),
 }
@@ -276,6 +278,41 @@ fn parse_platform<'i>(i: &mut Input<'i>) -> Res<&'i str> {
     .parse_next(i)
 }
 
+fn parse_ruby_version_inner<'i>(i: &mut Input<'i>) -> Res<ReleasedRubyVersion> {
+    let engine = take_while(1.., |c: char| c.is_ascii_alphabetic()).parse_next(i)?;
+
+    ' '.parse_next(i)?;
+    let major = parse_num.parse_next(i)?;
+
+    '.'.parse_next(i)?;
+    let minor = parse_num.parse_next(i)?;
+
+    '.'.parse_next(i)?;
+    let patch = parse_num.parse_next(i)?;
+
+    let tiny = opt(preceded('.', parse_num)).parse_next(i)?;
+
+    let patchlevel = opt(preceded('p', parse_num)).parse_next(i)?;
+
+    let prerelease = opt(preceded(
+        '.',
+        take_while(1.., |c: char| c.is_ascii_alphanumeric()),
+    ))
+    .parse_next(i)?;
+
+    let ruby_version = ReleasedRubyVersion {
+        engine: engine.into(),
+        major,
+        minor,
+        patch,
+        patchlevel,
+        tiny,
+        prerelease: prerelease.map(|p| p.to_string()),
+    };
+
+    Ok(ruby_version)
+}
+
 fn parse_version<'i>(i: &mut Input<'i>) -> Res<&'i str> {
     parse_version_inner.take().parse_next(i)
 }
@@ -429,16 +466,13 @@ fn parse_bundled_with<'i>(i: &mut Input<'i>) -> Res<BundledWithSection<'i>> {
     })
 }
 
-fn parse_ruby_version<'i>(i: &mut Input<'i>) -> Res<RubyVersionSection<'i>> {
+fn parse_ruby_version<'i>(i: &mut Input<'i>) -> Res<RubyVersionSection> {
     "RUBY VERSION".parse_next(i)?;
     space0.parse_next(i)?;
     "\n".parse_next(i)?;
     "  ".parse_next(i)?;
     let third_space = opt(' ').parse_next(i)?;
-    let ruby_version = take_while(0.., |c: char| {
-        c.is_ascii_alphanumeric() || c == '-' || c == '.' || c == ' '
-    })
-    .parse_next(i)?;
+    let ruby_version = parse_ruby_version_inner.parse_next(i)?;
     let indentation = match third_space {
         None => LockfileIndentation::Standard,
         Some(_) => LockfileIndentation::ThreeSpaces,
@@ -612,6 +646,80 @@ PATH
 ";
         let i = LocatingSlice::new(input);
         parse_path.parse(i).unwrap();
+    }
+
+    #[test]
+    fn test_parse_ruby_version_inner() {
+        let input = "\
+  ruby 3.3.1p55
+";
+        let mut i = LocatingSlice::new(input);
+        let version = parse_ruby_version_inner.parse_next(&mut i).unwrap();
+        assert_eq!(version.major, 3);
+        assert_eq!(version.minor, 3);
+        assert_eq!(version.patch, 1);
+        assert_eq!(version.patchlevel, Some(55));
+        assert_eq!(version.prerelease, None);
+    }
+
+    #[test]
+    fn test_parse_ruby_version_inner_without_patchlevel() {
+        let input = "\
+  ruby 4.0.0
+";
+        let mut i = LocatingSlice::new(input);
+        let version = parse_ruby_version_inner.parse_next(&mut i).unwrap();
+        assert_eq!(version.major, 4);
+        assert_eq!(version.minor, 0);
+        assert_eq!(version.patch, 0);
+        assert_eq!(version.patchlevel, None);
+        assert_eq!(version.prerelease, None);
+    }
+
+    #[test]
+    fn test_parse_ruby_version_inner_with_p0() {
+        let input = "\
+  ruby 3.2.0p0
+";
+        let mut i = LocatingSlice::new(input);
+        let version = parse_ruby_version_inner.parse_next(&mut i).unwrap();
+        assert_eq!(version.major, 3);
+        assert_eq!(version.minor, 2);
+        assert_eq!(version.patch, 0);
+        assert_eq!(version.patchlevel, Some(0));
+        assert_eq!(version.prerelease, None);
+    }
+
+    #[test]
+    fn test_parse_ruby_version_inner_preserves_preview() {
+        // Real format from GitHub: "ruby 3.3.0.preview2" (dot, not dash)
+        // https://github.com/akitaonrails/rinhabackend-rails-api/blob/main/Gemfile.lock
+        let input = "\
+  ruby 3.3.0.preview2
+";
+        let mut i = LocatingSlice::new(input);
+        let version = parse_ruby_version_inner.parse_next(&mut i).unwrap();
+        assert_eq!(version.major, 3);
+        assert_eq!(version.minor, 3);
+        assert_eq!(version.patch, 0);
+        assert_eq!(version.patchlevel, None);
+        assert_eq!(version.prerelease, Some("preview2".to_string()));
+    }
+
+    #[test]
+    fn test_parse_ruby_version_inner_preserves_rc() {
+        // Real format from GitHub: "ruby 3.3.0.rc1" (dot, not dash)
+        // https://github.com/pbstriker38/is_ruby_dead/blob/main/Gemfile.lock
+        let input = "\
+  ruby 3.3.0.rc1
+";
+        let mut i = LocatingSlice::new(input);
+        let version = parse_ruby_version_inner.parse_next(&mut i).unwrap();
+        assert_eq!(version.major, 3);
+        assert_eq!(version.minor, 3);
+        assert_eq!(version.patch, 0);
+        assert_eq!(version.patchlevel, None);
+        assert_eq!(version.prerelease, Some("rc1".to_string()));
     }
 
     #[test]

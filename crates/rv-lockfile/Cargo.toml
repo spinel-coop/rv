@@ -7,6 +7,7 @@ description = "Parses Gemfile.lock files"
 [dependencies]
 thiserror = { workspace = true }
 rv-version = { workspace = true }
+rv-ruby = { workspace = true }
 miette = { workspace = true }
 winnow = { workspace = true }
 serde = { workspace = true, optional = true, features = ["derive"] }
