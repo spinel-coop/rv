@@ -498,7 +498,12 @@ impl RvTest {
     }
 
     pub fn create_ruby_dir(&self, name: &str) -> Utf8PathBuf {
-        let ruby_dir = self.rubies_dir().join(name);
+        let dir_name = if name.ends_with("dev") {
+            "ruby-dev"
+        } else {
+            name
+        };
+        let ruby_dir = self.rubies_dir().join(dir_name);
         std::fs::create_dir_all(&ruby_dir).expect("Failed to create ruby directory");
 
         let bin_dir = ruby_dir.join("bin");

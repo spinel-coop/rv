@@ -33,7 +33,7 @@ impl RubyVersion {
     pub fn satisfies(&self, request: &RubyRequest) -> bool {
         match (self, request) {
             (RubyVersion::Dev, RubyRequest::Dev) => true,
-            (RubyVersion::Dev, RubyRequest::Released(_)) => false,
+            (RubyVersion::Dev, RubyRequest::Released(req)) => req.is_dev(),
             (RubyVersion::Released(version), request) => version.satisfies(request),
         }
     }

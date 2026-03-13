@@ -115,6 +115,12 @@ impl RubyRequest {
     }
 }
 
+impl ReleasedRubyRequest {
+    pub fn is_dev(&self) -> bool {
+        self.prerelease == Some("dev".to_string())
+    }
+}
+
 impl FromStr for ReleasedRubyRequest {
     type Err = RequestError;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
