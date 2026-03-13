@@ -1,6 +1,8 @@
 //! Most of the types in this module borrow a string from their input,
 //! so they have a lifetime 'i, which is short for 'input.
 
+use rv_ruby::version::RubyVersion;
+
 #[derive(Debug, Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct GemfileDotLock<'i> {
     /// Dependencies sourced from a Git repo.
@@ -19,7 +21,7 @@ pub struct GemfileDotLock<'i> {
     pub dependencies: Vec<GemRange<'i>>,
 
     /// Which version of Ruby this lockfile was built with.
-    pub ruby_version: Option<RubyVersionSection<'i>>,
+    pub ruby_version: Option<RubyVersionSection>,
 
     /// Which version of Bundler this lockfile was built with.
     pub bundled_with: Option<BundledWithSection<'i>>,
@@ -268,14 +270,19 @@ impl std::fmt::Display for LockfileIndentation {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct RubyVersionSection<'i> {
+pub struct RubyVersionSection {
     pub indentation: LockfileIndentation,
-    pub ruby_version: &'i str,
+    pub ruby_version: RubyVersion,
 }
 
-impl std::fmt::Display for RubyVersionSection<'_> {
+impl std::fmt::Display for RubyVersionSection {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}", self.indentation, self.ruby_version)
+        write!(
+            f,
+            "{}{}",
+            self.indentation,
+            self.ruby_version.to_gemfile_lock()
+        )
     }
 }
 

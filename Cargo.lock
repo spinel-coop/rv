@@ -2755,6 +2755,7 @@ dependencies = [
  "line-ending",
  "miette",
  "rv-gem-types",
+ "rv-ruby",
  "rv-version",
  "serde",
  "tempfile",

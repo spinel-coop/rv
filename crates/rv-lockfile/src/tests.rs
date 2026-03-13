@@ -108,7 +108,7 @@ fn test_parse_lobsters() {
     let input = include_str!("../tests/inputs/Gemfile.lobsters.lock");
     let output = must_parse(input);
     assert_eq!(
-        output.ruby_version.clone().unwrap().ruby_version,
+        output.ruby_version.unwrap().ruby_version.to_gemfile_lock(),
         "ruby 4.0.0"
     );
 }

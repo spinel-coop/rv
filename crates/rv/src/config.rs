@@ -351,14 +351,10 @@ fn find_directory_ruby(dir: &Utf8PathBuf) -> Result<Option<(RubyRequest, Source)
             let lockfile_ruby = parsed_lockfile.ruby_version;
 
             if let Some(lockfile_ruby) = lockfile_ruby {
-                if let Ok(version) = RubyVersion::from_gemfile_lock(lockfile_ruby.ruby_version) {
-                    return Ok(Some((version.into(), Source::GemfileLock(lockfile))));
-                } else {
-                    debug!(
-                        "Ignoring ruby version in {} because it could not be parsed",
-                        lockfile
-                    );
-                }
+                return Ok(Some((
+                    lockfile_ruby.ruby_version.into(),
+                    Source::GemfileLock(lockfile),
+                )));
             }
         } else {
             debug!(
