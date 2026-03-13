@@ -418,12 +418,7 @@ fn parse_bundled_with<'i>(i: &mut Input<'i>) -> Res<BundledWithSection<'i>> {
     "\n".parse_next(i)?;
     "  ".parse_next(i)?;
     let third_space = opt(' ').parse_next(i)?;
-
-    let bundler_version = take_while(0.., |c: char| {
-        c.is_ascii_alphanumeric() || c == '-' || c == '.'
-    })
-    .parse_next(i)?;
-
+    let bundler_version = parse_version.parse_next(i)?;
     let indentation = match third_space {
         None => LockfileIndentation::Standard,
         Some(_) => LockfileIndentation::ThreeSpaces,
