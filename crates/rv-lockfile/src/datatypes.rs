@@ -2,38 +2,29 @@
 //! so they have a lifetime 'i, which is short for 'input.
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GemfileDotLock<'i> {
     /// Dependencies sourced from a Git repo.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub git: Vec<GitSection<'i>>,
 
     /// Dependencies sourced from a RubyGems server.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub gem: Vec<GemSection<'i>>,
 
     /// Dependencies sourced from a filesystem path.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub path: Vec<PathSection<'i>>,
 
     /// Lists every triple that Bundler has resolved and included in this lockfile.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub platforms: Vec<&'i str>,
 
     /// Lists every gem that this lockfile has been resolved to include
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub dependencies: Vec<GemRange<'i>>,
 
     /// Which version of Ruby this lockfile was built with.
-    #[serde(default, skip_serializing_if = "Option::is_none", borrow)]
     pub ruby_version: Option<InconsistentlyIndentedSection<'i>>,
 
     /// Which version of Bundler this lockfile was built with.
-    #[serde(default, skip_serializing_if = "Option::is_none", borrow)]
     pub bundled_with: Option<InconsistentlyIndentedSection<'i>>,
 
     /// Checksums for each dependency.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub checksums: Option<Vec<Checksum<'i>>>,
 }
 
@@ -100,7 +91,6 @@ impl std::fmt::Display for GemfileDotLock<'_> {
 
 /// Git source that gems could come from.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GitSection<'i> {
     /// Location of the Git repo.
     pub remote: &'i str,
@@ -109,7 +99,6 @@ pub struct GitSection<'i> {
     /// Branch used from the Git repo.
     pub branch: Option<&'i str>,
     /// Ref used from the Git repo.
-    #[serde(rename = "ref")]
     pub git_ref: Option<&'i str>,
     /// Tag used from the Git repo.
     pub tag: Option<&'i str>,
@@ -153,7 +142,6 @@ impl std::fmt::Display for GitSection<'_> {
 
 /// Rubygems server source that gems could come from.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GemSection<'i> {
     /// Location of the RubyGems server.
     pub remote: Option<&'i str>,
@@ -178,7 +166,6 @@ impl std::fmt::Display for GemSection<'_> {
 
 /// Filesystem path that gems could come from.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PathSection<'i> {
     /// The filesystem path that sourced these dependencies.
     pub remote: &'i str,
@@ -201,7 +188,6 @@ impl std::fmt::Display for PathSection<'_> {
 
 /// A (gem, version) pair.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GemVersion<'i> {
     /// Name of the gem.
     pub name: &'i str,
@@ -223,7 +209,6 @@ impl std::fmt::Display for GemVersion<'_> {
 
 /// A range of possible versions of a certain gem.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GemRange<'i> {
     pub name: &'i str,
     pub semver: Option<Vec<GemRangeSemver<'i>>>,
@@ -256,10 +241,8 @@ impl std::fmt::Display for GemRange<'_> {
 
 /// A range of possible versions of a gem.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GemRangeSemver<'i> {
     pub semver_constraint: SemverConstraint,
-    #[serde(borrow)]
     pub version: &'i str,
 }
 
@@ -270,11 +253,8 @@ impl std::fmt::Display for GemRangeSemver<'_> {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum InconsistentlyIndentedSection<'i> {
-    #[serde(untagged)]
     ThreeSpaces(&'i str),
-    #[serde(untagged)]
     Standard(&'i str),
 }
 
@@ -298,11 +278,8 @@ impl std::fmt::Display for InconsistentlyIndentedSection<'_> {
 
 /// Gem which has been locked and came from some particular source.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Spec<'i> {
-    #[serde(borrow)]
     pub gem_version: GemVersion<'i>,
-    #[serde(borrow)]
     pub deps: Vec<GemRange<'i>>,
 }
 
@@ -327,9 +304,7 @@ impl std::fmt::Display for Spec<'_> {
 
 /// Checksum of a particular gem version.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Checksum<'i> {
-    #[serde(borrow)]
     pub gem_version: GemVersion<'i>,
     pub algorithm: ChecksumAlgorithm<'i>,
     pub value: Vec<u8>,
@@ -351,10 +326,8 @@ impl std::fmt::Display for Checksum<'_> {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ChecksumAlgorithm<'i> {
     None,
-    #[serde(borrow)]
     Unknown(&'i str),
     #[default]
     SHA256,
