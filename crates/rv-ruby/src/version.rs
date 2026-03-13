@@ -80,12 +80,13 @@ impl TryFrom<RubyRequest> for RubyVersion {
 }
 
 /// A concrete, released version of Ruby that can be downloaded.
-#[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay)]
+#[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay, Hash)]
 pub struct ReleasedRubyVersion {
     pub engine: RubyEngine,
     pub major: VersionPart,
     pub minor: VersionPart,
     pub patch: VersionPart,
+    pub patchlevel: Option<VersionPart>,
     pub tiny: Option<VersionPart>,
     pub prerelease: Option<String>,
 }
@@ -168,6 +169,7 @@ impl TryFrom<ReleasedRubyRequest> for ReleasedRubyVersion {
             major,
             minor,
             patch,
+            patchlevel: None,
             tiny: request.tiny,
             prerelease: request.prerelease,
         })
@@ -248,32 +250,26 @@ impl ReleasedRubyVersion {
         self.prerelease.is_some()
     }
 
-    /// Parse a Ruby version from Gemfile.lock format.
-    ///
-    /// Gemfile.lock uses the format "ruby X.Y.ZpNN" where:
-    /// - "ruby " is a prefix (with a space, not a dash)
-    /// - "pNN" is an optional patchlevel suffix that should be ignored
-    ///
-    /// Examples:
-    /// - "ruby 3.3.1p55" -> RubyVersion for 3.3.1
-    /// - "ruby 4.0.0" -> RubyVersion for 4.0.0
-    pub fn from_gemfile_lock(input: &str) -> Result<Self, ParseVersionError> {
-        // Strip "ruby " prefix
-        let version = input.strip_prefix("ruby ").unwrap_or(input);
+    pub fn to_gemfile_lock(&self) -> String {
+        use std::fmt::Write;
+        let mut version = format!(
+            "{} {}.{}.{}",
+            self.engine, self.major, self.minor, self.patch
+        );
 
-        // Strip patchlevel suffix (e.g., "p55" from "3.3.1p55")
-        // Only strip if 'p' is followed by all digits
-        let version = if let Some(p_pos) = version.find('p') {
-            if version[p_pos + 1..].chars().all(|c| c.is_ascii_digit()) {
-                &version[..p_pos]
-            } else {
-                version
-            }
-        } else {
-            version
-        };
-
-        version.parse()
+        if let Some(tiny) = self.tiny {
+            version.push('.');
+            write!(&mut version, "{}", tiny).unwrap();
+        }
+        if let Some(patchlevel) = self.patchlevel {
+            version.push('p');
+            write!(&mut version, "{}", patchlevel).unwrap();
+        }
+        if let Some(ref prerelease) = self.prerelease {
+            version.push('.');
+            version.push_str(prerelease);
+        }
+        version
     }
 }
 
@@ -395,56 +391,5 @@ mod tests {
             let num = version.number();
             assert!(version_str.contains(&num));
         }
-    }
-
-    #[test]
-    fn test_from_gemfile_lock_with_patchlevel() {
-        // Gemfile.lock format: "ruby 3.3.1p55"
-        let version = ReleasedRubyVersion::from_gemfile_lock("ruby 3.3.1p55").unwrap();
-        assert_eq!(version.major, 3);
-        assert_eq!(version.minor, 3);
-        assert_eq!(version.patch, 1);
-        assert_eq!(version.prerelease, None);
-    }
-
-    #[test]
-    fn test_from_gemfile_lock_without_patchlevel() {
-        // Gemfile.lock format: "ruby 4.0.0" (no patchlevel)
-        let version = ReleasedRubyVersion::from_gemfile_lock("ruby 4.0.0").unwrap();
-        assert_eq!(version.major, 4);
-        assert_eq!(version.minor, 0);
-        assert_eq!(version.patch, 0);
-        assert_eq!(version.prerelease, None);
-    }
-
-    #[test]
-    fn test_from_gemfile_lock_with_p0() {
-        // Gemfile.lock format: "ruby 3.2.0p0"
-        let version = ReleasedRubyVersion::from_gemfile_lock("ruby 3.2.0p0").unwrap();
-        assert_eq!(version.major, 3);
-        assert_eq!(version.minor, 2);
-        assert_eq!(version.patch, 0);
-    }
-
-    #[test]
-    fn test_from_gemfile_lock_preserves_preview() {
-        // Real format from GitHub: "ruby 3.3.0.preview2" (dot, not dash)
-        // https://github.com/akitaonrails/rinhabackend-rails-api/blob/main/Gemfile.lock
-        let version = ReleasedRubyVersion::from_gemfile_lock("ruby 3.3.0.preview2").unwrap();
-        assert_eq!(version.major, 3);
-        assert_eq!(version.minor, 3);
-        assert_eq!(version.patch, 0);
-        assert_eq!(version.prerelease, Some("preview2".to_string()));
-    }
-
-    #[test]
-    fn test_from_gemfile_lock_preserves_rc() {
-        // Real format from GitHub: "ruby 3.3.0.rc1" (dot, not dash)
-        // https://github.com/pbstriker38/is_ruby_dead/blob/main/Gemfile.lock
-        let version = ReleasedRubyVersion::from_gemfile_lock("ruby 3.3.0.rc1").unwrap();
-        assert_eq!(version.major, 3);
-        assert_eq!(version.minor, 3);
-        assert_eq!(version.patch, 0);
-        assert_eq!(version.prerelease, Some("rc1".to_string()));
     }
 }

@@ -5,7 +5,8 @@ use criterion::{Criterion, criterion_group, criterion_main};
 use rv_gem_specification_yaml::parse;
 
 fn load_fixture(name: &str) -> String {
-    let fixture_path = format!("crates/rv-gem-specification-yaml/tests/fixtures/{name}.yaml");
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    let fixture_path = format!("{manifest_dir}/tests/fixtures/{name}.yaml");
     fs::read_to_string(&fixture_path)
         .unwrap_or_else(|_| panic!("Failed to read fixture: {fixture_path}"))
 }
