@@ -272,7 +272,8 @@ impl std::fmt::Display for LockfileIndentation {
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct RubyVersionSection {
     pub indentation: LockfileIndentation,
-    pub ruby_version: ReleasedRubyVersion,
+    pub cruby_version: ReleasedRubyVersion,
+    pub engine_version: Option<ReleasedRubyVersion>,
 }
 
 impl std::fmt::Display for RubyVersionSection {
@@ -281,8 +282,14 @@ impl std::fmt::Display for RubyVersionSection {
             f,
             "{}{}",
             self.indentation,
-            self.ruby_version.to_gemfile_lock()
-        )
+            self.cruby_version.to_gemfile_lock()
+        )?;
+
+        if let Some(engine_version) = &self.engine_version {
+            write!(f, " ({})", engine_version.to_gemfile_lock())?;
+        };
+
+        Ok(())
     }
 }
 
