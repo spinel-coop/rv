@@ -107,7 +107,12 @@ enum Commands {
     Shell(ShellArgs),
     #[command(about = "Clean install from a Gemfile.lock", visible_alias = "ci")]
     CleanInstall(CleanInstallArgs),
-    #[command(name = "self", about = "Manage rv itself", visible_alias = "s", alias = "selfupdate")]
+    #[command(
+        name = "self",
+        about = "Manage rv itself",
+        visible_alias = "s",
+        alias = "selfupdate"
+    )]
     SelfCmd(SelfArgs),
     #[command(about = "Manage Ruby tools")]
     Tool(ToolArgs),
