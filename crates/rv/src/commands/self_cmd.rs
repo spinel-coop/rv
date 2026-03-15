@@ -1,4 +1,7 @@
 use axoupdater::AxoUpdater;
+use clap::{Args, Subcommand};
+
+use crate::GlobalArgs;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -10,7 +13,30 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
-pub(crate) async fn selfupdate() -> Result<()> {
+#[derive(Args)]
+pub struct SelfArgs {
+    #[command(subcommand)]
+    pub command: SelfCommand,
+}
+
+#[derive(Subcommand)]
+pub enum SelfCommand {
+    #[command(about = "Update rv to the latest version")]
+    Update,
+    #[command(about = "Display rv's version")]
+    Version,
+}
+
+pub(crate) async fn self_cmd(_global_args: &GlobalArgs, args: SelfArgs) -> Result<()> {
+    match args.command {
+        SelfCommand::Update => update().await?,
+        SelfCommand::Version => version(),
+    }
+
+    Ok(())
+}
+
+pub(crate) async fn update() -> Result<()> {
     if homebrew_install()? {
         println!(
             "Your copy of `rv` was installed via Homebrew. Run `brew upgrade rv` to update it."
@@ -22,7 +48,7 @@ pub(crate) async fn selfupdate() -> Result<()> {
 
     if updater.load_receipt().is_err() || !updater.check_receipt_is_for_this_executable()? {
         println!(
-            "Your copy of `rv` was not installed via a method that `rv selfupdate` supports. Please update manually."
+            "Your copy of `rv` was not installed via a method that `rv self update` supports. Please update manually."
         );
         return Ok(());
     }
@@ -34,6 +60,10 @@ pub(crate) async fn selfupdate() -> Result<()> {
     }
 
     Ok(())
+}
+
+pub(crate) fn version() {
+    println!("rv {}", env!("CARGO_PKG_VERSION"));
 }
 
 fn homebrew_install() -> Result<bool> {
