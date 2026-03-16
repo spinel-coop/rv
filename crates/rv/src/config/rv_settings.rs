@@ -9,9 +9,6 @@ use owo_colors::OwoColorize;
 pub enum Error {
     #[error("Multiple config files found: {0:?}")]
     MultipleConfigFiles(Vec<String>),
-
-    #[error("{} is not a valid value for {}", value, setting)]
-    SettingsValidationError { value: String, setting: String },
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -156,20 +153,6 @@ impl RvSettings {
 
         Ok(settings)
     }
-
-    pub fn validate(&self) -> Result<()> {
-        if let Some(ref install_path_path_str) = self.install_path {
-            let path = std::path::Path::new(&install_path_path_str);
-            if !path.is_dir() {
-                return Err(Error::SettingsValidationError {
-                    value: install_path_path_str.clone(),
-                    setting: "install_path".to_string(),
-                });
-            }
-        }
-        // Add other validations here if needed
-        Ok(())
-    }
 }
 
 #[cfg(test)]
@@ -218,29 +201,6 @@ rv{
             RvSettings::new(&home_dir, &project_dir).expect("Failed to load settings");
 
         assert!(rv_settings.install_path.is_none());
-    }
-
-    #[test]
-    fn test_validate_raises_error_for_invalid_install_path() {
-        let invalid_path = "/non/existent/path/rv_test";
-
-        let settings = RvSettings {
-            install_path: Some(invalid_path.to_string()),
-        };
-
-        let result = settings.validate();
-
-        assert!(result.is_err());
-
-        if let Err(err) = result {
-            match err {
-                Error::SettingsValidationError { value, setting } => {
-                    assert_eq!(value, invalid_path);
-                    assert_eq!(setting, "install_path");
-                }
-                _ => panic!("Expected SettingsValidationError"),
-            }
-        }
     }
 
     #[test]

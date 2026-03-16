@@ -152,8 +152,6 @@ impl Config<'_> {
         let bundler_settings = BundlerSettings::new(&home_dir, &project_root);
         let rv_settings = RvSettings::new(&home_dir, &project_root)?;
 
-        rv_settings.validate()?;
-
         Ok(Self {
             ruby_dirs,
             project_root,
