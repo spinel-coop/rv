@@ -194,7 +194,7 @@ pub(crate) async fn install(
     debug!("All dependencies resolved");
 
     // Make a Gemfile.lock in-memory, install it via `rv ci`.
-    let lockfile_builder = LockfileBuilder::new(&gemserver, versions_needed);
+    let lockfile_builder = LockfileBuilder::new(&gemserver.url, versions_needed);
     let lockfile = lockfile_builder.lockfile();
 
     let InstallStats {
@@ -239,14 +239,14 @@ struct LockfileBuilder {
 
 impl LockfileBuilder {
     pub fn new(
-        gemserver: &Gemserver,
+        url: &Url,
         versions_needed: pubgrub::SelectedDependencies<pubgrub_bridge::DepProvider>,
     ) -> Self {
         let versions_needed: Vec<_> = versions_needed
             .into_iter()
             .map(|(gem_name, v)| (gem_name, v.to_string()))
             .collect();
-        let gemserver_remote = gemserver.url.to_string();
+        let gemserver_remote = url.to_string();
         Self {
             gemserver_remote,
             versions_needed,
