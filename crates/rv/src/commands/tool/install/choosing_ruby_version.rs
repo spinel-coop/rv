@@ -4,8 +4,9 @@ use rv_ruby::version::RubyVersion;
 use rv_version::VersionError;
 
 use crate::{
-    commands::tool::install::{Error, Result, gemserver::VersionConstraint},
+    commands::tool::install::{Error, Result},
     config::Config,
+    gemserver::VersionConstraint,
 };
 
 /// Which ruby version should be used to run a tool?

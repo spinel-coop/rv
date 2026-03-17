@@ -11,23 +11,15 @@ use crate::{
     GlobalArgs,
     commands::{
         clean_install::InstallStats,
-        tool::{
-            Installed,
-            install::{
-                choosing_ruby_version::ruby_to_use_for,
-                gemserver::{GemRelease, Gemserver},
-            },
-        },
+        tool::{Installed, install::choosing_ruby_version::ruby_to_use_for},
     },
     config::Config,
+    gemserver::{self, GemName, GemRelease, Gemserver},
 };
 
 mod choosing_ruby_version;
-mod gemserver;
 mod pubgrub_bridge;
 mod transitive_dep_query;
-
-type GemName = String;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {

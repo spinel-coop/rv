@@ -12,6 +12,7 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberI
 
 pub mod commands;
 pub mod config;
+pub mod gemserver;
 pub mod http_client;
 pub mod output_format;
 pub mod progress;

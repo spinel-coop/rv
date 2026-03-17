@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use url::Url;
 
-use crate::{commands::tool::install::GemName, http_client::rv_http_client};
+use crate::http_client::rv_http_client;
 
 pub struct Gemserver {
     pub url: Url,
@@ -229,6 +229,8 @@ fn parse_metadata(metadata: &str) -> ParseResult<Metadata> {
     }
     Ok(out)
 }
+
+pub type GemName = String;
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Dep {

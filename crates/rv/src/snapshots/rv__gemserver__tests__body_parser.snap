@@ -1,5 +1,5 @@
 ---
-source: crates/rv/src/commands/tool/install/gemserver.rs
+source: crates/rv/src/gemserver.rs
 expression: actual_parsed_response
 ---
 [
