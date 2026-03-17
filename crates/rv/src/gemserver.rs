@@ -1,6 +1,6 @@
 use std::str::FromStr;
+use std::sync::Arc;
 
-use reqwest::Client;
 use rv_gem_types::{Platform, VersionPlatform};
 use rv_lockfile::datatypes::SemverConstraint;
 use rv_version::Version;
@@ -8,47 +8,86 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use url::Url;
 
-use crate::http_client::rv_http_client;
+use crate::config::Config;
+use crate::gemserver::http_fetcher::HttpFetcher;
+use crate::gemserver::storage::{FilesystemStorage, Storage};
+use crate::gemserver::updater::Updater;
+
+pub mod http_fetcher;
+pub mod storage;
+pub mod updater;
 
 pub struct Gemserver {
     pub url: Url,
-    client: Client,
+    updater: Arc<Updater>,
+    storage: Arc<dyn Storage>,
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]
+    HttpError(#[from] http_fetcher::Error),
+    #[error(transparent)]
+    StorageError(#[from] storage::Error),
+    #[error(transparent)]
     Reqwest(#[from] reqwest::Error),
+    #[error("Could not create the cache dir: {0}")]
+    CouldNotCreateCacheDir(std::io::Error),
     #[error("The url {url} unexpectedly returned an empty response")]
     EmptyResponse { url: Url },
 }
 
+pub type Result<T> = std::result::Result<T, Error>;
+
 impl Gemserver {
-    pub fn new(url: Url) -> Result<Self, Error> {
-        let client = rv_http_client("install")?;
-        Ok(Self { url, client })
+    pub fn new(config: &Config, url: Url) -> Result<Self> {
+        let cache_dir = config
+            .cache
+            .shard(rv_cache::CacheBucket::GemDeps, "compact_index")
+            .into_path_buf();
+
+        fs_err::create_dir_all(&cache_dir).map_err(Error::CouldNotCreateCacheDir)?;
+
+        let client = HttpFetcher::new("install")?;
+        let storage = FilesystemStorage::new(cache_dir.into());
+        let updater = Updater::new(client);
+
+        Ok(Self {
+            url,
+            storage: Arc::new(storage),
+            updater: Arc::new(updater),
+        })
     }
 
     /// Returns the response body from the server SERVER/info/GEM_NAME.
-    /// You probably want to call [`parse_release_from_body`] on that string.
+    /// Fetches the file using etag/range requests if it's already there.
+    /// Otherwise fetches a fresh copy.
+    /// You probably want to call [`parse_release_from_body`] on the returned string.
     /// This function doesn't parse the response, so that the parser doesn't have to copy any strings.
     /// Whoever calls this should own the response, and then the parser will borrow &strs from the response.
-    pub async fn get_releases_for_gem(&self, gem: &str) -> Result<String, Error> {
-        let mut url = self.url.clone();
-        url.set_path(&format!("info/{}", gem));
-        let index_body = self
-            .client
-            .get(url)
-            .send()
-            .await?
-            .error_for_status()?
-            .text()
-            .await?;
-        if index_body.is_empty() {
-            return Err(Error::EmptyResponse {
-                url: self.url.to_owned(),
-            });
+    pub async fn get_releases_for_gem(&self, gem: &str) -> Result<String> {
+        let info_key = format!("info/{}", gem);
+        let info_url = self.url.join(&info_key).expect("valid info URL");
+
+        let blob = if let Ok(blob) = self.storage.read_blob(&info_key).await {
+            self.updater.update(info_url.as_str(), blob).await
+        } else {
+            self.updater.fetch(info_url.as_str()).await
         }
+        .map_err(|err| {
+            if matches!(err, Error::StorageError(storage::Error::EmptyContent)) {
+                Error::EmptyResponse {
+                    url: self.url.to_owned(),
+                }
+            } else {
+                err
+            }
+        })?;
+
+        self.storage.write_blob(&info_key, &blob).await?;
+
+        let index_body = String::from_utf8_lossy(&blob.content).to_string();
+
         Ok(index_body)
     }
 }

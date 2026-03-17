@@ -88,7 +88,7 @@ pub(crate) async fn install(
 
     let gem_server: Url = gem_server.parse().map_err(|_| Error::BadUrl(gem_server))?;
 
-    let gemserver = Gemserver::new(gem_server)?;
+    let gemserver = Gemserver::new(config, gem_server)?;
 
     // Maps gem names to their dependency lists.
     let mut gems_to_deps: HashMap<GemName, Vec<GemRelease>> = HashMap::new();
