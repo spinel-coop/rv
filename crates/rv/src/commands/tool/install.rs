@@ -36,8 +36,6 @@ pub enum Error {
     #[error(transparent)]
     VersionError(#[from] rv_version::VersionError),
     #[error(transparent)]
-    HttpError(#[from] reqwest::Error),
-    #[error(transparent)]
     GemserverError(#[from] gemserver::Error),
     #[error("Could not parse a version from the server: {0}")]
     GemReleaseParse(#[from] gemserver::GemReleaseParse),
