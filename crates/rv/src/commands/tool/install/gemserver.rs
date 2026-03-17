@@ -53,9 +53,43 @@ impl Gemserver {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum GemReleaseParse {
+    #[error("Missing a space")]
+    MissingSpace,
+    #[error("Missing a pipe")]
+    MissingPipe,
+    #[error("Missing a colon")]
+    MissingColon,
+    #[error("Missing a colon in metadata field: {0}")]
+    MissingMetadataColon(String),
+    #[error(transparent)]
+    InvalidRubyVersion(#[from] rv_ruby::version::ParseVersionError),
+    #[error(transparent)]
+    InvalidVersion(#[from] rv_version::VersionError),
+    #[error("Invalid release: {0}")]
+    InvalidRelease(String),
+    #[error("Unknown semver constraint type {0}")]
+    UnknownSemverType(String),
+    #[error("Unknown metadata key {key} in metadata field: {metadata}")]
+    UnknownMetadataKey { key: String, metadata: String },
+    #[error("Invalid checksum in metadata field {metadata}: {source}")]
+    InvalidChecksum {
+        source: hex::FromHexError,
+        metadata: String,
+    },
+    #[error("Invalid constraint in metadata field {metadata}: {source}")]
+    MetadataConstraintParse {
+        source: Box<GemReleaseParse>,
+        metadata: String,
+    },
+}
+
+pub type ParseResult<T> = std::result::Result<T, GemReleaseParse>;
+
 /// Given a response body from the server SERVER/info/GEM_NAME,
 /// parse it into a list of versions.
-pub fn parse_release_from_body(index_body: &str) -> Result<Vec<GemRelease>, GemReleaseParse> {
+pub fn parse_release_from_body(index_body: &str) -> ParseResult<Vec<GemRelease>> {
     index_body
         .lines()
         .filter_map(|line| {
@@ -104,43 +138,11 @@ impl From<GemRelease> for VersionPlatform {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum GemReleaseParse {
-    #[error("Missing a space")]
-    MissingSpace,
-    #[error("Missing a pipe")]
-    MissingPipe,
-    #[error("Missing a colon")]
-    MissingColon,
-    #[error("Missing a colon in metadata field: {0}")]
-    MissingMetadataColon(String),
-    #[error(transparent)]
-    InvalidRubyVersion(#[from] rv_ruby::version::ParseVersionError),
-    #[error(transparent)]
-    InvalidVersion(#[from] rv_version::VersionError),
-    #[error("Invalid release: {0}")]
-    InvalidRelease(String),
-    #[error("Unknown semver constraint type {0}")]
-    UnknownSemverType(String),
-    #[error("Unknown metadata key {key} in metadata field: {metadata}")]
-    UnknownMetadataKey { key: String, metadata: String },
-    #[error("Invalid checksum in metadata field {metadata}: {source}")]
-    InvalidChecksum {
-        source: hex::FromHexError,
-        metadata: String,
-    },
-    #[error("Invalid constraint in metadata field {metadata}: {source}")]
-    MetadataConstraintParse {
-        source: Box<GemReleaseParse>,
-        metadata: String,
-    },
-}
-
 impl GemRelease {
     /// Parses from a string like this:
     /// 2.2.2 actionmailer:= 2.2.2,actionpack:= 2.2.2,activerecord:= 2.2.2,activeresource:= 2.2.2,activesupport:=
     /// 2.2.2,rake:>= 0.8.3|checksum:84fd0ee92f92088cff81d1a4bcb61306bd4b7440b8634d7ac3d1396571a2133f
-    fn parse(line: &str) -> std::result::Result<Self, GemReleaseParse> {
+    fn parse(line: &str) -> ParseResult<Self> {
         let (v, rest) = line.split_once(' ').ok_or(GemReleaseParse::MissingSpace)?;
         let version = v;
         let (deps, metadata) = rest.split_once('|').ok_or(GemReleaseParse::MissingPipe)?;
@@ -156,13 +158,13 @@ impl GemRelease {
                     let version_constraint = constraints
                         .split('&')
                         .map(VersionConstraint::from_str)
-                        .collect::<std::result::Result<Vec<_>, _>>()?;
+                        .collect::<ParseResult<Vec<_>>>()?;
                     Ok::<_, GemReleaseParse>(Dep {
                         gem_name: gem_name.to_owned(),
                         version_constraints: version_constraint.into(),
                     })
                 })
-                .collect::<std::result::Result<Vec<_>, _>>()?
+                .collect::<ParseResult<Vec<_>>>()?
         };
         let metadata = parse_metadata(metadata)?;
 
@@ -181,7 +183,7 @@ impl GemRelease {
     }
 }
 
-fn parse_metadata(metadata: &str) -> Result<Metadata, GemReleaseParse> {
+fn parse_metadata(metadata: &str) -> ParseResult<Metadata> {
     let mut out = Metadata::default();
     for md_str in metadata.split(',') {
         if md_str.is_empty() {
@@ -201,7 +203,7 @@ fn parse_metadata(metadata: &str) -> Result<Metadata, GemReleaseParse> {
                 out.ruby = v
                     .split('&')
                     .map(VersionConstraint::from_str)
-                    .collect::<Result<Vec<_>, _>>()
+                    .collect::<ParseResult<Vec<_>>>()
                     .map_err(|err| GemReleaseParse::MetadataConstraintParse {
                         source: Box::new(err),
                         metadata: md_str.to_owned(),
@@ -211,7 +213,7 @@ fn parse_metadata(metadata: &str) -> Result<Metadata, GemReleaseParse> {
                 out.rubygems = v
                     .split('&')
                     .map(VersionConstraint::from_str)
-                    .collect::<Result<Vec<_>, _>>()
+                    .collect::<ParseResult<Vec<_>>>()
                     .map_err(|err| GemReleaseParse::MetadataConstraintParse {
                         source: Box::new(err),
                         metadata: md_str.to_owned(),
@@ -299,7 +301,7 @@ impl std::fmt::Debug for VersionConstraint {
 impl FromStr for VersionConstraint {
     type Err = GemReleaseParse;
 
-    fn from_str(constr: &str) -> Result<Self, Self::Err> {
+    fn from_str(constr: &str) -> ParseResult<Self> {
         let (semver_constr, v) = constr
             .split_once(' ')
             .ok_or(GemReleaseParse::MissingSpace)?;
