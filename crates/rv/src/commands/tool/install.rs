@@ -53,7 +53,7 @@ pub enum Error {
         "No available Ruby matched the Ruby requirements. The requirements were {requirements:?}"
     )]
     NoMatchingRuby {
-        requirements: Vec<gemserver::VersionConstraint>,
+        requirements: Vec<rv_gem_types::requirement::VersionConstraint>,
     },
     #[error("Could not pin Ruby version for this tool: {0}")]
     CouldNotPinRubyVersion(std::io::Error),

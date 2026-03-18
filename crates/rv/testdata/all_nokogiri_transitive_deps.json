@@ -511,7 +511,7 @@
         "ruby": [],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -607,7 +607,7 @@
         "ruby": [],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -677,7 +677,7 @@
         "ruby": [],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -724,7 +724,7 @@
         "ruby": [],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -833,7 +833,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -877,7 +877,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -896,7 +896,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -936,7 +936,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -977,7 +977,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -1021,7 +1021,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -1040,7 +1040,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -1083,7 +1083,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -1102,7 +1102,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -1145,7 +1145,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -1164,7 +1164,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -1207,7 +1207,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -1226,7 +1226,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -1269,7 +1269,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -1288,7 +1288,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -1328,7 +1328,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -1372,7 +1372,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -1391,7 +1391,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -1434,7 +1434,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -1453,7 +1453,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -1496,7 +1496,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -1515,7 +1515,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -1555,7 +1555,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -1599,7 +1599,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -1618,7 +1618,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -1661,7 +1661,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -1680,7 +1680,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -1723,7 +1723,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -1742,7 +1742,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -1782,7 +1782,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -1826,7 +1826,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -1845,7 +1845,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -1888,7 +1888,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -1907,7 +1907,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -1950,7 +1950,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -1969,7 +1969,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -2009,7 +2009,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -2053,7 +2053,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -2072,7 +2072,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -2115,7 +2115,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -2134,7 +2134,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -2177,7 +2177,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -2196,7 +2196,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -2236,7 +2236,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -2277,7 +2277,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -2318,7 +2318,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -2361,9 +2361,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "0.5.0",
                   "segments": [
@@ -2387,7 +2387,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -2406,7 +2406,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -2446,7 +2446,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -2486,9 +2486,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "0.5.0",
                   "segments": [
@@ -2512,7 +2512,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -2553,7 +2553,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.8.7",
               "segments": [
@@ -2593,9 +2593,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "0.5.0",
                   "segments": [
@@ -2619,7 +2619,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -2662,9 +2662,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "0.5.2",
                   "segments": [
@@ -2688,7 +2688,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -2707,7 +2707,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -2749,9 +2749,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "0.5.2",
                   "segments": [
@@ -2775,7 +2775,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -2794,7 +2794,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -2836,9 +2836,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "0.5.2",
                   "segments": [
@@ -2862,7 +2862,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -2881,7 +2881,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -2920,9 +2920,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "0.5.2",
                   "segments": [
@@ -2946,7 +2946,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -2989,9 +2989,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Equal",
+                "operator": "Equal",
                 "version": {
                   "version": "0.6.0",
                   "segments": [
@@ -3015,7 +3015,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -3058,9 +3058,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Equal",
+                "operator": "Equal",
                 "version": {
                   "version": "0.6.0",
                   "segments": [
@@ -3084,7 +3084,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -3103,7 +3103,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -3145,9 +3145,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Equal",
+                "operator": "Equal",
                 "version": {
                   "version": "0.6.0",
                   "segments": [
@@ -3171,7 +3171,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -3190,7 +3190,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -3232,9 +3232,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Equal",
+                "operator": "Equal",
                 "version": {
                   "version": "0.6.0",
                   "segments": [
@@ -3258,7 +3258,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -3277,7 +3277,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -3316,9 +3316,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Equal",
+                "operator": "Equal",
                 "version": {
                   "version": "0.6.0",
                   "segments": [
@@ -3342,7 +3342,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -3385,9 +3385,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Equal",
+                "operator": "Equal",
                 "version": {
                   "version": "0.6.0",
                   "segments": [
@@ -3411,7 +3411,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -3451,9 +3451,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "0.6.0",
                   "segments": [
@@ -3477,7 +3477,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -3520,9 +3520,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "0.6.0",
                   "segments": [
@@ -3546,7 +3546,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -3586,9 +3586,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "0.6.0",
                   "segments": [
@@ -3612,7 +3612,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -3655,9 +3655,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "0.6.0",
                   "segments": [
@@ -3681,7 +3681,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -3724,9 +3724,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "0.6.0",
                   "segments": [
@@ -3750,7 +3750,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -3793,9 +3793,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "0.7.0.rc2",
                   "segments": [
@@ -3822,7 +3822,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -3841,7 +3841,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -3883,9 +3883,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "0.7.0.rc4",
                   "segments": [
@@ -3912,7 +3912,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -3931,7 +3931,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -3973,9 +3973,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "0.6.0",
                   "segments": [
@@ -3999,7 +3999,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -4042,9 +4042,9 @@
         {
           "gem_name": "mini_portile",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "0.6.0",
                   "segments": [
@@ -4068,7 +4068,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -4111,9 +4111,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.0.0.rc2",
                   "segments": [
@@ -4140,7 +4140,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -4159,7 +4159,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -4198,9 +4198,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.0.0.rc2",
                   "segments": [
@@ -4227,7 +4227,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -4270,9 +4270,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.0.0.rc2",
                   "segments": [
@@ -4299,7 +4299,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -4342,9 +4342,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.0.0",
                   "segments": [
@@ -4368,7 +4368,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -4387,7 +4387,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -4429,9 +4429,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.1.0",
                   "segments": [
@@ -4455,7 +4455,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -4474,7 +4474,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -4516,9 +4516,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.0.0.rc2",
                   "segments": [
@@ -4545,7 +4545,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -4588,9 +4588,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.1.0",
                   "segments": [
@@ -4612,9 +4612,9 @@
         {
           "gem_name": "pkg-config",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.1.7",
                   "segments": [
@@ -4638,7 +4638,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -4657,7 +4657,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -4696,9 +4696,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.1.0",
                   "segments": [
@@ -4720,9 +4720,9 @@
         {
           "gem_name": "pkg-config",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.1.7",
                   "segments": [
@@ -4746,7 +4746,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -4789,9 +4789,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.1.0",
                   "segments": [
@@ -4815,7 +4815,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "1.9.2",
               "segments": [
@@ -4855,9 +4855,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.1.0",
                   "segments": [
@@ -4881,7 +4881,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.1.0",
               "segments": [
@@ -4924,9 +4924,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.1.0",
                   "segments": [
@@ -4950,7 +4950,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.1.0",
               "segments": [
@@ -4990,9 +4990,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.1.0",
                   "segments": [
@@ -5016,7 +5016,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.1.0",
               "segments": [
@@ -5056,9 +5056,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.1.0",
                   "segments": [
@@ -5082,7 +5082,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.1.0",
               "segments": [
@@ -5122,9 +5122,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.2.0",
                   "segments": [
@@ -5148,7 +5148,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.1.0",
               "segments": [
@@ -5188,9 +5188,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.3.0",
                   "segments": [
@@ -5214,7 +5214,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.1.0",
               "segments": [
@@ -5254,9 +5254,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.3.0",
                   "segments": [
@@ -5280,7 +5280,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.1.0",
               "segments": [
@@ -5320,9 +5320,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.3.0",
                   "segments": [
@@ -5346,7 +5346,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.1.0",
               "segments": [
@@ -5386,9 +5386,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.3.0",
                   "segments": [
@@ -5412,7 +5412,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.1.0",
               "segments": [
@@ -5452,9 +5452,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.3.0",
                   "segments": [
@@ -5478,7 +5478,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.1.0",
               "segments": [
@@ -5521,9 +5521,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.4.0",
                   "segments": [
@@ -5547,7 +5547,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.1.0",
               "segments": [
@@ -5566,7 +5566,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -5605,9 +5605,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.4.0",
                   "segments": [
@@ -5631,7 +5631,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.1.0",
               "segments": [
@@ -5671,9 +5671,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.4.0",
                   "segments": [
@@ -5697,7 +5697,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.1.0",
               "segments": [
@@ -5740,9 +5740,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.4.0",
                   "segments": [
@@ -5766,7 +5766,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.3.0",
               "segments": [
@@ -5785,7 +5785,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -5824,9 +5824,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.4.0",
                   "segments": [
@@ -5850,7 +5850,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.3.0",
               "segments": [
@@ -5890,9 +5890,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.4.0",
                   "segments": [
@@ -5916,7 +5916,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.3.0",
               "segments": [
@@ -5956,9 +5956,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.4.0",
                   "segments": [
@@ -5982,7 +5982,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.3.0",
               "segments": [
@@ -6022,9 +6022,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.4.0",
                   "segments": [
@@ -6048,7 +6048,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.3.0",
               "segments": [
@@ -6088,9 +6088,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.4.0",
                   "segments": [
@@ -6114,7 +6114,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.3.0",
               "segments": [
@@ -6154,9 +6154,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.4.0",
                   "segments": [
@@ -6180,7 +6180,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.3.0",
               "segments": [
@@ -6220,9 +6220,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.4.0",
                   "segments": [
@@ -6246,7 +6246,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.3.0",
               "segments": [
@@ -6286,9 +6286,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.4.0",
                   "segments": [
@@ -6312,7 +6312,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.3.0",
               "segments": [
@@ -6355,9 +6355,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.4.0",
                   "segments": [
@@ -6381,7 +6381,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.4.0",
               "segments": [
@@ -6400,7 +6400,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -6439,9 +6439,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.4.0",
                   "segments": [
@@ -6465,7 +6465,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.3.0",
               "segments": [
@@ -6505,9 +6505,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.4.0",
                   "segments": [
@@ -6531,7 +6531,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.3.0",
               "segments": [
@@ -6574,9 +6574,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.5.0",
                   "segments": [
@@ -6600,7 +6600,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.4.0",
               "segments": [
@@ -6619,7 +6619,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -6658,9 +6658,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.4.0",
                   "segments": [
@@ -6684,7 +6684,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.3.0",
               "segments": [
@@ -6727,9 +6727,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.5.0",
                   "segments": [
@@ -6753,7 +6753,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.4.0",
               "segments": [
@@ -6772,7 +6772,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -6820,9 +6820,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -6843,7 +6843,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.1.dev",
               "segments": [
@@ -6860,7 +6860,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -6876,7 +6876,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -6918,9 +6918,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.5.0",
                   "segments": [
@@ -6942,9 +6942,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -6965,7 +6965,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5.0",
               "segments": [
@@ -6984,7 +6984,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -7029,9 +7029,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -7052,7 +7052,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.1.dev",
               "segments": [
@@ -7069,7 +7069,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -7106,9 +7106,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.5.0",
                   "segments": [
@@ -7130,9 +7130,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -7153,7 +7153,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5.0",
               "segments": [
@@ -7199,9 +7199,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -7222,7 +7222,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.1.dev",
               "segments": [
@@ -7239,7 +7239,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -7276,9 +7276,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.5.0",
                   "segments": [
@@ -7300,9 +7300,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -7323,7 +7323,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5.0",
               "segments": [
@@ -7369,9 +7369,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -7392,7 +7392,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.1.dev",
               "segments": [
@@ -7409,7 +7409,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -7446,9 +7446,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.5.0",
                   "segments": [
@@ -7470,9 +7470,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -7493,7 +7493,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5.0",
               "segments": [
@@ -7539,9 +7539,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -7562,7 +7562,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.1.dev",
               "segments": [
@@ -7579,7 +7579,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -7616,9 +7616,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.5.0",
                   "segments": [
@@ -7640,9 +7640,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -7663,7 +7663,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5.0",
               "segments": [
@@ -7709,9 +7709,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -7732,7 +7732,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.1.dev",
               "segments": [
@@ -7749,7 +7749,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -7786,9 +7786,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.5.0",
                   "segments": [
@@ -7810,9 +7810,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -7833,7 +7833,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5.0",
               "segments": [
@@ -7879,9 +7879,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -7902,7 +7902,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.1.dev",
               "segments": [
@@ -7919,7 +7919,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -7956,9 +7956,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.5.0",
                   "segments": [
@@ -7980,9 +7980,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -8003,7 +8003,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5.0",
               "segments": [
@@ -8049,9 +8049,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -8072,7 +8072,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.1.dev",
               "segments": [
@@ -8089,7 +8089,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -8126,9 +8126,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.5.0",
                   "segments": [
@@ -8150,9 +8150,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -8173,7 +8173,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5.0",
               "segments": [
@@ -8219,9 +8219,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -8242,7 +8242,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.1.dev",
               "segments": [
@@ -8259,7 +8259,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -8296,9 +8296,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.5.0",
                   "segments": [
@@ -8320,9 +8320,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -8343,7 +8343,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5.0",
               "segments": [
@@ -8392,9 +8392,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -8415,7 +8415,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.1.dev",
               "segments": [
@@ -8432,7 +8432,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -8448,7 +8448,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -8490,9 +8490,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.6.1",
                   "segments": [
@@ -8514,9 +8514,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -8537,7 +8537,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5.0",
               "segments": [
@@ -8556,7 +8556,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -8601,9 +8601,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -8624,7 +8624,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.1.dev",
               "segments": [
@@ -8641,7 +8641,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -8678,9 +8678,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.6.1",
                   "segments": [
@@ -8702,9 +8702,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -8725,7 +8725,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5.0",
               "segments": [
@@ -8771,9 +8771,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -8794,7 +8794,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.1.dev",
               "segments": [
@@ -8811,7 +8811,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -8848,9 +8848,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.6.1",
                   "segments": [
@@ -8872,9 +8872,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -8895,7 +8895,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5.0",
               "segments": [
@@ -8941,9 +8941,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -8964,7 +8964,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.1.dev",
               "segments": [
@@ -8981,7 +8981,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -9018,9 +9018,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.6.1",
                   "segments": [
@@ -9042,9 +9042,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -9065,7 +9065,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5.0",
               "segments": [
@@ -9111,9 +9111,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -9134,7 +9134,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.1.dev",
               "segments": [
@@ -9151,7 +9151,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -9188,9 +9188,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.6.1",
                   "segments": [
@@ -9212,9 +9212,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -9235,7 +9235,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5.0",
               "segments": [
@@ -9281,9 +9281,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -9304,7 +9304,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.1.dev",
               "segments": [
@@ -9321,7 +9321,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -9358,9 +9358,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.6.1",
                   "segments": [
@@ -9382,9 +9382,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -9405,7 +9405,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5.0",
               "segments": [
@@ -9451,9 +9451,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -9474,7 +9474,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.1.dev",
               "segments": [
@@ -9491,7 +9491,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -9528,9 +9528,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.6.1",
                   "segments": [
@@ -9552,9 +9552,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -9575,7 +9575,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5.0",
               "segments": [
@@ -9621,9 +9621,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -9644,7 +9644,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.2.dev",
               "segments": [
@@ -9661,7 +9661,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6",
               "segments": [
@@ -9698,9 +9698,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.7.0",
                   "segments": [
@@ -9722,9 +9722,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -9745,7 +9745,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6.0",
               "segments": [
@@ -9791,9 +9791,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -9814,7 +9814,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.2.dev",
               "segments": [
@@ -9831,7 +9831,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6",
               "segments": [
@@ -9868,9 +9868,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.7.0",
                   "segments": [
@@ -9892,9 +9892,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -9915,7 +9915,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6.0",
               "segments": [
@@ -9961,9 +9961,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -9984,7 +9984,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.2.dev",
               "segments": [
@@ -10001,7 +10001,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6",
               "segments": [
@@ -10038,9 +10038,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.0",
                   "segments": [
@@ -10062,9 +10062,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -10085,7 +10085,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6.0",
               "segments": [
@@ -10131,9 +10131,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -10154,7 +10154,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.2.dev",
               "segments": [
@@ -10171,7 +10171,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6",
               "segments": [
@@ -10208,9 +10208,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.0",
                   "segments": [
@@ -10232,9 +10232,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -10255,7 +10255,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6.0",
               "segments": [
@@ -10301,9 +10301,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -10324,7 +10324,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.2.dev",
               "segments": [
@@ -10341,7 +10341,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6",
               "segments": [
@@ -10378,9 +10378,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.0",
                   "segments": [
@@ -10402,9 +10402,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -10425,7 +10425,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6.0",
               "segments": [
@@ -10471,9 +10471,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -10494,7 +10494,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.2.dev",
               "segments": [
@@ -10511,7 +10511,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6",
               "segments": [
@@ -10548,9 +10548,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.0",
                   "segments": [
@@ -10572,9 +10572,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -10595,7 +10595,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6.0",
               "segments": [
@@ -10641,9 +10641,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -10664,7 +10664,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.2.dev",
               "segments": [
@@ -10681,7 +10681,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6",
               "segments": [
@@ -10718,9 +10718,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.0",
                   "segments": [
@@ -10742,9 +10742,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -10765,7 +10765,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6.0",
               "segments": [
@@ -10811,9 +10811,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -10834,7 +10834,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.2.dev",
               "segments": [
@@ -10851,7 +10851,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6",
               "segments": [
@@ -10888,9 +10888,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.0",
                   "segments": [
@@ -10912,9 +10912,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -10935,7 +10935,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6.0",
               "segments": [
@@ -10981,9 +10981,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -11004,7 +11004,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.2.dev",
               "segments": [
@@ -11021,7 +11021,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6",
               "segments": [
@@ -11058,9 +11058,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.0",
                   "segments": [
@@ -11082,9 +11082,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -11105,7 +11105,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6.0",
               "segments": [
@@ -11151,9 +11151,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -11174,7 +11174,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.2.dev",
               "segments": [
@@ -11191,7 +11191,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6",
               "segments": [
@@ -11228,9 +11228,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.0",
                   "segments": [
@@ -11252,9 +11252,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -11275,7 +11275,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6.0",
               "segments": [
@@ -11321,9 +11321,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -11344,7 +11344,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.2.dev",
               "segments": [
@@ -11361,7 +11361,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6",
               "segments": [
@@ -11398,9 +11398,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.0",
                   "segments": [
@@ -11422,9 +11422,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -11445,7 +11445,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.6.0",
               "segments": [
@@ -11494,9 +11494,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -11517,7 +11517,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.3.dev",
               "segments": [
@@ -11534,7 +11534,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7",
               "segments": [
@@ -11550,7 +11550,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -11592,9 +11592,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.0",
                   "segments": [
@@ -11616,9 +11616,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -11639,7 +11639,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7.0",
               "segments": [
@@ -11658,7 +11658,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -11697,9 +11697,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.0",
                   "segments": [
@@ -11721,9 +11721,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -11744,7 +11744,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7.0",
               "segments": [
@@ -11790,9 +11790,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -11813,7 +11813,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.3.dev",
               "segments": [
@@ -11830,7 +11830,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7",
               "segments": [
@@ -11873,9 +11873,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -11896,7 +11896,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.3.dev",
               "segments": [
@@ -11913,7 +11913,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7",
               "segments": [
@@ -11950,9 +11950,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.0",
                   "segments": [
@@ -11974,9 +11974,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -11997,7 +11997,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7.0",
               "segments": [
@@ -12043,9 +12043,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -12066,7 +12066,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.3.dev",
               "segments": [
@@ -12083,7 +12083,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7",
               "segments": [
@@ -12120,9 +12120,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.0",
                   "segments": [
@@ -12144,9 +12144,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -12167,7 +12167,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7.0",
               "segments": [
@@ -12213,9 +12213,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -12236,7 +12236,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.3.dev",
               "segments": [
@@ -12253,7 +12253,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7",
               "segments": [
@@ -12290,9 +12290,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.0",
                   "segments": [
@@ -12314,9 +12314,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -12337,7 +12337,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7.0",
               "segments": [
@@ -12383,9 +12383,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -12406,7 +12406,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.3.dev",
               "segments": [
@@ -12423,7 +12423,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7",
               "segments": [
@@ -12460,9 +12460,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.0",
                   "segments": [
@@ -12484,9 +12484,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -12507,7 +12507,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7.0",
               "segments": [
@@ -12553,9 +12553,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -12576,7 +12576,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.3.dev",
               "segments": [
@@ -12593,7 +12593,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7",
               "segments": [
@@ -12630,9 +12630,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -12654,9 +12654,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -12677,7 +12677,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7.0",
               "segments": [
@@ -12723,9 +12723,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -12746,7 +12746,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.3.dev",
               "segments": [
@@ -12763,7 +12763,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7",
               "segments": [
@@ -12800,9 +12800,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -12824,9 +12824,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -12847,7 +12847,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7.0",
               "segments": [
@@ -12893,9 +12893,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -12916,7 +12916,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.3.dev",
               "segments": [
@@ -12933,7 +12933,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7",
               "segments": [
@@ -12970,9 +12970,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.0",
                   "segments": [
@@ -12994,9 +12994,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -13017,7 +13017,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7.0",
               "segments": [
@@ -13063,9 +13063,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -13086,7 +13086,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.3.dev",
               "segments": [
@@ -13103,7 +13103,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7",
               "segments": [
@@ -13140,9 +13140,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -13164,9 +13164,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -13187,7 +13187,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7.0",
               "segments": [
@@ -13233,9 +13233,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -13256,7 +13256,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.3.dev",
               "segments": [
@@ -13273,7 +13273,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7",
               "segments": [
@@ -13310,9 +13310,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -13334,9 +13334,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -13357,7 +13357,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7.0",
               "segments": [
@@ -13403,9 +13403,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -13426,7 +13426,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.3.dev",
               "segments": [
@@ -13443,7 +13443,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7",
               "segments": [
@@ -13480,9 +13480,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -13504,9 +13504,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -13527,7 +13527,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7.0",
               "segments": [
@@ -13573,9 +13573,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -13596,7 +13596,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.3.dev",
               "segments": [
@@ -13613,7 +13613,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7",
               "segments": [
@@ -13650,9 +13650,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -13674,9 +13674,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -13697,7 +13697,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7.0",
               "segments": [
@@ -13746,9 +13746,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -13769,7 +13769,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.4.dev",
               "segments": [
@@ -13786,7 +13786,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0",
               "segments": [
@@ -13802,7 +13802,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -13844,9 +13844,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -13868,9 +13868,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -13891,7 +13891,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0.0",
               "segments": [
@@ -13910,7 +13910,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -13955,9 +13955,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -13978,7 +13978,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.4.dev",
               "segments": [
@@ -13995,7 +13995,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0",
               "segments": [
@@ -14032,9 +14032,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -14056,9 +14056,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -14079,7 +14079,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0.0",
               "segments": [
@@ -14125,9 +14125,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -14148,7 +14148,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.4.dev",
               "segments": [
@@ -14165,7 +14165,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0",
               "segments": [
@@ -14202,9 +14202,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -14226,9 +14226,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -14249,7 +14249,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0.0",
               "segments": [
@@ -14295,9 +14295,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -14318,7 +14318,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.4.dev",
               "segments": [
@@ -14335,7 +14335,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0",
               "segments": [
@@ -14372,9 +14372,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -14396,9 +14396,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -14419,7 +14419,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0.0",
               "segments": [
@@ -14465,9 +14465,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -14488,7 +14488,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.4.dev",
               "segments": [
@@ -14505,7 +14505,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0",
               "segments": [
@@ -14542,9 +14542,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -14566,9 +14566,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -14589,7 +14589,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0.0",
               "segments": [
@@ -14635,9 +14635,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -14658,7 +14658,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.3.dev",
               "segments": [
@@ -14675,7 +14675,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7",
               "segments": [
@@ -14712,9 +14712,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -14736,9 +14736,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -14759,7 +14759,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7.0",
               "segments": [
@@ -14805,9 +14805,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -14828,7 +14828,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.4.dev",
               "segments": [
@@ -14845,7 +14845,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0",
               "segments": [
@@ -14882,9 +14882,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -14906,9 +14906,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -14929,7 +14929,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0.0",
               "segments": [
@@ -14975,9 +14975,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -14998,7 +14998,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.4.dev",
               "segments": [
@@ -15015,7 +15015,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0",
               "segments": [
@@ -15052,9 +15052,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -15076,9 +15076,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -15099,7 +15099,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0.0",
               "segments": [
@@ -15145,9 +15145,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -15168,7 +15168,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.4.dev",
               "segments": [
@@ -15185,7 +15185,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0",
               "segments": [
@@ -15222,9 +15222,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -15246,9 +15246,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -15269,7 +15269,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0.0",
               "segments": [
@@ -15315,9 +15315,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -15338,7 +15338,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.4.dev",
               "segments": [
@@ -15355,7 +15355,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0",
               "segments": [
@@ -15392,9 +15392,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -15416,9 +15416,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -15439,7 +15439,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0.0",
               "segments": [
@@ -15485,9 +15485,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -15508,7 +15508,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.4.dev",
               "segments": [
@@ -15525,7 +15525,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0",
               "segments": [
@@ -15562,9 +15562,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -15586,9 +15586,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -15609,7 +15609,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0.0",
               "segments": [
@@ -15655,9 +15655,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -15678,7 +15678,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.3.dev",
               "segments": [
@@ -15695,7 +15695,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7",
               "segments": [
@@ -15732,9 +15732,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -15756,9 +15756,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -15779,7 +15779,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.7.0",
               "segments": [
@@ -15825,9 +15825,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -15848,7 +15848,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.4.dev",
               "segments": [
@@ -15865,7 +15865,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0",
               "segments": [
@@ -15902,9 +15902,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -15926,9 +15926,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -15949,7 +15949,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0.0",
               "segments": [
@@ -15995,9 +15995,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -16018,7 +16018,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.4.dev",
               "segments": [
@@ -16035,7 +16035,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0",
               "segments": [
@@ -16072,9 +16072,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -16096,9 +16096,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -16119,7 +16119,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0.0",
               "segments": [
@@ -16165,9 +16165,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -16188,7 +16188,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.4.dev",
               "segments": [
@@ -16205,7 +16205,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0",
               "segments": [
@@ -16242,9 +16242,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -16266,9 +16266,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -16289,7 +16289,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.0.0",
               "segments": [
@@ -16338,9 +16338,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -16361,7 +16361,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.5.dev",
               "segments": [
@@ -16378,7 +16378,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1",
               "segments": [
@@ -16394,7 +16394,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -16436,9 +16436,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -16460,9 +16460,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -16483,7 +16483,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1.0",
               "segments": [
@@ -16502,7 +16502,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -16547,9 +16547,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -16570,7 +16570,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.5.dev",
               "segments": [
@@ -16587,7 +16587,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1",
               "segments": [
@@ -16624,9 +16624,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -16648,9 +16648,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -16671,7 +16671,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1.0",
               "segments": [
@@ -16717,9 +16717,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -16740,7 +16740,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.5.dev",
               "segments": [
@@ -16757,7 +16757,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1",
               "segments": [
@@ -16794,9 +16794,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -16818,9 +16818,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -16841,7 +16841,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1.0",
               "segments": [
@@ -16887,9 +16887,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -16910,7 +16910,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.5.dev",
               "segments": [
@@ -16927,7 +16927,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1",
               "segments": [
@@ -16964,9 +16964,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -16988,9 +16988,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -17011,7 +17011,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1.0",
               "segments": [
@@ -17057,9 +17057,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -17080,7 +17080,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.5.dev",
               "segments": [
@@ -17097,7 +17097,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1",
               "segments": [
@@ -17134,9 +17134,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -17158,9 +17158,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -17181,7 +17181,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1.0",
               "segments": [
@@ -17227,9 +17227,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -17250,7 +17250,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.5.dev",
               "segments": [
@@ -17267,7 +17267,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1",
               "segments": [
@@ -17304,9 +17304,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -17328,9 +17328,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -17351,7 +17351,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1.0",
               "segments": [
@@ -17397,9 +17397,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -17420,7 +17420,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.5.dev",
               "segments": [
@@ -17437,7 +17437,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1",
               "segments": [
@@ -17474,9 +17474,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -17498,9 +17498,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -17521,7 +17521,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1.0",
               "segments": [
@@ -17567,9 +17567,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -17590,7 +17590,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.5.dev",
               "segments": [
@@ -17607,7 +17607,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1",
               "segments": [
@@ -17644,9 +17644,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -17668,9 +17668,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -17691,7 +17691,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1.0",
               "segments": [
@@ -17737,9 +17737,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -17760,7 +17760,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.5.dev",
               "segments": [
@@ -17777,7 +17777,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1",
               "segments": [
@@ -17814,9 +17814,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -17838,9 +17838,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -17861,7 +17861,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1.0",
               "segments": [
@@ -17907,9 +17907,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -17930,7 +17930,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.5.dev",
               "segments": [
@@ -17947,7 +17947,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1",
               "segments": [
@@ -17984,9 +17984,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -18008,9 +18008,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -18031,7 +18031,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1.0",
               "segments": [
@@ -18077,9 +18077,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -18100,7 +18100,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.5.dev",
               "segments": [
@@ -18117,7 +18117,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1",
               "segments": [
@@ -18154,9 +18154,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -18178,9 +18178,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -18201,7 +18201,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1.0",
               "segments": [
@@ -18247,9 +18247,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -18270,7 +18270,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "3.5.dev",
               "segments": [
@@ -18287,7 +18287,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1",
               "segments": [
@@ -18324,9 +18324,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -18348,9 +18348,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -18371,7 +18371,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.1.0",
               "segments": [
@@ -18417,9 +18417,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -18440,7 +18440,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "LessThan",
+            "operator": "LessThan",
             "version": {
               "version": "4.1.dev",
               "segments": [
@@ -18457,7 +18457,7 @@
             }
           },
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.2",
               "segments": [
@@ -18494,9 +18494,9 @@
         {
           "gem_name": "mini_portile2",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "2.8.2",
                   "segments": [
@@ -18518,9 +18518,9 @@
         {
           "gem_name": "racc",
           "version_constraints": {
-            "inner": [
+            "constraints": [
               {
-                "constraint_type": "Pessimistic",
+                "operator": "Pessimistic",
                 "version": {
                   "version": "1.4",
                   "segments": [
@@ -18541,7 +18541,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "3.2",
               "segments": [
@@ -18903,7 +18903,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -18941,7 +18941,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -18979,7 +18979,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -19017,7 +19017,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -19055,7 +19055,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -19093,7 +19093,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -19137,7 +19137,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -19153,7 +19153,7 @@
         ],
         "rubygems": [
           {
-            "constraint_type": "GreaterThan",
+            "operator": "GreaterThan",
             "version": {
               "version": "1.3.1",
               "segments": [
@@ -19193,7 +19193,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -19231,7 +19231,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [
@@ -19269,7 +19269,7 @@
         "checksum": [],
         "ruby": [
           {
-            "constraint_type": "GreaterThanOrEqual",
+            "operator": "GreaterThanOrEqual",
             "version": {
               "version": "2.5",
               "segments": [

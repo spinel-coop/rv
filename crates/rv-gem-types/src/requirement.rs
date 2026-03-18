@@ -1,4 +1,5 @@
-use crate::Version;
+use crate::{Platform, Version, VersionPlatform};
+use pubgrub::Ranges;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -14,16 +15,63 @@ pub enum RequirementError {
     Malformed { requirement: String },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Requirement {
     pub constraints: Vec<VersionConstraint>,
 }
 
+impl Default for Requirement {
+    fn default() -> Self {
+        Self {
+            constraints: vec![VersionConstraint::default()],
+        }
+    }
+}
+
+impl std::fmt::Debug for Requirement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.constraints.fmt(f)
+    }
+}
+
+impl From<Vec<VersionConstraint>> for Requirement {
+    fn from(constraints: Vec<VersionConstraint>) -> Self {
+        Self { constraints }
+    }
+}
+
+impl From<Requirement> for Vec<VersionConstraint> {
+    fn from(constraints: Requirement) -> Self {
+        constraints.constraints
+    }
+}
+
+impl From<Requirement> for Ranges<VersionPlatform> {
+    fn from(constraints: Requirement) -> Self {
+        // Convert the RubyGems constraints into PubGrub ranges.
+        let ranges = constraints.constraints.into_iter().map(Ranges::from);
+
+        // Now, join all those ranges together using &, because that's what multiple RubyGems
+        // constraints are actually listed as.
+        let mut overall_range = Ranges::full();
+        for r in ranges {
+            overall_range = overall_range.intersection(&r);
+        }
+        overall_range
+    }
+}
+
 // Defaults to ">= 0"
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct VersionConstraint {
     pub operator: ComparisonOperator,
     pub version: Version,
+}
+
+impl std::fmt::Debug for VersionConstraint {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{} {}", self.operator, self.version)
+    }
 }
 
 impl VersionConstraint {
@@ -56,6 +104,49 @@ impl TryFrom<&str> for VersionConstraint {
         let version = VersionConstraint::version_from(str, operator.as_ref())?;
 
         Ok(Self { operator, version })
+    }
+}
+
+impl From<VersionConstraint> for Ranges<VersionPlatform> {
+    fn from(constraint: VersionConstraint) -> Self {
+        let v = constraint.version;
+        let min_v = VersionPlatform {
+            version: v.clone(),
+            platform: Platform::Ruby,
+        };
+
+        let max_v = VersionPlatform {
+            version: v.clone(),
+            platform: Platform::Current,
+        };
+
+        match constraint.operator {
+            ComparisonOperator::Equal => {
+                Ranges::intersection(&Ranges::higher_than(min_v), &Ranges::lower_than(max_v))
+            }
+            ComparisonOperator::NotEqual => Ranges::union(
+                &Ranges::strictly_lower_than(min_v),
+                &Ranges::strictly_higher_than(max_v),
+            ),
+
+            // These 4 are easy:
+            ComparisonOperator::GreaterThan => Ranges::strictly_higher_than(max_v),
+            ComparisonOperator::LessThan => Ranges::strictly_lower_than(min_v),
+            ComparisonOperator::GreaterThanOrEqual => Ranges::higher_than(min_v),
+            ComparisonOperator::LessThanOrEqual => Ranges::lower_than(max_v),
+            // This one is weird, but at least it's encapsulated into a `bump` method.
+            ComparisonOperator::Pessimistic => {
+                let bump_v = VersionPlatform {
+                    version: Version::new(format!("{}.A", v.bump())).unwrap(),
+                    platform: Platform::Ruby,
+                };
+
+                Ranges::intersection(
+                    &Ranges::higher_than(min_v),
+                    &Ranges::strictly_lower_than(bump_v),
+                )
+            }
+        }
     }
 }
 
@@ -184,22 +275,6 @@ impl Requirement {
     }
 }
 
-impl PartialEq for Requirement {
-    fn eq(&self, other: &Self) -> bool {
-        self.constraints == other.constraints
-    }
-}
-
-impl Eq for Requirement {}
-
-impl Default for Requirement {
-    fn default() -> Self {
-        Self {
-            constraints: vec![VersionConstraint::default()],
-        }
-    }
-}
-
 impl PartialEq for VersionConstraint {
     fn eq(&self, other: &Self) -> bool {
         self.operator == other.operator && self.version.version == other.version.version
@@ -272,89 +347,29 @@ mod tests {
     #[test]
     fn test_requirement_parsing() {
         // Basic parsing
-        insta::assert_debug_snapshot!(req("1.0"), @r###"
-        Requirement {
-            constraints: [
-                VersionConstraint {
-                    operator: Equal,
-                    version: Version {
-                        version: "1.0",
-                        segments: [
-                            Number(
-                                1,
-                            ),
-                            Number(
-                                0,
-                            ),
-                        ],
-                    },
-                },
-            ],
-        }
-        "###);
+        insta::assert_debug_snapshot!(req("1.0"), @r"
+        [
+            = 1.0,
+        ]
+        ");
 
-        insta::assert_debug_snapshot!(req("= 1.0"), @r###"
-        Requirement {
-            constraints: [
-                VersionConstraint {
-                    operator: Equal,
-                    version: Version {
-                        version: "1.0",
-                        segments: [
-                            Number(
-                                1,
-                            ),
-                            Number(
-                                0,
-                            ),
-                        ],
-                    },
-                },
-            ],
-        }
-        "###);
+        insta::assert_debug_snapshot!(req("= 1.0"), @r"
+        [
+            = 1.0,
+        ]
+        ");
 
-        insta::assert_debug_snapshot!(req("> 1.0"), @r###"
-        Requirement {
-            constraints: [
-                VersionConstraint {
-                    operator: GreaterThan,
-                    version: Version {
-                        version: "1.0",
-                        segments: [
-                            Number(
-                                1,
-                            ),
-                            Number(
-                                0,
-                            ),
-                        ],
-                    },
-                },
-            ],
-        }
-        "###);
+        insta::assert_debug_snapshot!(req("> 1.0"), @r"
+        [
+            > 1.0,
+        ]
+        ");
 
-        insta::assert_debug_snapshot!(req("~> 1.2"), @r###"
-        Requirement {
-            constraints: [
-                VersionConstraint {
-                    operator: Pessimistic,
-                    version: Version {
-                        version: "1.2",
-                        segments: [
-                            Number(
-                                1,
-                            ),
-                            Number(
-                                2,
-                            ),
-                        ],
-                    },
-                },
-            ],
-        }
-        "###);
+        insta::assert_debug_snapshot!(req("~> 1.2"), @r"
+        [
+            ~> 1.2,
+        ]
+        ");
     }
 
     #[test]

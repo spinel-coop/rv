@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
 use pubgrub::{OfflineDependencyProvider, Ranges, SelectedDependencies};
-use rv_gem_types::requirement::ComparisonOperator;
-use rv_gem_types::{Platform, Version, VersionPlatform};
+use rv_gem_types::VersionPlatform;
 
-use crate::gemserver::{GemName, GemRelease, VersionConstraint, VersionConstraints};
+use super::gemserver::{GemName, GemRelease};
 
 pub fn solve(
     gem: GemName,
@@ -39,70 +38,13 @@ fn all_dependencies(gem_info: HashMap<GemName, Vec<GemRelease>>) -> DepProvider 
     m
 }
 
-impl From<VersionConstraint> for Ranges<VersionPlatform> {
-    fn from(constraint: VersionConstraint) -> Self {
-        let v = constraint.version;
-        let min_v = VersionPlatform {
-            version: v.clone(),
-            platform: Platform::Ruby,
-        };
-
-        let max_v = VersionPlatform {
-            version: v.clone(),
-            platform: Platform::Current,
-        };
-
-        match constraint.constraint_type {
-            ComparisonOperator::Equal => {
-                Ranges::intersection(&Ranges::higher_than(min_v), &Ranges::lower_than(max_v))
-            }
-            ComparisonOperator::NotEqual => Ranges::union(
-                &Ranges::strictly_lower_than(min_v),
-                &Ranges::strictly_higher_than(max_v),
-            ),
-
-            // These 4 are easy:
-            ComparisonOperator::GreaterThan => Ranges::strictly_higher_than(max_v),
-            ComparisonOperator::LessThan => Ranges::strictly_lower_than(min_v),
-            ComparisonOperator::GreaterThanOrEqual => Ranges::higher_than(min_v),
-            ComparisonOperator::LessThanOrEqual => Ranges::lower_than(max_v),
-            // This one is weird, but at least it's encapsulated into a `bump` method.
-            ComparisonOperator::Pessimistic => {
-                let bump_v = VersionPlatform {
-                    version: Version::new(format!("{}.A", v.bump())).unwrap(),
-                    platform: Platform::Ruby,
-                };
-
-                Ranges::intersection(
-                    &Ranges::higher_than(min_v),
-                    &Ranges::strictly_lower_than(bump_v),
-                )
-            }
-        }
-    }
-}
-
-impl From<VersionConstraints> for Ranges<VersionPlatform> {
-    fn from(constraints: VersionConstraints) -> Self {
-        // Convert the RubyGems constraints into PubGrub ranges.
-        let ranges = constraints.inner.into_iter().map(Ranges::from);
-
-        // Now, join all those ranges together using &, because that's what multiple RubyGems
-        // constraints are actually listed as.
-        let mut overall_range = Ranges::full();
-        for r in ranges {
-            overall_range = overall_range.intersection(&r);
-        }
-        overall_range
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use serde::{Deserialize, Serialize};
 
     use super::*;
-    use crate::gemserver::VersionConstraint;
+    use rv_gem_types::requirement::{Requirement, VersionConstraint};
+    use rv_gem_types::{ComparisonOperator, Platform, Version};
     use std::str::FromStr;
 
     fn vp(input: &str) -> VersionPlatform {
@@ -127,7 +69,7 @@ mod tests {
         #[expect(clippy::single_element_loop)] // Remove this 'expect' if you add another test.
         for Test { input, expected } in [Test {
             input: vec![VersionConstraint {
-                constraint_type: ComparisonOperator::Pessimistic,
+                operator: ComparisonOperator::Pessimistic,
                 version: "3.0.3".parse().unwrap(),
             }],
             expected: Ranges::intersection(
@@ -137,7 +79,7 @@ mod tests {
         }] {
             // Take the Ruby gem version requirements,
             // translate them to PubGrub version ranges.
-            let actual = Ranges::from(VersionConstraints::from(input));
+            let actual = Ranges::from(Requirement::from(input));
             assert_eq!(actual, expected);
         }
     }

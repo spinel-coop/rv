@@ -43,36 +43,12 @@ Specification {
     bindir: "bin",
     post_install_message: None,
     requirements: [],
-    required_ruby_version: Requirement {
-        constraints: [
-            VersionConstraint {
-                operator: GreaterThanOrEqual,
-                version: Version {
-                    version: "0",
-                    segments: [
-                        Number(
-                            0,
-                        ),
-                    ],
-                },
-            },
-        ],
-    },
-    required_rubygems_version: Requirement {
-        constraints: [
-            VersionConstraint {
-                operator: GreaterThanOrEqual,
-                version: Version {
-                    version: "0",
-                    segments: [
-                        Number(
-                            0,
-                        ),
-                    ],
-                },
-            },
-        ],
-    },
+    required_ruby_version: [
+        >= 0,
+    ],
+    required_rubygems_version: [
+        >= 0,
+    ],
     test_files: [],
     extra_rdoc_files: [],
     rdoc_options: [],

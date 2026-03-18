@@ -79,48 +79,12 @@ Specification {
         "libssl >= 1.1",
         "cmake >= 3.10",
     ],
-    required_ruby_version: Requirement {
-        constraints: [
-            VersionConstraint {
-                operator: GreaterThanOrEqual,
-                version: Version {
-                    version: "2.7.0",
-                    segments: [
-                        Number(
-                            2,
-                        ),
-                        Number(
-                            7,
-                        ),
-                        Number(
-                            0,
-                        ),
-                    ],
-                },
-            },
-        ],
-    },
-    required_rubygems_version: Requirement {
-        constraints: [
-            VersionConstraint {
-                operator: GreaterThanOrEqual,
-                version: Version {
-                    version: "3.0.0",
-                    segments: [
-                        Number(
-                            3,
-                        ),
-                        Number(
-                            0,
-                        ),
-                        Number(
-                            0,
-                        ),
-                    ],
-                },
-            },
-        ],
-    },
+    required_ruby_version: [
+        >= 2.7.0,
+    ],
+    required_rubygems_version: [
+        >= 3.0.0,
+    ],
     test_files: [],
     extra_rdoc_files: [],
     rdoc_options: [],

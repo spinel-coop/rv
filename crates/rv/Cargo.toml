@@ -73,7 +73,7 @@ dircpy = "0.3.19"
 glob = "0.3.3"
 base64 = "0.22.1"
 dep-graph = { workspace = true }
-pubgrub = "0.3.0"
+pubgrub = { workspace = true }
 tabled = { version = "0.20.0", features = ["ansi"] }
 config = { version = "0.15.19", default-features = false }
 kdl = { git = "https://github.com/kdl-org/kdl-rs.git", version = "6.5.0" }

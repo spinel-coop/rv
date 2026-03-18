@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use rv_gem_types::requirement::ComparisonOperator;
+use rv_gem_types::requirement::{Requirement, VersionConstraint};
 use rv_gem_types::{Platform, VersionPlatform};
 use rv_version::Version;
 use serde::{Deserialize, Serialize};
@@ -279,7 +279,7 @@ fn parse_version_constraint(constr: &str) -> ParseResult<VersionConstraint> {
         .ok_or(GemReleaseParse::MissingSpace)?;
 
     Ok(VersionConstraint {
-        constraint_type: op.parse().map_err(GemReleaseParse::UnknownSemverType)?,
+        operator: op.parse().map_err(GemReleaseParse::UnknownSemverType)?,
         version: v.parse().map_err(GemReleaseParse::InvalidVersion)?,
     })
 }
@@ -291,35 +291,12 @@ pub struct Dep {
     /// What gem this dependency uses.
     pub gem_name: GemName,
     /// Constraints on what version of the gem can be used.
-    pub version_constraints: VersionConstraints,
+    pub version_constraints: Requirement,
 }
 
 impl std::fmt::Debug for Dep {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}@{:?}", self.gem_name, self.version_constraints)
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct VersionConstraints {
-    pub inner: Vec<VersionConstraint>,
-}
-
-impl std::fmt::Debug for VersionConstraints {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.inner.fmt(f)
-    }
-}
-
-impl From<Vec<VersionConstraint>> for VersionConstraints {
-    fn from(constraints: Vec<VersionConstraint>) -> Self {
-        Self { inner: constraints }
-    }
-}
-
-impl From<VersionConstraints> for Vec<VersionConstraint> {
-    fn from(constraints: VersionConstraints) -> Self {
-        constraints.inner
     }
 }
 
@@ -339,18 +316,6 @@ impl std::fmt::Debug for Metadata {
             .field("ruby", &self.ruby)
             .field("rubygems", &self.rubygems)
             .finish()
-    }
-}
-
-#[derive(Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct VersionConstraint {
-    pub constraint_type: ComparisonOperator,
-    pub version: Version,
-}
-
-impl std::fmt::Debug for VersionConstraint {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{} {}", self.constraint_type, self.version)
     }
 }
 
