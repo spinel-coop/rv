@@ -1769,7 +1769,9 @@ where
     let mut gem_data_archive = tar::Archive::new(GzDecoder::new(data_tar_gz));
     crate::tar_utils::unpack_tar(&mut gem_data_archive, data_dir)?;
     // Get the HashReader back, so we can tell what the hash is for the contents of this tar.
-    let h = gem_data_archive.into_inner().into_inner();
+    let mut gz_archive = gem_data_archive.into_inner();
+    gz_archive.read_to_end(&mut Vec::new())?;
+    let h = gz_archive.into_inner();
     let hashed = h.finalize();
     Ok(UnpackedData { hashed })
 }
