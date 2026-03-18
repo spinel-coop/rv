@@ -40,7 +40,7 @@ use std::io;
 use std::io::Read;
 use std::io::Write;
 use std::ops::Not;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
@@ -1298,8 +1298,6 @@ impl<'i> DownloadedRubygems<'i> {
                     println!("{error:?}");
                 };
 
-                std::fs::remove_dir_all(args.install_layout.install_path.clone()).unwrap();
-
                 Err(Error::UnpackError(error))
             }
             Ok(other) => Ok(other),
@@ -1312,6 +1310,11 @@ impl<'i> DownloadedRubygems<'i> {
         // (and optionally, a checksum zip).
         let full_name = self.spec.gem_version.full_name();
         debug!("Unpacking {full_name}");
+
+        // First, create the data's destination.
+        let install_layout = &args.install_layout;
+        let data_dir: PathBuf = install_layout.gem_path(&full_name).into();
+        fs_err::create_dir_all(&data_dir)?;
 
         // Then unpack the tarball into it.
         let contents = &self.contents[..];
@@ -1351,7 +1354,7 @@ impl<'i> DownloadedRubygems<'i> {
                         ));
                     }
                     let UnpackedMetadata { hashed, gemspec } =
-                        unpack_metadata(&args.install_layout, &full_name, HashReader::new(entry))?;
+                        unpack_metadata(install_layout, &full_name, HashReader::new(entry))?;
                     found_gemspec = Some(gemspec);
                     metadata_hashed = Some(hashed);
                 }
@@ -1362,8 +1365,7 @@ impl<'i> DownloadedRubygems<'i> {
                             "two data.tar.gz found".to_owned(),
                         ));
                     }
-                    let unpacked =
-                        unpack_data_tar(&args.install_layout, &full_name, HashReader::new(entry))?;
+                    let unpacked = unpack_data_tar(&data_dir, HashReader::new(entry))?;
                     data_tar_unpacked = Some(unpacked);
                 }
                 "data.tar.gz.sig" | "metadata.gz.sig" | "checksums.yaml.gz.sig" => {
@@ -1392,7 +1394,12 @@ impl<'i> DownloadedRubygems<'i> {
                 checksums.validate_metadata(full_name.clone(), hashed)?
             }
 
-            checksums.validate_data_tar(full_name, &data_tar_unpacked.hashed)?
+            if let Err(validation_error) =
+                checksums.validate_data_tar(full_name, &data_tar_unpacked.hashed)
+            {
+                std::fs::remove_dir_all(data_dir).unwrap();
+                return Err(validation_error);
+            }
         }
 
         Ok(found_gemspec)
@@ -1752,23 +1759,15 @@ struct UnpackedData {
     hashed: Hashed,
 }
 
-/// Given the data.tar.gz from a gem, unpack its contents to the filesystem under
-/// BUNDLEPATH/gems/name-version/ENTRY
+/// Given the data.tar.gz from a gem, unpack its contents to the filesystem under data_dir
 /// Returns the checksum.
-fn unpack_data_tar<R>(
-    install_layout: &InstallLayout,
-    nameversion: &str,
-    data_tar_gz: HashReader<R>,
-) -> UnpackResult<UnpackedData>
+fn unpack_data_tar<R>(data_dir: &Path, data_tar_gz: HashReader<R>) -> UnpackResult<UnpackedData>
 where
     R: std::io::Read,
 {
-    // First, create the data's destination.
-    let data_dir: PathBuf = install_layout.gem_path(nameversion).into();
-    fs_err::create_dir_all(&data_dir)?;
     // Unpack it (with symlink fallback on Windows):
     let mut gem_data_archive = tar::Archive::new(GzDecoder::new(data_tar_gz));
-    crate::tar_utils::unpack_tar(&mut gem_data_archive, &data_dir)?;
+    crate::tar_utils::unpack_tar(&mut gem_data_archive, data_dir)?;
     // Get the HashReader back, so we can tell what the hash is for the contents of this tar.
     let h = gem_data_archive.into_inner().into_inner();
     let hashed = h.finalize();
