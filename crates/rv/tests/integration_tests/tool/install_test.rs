@@ -121,3 +121,32 @@ fn test_tool_install_writes_ruby_version_file() {
     info_endpoint_mock.assert();
     tarball_mock.assert();
 }
+
+#[test]
+fn test_tool_install_package_data_tar_gz_with_trailing_garbage() {
+    let mut test = RvTest::new();
+
+    let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
+    let ruby_mock = test.mock_ruby_download("4.0.0").create();
+
+    let info_endpoint_content = fs_err::read("tests/fixtures/info-alba-gem").unwrap();
+    let info_endpoint_mock = test
+        .mock_info_endpoint("alba", &info_endpoint_content)
+        .create();
+
+    let tarball_mock = test.mock_gem_download("alba-3.10.0.gem").create();
+
+    let output = test.tool_install(&["alba"]);
+    output.assert_failure();
+
+    // Unpacks fine, but fails to install because it has no executables
+    assert_eq!(
+        output.normalized_stderr(),
+        "Error: ToolError(ToolInstallError(NoExecutables))\n"
+    );
+
+    releases_mock.assert();
+    ruby_mock.assert();
+    info_endpoint_mock.assert();
+    tarball_mock.assert();
+}
