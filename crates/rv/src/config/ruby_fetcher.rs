@@ -401,6 +401,7 @@ mod tests {
                 major: 3,
                 minor: 3,
                 patch: 0,
+                patchlevel: None,
                 tiny: None,
                 prerelease: None,
             },

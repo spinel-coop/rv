@@ -107,7 +107,10 @@ fn test_parse_lobsters() {
     // https://github.com/lobsters/lobsters/blob/main/Gemfile.lock
     let input = include_str!("../tests/inputs/Gemfile.lobsters.lock");
     let output = must_parse(input);
-    assert_eq!(output.ruby_version.clone().unwrap().content(), "ruby 4.0.0");
+    assert_eq!(
+        output.ruby_version.unwrap().cruby_version.to_gemfile_lock(),
+        "ruby 4.0.0"
+    );
 }
 
 #[test]
@@ -115,6 +118,14 @@ fn test_parse_mastodon() {
     // Test parsing Mastodon's Gemfile.lock (has `ref:` field in GIT section)
     // https://github.com/mastodon/mastodon
     let input = include_str!("../tests/inputs/Gemfile.mastodon.lock");
+    must_parse(input);
+}
+
+#[test]
+fn test_parse_engine_versions() {
+    // Test parsing ruby-buildack fixture file for jruby (has jruby in RUBY VERSION section)
+    // https://github.com/cloudfoundry/ruby-buildpack/blob/936a4ca89a82ed5fb64644c49aa892a2026aa4c3/fixtures/default/sinatra_jruby/Gemfile.lock#L34
+    let input = include_str!("../tests/inputs/Gemfile.ruby-buildpack.lock");
     must_parse(input);
 }
 
