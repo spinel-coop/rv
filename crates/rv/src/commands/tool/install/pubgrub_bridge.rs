@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use pubgrub::{OfflineDependencyProvider, Ranges, SelectedDependencies};
+use rv_gem_types::requirement::ComparisonOperator;
 use rv_gem_types::{Platform, Version, VersionPlatform};
-use rv_lockfile::datatypes::SemverConstraint;
 
 use crate::gemserver::{GemName, GemRelease, VersionConstraint, VersionConstraints};
 
@@ -53,21 +53,21 @@ impl From<VersionConstraint> for Ranges<VersionPlatform> {
         };
 
         match constraint.constraint_type {
-            SemverConstraint::Exact => {
+            ComparisonOperator::Equal => {
                 Ranges::intersection(&Ranges::higher_than(min_v), &Ranges::lower_than(max_v))
             }
-            SemverConstraint::NotEqual => Ranges::union(
+            ComparisonOperator::NotEqual => Ranges::union(
                 &Ranges::strictly_lower_than(min_v),
                 &Ranges::strictly_higher_than(max_v),
             ),
 
             // These 4 are easy:
-            SemverConstraint::GreaterThan => Ranges::strictly_higher_than(max_v),
-            SemverConstraint::LessThan => Ranges::strictly_lower_than(min_v),
-            SemverConstraint::GreaterThanOrEqual => Ranges::higher_than(min_v),
-            SemverConstraint::LessThanOrEqual => Ranges::lower_than(max_v),
+            ComparisonOperator::GreaterThan => Ranges::strictly_higher_than(max_v),
+            ComparisonOperator::LessThan => Ranges::strictly_lower_than(min_v),
+            ComparisonOperator::GreaterThanOrEqual => Ranges::higher_than(min_v),
+            ComparisonOperator::LessThanOrEqual => Ranges::lower_than(max_v),
             // This one is weird, but at least it's encapsulated into a `bump` method.
-            SemverConstraint::Pessimistic => {
+            ComparisonOperator::Pessimistic => {
                 let bump_v = VersionPlatform {
                     version: Version::new(format!("{}.A", v.bump())).unwrap(),
                     platform: Platform::Ruby,
@@ -127,7 +127,7 @@ mod tests {
         #[expect(clippy::single_element_loop)] // Remove this 'expect' if you add another test.
         for Test { input, expected } in [Test {
             input: vec![VersionConstraint {
-                constraint_type: SemverConstraint::Pessimistic,
+                constraint_type: ComparisonOperator::Pessimistic,
                 version: "3.0.3".parse().unwrap(),
             }],
             expected: Ranges::intersection(

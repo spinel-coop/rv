@@ -64,7 +64,7 @@ Specification {
             requirement: Requirement {
                 constraints: [
                     VersionConstraint {
-                        operator: GreaterEqual,
+                        operator: GreaterThanOrEqual,
                         version: Version {
                             version: "1.0.0",
                             segments: [
@@ -121,7 +121,7 @@ Specification {
     required_ruby_version: Requirement {
         constraints: [
             VersionConstraint {
-                operator: GreaterEqual,
+                operator: GreaterThanOrEqual,
                 version: Version {
                     version: "2.7.0",
                     segments: [
@@ -142,7 +142,7 @@ Specification {
     required_rubygems_version: Requirement {
         constraints: [
             VersionConstraint {
-                operator: GreaterEqual,
+                operator: GreaterThanOrEqual,
                 version: Version {
                     version: "3.0.0",
                     segments: [

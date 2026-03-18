@@ -1,4 +1,5 @@
 use crate::Version;
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -35,7 +36,8 @@ impl VersionConstraint {
     }
 
     pub fn is_latest(&self) -> bool {
-        matches!(self.operator, ComparisonOperator::GreaterEqual) && self.version.version == "0"
+        matches!(self.operator, ComparisonOperator::GreaterThanOrEqual)
+            && self.version.version == "0"
     }
 }
 
@@ -57,15 +59,15 @@ impl TryFrom<&str> for VersionConstraint {
     }
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub enum ComparisonOperator {
     Equal,
     NotEqual,
-    Greater,
+    GreaterThan,
     #[default]
-    GreaterEqual,
-    Less,
-    LessEqual,
+    GreaterThanOrEqual,
+    LessThan,
+    LessThanOrEqual,
     Pessimistic,
 }
 
@@ -74,12 +76,12 @@ impl TryFrom<&str> for ComparisonOperator {
 
     fn try_from(str: &str) -> Result<Self, RequirementError> {
         match str {
-            s if s.starts_with(">=") => Ok(Self::GreaterEqual),
-            s if s.starts_with("<=") => Ok(Self::LessEqual),
+            s if s.starts_with(">=") => Ok(Self::GreaterThanOrEqual),
+            s if s.starts_with("<=") => Ok(Self::LessThanOrEqual),
             s if s.starts_with("!=") => Ok(Self::NotEqual),
             s if s.starts_with("~>") => Ok(Self::Pessimistic),
-            s if s.starts_with(">") => Ok(Self::Greater),
-            s if s.starts_with("<") => Ok(Self::Less),
+            s if s.starts_with(">") => Ok(Self::GreaterThan),
+            s if s.starts_with("<") => Ok(Self::LessThan),
             s if s.starts_with("!") => Err(RequirementError::InvalidOperator {
                 operator: str.chars().take(2).collect(),
             }),
@@ -88,15 +90,32 @@ impl TryFrom<&str> for ComparisonOperator {
     }
 }
 
+impl FromStr for ComparisonOperator {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "!=" => Ok(ComparisonOperator::NotEqual),
+            ">=" => Ok(ComparisonOperator::GreaterThanOrEqual),
+            "<=" => Ok(ComparisonOperator::LessThanOrEqual),
+            ">" => Ok(ComparisonOperator::GreaterThan),
+            "<" => Ok(ComparisonOperator::LessThan),
+            "~>" => Ok(ComparisonOperator::Pessimistic),
+            "=" => Ok(ComparisonOperator::Equal),
+            other => Err(other.to_owned()),
+        }
+    }
+}
+
 impl AsRef<str> for ComparisonOperator {
     fn as_ref(&self) -> &str {
         match self {
-            Self::GreaterEqual => ">=",
-            Self::LessEqual => "<=",
+            Self::GreaterThanOrEqual => ">=",
+            Self::LessThanOrEqual => "<=",
             Self::NotEqual => "!=",
             Self::Pessimistic => "~>",
-            Self::Greater => ">",
-            Self::Less => "<",
+            Self::GreaterThan => ">",
+            Self::LessThan => "<",
             Self::Equal => "=",
         }
     }
@@ -198,10 +217,10 @@ impl VersionConstraint {
         match self.operator {
             ComparisonOperator::Equal => version == &self.version,
             ComparisonOperator::NotEqual => version != &self.version,
-            ComparisonOperator::Greater => version > &self.version,
-            ComparisonOperator::GreaterEqual => version >= &self.version,
-            ComparisonOperator::Less => version < &self.version,
-            ComparisonOperator::LessEqual => version <= &self.version,
+            ComparisonOperator::GreaterThan => version > &self.version,
+            ComparisonOperator::GreaterThanOrEqual => version >= &self.version,
+            ComparisonOperator::LessThan => version < &self.version,
+            ComparisonOperator::LessThanOrEqual => version <= &self.version,
             ComparisonOperator::Pessimistic => {
                 version >= &self.version && version < &self.version.bump()
             }
@@ -299,7 +318,7 @@ mod tests {
         Requirement {
             constraints: [
                 VersionConstraint {
-                    operator: Greater,
+                    operator: GreaterThan,
                     version: Version {
                         version: "1.0",
                         segments: [
@@ -406,7 +425,7 @@ mod tests {
         assert_eq!(req.constraints.len(), 1);
         assert_eq!(
             req.constraints[0].operator,
-            ComparisonOperator::GreaterEqual
+            ComparisonOperator::GreaterThanOrEqual
         );
         assert_eq!(req.constraints[0].version, v("0"));
     }

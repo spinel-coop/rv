@@ -365,7 +365,7 @@ fn test_creole_0_5_0_dependency_prerelease() -> miette::Result<()> {
             requirement: Requirement {
                 constraints: [
                     VersionConstraint {
-                        operator: GreaterEqual,
+                        operator: GreaterThanOrEqual,
                         version: Version {
                             version: "0",
                             segments: [
@@ -384,7 +384,7 @@ fn test_creole_0_5_0_dependency_prerelease() -> miette::Result<()> {
             requirement: Requirement {
                 constraints: [
                     VersionConstraint {
-                        operator: GreaterEqual,
+                        operator: GreaterThanOrEqual,
                         version: Version {
                             version: "0",
                             segments: [

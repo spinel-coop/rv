@@ -1,6 +1,7 @@
 //! Most of the types in this module borrow a string from their input,
 //! so they have a lifetime 'i, which is short for 'input.
 
+use rv_gem_types::requirement::ComparisonOperator;
 use rv_ruby::version::RubyVersion;
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -244,7 +245,7 @@ impl std::fmt::Display for GemRange<'_> {
 /// A range of possible versions of a gem.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct GemRangeSemver<'i> {
-    pub semver_constraint: SemverConstraint,
+    pub semver_constraint: ComparisonOperator,
     pub version: &'i str,
 }
 
@@ -368,55 +369,6 @@ impl std::fmt::Display for ChecksumAlgorithm<'_> {
             Self::None => write!(f, ""),
             Self::Unknown(algo) => write!(f, "{algo}"),
             Self::SHA256 => write!(f, "sha256"),
-        }
-    }
-}
-
-/// Constrains the range of possible versions of a gem which could be selected.
-#[derive(Debug, Default, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Copy)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum SemverConstraint {
-    /// `=`
-    Exact,
-    /// `!=`
-    NotEqual,
-    /// `>`
-    GreaterThan,
-    /// `<`
-    LessThan,
-    /// `>=`
-    #[default]
-    GreaterThanOrEqual,
-    /// `<=`
-    LessThanOrEqual,
-    /// `~>`
-    Pessimistic,
-}
-
-impl std::fmt::Display for SemverConstraint {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Exact => {
-                write!(f, "=")
-            }
-            Self::NotEqual => {
-                write!(f, "!=")
-            }
-            Self::GreaterThan => {
-                write!(f, ">")
-            }
-            Self::LessThan => {
-                write!(f, "<")
-            }
-            Self::GreaterThanOrEqual => {
-                write!(f, ">=")
-            }
-            Self::LessThanOrEqual => {
-                write!(f, "<=")
-            }
-            Self::Pessimistic => {
-                write!(f, "~>")
-            }
         }
     }
 }

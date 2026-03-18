@@ -2991,7 +2991,7 @@
           "version_constraints": {
             "inner": [
               {
-                "constraint_type": "Exact",
+                "constraint_type": "Equal",
                 "version": {
                   "version": "0.6.0",
                   "segments": [
@@ -3060,7 +3060,7 @@
           "version_constraints": {
             "inner": [
               {
-                "constraint_type": "Exact",
+                "constraint_type": "Equal",
                 "version": {
                   "version": "0.6.0",
                   "segments": [
@@ -3147,7 +3147,7 @@
           "version_constraints": {
             "inner": [
               {
-                "constraint_type": "Exact",
+                "constraint_type": "Equal",
                 "version": {
                   "version": "0.6.0",
                   "segments": [
@@ -3234,7 +3234,7 @@
           "version_constraints": {
             "inner": [
               {
-                "constraint_type": "Exact",
+                "constraint_type": "Equal",
                 "version": {
                   "version": "0.6.0",
                   "segments": [
@@ -3318,7 +3318,7 @@
           "version_constraints": {
             "inner": [
               {
-                "constraint_type": "Exact",
+                "constraint_type": "Equal",
                 "version": {
                   "version": "0.6.0",
                   "segments": [
@@ -3387,7 +3387,7 @@
           "version_constraints": {
             "inner": [
               {
-                "constraint_type": "Exact",
+                "constraint_type": "Equal",
                 "version": {
                   "version": "0.6.0",
                   "segments": [

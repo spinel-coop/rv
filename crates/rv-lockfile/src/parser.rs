@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use crate::{ParseError, ParseErrors, datatypes::*};
 use miette::SourceSpan;
 use winnow::{
@@ -11,6 +9,7 @@ use winnow::{
     token::{take_until, take_while},
 };
 
+use rv_gem_types::requirement::ComparisonOperator;
 use rv_ruby::version::RubyVersion;
 
 const GIT: &str = "GIT";
@@ -231,37 +230,20 @@ fn parse_semver_constraints<'i>(i: &mut Input<'i>) -> Res<GemRangeSemver<'i>> {
     })
 }
 
-fn parse_semver_constraint<'i>(i: &mut Input<'i>) -> Res<SemverConstraint> {
+fn parse_semver_constraint<'i>(i: &mut Input<'i>) -> Res<ComparisonOperator> {
     // Order matters here somewhat,
     // e.g. must parse >= before > otherwise >= would never get parsed,
     // because > is a substring of >=.
     alt((
-        "!=".map(|_| SemverConstraint::NotEqual),
-        ">=".map(|_| SemverConstraint::GreaterThanOrEqual),
-        "<=".map(|_| SemverConstraint::LessThanOrEqual),
-        ">".map(|_| SemverConstraint::GreaterThan),
-        "<".map(|_| SemverConstraint::LessThan),
-        "~>".map(|_| SemverConstraint::Pessimistic),
-        "=".map(|_| SemverConstraint::Exact),
+        "!=".map(|_| ComparisonOperator::NotEqual),
+        ">=".map(|_| ComparisonOperator::GreaterThanOrEqual),
+        "<=".map(|_| ComparisonOperator::LessThanOrEqual),
+        ">".map(|_| ComparisonOperator::GreaterThan),
+        "<".map(|_| ComparisonOperator::LessThan),
+        "~>".map(|_| ComparisonOperator::Pessimistic),
+        "=".map(|_| ComparisonOperator::Equal),
     ))
     .parse_next(i)
-}
-
-impl FromStr for SemverConstraint {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "!=" => Ok(SemverConstraint::NotEqual),
-            ">=" => Ok(SemverConstraint::GreaterThanOrEqual),
-            "<=" => Ok(SemverConstraint::LessThanOrEqual),
-            ">" => Ok(SemverConstraint::GreaterThan),
-            "<" => Ok(SemverConstraint::LessThan),
-            "~>" => Ok(SemverConstraint::Pessimistic),
-            "=" => Ok(SemverConstraint::Exact),
-            other => Err(other.to_owned()),
-        }
-    }
 }
 
 fn parse_gem_name<'i>(i: &mut Input<'i>) -> Res<&'i str> {

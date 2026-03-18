@@ -93,7 +93,7 @@ Specification {
             requirement: Requirement {
                 constraints: [
                     VersionConstraint {
-                        operator: GreaterEqual,
+                        operator: GreaterThanOrEqual,
                         version: Version {
                             version: "1.5",
                             segments: [
@@ -107,7 +107,7 @@ Specification {
                         },
                     },
                     VersionConstraint {
-                        operator: Less,
+                        operator: LessThan,
                         version: Version {
                             version: "2.0",
                             segments: [
@@ -146,7 +146,7 @@ Specification {
                         },
                     },
                     VersionConstraint {
-                        operator: GreaterEqual,
+                        operator: GreaterThanOrEqual,
                         version: Version {
                             version: "7.0.4",
                             segments: [
@@ -207,7 +207,7 @@ Specification {
                         },
                     },
                     VersionConstraint {
-                        operator: GreaterEqual,
+                        operator: GreaterThanOrEqual,
                         version: Version {
                             version: "1.50.2",
                             segments: [

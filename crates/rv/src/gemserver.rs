@@ -1,8 +1,8 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use rv_gem_types::requirement::ComparisonOperator;
 use rv_gem_types::{Platform, VersionPlatform};
-use rv_lockfile::datatypes::SemverConstraint;
 use rv_version::Version;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
@@ -329,7 +329,7 @@ impl std::fmt::Debug for Metadata {
 
 #[derive(Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VersionConstraint {
-    pub constraint_type: SemverConstraint,
+    pub constraint_type: ComparisonOperator,
     pub version: Version,
 }
 
