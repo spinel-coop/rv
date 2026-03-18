@@ -154,11 +154,9 @@ pub(crate) async fn install(
     debug!("Querying all transitive dependencies");
     let mut transitive_deps = Default::default();
     transitive_dep_query::query_all_gem_deps(
-        config,
-        &mut transitive_deps,
         release_to_install.clone(),
-        &gem_name,
         &gemserver,
+        &mut transitive_deps,
         &ruby_to_use,
     )
     .await?;
