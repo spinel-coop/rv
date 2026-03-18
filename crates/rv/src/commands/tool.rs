@@ -1,3 +1,4 @@
+pub mod dir;
 pub mod install;
 pub mod list;
 pub mod run;
@@ -64,6 +65,8 @@ pub enum ToolCommand {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true, value_names = ["COMMAND", "ARGS"])]
         args: Vec<String>,
     },
+    #[command(about = "Show the path to the rv tools directory")]
+    Dir,
 }
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -76,6 +79,8 @@ pub enum Error {
     ToolUninstallError(#[from] tool::uninstall::Error),
     #[error(transparent)]
     ToolRunError(#[from] tool::run::Error),
+    #[error(transparent)]
+    ToolDirError(#[from] tool::dir::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -97,6 +102,7 @@ pub(crate) async fn tool(global_args: &GlobalArgs, tool_args: ToolArgs) -> Resul
             no_install,
             args,
         } => run::run(global_args, gem, gem_server, no_install, args).await?,
+        ToolCommand::Dir => dir::dir(global_args)?,
     };
 
     Ok(())
