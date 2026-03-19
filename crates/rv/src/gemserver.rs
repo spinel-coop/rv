@@ -196,7 +196,7 @@ impl GemRelease {
 
                     let version_constraint = constraints
                         .split('&')
-                        .map(VersionConstraint::from_str)
+                        .map(parse_version_constraint)
                         .collect::<ParseResult<Vec<_>>>()?;
                     Ok(Dep {
                         gem_name: gem_name.to_owned(),
@@ -241,7 +241,7 @@ fn parse_metadata(metadata: &str) -> ParseResult<Metadata> {
             "ruby" => {
                 out.ruby = v
                     .split('&')
-                    .map(VersionConstraint::from_str)
+                    .map(parse_version_constraint)
                     .collect::<ParseResult<Vec<_>>>()
                     .map_err(|err| GemReleaseParse::MetadataConstraintParse {
                         source: Box::new(err),
@@ -251,7 +251,7 @@ fn parse_metadata(metadata: &str) -> ParseResult<Metadata> {
             "rubygems" => {
                 out.rubygems = v
                     .split('&')
-                    .map(VersionConstraint::from_str)
+                    .map(parse_version_constraint)
                     .collect::<ParseResult<Vec<_>>>()
                     .map_err(|err| GemReleaseParse::MetadataConstraintParse {
                         source: Box::new(err),
@@ -267,6 +267,21 @@ fn parse_metadata(metadata: &str) -> ParseResult<Metadata> {
         }
     }
     Ok(out)
+}
+
+fn parse_version_constraint(constr: &str) -> ParseResult<VersionConstraint> {
+    if constr.is_empty() {
+        return Ok(VersionConstraint::default());
+    }
+
+    let (op, v) = constr
+        .split_once(' ')
+        .ok_or(GemReleaseParse::MissingSpace)?;
+
+    Ok(VersionConstraint {
+        constraint_type: op.parse().map_err(GemReleaseParse::UnknownSemverType)?,
+        version: v.parse().map_err(GemReleaseParse::InvalidVersion)?,
+    })
 }
 
 pub type GemName = String;
@@ -339,25 +354,6 @@ impl std::fmt::Debug for VersionConstraint {
     }
 }
 
-impl FromStr for VersionConstraint {
-    type Err = GemReleaseParse;
-
-    fn from_str(constr: &str) -> ParseResult<Self> {
-        if constr.is_empty() {
-            return Ok(VersionConstraint::default());
-        }
-
-        let (semver_constr, v) = constr
-            .split_once(' ')
-            .ok_or(GemReleaseParse::MissingSpace)?;
-        Ok(VersionConstraint {
-            constraint_type: semver_constr
-                .parse()
-                .map_err(GemReleaseParse::UnknownSemverType)?,
-            version: v.parse().map_err(GemReleaseParse::InvalidVersion)?,
-        })
-    }
-}
 #[cfg(test)]
 mod tests {
     use super::*;
