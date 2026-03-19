@@ -124,10 +124,10 @@ mod tests {
             .into_iter()
             .collect();
         out.sort();
-        let mut resolved_rails = String::new();
+        let mut resolved_nokogiri = String::new();
         for (k, v) in out {
-            resolved_rails.push_str(&format!("{k}: {v}\n"));
+            resolved_nokogiri.push_str(&format!("{k}: {v}\n"));
         }
-        insta::assert_snapshot!(resolved_rails);
+        insta::assert_snapshot!(resolved_nokogiri);
     }
 }
