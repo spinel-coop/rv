@@ -112,12 +112,12 @@ pub enum GemReleaseParse {
     UnknownSemverType(String),
     #[error("Unknown metadata key {key} in metadata field: {metadata}")]
     UnknownMetadataKey { key: String, metadata: String },
-    #[error("Invalid checksum in metadata field {metadata}: {source}")]
+    #[error("Invalid checksum in metadata field {metadata}")]
     InvalidChecksum {
         source: hex::FromHexError,
         metadata: String,
     },
-    #[error("Invalid constraint in metadata field {metadata}: {source}")]
+    #[error("Invalid constraint in metadata field {metadata}")]
     MetadataConstraintParse {
         source: Box<GemReleaseParse>,
         metadata: String,
