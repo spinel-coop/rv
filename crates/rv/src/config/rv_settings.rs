@@ -3,12 +3,16 @@ use config::{
     Config as ConfigRs, Environment, File, FileStoredFormat, Format, Map, Value, ValueKind,
 };
 
-use owo_colors::OwoColorize;
-
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error("Multiple config files found: {0:?}")]
     MultipleConfigFiles(Vec<String>),
+
+    #[error("Error building configuration: {0}")]
+    BuildError(String),
+
+    #[error("Failed to deserialize configuration: {0}")]
+    DeserializationError(String),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -132,22 +136,14 @@ impl RvSettings {
         let s = match builder.build() {
             Ok(config) => config,
             Err(e) => {
-                eprintln!("{}: {}", "Error".red(), e);
-
-                std::process::exit(1);
+                return Err(Error::BuildError(format!("{}", e)));
             }
         };
 
         let settings: RvSettings = match s.try_deserialize() {
             Ok(settings) => settings,
             Err(e) => {
-                eprintln!(
-                    "{}: Failed to deserialize configuration: {}",
-                    "Error".red(),
-                    e
-                );
-
-                std::process::exit(1);
+                return Err(Error::DeserializationError(format!("{}", e)));
             }
         };
 
