@@ -158,10 +158,7 @@ fn test_ci_respects_rv_setting_gem_home() {
 
     let output = test.ci(&[]);
     output.assert_success();
-    output.assert_stdout_contains(&format!(
-        "1 gems installed to {}/ruby/4.0.0",
-        temp_dir.path()
-    ));
+    output.assert_stdout_contains(&format!("1 gems installed to {}/ruby/4.0.0", install_path));
     mock.assert();
 }
 
