@@ -13,6 +13,9 @@ pub enum Error {
 
     #[error("Failed to deserialize configuration: {0}")]
     DeserializationError(String),
+
+    #[error("{} is not a valid value for {}", value, setting)]
+    SettingsValidationError { value: String, setting: String },
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -20,6 +23,13 @@ type Result<T> = miette::Result<T, Error>;
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, Default)]
 pub struct RvSettings {
     pub install_path: Option<String>,
+
+    #[serde(default = "default_update_mode")]
+    pub update_mode: String,
+}
+
+fn default_update_mode() -> String {
+    "install".to_string()
 }
 
 #[derive(Debug, Clone)]
@@ -43,7 +53,7 @@ impl Format for RvSettingsFormat {
             .children()
             .ok_or("Missing children in 'rv' node")?;
 
-        const ALLOWED_KEYS: &[&str] = &["install-path"];
+        const ALLOWED_KEYS: &[&str] = &["install-path", "update-mode"];
 
         let mut map = Map::new();
 
@@ -148,6 +158,18 @@ impl RvSettings {
         };
 
         Ok(settings)
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        const VALID_UPDATE_MODES: &[&str] = &["none", "warning", "install"];
+        if !VALID_UPDATE_MODES.contains(&self.update_mode.as_str()) {
+            return Err(Error::SettingsValidationError {
+                value: self.update_mode.clone(),
+                setting: "update_mode".to_string(),
+            });
+        }
+
+        Ok(())
     }
 
     pub fn install_path_as_utf8pathbuf(&self) -> Option<Utf8PathBuf> {

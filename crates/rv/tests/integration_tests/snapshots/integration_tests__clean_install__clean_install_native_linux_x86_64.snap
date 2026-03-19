@@ -1,5 +1,5 @@
 ---
-source: crates/rv/tests/integration_tests/ci.rs
+source: crates/rv/tests/integration_tests/clean_install.rs
 expression: files_sorted
 ---
 ./Gemfile
@@ -138,3 +138,4 @@ expression: files_sorted
 ./app/ruby/4.0.0/gems/ffi-1.17.2-x86_64-linux-gnu/sig/ffi/struct_layout_builder.rbs
 ./app/ruby/4.0.0/gems/ffi-1.17.2-x86_64-linux-gnu/sig/ffi/type.rbs
 ./app/ruby/4.0.0/specifications/ffi-1.17.2-x86_64-linux-gnu.gemspec
+./home/.config/rv/rv_last_update_check

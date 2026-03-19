@@ -19,6 +19,7 @@ pub mod progress;
 pub mod script_metadata;
 pub mod tar_utils;
 pub mod update;
+pub mod utils;
 
 use crate::commands::cache::{CacheCommandArgs, cache};
 use crate::commands::clean_install::{CleanInstallArgs, ci};
@@ -287,7 +288,7 @@ async fn main_inner() -> Result<()> {
 
     reg.init();
 
-    update_if_needed().await;
+    update_if_needed(&cli.global_args(), &cli.command).await;
 
     run_cmd(&cli.global_args(), cli.command).await
 }

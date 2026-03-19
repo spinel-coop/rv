@@ -1,7 +1,7 @@
 use axoupdater::AxoUpdater;
 use clap::{Args, Subcommand};
 
-use crate::GlobalArgs;
+use crate::{GlobalArgs, utils::is_homebrew_install};
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -37,7 +37,7 @@ pub(crate) async fn self_cmd(_global_args: &GlobalArgs, args: SelfArgs) -> Resul
 }
 
 pub(crate) async fn update() -> Result<()> {
-    if homebrew_install()? {
+    if is_homebrew_install() {
         println!(
             "Your copy of `rv` was installed via Homebrew. Run `brew upgrade rv` to update it."
         );
@@ -64,15 +64,4 @@ pub(crate) async fn update() -> Result<()> {
 
 pub(crate) fn version() {
     println!("rv {}", env!("CARGO_PKG_VERSION"));
-}
-
-fn homebrew_install() -> Result<bool> {
-    if cfg!(target_family = "windows") {
-        return Ok(false);
-    }
-
-    let current_exe = rv_dirs::canonicalize_utf8(rv_dirs::current_exe()?)?;
-
-    Ok(current_exe.starts_with("/usr/local/Cellar")
-        || current_exe.starts_with("/opt/homebrew/Cellar"))
 }

@@ -1,13 +1,33 @@
+use crate::utils::is_homebrew_install;
+use crate::{Commands, GlobalArgs, config::Config};
 use axoupdater::AxoUpdater;
 use rv_dirs::user_config_dir;
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::debug;
 
-const UPDATE_CHECK_FILENAME: &str = "last_update_check";
+const UPDATE_CHECK_FILENAME: &str = "rv_last_update_check";
 const CHECK_INTERVAL_SECS: u64 = 60 * 60; // 1 hour
 
-pub async fn update_if_needed() {
+pub(crate) async fn update_if_needed(global_args: &GlobalArgs, command: &Commands) {
+    if let Commands::Shell(_) = command {
+        return;
+    }
+
+    let Ok(config) = &Config::with_settings(global_args, None) else {
+        return;
+    };
+
+    if config.rv_settings.update_mode == "none" {
+        return;
+    }
+
+    // Check if installed via Homebrew
+    if is_homebrew_install() {
+        debug!("Detected Homebrew installation, skipping auto update.");
+        return;
+    }
+
     let config_dir = user_config_dir();
 
     fs_err::create_dir_all(config_dir.clone()).unwrap();
@@ -41,15 +61,29 @@ pub async fn update_if_needed() {
     fs::write(&update_timestamp_file, now_secs.to_string()).unwrap();
 
     let mut updater = AxoUpdater::new_for("rv");
-    updater.load_receipt().is_err() || !updater.check_receipt_is_for_this_executable().unwrap();
+
+    if updater.load_receipt().is_err() || !updater.check_receipt_is_for_this_executable().unwrap() {
+        debug!("Update receipt is invalid or not for this executable, skipping update.");
+        return;
+    }
 
     if updater.is_update_needed().await.unwrap() {
-        debug!("Update needed. rv will be updated!");
-        match updater.run().await {
-            Ok(_) => {
-                debug!("Successfully updated")
+        debug!("Update needed.");
+        if config.rv_settings.update_mode == "warning" {
+            println!("⚠️ There is a new version of `rv`. Please update using `rv self update`.");
+        } else {
+            println!("⬆️ Installing new version of `rv`...");
+            match updater.run().await {
+                Ok(r) => {
+                    if let Some(result) = r {
+                        println!("✅ `rv` {} installed!", result.new_version);
+                    }
+                    debug!("Successfully updated");
+                }
+                Err(e) => {
+                    debug!("Update failed: {:?}", e);
+                }
             }
-            Err(_) => debug!("Update failed"),
         }
     } else {
         debug!("No update needed");
