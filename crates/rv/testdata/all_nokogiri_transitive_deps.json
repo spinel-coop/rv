@@ -2359,8 +2359,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -2484,8 +2484,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -2591,8 +2591,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -2660,8 +2660,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -2747,8 +2747,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -2834,8 +2834,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -2918,8 +2918,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -2987,8 +2987,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Equal",
@@ -3056,8 +3056,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Equal",
@@ -3143,8 +3143,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Equal",
@@ -3230,8 +3230,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Equal",
@@ -3314,8 +3314,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Equal",
@@ -3383,8 +3383,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Equal",
@@ -3449,8 +3449,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -3518,8 +3518,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -3584,8 +3584,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -3653,8 +3653,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -3722,8 +3722,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -3791,8 +3791,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -3881,8 +3881,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -3971,8 +3971,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -4040,8 +4040,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile",
-          "version_constraints": {
+          "name": "mini_portile",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -4109,8 +4109,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -4196,8 +4196,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -4268,8 +4268,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -4340,8 +4340,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -4427,8 +4427,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -4514,8 +4514,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -4586,8 +4586,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -4610,8 +4610,8 @@
           }
         },
         {
-          "gem_name": "pkg-config",
-          "version_constraints": {
+          "name": "pkg-config",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -4694,8 +4694,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -4718,8 +4718,8 @@
           }
         },
         {
-          "gem_name": "pkg-config",
-          "version_constraints": {
+          "name": "pkg-config",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -4787,8 +4787,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -4853,8 +4853,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -4922,8 +4922,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -4988,8 +4988,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -5054,8 +5054,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -5120,8 +5120,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -5186,8 +5186,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -5252,8 +5252,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -5318,8 +5318,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -5384,8 +5384,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -5450,8 +5450,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -5519,8 +5519,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -5603,8 +5603,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -5669,8 +5669,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -5738,8 +5738,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -5822,8 +5822,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -5888,8 +5888,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -5954,8 +5954,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -6020,8 +6020,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -6086,8 +6086,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -6152,8 +6152,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -6218,8 +6218,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -6284,8 +6284,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -6353,8 +6353,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -6437,8 +6437,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -6503,8 +6503,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -6572,8 +6572,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -6656,8 +6656,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -6725,8 +6725,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -6818,8 +6818,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -6916,8 +6916,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -6940,8 +6940,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -7027,8 +7027,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -7104,8 +7104,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -7128,8 +7128,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -7197,8 +7197,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -7274,8 +7274,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -7298,8 +7298,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -7367,8 +7367,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -7444,8 +7444,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -7468,8 +7468,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -7537,8 +7537,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -7614,8 +7614,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -7638,8 +7638,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -7707,8 +7707,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -7784,8 +7784,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -7808,8 +7808,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -7877,8 +7877,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -7954,8 +7954,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -7978,8 +7978,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -8047,8 +8047,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -8124,8 +8124,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -8148,8 +8148,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -8217,8 +8217,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -8294,8 +8294,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -8318,8 +8318,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -8390,8 +8390,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -8488,8 +8488,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -8512,8 +8512,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -8599,8 +8599,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -8676,8 +8676,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -8700,8 +8700,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -8769,8 +8769,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -8846,8 +8846,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -8870,8 +8870,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -8939,8 +8939,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -9016,8 +9016,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -9040,8 +9040,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -9109,8 +9109,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -9186,8 +9186,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -9210,8 +9210,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -9279,8 +9279,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -9356,8 +9356,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -9380,8 +9380,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -9449,8 +9449,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -9526,8 +9526,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -9550,8 +9550,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -9619,8 +9619,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -9696,8 +9696,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -9720,8 +9720,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -9789,8 +9789,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -9866,8 +9866,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -9890,8 +9890,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -9959,8 +9959,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -10036,8 +10036,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -10060,8 +10060,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -10129,8 +10129,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -10206,8 +10206,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -10230,8 +10230,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -10299,8 +10299,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -10376,8 +10376,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -10400,8 +10400,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -10469,8 +10469,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -10546,8 +10546,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -10570,8 +10570,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -10639,8 +10639,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -10716,8 +10716,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -10740,8 +10740,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -10809,8 +10809,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -10886,8 +10886,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -10910,8 +10910,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -10979,8 +10979,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -11056,8 +11056,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -11080,8 +11080,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -11149,8 +11149,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -11226,8 +11226,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -11250,8 +11250,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -11319,8 +11319,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -11396,8 +11396,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -11420,8 +11420,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -11492,8 +11492,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -11590,8 +11590,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -11614,8 +11614,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -11695,8 +11695,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -11719,8 +11719,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -11788,8 +11788,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -11871,8 +11871,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -11948,8 +11948,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -11972,8 +11972,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -12041,8 +12041,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -12118,8 +12118,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -12142,8 +12142,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -12211,8 +12211,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -12288,8 +12288,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -12312,8 +12312,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -12381,8 +12381,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -12458,8 +12458,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -12482,8 +12482,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -12551,8 +12551,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -12628,8 +12628,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -12652,8 +12652,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -12721,8 +12721,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -12798,8 +12798,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -12822,8 +12822,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -12891,8 +12891,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -12968,8 +12968,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -12992,8 +12992,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -13061,8 +13061,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -13138,8 +13138,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -13162,8 +13162,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -13231,8 +13231,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -13308,8 +13308,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -13332,8 +13332,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -13401,8 +13401,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -13478,8 +13478,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -13502,8 +13502,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -13571,8 +13571,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -13648,8 +13648,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -13672,8 +13672,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -13744,8 +13744,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -13842,8 +13842,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -13866,8 +13866,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -13953,8 +13953,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -14030,8 +14030,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -14054,8 +14054,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -14123,8 +14123,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -14200,8 +14200,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -14224,8 +14224,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -14293,8 +14293,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -14370,8 +14370,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -14394,8 +14394,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -14463,8 +14463,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -14540,8 +14540,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -14564,8 +14564,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -14633,8 +14633,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -14710,8 +14710,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -14734,8 +14734,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -14803,8 +14803,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -14880,8 +14880,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -14904,8 +14904,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -14973,8 +14973,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -15050,8 +15050,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -15074,8 +15074,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -15143,8 +15143,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -15220,8 +15220,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -15244,8 +15244,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -15313,8 +15313,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -15390,8 +15390,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -15414,8 +15414,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -15483,8 +15483,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -15560,8 +15560,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -15584,8 +15584,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -15653,8 +15653,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -15730,8 +15730,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -15754,8 +15754,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -15823,8 +15823,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -15900,8 +15900,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -15924,8 +15924,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -15993,8 +15993,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -16070,8 +16070,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -16094,8 +16094,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -16163,8 +16163,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -16240,8 +16240,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -16264,8 +16264,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -16336,8 +16336,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -16434,8 +16434,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -16458,8 +16458,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -16545,8 +16545,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -16622,8 +16622,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -16646,8 +16646,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -16715,8 +16715,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -16792,8 +16792,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -16816,8 +16816,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -16885,8 +16885,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -16962,8 +16962,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -16986,8 +16986,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -17055,8 +17055,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -17132,8 +17132,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -17156,8 +17156,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -17225,8 +17225,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -17302,8 +17302,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -17326,8 +17326,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -17395,8 +17395,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -17472,8 +17472,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -17496,8 +17496,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -17565,8 +17565,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -17642,8 +17642,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -17666,8 +17666,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -17735,8 +17735,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -17812,8 +17812,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -17836,8 +17836,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -17905,8 +17905,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -17982,8 +17982,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -18006,8 +18006,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -18075,8 +18075,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -18152,8 +18152,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -18176,8 +18176,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -18245,8 +18245,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -18322,8 +18322,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -18346,8 +18346,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -18415,8 +18415,8 @@
       },
       "deps": [
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -18492,8 +18492,8 @@
       "platform": "Ruby",
       "deps": [
         {
-          "gem_name": "mini_portile2",
-          "version_constraints": {
+          "name": "mini_portile2",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",
@@ -18516,8 +18516,8 @@
           }
         },
         {
-          "gem_name": "racc",
-          "version_constraints": {
+          "name": "racc",
+          "requirement": {
             "constraints": [
               {
                 "operator": "Pessimistic",

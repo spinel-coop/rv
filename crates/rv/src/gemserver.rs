@@ -1,8 +1,8 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use rv_gem_types::requirement::{Requirement, VersionConstraint};
-use rv_gem_types::{Platform, VersionPlatform};
+use rv_gem_types::requirement::VersionConstraint;
+use rv_gem_types::{Platform, ProjectDependency, VersionPlatform};
 use rv_version::Version;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
@@ -153,7 +153,7 @@ pub fn parse_release_from_body(index_body: &str) -> ParseResult<Vec<GemRelease>>
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GemRelease {
     pub version_platform: VersionPlatform,
-    pub deps: Vec<Dep>,
+    pub deps: Vec<ProjectDependency>,
     pub metadata: Metadata,
 }
 
@@ -191,16 +191,16 @@ impl GemRelease {
         } else {
             deps.split(',')
                 .map(|dep| {
-                    let (gem_name, constraints) =
+                    let (name, constraints) =
                         dep.split_once(':').ok_or(GemReleaseParse::MissingColon)?;
 
                     let version_constraint = constraints
                         .split('&')
                         .map(parse_version_constraint)
                         .collect::<ParseResult<Vec<_>>>()?;
-                    Ok(Dep {
-                        gem_name: gem_name.to_owned(),
-                        version_constraints: version_constraint.into(),
+                    Ok(ProjectDependency {
+                        name: name.to_owned(),
+                        requirement: version_constraint.into(),
                     })
                 })
                 .collect::<ParseResult<Vec<_>>>()?
@@ -285,20 +285,6 @@ fn parse_version_constraint(constr: &str) -> ParseResult<VersionConstraint> {
 }
 
 pub type GemName = String;
-
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Dep {
-    /// What gem this dependency uses.
-    pub gem_name: GemName,
-    /// Constraints on what version of the gem can be used.
-    pub version_constraints: Requirement,
-}
-
-impl std::fmt::Debug for Dep {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}@{:?}", self.gem_name, self.version_constraints)
-    }
-}
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde_as]

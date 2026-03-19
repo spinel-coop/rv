@@ -31,7 +31,7 @@ fn all_dependencies(gem_info: HashMap<GemName, Vec<GemRelease>>) -> DepProvider 
                 gem_release
                     .deps
                     .into_iter()
-                    .map(|dep| (dep.gem_name, dep.version_constraints.into())),
+                    .map(|dep| (dep.name, dep.requirement.into())),
             );
         }
     }
@@ -91,7 +91,7 @@ mod tests {
         pub struct PrevGemRelease {
             pub version: Version,
             pub platform: Platform,
-            pub deps: Vec<crate::gemserver::Dep>,
+            pub deps: Vec<rv_gem_types::ProjectDependency>,
             pub metadata: crate::gemserver::Metadata,
         }
 
