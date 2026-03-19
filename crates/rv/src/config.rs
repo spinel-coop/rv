@@ -244,8 +244,8 @@ impl Config<'_> {
     }
 
     pub fn gem_home(&self, ruby: &Ruby) -> Utf8PathBuf {
-        if let Some(install_path) = &self.rv_settings.install_path {
-            return Utf8PathBuf::from(install_path).join(ruby.gem_scope());
+        if let Some(install_path) = &self.rv_settings.install_path_as_utf8pathbuf() {
+            return install_path.join(ruby.gem_scope());
         }
 
         if let Some(path) = self.bundler_settings.path() {

@@ -153,6 +153,12 @@ impl RvSettings {
 
         Ok(settings)
     }
+
+    pub fn install_path_as_utf8pathbuf(&self) -> Option<Utf8PathBuf> {
+        self.install_path
+            .as_ref()
+            .map(|s| Utf8PathBuf::from(s.as_str()))
+    }
 }
 
 #[cfg(test)]

@@ -136,13 +136,14 @@ fn test_ci_respects_rv_setting_gem_home() {
     std::fs::create_dir_all(project_dir.as_path()).unwrap();
     let temp_dir = Utf8TempDir::new().expect("Failed to create temporary directory");
 
+    let install_path = temp_dir.path().as_str().replace('\\', "/");
     let config_content = format!(
         r#"
-rv{{
-  install-path "{}"
-}}
-"#,
-        temp_dir.path()
+	rv{{
+	  install-path "{}"
+	}}
+	"#,
+        install_path
     );
 
     std::fs::write(project_dir.join("rv.kdl"), config_content).expect("Failed to write config");
