@@ -753,7 +753,8 @@ PATH
             "1.0.pre.rc.1",
         ] {
             let i = LocatingSlice::new(input);
-            let _out = parse_version.parse(i).unwrap();
+            let result = parse_version.parse(i);
+            assert!(result.is_ok(), "{:?}", result);
         }
     }
 }
