@@ -198,7 +198,7 @@ impl GemRelease {
                         .split('&')
                         .map(VersionConstraint::from_str)
                         .collect::<ParseResult<Vec<_>>>()?;
-                    Ok::<_, GemReleaseParse>(Dep {
+                    Ok(Dep {
                         gem_name: gem_name.to_owned(),
                         version_constraints: version_constraint.into(),
                     })
@@ -346,7 +346,7 @@ impl FromStr for VersionConstraint {
         let (semver_constr, v) = constr
             .split_once(' ')
             .ok_or(GemReleaseParse::MissingSpace)?;
-        Ok::<_, GemReleaseParse>(VersionConstraint {
+        Ok(VersionConstraint {
             constraint_type: semver_constr
                 .parse()
                 .map_err(GemReleaseParse::UnknownSemverType)?,
