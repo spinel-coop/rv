@@ -1,6 +1,7 @@
 //! Most of the types in this module borrow a string from their input,
 //! so they have a lifetime 'i, which is short for 'input.
 
+use rv_gem_types::ProjectDependency;
 use rv_gem_types::requirement::VersionConstraint;
 use rv_ruby::version::RubyVersion;
 use rv_version::Version;
@@ -298,7 +299,7 @@ impl std::fmt::Display for BundledWithSection {
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Spec<'i> {
     pub gem_version: GemVersion<'i>,
-    pub deps: Vec<GemRange<'i>>,
+    pub deps: Vec<ProjectDependency>,
 }
 
 impl std::fmt::Display for Spec<'_> {

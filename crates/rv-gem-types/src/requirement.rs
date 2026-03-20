@@ -16,7 +16,7 @@ pub enum RequirementError {
     Malformed { requirement: String },
 }
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct Requirement {
     pub constraints: Vec<VersionConstraint>,
 }

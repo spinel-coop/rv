@@ -9,7 +9,8 @@ use winnow::{
     token::{take_until, take_while},
 };
 
-use rv_gem_types::requirement::{ComparisonOperator, VersionConstraint};
+use rv_gem_types::ProjectDependency;
+use rv_gem_types::requirement::{ComparisonOperator, Requirement, VersionConstraint};
 use rv_ruby::version::RubyVersion;
 use rv_version::{Version, VersionSegment};
 
@@ -195,11 +196,13 @@ fn parse_spec_no_delimiters<'i>(i: &mut Input<'i>) -> Res<Spec<'i>> {
     Ok(Spec { gem_version, deps })
 }
 
-fn parse_spec_dep<'i>(i: &mut Input<'i>) -> Res<GemRange<'i>> {
+fn parse_spec_dep<'i>(i: &mut Input<'i>) -> Res<ProjectDependency> {
     "      ".parse_next(i)?;
-    let out = parse_dependency.parse_next(i)?;
+    let name = parse_gem_name.parse_next(i)?.to_string();
+    let constraints = opt(spec_dep_semver).parse_next(i)?.unwrap_or(vec![]);
+    let requirement = Requirement::from(constraints);
     line_ending.parse_next(i)?;
-    Ok(out)
+    Ok(ProjectDependency { name, requirement })
 }
 
 fn parse_dependency<'i>(i: &mut Input<'i>) -> Res<GemRange<'i>> {
