@@ -567,11 +567,10 @@ GEM
             "      sorbet-runtime\n",
             "      sorbet-runtime (>= 0.5.9204)\n",
         ] {
+            let original_input = input;
             let mut input = LocatingSlice::new(input);
             let out = parse_spec_dep.parse_next(&mut input).unwrap();
-            println!("{out:#?}");
-            println!("Remainder:");
-            println!("{input}");
+            assert_eq!(original_input.trim(), out.to_string());
         }
     }
 
@@ -585,7 +584,7 @@ GEM
 
     #[test]
     fn test_git_section() {
-        for (test_num, input) in [
+        for input in [
             "GIT
   remote: git://github.com/libgit2/rugged.git
   revision: 34a492ec7c5165824f39d8027d73712b0346aac2
@@ -628,15 +627,10 @@ GEM
       nokogiri (>= 1.15.7, != 1.16.7, != 1.16.6, != 1.16.5, != 1.16.4, != 1.16.3, != 1.16.2, != 1.16.1, != 1.16.0.rc1, != 1.16.0)
       tilt (~> 2)
 ",
-        ]
-        .into_iter()
-        .enumerate()
-        {
+        ] {
             let i = LocatingSlice::new(input);
             let git_section = parse_git_section.parse(i).unwrap();
-            if test_num == 3 {
-                println!("{git_section:#?}");
-            }
+            assert_eq!(input, git_section.to_string());
         }
     }
 
