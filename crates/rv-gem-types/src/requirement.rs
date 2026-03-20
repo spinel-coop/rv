@@ -1,6 +1,7 @@
 use crate::{Platform, Version, VersionPlatform};
 use pubgrub::Ranges;
 use serde::{Deserialize, Serialize};
+use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -62,7 +63,7 @@ impl From<Requirement> for Ranges<VersionPlatform> {
 }
 
 // Defaults to ">= 0"
-#[derive(Default, Clone, Serialize, Deserialize)]
+#[derive(Default, Clone, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct VersionConstraint {
     pub operator: ComparisonOperator,
     pub version: Version,
@@ -282,6 +283,13 @@ impl PartialEq for VersionConstraint {
 }
 
 impl Eq for VersionConstraint {}
+
+impl Hash for VersionConstraint {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.operator.hash(state);
+        self.version.version.hash(state);
+    }
+}
 
 impl VersionConstraint {
     pub fn new(operator: ComparisonOperator, version: Version) -> Self {

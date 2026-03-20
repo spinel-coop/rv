@@ -1,7 +1,7 @@
 //! Most of the types in this module borrow a string from their input,
 //! so they have a lifetime 'i, which is short for 'input.
 
-use rv_gem_types::requirement::ComparisonOperator;
+use rv_gem_types::requirement::VersionConstraint;
 use rv_ruby::version::RubyVersion;
 use rv_version::Version;
 
@@ -215,7 +215,7 @@ impl std::fmt::Display for GemVersion<'_> {
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct GemRange<'i> {
     pub name: &'i str,
-    pub semver: Option<Vec<GemRangeSemver>>,
+    pub semver: Option<Vec<VersionConstraint>>,
     /// Dependencies specified with a source other than the main Rubygems index (e.g., git dependencies, path-based, dependencies) have a ! which means they are "pinned" to that source.
     /// According to <https://stackoverflow.com/questions/7517524/understanding-the-gemfile-lock-file>.
     pub nonstandard: bool,
@@ -240,19 +240,6 @@ impl std::fmt::Display for GemRange<'_> {
         }
 
         Ok(())
-    }
-}
-
-/// A range of possible versions of a gem.
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct GemRangeSemver {
-    pub semver_constraint: ComparisonOperator,
-    pub version: Version,
-}
-
-impl std::fmt::Display for GemRangeSemver {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {}", self.semver_constraint, self.version)
     }
 }
 

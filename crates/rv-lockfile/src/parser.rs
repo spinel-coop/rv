@@ -9,7 +9,7 @@ use winnow::{
     token::{take_until, take_while},
 };
 
-use rv_gem_types::requirement::ComparisonOperator;
+use rv_gem_types::requirement::{ComparisonOperator, VersionConstraint};
 use rv_ruby::version::RubyVersion;
 use rv_version::{Version, VersionSegment};
 
@@ -213,25 +213,22 @@ fn parse_dependency<'i>(i: &mut Input<'i>) -> Res<GemRange<'i>> {
     })
 }
 
-fn spec_dep_semver<'i>(i: &mut Input<'i>) -> Res<Vec<GemRangeSemver>> {
+fn spec_dep_semver<'i>(i: &mut Input<'i>) -> Res<Vec<VersionConstraint>> {
     space1.parse_next(i)?;
     '('.parse_next(i)?;
-    let out = separated(1.., parse_semver_constraints, terminated(',', space0)).parse_next(i)?;
+    let out = separated(1.., parse_version_constraint, terminated(',', space0)).parse_next(i)?;
     ')'.parse_next(i)?;
     Ok(out)
 }
 
-fn parse_semver_constraints<'i>(i: &mut Input<'i>) -> Res<GemRangeSemver> {
-    let semver_constraint = parse_semver_constraint.parse_next(i)?;
+fn parse_version_constraint<'i>(i: &mut Input<'i>) -> Res<VersionConstraint> {
+    let operator = parse_operator.parse_next(i)?;
     space1.parse_next(i)?;
     let version = parse_version.parse_next(i)?;
-    Ok(GemRangeSemver {
-        semver_constraint,
-        version,
-    })
+    Ok(VersionConstraint { operator, version })
 }
 
-fn parse_semver_constraint<'i>(i: &mut Input<'i>) -> Res<ComparisonOperator> {
+fn parse_operator<'i>(i: &mut Input<'i>) -> Res<ComparisonOperator> {
     // Order matters here somewhat,
     // e.g. must parse >= before > otherwise >= would never get parsed,
     // because > is a substring of >=.
