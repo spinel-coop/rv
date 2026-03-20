@@ -3,6 +3,7 @@
 
 use rv_gem_types::requirement::ComparisonOperator;
 use rv_ruby::version::RubyVersion;
+use rv_version::Version;
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct GemfileDotLock<'i> {
@@ -25,7 +26,7 @@ pub struct GemfileDotLock<'i> {
     pub ruby_version: Option<RubyVersionSection>,
 
     /// Which version of Bundler this lockfile was built with.
-    pub bundled_with: Option<BundledWithSection<'i>>,
+    pub bundled_with: Option<BundledWithSection>,
 
     /// Checksums for each dependency.
     pub checksums: Option<Vec<Checksum<'i>>>,
@@ -214,7 +215,7 @@ impl std::fmt::Display for GemVersion<'_> {
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct GemRange<'i> {
     pub name: &'i str,
-    pub semver: Option<Vec<GemRangeSemver<'i>>>,
+    pub semver: Option<Vec<GemRangeSemver>>,
     /// Dependencies specified with a source other than the main Rubygems index (e.g., git dependencies, path-based, dependencies) have a ! which means they are "pinned" to that source.
     /// According to <https://stackoverflow.com/questions/7517524/understanding-the-gemfile-lock-file>.
     pub nonstandard: bool,
@@ -244,12 +245,12 @@ impl std::fmt::Display for GemRange<'_> {
 
 /// A range of possible versions of a gem.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct GemRangeSemver<'i> {
+pub struct GemRangeSemver {
     pub semver_constraint: ComparisonOperator,
-    pub version: &'i str,
+    pub version: Version,
 }
 
-impl std::fmt::Display for GemRangeSemver<'_> {
+impl std::fmt::Display for GemRangeSemver {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} {}", self.semver_constraint, self.version)
     }
@@ -295,12 +296,12 @@ impl std::fmt::Display for RubyVersionSection {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct BundledWithSection<'i> {
+pub struct BundledWithSection {
     pub indentation: LockfileIndentation,
-    pub bundler_version: &'i str,
+    pub bundler_version: Version,
 }
 
-impl std::fmt::Display for BundledWithSection<'_> {
+impl std::fmt::Display for BundledWithSection {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}{}", self.indentation, self.bundler_version)
     }

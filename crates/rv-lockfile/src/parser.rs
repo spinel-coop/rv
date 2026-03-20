@@ -11,6 +11,7 @@ use winnow::{
 
 use rv_gem_types::requirement::ComparisonOperator;
 use rv_ruby::version::RubyVersion;
+use rv_version::{Version, VersionSegment};
 
 const GIT: &str = "GIT";
 const GEM: &str = "GEM";
@@ -33,7 +34,7 @@ enum Section<'i> {
     Platforms(Vec<&'i str>),
     Dependencies(Vec<GemRange<'i>>),
     RubyVersion(RubyVersionSection),
-    BundledWith(BundledWithSection<'i>),
+    BundledWith(BundledWithSection),
     Checksums(Vec<Checksum<'i>>),
 }
 
@@ -188,7 +189,7 @@ fn parse_spec<'i>(i: &mut Input<'i>) -> Res<Spec<'i>> {
 fn parse_spec_no_delimiters<'i>(i: &mut Input<'i>) -> Res<Spec<'i>> {
     let name = parse_gem_name.parse_next(i)?;
     space1.parse_next(i)?;
-    let version = delimited('(', parse_version, ")\n").parse_next(i)?;
+    let version = delimited('(', parse_version_platform, ")\n").parse_next(i)?;
     let gem_version = GemVersion { name, version };
     let deps = repeat(0.., parse_spec_dep).parse_next(i)?;
     Ok(Spec { gem_version, deps })
@@ -212,7 +213,7 @@ fn parse_dependency<'i>(i: &mut Input<'i>) -> Res<GemRange<'i>> {
     })
 }
 
-fn spec_dep_semver<'i>(i: &mut Input<'i>) -> Res<Vec<GemRangeSemver<'i>>> {
+fn spec_dep_semver<'i>(i: &mut Input<'i>) -> Res<Vec<GemRangeSemver>> {
     space1.parse_next(i)?;
     '('.parse_next(i)?;
     let out = separated(1.., parse_semver_constraints, terminated(',', space0)).parse_next(i)?;
@@ -220,7 +221,7 @@ fn spec_dep_semver<'i>(i: &mut Input<'i>) -> Res<Vec<GemRangeSemver<'i>>> {
     Ok(out)
 }
 
-fn parse_semver_constraints<'i>(i: &mut Input<'i>) -> Res<GemRangeSemver<'i>> {
+fn parse_semver_constraints<'i>(i: &mut Input<'i>) -> Res<GemRangeSemver> {
     let semver_constraint = parse_semver_constraint.parse_next(i)?;
     space1.parse_next(i)?;
     let version = parse_version.parse_next(i)?;
@@ -293,11 +294,32 @@ fn parse_ruby_version_inner<'i>(i: &mut Input<'i>) -> Res<RubyVersion> {
     })
 }
 
-fn parse_version<'i>(i: &mut Input<'i>) -> Res<&'i str> {
-    parse_version_inner.take().parse_next(i)
+fn parse_version<'i>(i: &mut Input<'i>) -> Res<Version> {
+    let segments = peek(parse_segments).parse_next(i)?;
+    let version = take_while(1.., |c: char| c.is_alphanumeric() || c == '.')
+        .parse_next(i)?
+        .to_string();
+
+    Ok(Version { version, segments })
 }
 
-fn parse_version_inner<'i>(i: &mut Input<'i>) -> Res<()> {
+fn parse_segments<'i>(i: &mut Input<'i>) -> Res<Vec<VersionSegment>> {
+    // [0-9]+
+    let major = parse_num.parse_next(i)?;
+    let mut segments = vec![VersionSegment::Number(major)];
+
+    // (?>\.[0-9a-zA-Z]+)*
+    let other_segments: Vec<_> = repeat(0.., preceded('.', parse_alphanum)).parse_next(i)?;
+    segments.extend(other_segments.iter().map(|s| VersionSegment::new(s)));
+
+    Ok(segments)
+}
+
+fn parse_version_platform<'i>(i: &mut Input<'i>) -> Res<&'i str> {
+    parse_version_platform_inner.take().parse_next(i)
+}
+
+fn parse_version_platform_inner<'i>(i: &mut Input<'i>) -> Res<()> {
     // [0-9]+
     let _major = parse_num.parse_next(i)?;
 
@@ -324,7 +346,7 @@ fn parse_checksum<'i>(i: &mut Input<'i>) -> Res<Checksum<'i>> {
     let name = parse_gem_name.parse_next(i)?;
     space1.parse_next(i)?;
     '('.parse_next(i)?;
-    let version = parse_version.parse_next(i)?;
+    let version = parse_version_platform.parse_next(i)?;
     ')'.parse_next(i)?;
     let value = opt((space1, "sha256=")).parse_next(i)?;
     if value.is_some() {
@@ -432,7 +454,7 @@ fn parse_checksums<'i>(i: &mut Input<'i>) -> Res<Vec<Checksum<'i>>> {
     repeat(0.., delimited(space1, parse_checksum, line_ending)).parse_next(i)
 }
 
-fn parse_bundled_with<'i>(i: &mut Input<'i>) -> Res<BundledWithSection<'i>> {
+fn parse_bundled_with<'i>(i: &mut Input<'i>) -> Res<BundledWithSection> {
     "BUNDLED WITH".parse_next(i)?;
     space0.parse_next(i)?;
     "\n".parse_next(i)?;
