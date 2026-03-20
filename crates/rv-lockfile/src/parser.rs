@@ -454,7 +454,7 @@ fn parse_checksums<'i>(i: &mut Input<'i>) -> Res<Vec<Checksum<'i>>> {
 fn parse_bundled_with<'i>(i: &mut Input<'i>) -> Res<BundledWithSection> {
     "BUNDLED WITH".parse_next(i)?;
     space0.parse_next(i)?;
-    "\n".parse_next(i)?;
+    line_ending.parse_next(i)?;
     "  ".parse_next(i)?;
     let third_space = opt(' ').parse_next(i)?;
     let bundler_version = parse_version.parse_next(i)?;
@@ -471,7 +471,7 @@ fn parse_bundled_with<'i>(i: &mut Input<'i>) -> Res<BundledWithSection> {
 fn parse_ruby_version<'i>(i: &mut Input<'i>) -> Res<RubyVersionSection> {
     "RUBY VERSION".parse_next(i)?;
     space0.parse_next(i)?;
-    "\n".parse_next(i)?;
+    line_ending.parse_next(i)?;
     "  ".parse_next(i)?;
     let third_space = opt(' ').parse_next(i)?;
     let cruby_version = parse_ruby_version_inner.parse_next(i)?;
