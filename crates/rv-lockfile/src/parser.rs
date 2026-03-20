@@ -302,8 +302,7 @@ fn parse_version_inner<'i>(i: &mut Input<'i>) -> Res<()> {
     let _major = parse_num.parse_next(i)?;
 
     // (?>\.[0-9a-zA-Z]+)*
-    let _other_segments: Vec<_> =
-        repeat(0.., ('.', take_while(1.., |c: char| c.is_alphanumeric()))).parse_next(i)?;
+    let _other_segments: Vec<_> = repeat(0.., ('.', parse_alphanum)).parse_next(i)?;
 
     // (-[0-9A-Za-z_-]+)?
     let _platform: Option<(char, &str)> = opt(('-', parse_platform)).parse_next(i)?;
@@ -348,6 +347,10 @@ fn parse_num(i: &mut Input<'_>) -> Res<u32> {
     take_while(1.., |c: char| c.is_ascii_digit())
         .try_map(|digits: &str| digits.parse::<u32>())
         .parse_next(i)
+}
+
+fn parse_alphanum<'i>(i: &mut Input<'i>) -> Res<&'i str> {
+    take_while(1.., |c: char| c.is_alphanumeric()).parse_next(i)
 }
 
 fn parse_git_section<'i>(i: &mut Input<'i>) -> Res<GitSection<'i>> {
