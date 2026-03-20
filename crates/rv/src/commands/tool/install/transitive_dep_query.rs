@@ -12,8 +12,8 @@ use tracing::debug;
 use super::Error;
 use super::Result;
 use crate::{
-    commands::tool::install::gemserver::{self, GemRelease, Gemserver},
     config::Config,
+    gemserver::{self, GemRelease, Gemserver},
 };
 
 #[derive(Debug, Serialize, Deserialize)]

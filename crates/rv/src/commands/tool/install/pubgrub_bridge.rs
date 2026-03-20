@@ -4,10 +4,7 @@ use pubgrub::{OfflineDependencyProvider, Ranges, SelectedDependencies};
 use rv_gem_types::{Platform, Version, VersionPlatform};
 use rv_lockfile::datatypes::SemverConstraint;
 
-use super::{
-    GemName,
-    gemserver::{GemRelease, VersionConstraint, VersionConstraints},
-};
+use crate::gemserver::{GemName, GemRelease, VersionConstraint, VersionConstraints};
 
 pub fn solve(
     gem: GemName,
@@ -105,7 +102,7 @@ mod tests {
     use serde::{Deserialize, Serialize};
 
     use super::*;
-    use crate::commands::tool::install::gemserver::VersionConstraint;
+    use crate::gemserver::VersionConstraint;
     use std::str::FromStr;
 
     fn vp(input: &str) -> VersionPlatform {
@@ -152,8 +149,8 @@ mod tests {
         pub struct PrevGemRelease {
             pub version: Version,
             pub platform: Platform,
-            pub deps: Vec<crate::commands::tool::install::gemserver::Dep>,
-            pub metadata: crate::commands::tool::install::gemserver::Metadata,
+            pub deps: Vec<crate::gemserver::Dep>,
+            pub metadata: crate::gemserver::Metadata,
         }
 
         impl From<PrevGemRelease> for GemRelease {

@@ -34,7 +34,7 @@ use crate::commands::clean_install::checksums::Hashed;
 use crate::commands::ruby::install::install as ruby_install;
 use crate::commands::run::Invocation;
 use crate::progress::WorkProgress;
-use crate::{GlobalArgs, config::Config};
+use crate::{GlobalArgs, config::Config, http_client::rv_http_client};
 use std::collections::HashMap;
 use std::io;
 use std::io::Read;
@@ -1147,23 +1147,6 @@ fn install_binstub(gemspec: &GemSpecification, args: &CiInnerArgs) -> Result<()>
     Ok(())
 }
 
-fn rv_http_client() -> Result<Client> {
-    use reqwest::header;
-    let mut headers = header::HeaderMap::new();
-    headers.insert(
-        "X-RV-PLATFORM",
-        header::HeaderValue::from_static(current_platform::CURRENT_PLATFORM),
-    );
-    headers.insert("X-RV-COMMAND", header::HeaderValue::from_static("ci"));
-
-    let client = reqwest::Client::builder()
-        .user_agent(format!("rv-{}", env!("CARGO_PKG_VERSION")))
-        .default_headers(headers)
-        .build()?;
-
-    Ok(client)
-}
-
 enum KnownChecksumAlgos {
     Sha256,
 }
@@ -1837,7 +1820,7 @@ async fn download_gem_source<'i>(
     stats: &DownloadStats,
     span: &tracing::Span,
 ) -> Result<Vec<DownloadedRubygems<'i>>> {
-    let client = rv_http_client()?;
+    let client = rv_http_client("ci")?;
     let Some(remote) = gem_source.remote else {
         debug!("Skipping download of gems attached to the global source, because it has no remote");
         return Ok(vec![]);
