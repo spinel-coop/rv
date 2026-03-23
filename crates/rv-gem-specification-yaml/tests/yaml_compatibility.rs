@@ -362,40 +362,16 @@ fn test_creole_0_5_0_dependency_prerelease() -> miette::Result<()> {
     [
         Dependency {
             name: "bacon",
-            requirement: Requirement {
-                constraints: [
-                    VersionConstraint {
-                        operator: GreaterEqual,
-                        version: Version {
-                            version: "0",
-                            segments: [
-                                Number(
-                                    0,
-                                ),
-                            ],
-                        },
-                    },
-                ],
-            },
+            requirement: [
+                >= 0,
+            ],
             dep_type: Development,
         },
         Dependency {
             name: "rake",
-            requirement: Requirement {
-                constraints: [
-                    VersionConstraint {
-                        operator: GreaterEqual,
-                        version: Version {
-                            version: "0",
-                            segments: [
-                                Number(
-                                    0,
-                                ),
-                            ],
-                        },
-                    },
-                ],
-            },
+            requirement: [
+                >= 0,
+            ],
             dep_type: Development,
         },
     ]

@@ -1,12 +1,11 @@
 use owo_colors::OwoColorize;
-use rv_lockfile::datatypes::SemverConstraint;
+use rv_gem_types::requirement::{ComparisonOperator, VersionConstraint};
 use rv_ruby::version::RubyVersion;
 use rv_version::VersionError;
 
 use crate::{
     commands::tool::install::{Error, Result},
     config::Config,
-    gemserver::VersionConstraint,
 };
 
 /// Which ruby version should be used to run a tool?
@@ -112,14 +111,14 @@ pub fn does_ruby_version_satisfy(
 }
 
 fn meets_constraint(version: rv_version::Version, constraint: &VersionConstraint) -> bool {
-    match constraint.constraint_type {
-        SemverConstraint::Exact => version == constraint.version,
-        SemverConstraint::NotEqual => version != constraint.version,
-        SemverConstraint::GreaterThan => version > constraint.version,
-        SemverConstraint::LessThan => version < constraint.version,
-        SemverConstraint::GreaterThanOrEqual => version >= constraint.version,
-        SemverConstraint::LessThanOrEqual => version <= constraint.version,
-        SemverConstraint::Pessimistic => {
+    match constraint.operator {
+        ComparisonOperator::Equal => version == constraint.version,
+        ComparisonOperator::NotEqual => version != constraint.version,
+        ComparisonOperator::GreaterThan => version > constraint.version,
+        ComparisonOperator::LessThan => version < constraint.version,
+        ComparisonOperator::GreaterThanOrEqual => version >= constraint.version,
+        ComparisonOperator::LessThanOrEqual => version <= constraint.version,
+        ComparisonOperator::Pessimistic => {
             let (low, high) = constraint.version.pessimistic_range();
             version >= low && version < high
         }
@@ -138,7 +137,7 @@ mod tests {
     fn test_eval() {
         let chosen = "4.0.1".parse().unwrap();
         let constraint = VersionConstraint {
-            constraint_type: SemverConstraint::GreaterThanOrEqual,
+            operator: ComparisonOperator::GreaterThanOrEqual,
             version: "3.2".parse().unwrap(),
         };
         assert!(meets_constraint(chosen, &constraint));
@@ -164,7 +163,7 @@ mod tests {
     #[test]
     fn test_select_ruby_version_for() {
         let constraints = vec![VersionConstraint {
-            constraint_type: SemverConstraint::LessThan,
+            operator: ComparisonOperator::LessThan,
             version: "3.4".parse().unwrap(),
         }];
 
@@ -180,7 +179,7 @@ mod tests {
     #[test]
     fn test_select_ruby_version_for_prereleases() {
         let constraints = vec![VersionConstraint {
-            constraint_type: SemverConstraint::LessThan,
+            operator: ComparisonOperator::LessThan,
             version: "3.5".parse().unwrap(),
         }];
 

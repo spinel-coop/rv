@@ -1,7 +1,10 @@
 //! Most of the types in this module borrow a string from their input,
 //! so they have a lifetime 'i, which is short for 'input.
 
+use rv_gem_types::ProjectDependency;
+use rv_gem_types::requirement::VersionConstraint;
 use rv_ruby::version::RubyVersion;
+use rv_version::Version;
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct GemfileDotLock<'i> {
@@ -24,7 +27,7 @@ pub struct GemfileDotLock<'i> {
     pub ruby_version: Option<RubyVersionSection>,
 
     /// Which version of Bundler this lockfile was built with.
-    pub bundled_with: Option<BundledWithSection<'i>>,
+    pub bundled_with: Option<BundledWithSection>,
 
     /// Checksums for each dependency.
     pub checksums: Option<Vec<Checksum<'i>>>,
@@ -213,7 +216,7 @@ impl std::fmt::Display for GemVersion<'_> {
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct GemRange<'i> {
     pub name: &'i str,
-    pub semver: Option<Vec<GemRangeSemver<'i>>>,
+    pub semver: Option<Vec<VersionConstraint>>,
     /// Dependencies specified with a source other than the main Rubygems index (e.g., git dependencies, path-based, dependencies) have a ! which means they are "pinned" to that source.
     /// According to <https://stackoverflow.com/questions/7517524/understanding-the-gemfile-lock-file>.
     pub nonstandard: bool,
@@ -238,19 +241,6 @@ impl std::fmt::Display for GemRange<'_> {
         }
 
         Ok(())
-    }
-}
-
-/// A range of possible versions of a gem.
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct GemRangeSemver<'i> {
-    pub semver_constraint: SemverConstraint,
-    pub version: &'i str,
-}
-
-impl std::fmt::Display for GemRangeSemver<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {}", self.semver_constraint, self.version)
     }
 }
 
@@ -294,12 +284,12 @@ impl std::fmt::Display for RubyVersionSection {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct BundledWithSection<'i> {
+pub struct BundledWithSection {
     pub indentation: LockfileIndentation,
-    pub bundler_version: &'i str,
+    pub bundler_version: Version,
 }
 
-impl std::fmt::Display for BundledWithSection<'_> {
+impl std::fmt::Display for BundledWithSection {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}{}", self.indentation, self.bundler_version)
     }
@@ -309,7 +299,7 @@ impl std::fmt::Display for BundledWithSection<'_> {
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Spec<'i> {
     pub gem_version: GemVersion<'i>,
-    pub deps: Vec<GemRange<'i>>,
+    pub deps: Vec<ProjectDependency>,
 }
 
 impl std::fmt::Display for Spec<'_> {
@@ -368,55 +358,6 @@ impl std::fmt::Display for ChecksumAlgorithm<'_> {
             Self::None => write!(f, ""),
             Self::Unknown(algo) => write!(f, "{algo}"),
             Self::SHA256 => write!(f, "sha256"),
-        }
-    }
-}
-
-/// Constrains the range of possible versions of a gem which could be selected.
-#[derive(Debug, Default, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Copy)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum SemverConstraint {
-    /// `=`
-    Exact,
-    /// `!=`
-    NotEqual,
-    /// `>`
-    GreaterThan,
-    /// `<`
-    LessThan,
-    /// `>=`
-    #[default]
-    GreaterThanOrEqual,
-    /// `<=`
-    LessThanOrEqual,
-    /// `~>`
-    Pessimistic,
-}
-
-impl std::fmt::Display for SemverConstraint {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Exact => {
-                write!(f, "=")
-            }
-            Self::NotEqual => {
-                write!(f, "!=")
-            }
-            Self::GreaterThan => {
-                write!(f, ">")
-            }
-            Self::LessThan => {
-                write!(f, "<")
-            }
-            Self::GreaterThanOrEqual => {
-                write!(f, ">=")
-            }
-            Self::LessThanOrEqual => {
-                write!(f, "<=")
-            }
-            Self::Pessimistic => {
-                write!(f, "~>")
-            }
         }
     }
 }

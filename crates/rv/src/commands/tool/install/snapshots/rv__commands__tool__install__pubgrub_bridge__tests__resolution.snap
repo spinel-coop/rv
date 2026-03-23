@@ -1,6 +1,6 @@
 ---
 source: crates/rv/src/commands/tool/install/pubgrub_bridge.rs
-expression: resolved_rails
+expression: resolved_nokogiri
 ---
 nokogiri: 1.19.0-arm64-darwin
 racc: 1.8.1

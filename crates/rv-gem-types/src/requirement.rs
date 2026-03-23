@@ -1,4 +1,7 @@
-use crate::Version;
+use crate::{Platform, Version, VersionPlatform};
+use pubgrub::Ranges;
+use serde::{Deserialize, Serialize};
+use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -13,16 +16,63 @@ pub enum RequirementError {
     Malformed { requirement: String },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct Requirement {
     pub constraints: Vec<VersionConstraint>,
 }
 
+impl Default for Requirement {
+    fn default() -> Self {
+        Self {
+            constraints: vec![VersionConstraint::default()],
+        }
+    }
+}
+
+impl std::fmt::Debug for Requirement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.constraints.fmt(f)
+    }
+}
+
+impl From<Vec<VersionConstraint>> for Requirement {
+    fn from(constraints: Vec<VersionConstraint>) -> Self {
+        Self { constraints }
+    }
+}
+
+impl From<Requirement> for Vec<VersionConstraint> {
+    fn from(constraints: Requirement) -> Self {
+        constraints.constraints
+    }
+}
+
+impl From<Requirement> for Ranges<VersionPlatform> {
+    fn from(constraints: Requirement) -> Self {
+        // Convert the RubyGems constraints into PubGrub ranges.
+        let ranges = constraints.constraints.into_iter().map(Ranges::from);
+
+        // Now, join all those ranges together using &, because that's what multiple RubyGems
+        // constraints are actually listed as.
+        let mut overall_range = Ranges::full();
+        for r in ranges {
+            overall_range = overall_range.intersection(&r);
+        }
+        overall_range
+    }
+}
+
 // Defaults to ">= 0"
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Clone, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct VersionConstraint {
     pub operator: ComparisonOperator,
     pub version: Version,
+}
+
+impl std::fmt::Debug for VersionConstraint {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{} {}", self.operator, self.version)
+    }
 }
 
 impl VersionConstraint {
@@ -35,7 +85,8 @@ impl VersionConstraint {
     }
 
     pub fn is_latest(&self) -> bool {
-        matches!(self.operator, ComparisonOperator::GreaterEqual) && self.version.version == "0"
+        matches!(self.operator, ComparisonOperator::GreaterThanOrEqual)
+            && self.version.version == "0"
     }
 }
 
@@ -57,15 +108,58 @@ impl TryFrom<&str> for VersionConstraint {
     }
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Eq)]
+impl From<VersionConstraint> for Ranges<VersionPlatform> {
+    fn from(constraint: VersionConstraint) -> Self {
+        let v = constraint.version;
+        let min_v = VersionPlatform {
+            version: v.clone(),
+            platform: Platform::Ruby,
+        };
+
+        let max_v = VersionPlatform {
+            version: v.clone(),
+            platform: Platform::Current,
+        };
+
+        match constraint.operator {
+            ComparisonOperator::Equal => {
+                Ranges::intersection(&Ranges::higher_than(min_v), &Ranges::lower_than(max_v))
+            }
+            ComparisonOperator::NotEqual => Ranges::union(
+                &Ranges::strictly_lower_than(min_v),
+                &Ranges::strictly_higher_than(max_v),
+            ),
+
+            // These 4 are easy:
+            ComparisonOperator::GreaterThan => Ranges::strictly_higher_than(max_v),
+            ComparisonOperator::LessThan => Ranges::strictly_lower_than(min_v),
+            ComparisonOperator::GreaterThanOrEqual => Ranges::higher_than(min_v),
+            ComparisonOperator::LessThanOrEqual => Ranges::lower_than(max_v),
+            // This one is weird, but at least it's encapsulated into a `bump` method.
+            ComparisonOperator::Pessimistic => {
+                let bump_v = VersionPlatform {
+                    version: Version::new(format!("{}.A", v.bump())).unwrap(),
+                    platform: Platform::Ruby,
+                };
+
+                Ranges::intersection(
+                    &Ranges::higher_than(min_v),
+                    &Ranges::strictly_lower_than(bump_v),
+                )
+            }
+        }
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub enum ComparisonOperator {
     Equal,
     NotEqual,
-    Greater,
+    GreaterThan,
     #[default]
-    GreaterEqual,
-    Less,
-    LessEqual,
+    GreaterThanOrEqual,
+    LessThan,
+    LessThanOrEqual,
     Pessimistic,
 }
 
@@ -74,12 +168,12 @@ impl TryFrom<&str> for ComparisonOperator {
 
     fn try_from(str: &str) -> Result<Self, RequirementError> {
         match str {
-            s if s.starts_with(">=") => Ok(Self::GreaterEqual),
-            s if s.starts_with("<=") => Ok(Self::LessEqual),
+            s if s.starts_with(">=") => Ok(Self::GreaterThanOrEqual),
+            s if s.starts_with("<=") => Ok(Self::LessThanOrEqual),
             s if s.starts_with("!=") => Ok(Self::NotEqual),
             s if s.starts_with("~>") => Ok(Self::Pessimistic),
-            s if s.starts_with(">") => Ok(Self::Greater),
-            s if s.starts_with("<") => Ok(Self::Less),
+            s if s.starts_with(">") => Ok(Self::GreaterThan),
+            s if s.starts_with("<") => Ok(Self::LessThan),
             s if s.starts_with("!") => Err(RequirementError::InvalidOperator {
                 operator: str.chars().take(2).collect(),
             }),
@@ -88,15 +182,32 @@ impl TryFrom<&str> for ComparisonOperator {
     }
 }
 
+impl FromStr for ComparisonOperator {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "!=" => Ok(ComparisonOperator::NotEqual),
+            ">=" => Ok(ComparisonOperator::GreaterThanOrEqual),
+            "<=" => Ok(ComparisonOperator::LessThanOrEqual),
+            ">" => Ok(ComparisonOperator::GreaterThan),
+            "<" => Ok(ComparisonOperator::LessThan),
+            "~>" => Ok(ComparisonOperator::Pessimistic),
+            "=" => Ok(ComparisonOperator::Equal),
+            other => Err(other.to_owned()),
+        }
+    }
+}
+
 impl AsRef<str> for ComparisonOperator {
     fn as_ref(&self) -> &str {
         match self {
-            Self::GreaterEqual => ">=",
-            Self::LessEqual => "<=",
+            Self::GreaterThanOrEqual => ">=",
+            Self::LessThanOrEqual => "<=",
             Self::NotEqual => "!=",
             Self::Pessimistic => "~>",
-            Self::Greater => ">",
-            Self::Less => "<",
+            Self::GreaterThan => ">",
+            Self::LessThan => "<",
             Self::Equal => "=",
         }
     }
@@ -165,22 +276,6 @@ impl Requirement {
     }
 }
 
-impl PartialEq for Requirement {
-    fn eq(&self, other: &Self) -> bool {
-        self.constraints == other.constraints
-    }
-}
-
-impl Eq for Requirement {}
-
-impl Default for Requirement {
-    fn default() -> Self {
-        Self {
-            constraints: vec![VersionConstraint::default()],
-        }
-    }
-}
-
 impl PartialEq for VersionConstraint {
     fn eq(&self, other: &Self) -> bool {
         self.operator == other.operator && self.version.version == other.version.version
@@ -188,6 +283,13 @@ impl PartialEq for VersionConstraint {
 }
 
 impl Eq for VersionConstraint {}
+
+impl Hash for VersionConstraint {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.operator.hash(state);
+        self.version.version.hash(state);
+    }
+}
 
 impl VersionConstraint {
     pub fn new(operator: ComparisonOperator, version: Version) -> Self {
@@ -198,10 +300,10 @@ impl VersionConstraint {
         match self.operator {
             ComparisonOperator::Equal => version == &self.version,
             ComparisonOperator::NotEqual => version != &self.version,
-            ComparisonOperator::Greater => version > &self.version,
-            ComparisonOperator::GreaterEqual => version >= &self.version,
-            ComparisonOperator::Less => version < &self.version,
-            ComparisonOperator::LessEqual => version <= &self.version,
+            ComparisonOperator::GreaterThan => version > &self.version,
+            ComparisonOperator::GreaterThanOrEqual => version >= &self.version,
+            ComparisonOperator::LessThan => version < &self.version,
+            ComparisonOperator::LessThanOrEqual => version <= &self.version,
             ComparisonOperator::Pessimistic => {
                 version >= &self.version && version < &self.version.bump()
             }
@@ -253,89 +355,29 @@ mod tests {
     #[test]
     fn test_requirement_parsing() {
         // Basic parsing
-        insta::assert_debug_snapshot!(req("1.0"), @r###"
-        Requirement {
-            constraints: [
-                VersionConstraint {
-                    operator: Equal,
-                    version: Version {
-                        version: "1.0",
-                        segments: [
-                            Number(
-                                1,
-                            ),
-                            Number(
-                                0,
-                            ),
-                        ],
-                    },
-                },
-            ],
-        }
-        "###);
+        insta::assert_debug_snapshot!(req("1.0"), @r"
+        [
+            = 1.0,
+        ]
+        ");
 
-        insta::assert_debug_snapshot!(req("= 1.0"), @r###"
-        Requirement {
-            constraints: [
-                VersionConstraint {
-                    operator: Equal,
-                    version: Version {
-                        version: "1.0",
-                        segments: [
-                            Number(
-                                1,
-                            ),
-                            Number(
-                                0,
-                            ),
-                        ],
-                    },
-                },
-            ],
-        }
-        "###);
+        insta::assert_debug_snapshot!(req("= 1.0"), @r"
+        [
+            = 1.0,
+        ]
+        ");
 
-        insta::assert_debug_snapshot!(req("> 1.0"), @r###"
-        Requirement {
-            constraints: [
-                VersionConstraint {
-                    operator: Greater,
-                    version: Version {
-                        version: "1.0",
-                        segments: [
-                            Number(
-                                1,
-                            ),
-                            Number(
-                                0,
-                            ),
-                        ],
-                    },
-                },
-            ],
-        }
-        "###);
+        insta::assert_debug_snapshot!(req("> 1.0"), @r"
+        [
+            > 1.0,
+        ]
+        ");
 
-        insta::assert_debug_snapshot!(req("~> 1.2"), @r###"
-        Requirement {
-            constraints: [
-                VersionConstraint {
-                    operator: Pessimistic,
-                    version: Version {
-                        version: "1.2",
-                        segments: [
-                            Number(
-                                1,
-                            ),
-                            Number(
-                                2,
-                            ),
-                        ],
-                    },
-                },
-            ],
-        }
-        "###);
+        insta::assert_debug_snapshot!(req("~> 1.2"), @r"
+        [
+            ~> 1.2,
+        ]
+        ");
     }
 
     #[test]
@@ -406,7 +448,7 @@ mod tests {
         assert_eq!(req.constraints.len(), 1);
         assert_eq!(
             req.constraints[0].operator,
-            ComparisonOperator::GreaterEqual
+            ComparisonOperator::GreaterThanOrEqual
         );
         assert_eq!(req.constraints[0].version, v("0"));
     }

@@ -1,8 +1,8 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use rv_gem_types::{Platform, VersionPlatform};
-use rv_lockfile::datatypes::SemverConstraint;
+use rv_gem_types::requirement::VersionConstraint;
+use rv_gem_types::{Platform, ProjectDependency, VersionPlatform};
 use rv_version::Version;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
@@ -153,7 +153,7 @@ pub fn parse_release_from_body(index_body: &str) -> ParseResult<Vec<GemRelease>>
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GemRelease {
     pub version_platform: VersionPlatform,
-    pub deps: Vec<Dep>,
+    pub deps: Vec<ProjectDependency>,
     pub metadata: Metadata,
 }
 
@@ -191,16 +191,16 @@ impl GemRelease {
         } else {
             deps.split(',')
                 .map(|dep| {
-                    let (gem_name, constraints) =
+                    let (name, constraints) =
                         dep.split_once(':').ok_or(GemReleaseParse::MissingColon)?;
 
                     let version_constraint = constraints
                         .split('&')
-                        .map(VersionConstraint::from_str)
+                        .map(parse_version_constraint)
                         .collect::<ParseResult<Vec<_>>>()?;
-                    Ok(Dep {
-                        gem_name: gem_name.to_owned(),
-                        version_constraints: version_constraint.into(),
+                    Ok(ProjectDependency {
+                        name: name.to_owned(),
+                        requirement: version_constraint.into(),
                     })
                 })
                 .collect::<ParseResult<Vec<_>>>()?
@@ -241,7 +241,7 @@ fn parse_metadata(metadata: &str) -> ParseResult<Metadata> {
             "ruby" => {
                 out.ruby = v
                     .split('&')
-                    .map(VersionConstraint::from_str)
+                    .map(parse_version_constraint)
                     .collect::<ParseResult<Vec<_>>>()
                     .map_err(|err| GemReleaseParse::MetadataConstraintParse {
                         source: Box::new(err),
@@ -251,7 +251,7 @@ fn parse_metadata(metadata: &str) -> ParseResult<Metadata> {
             "rubygems" => {
                 out.rubygems = v
                     .split('&')
-                    .map(VersionConstraint::from_str)
+                    .map(parse_version_constraint)
                     .collect::<ParseResult<Vec<_>>>()
                     .map_err(|err| GemReleaseParse::MetadataConstraintParse {
                         source: Box::new(err),
@@ -269,44 +269,22 @@ fn parse_metadata(metadata: &str) -> ParseResult<Metadata> {
     Ok(out)
 }
 
+fn parse_version_constraint(constr: &str) -> ParseResult<VersionConstraint> {
+    if constr.is_empty() {
+        return Ok(VersionConstraint::default());
+    }
+
+    let (op, v) = constr
+        .split_once(' ')
+        .ok_or(GemReleaseParse::MissingSpace)?;
+
+    Ok(VersionConstraint {
+        operator: op.parse().map_err(GemReleaseParse::UnknownSemverType)?,
+        version: v.parse().map_err(GemReleaseParse::InvalidVersion)?,
+    })
+}
+
 pub type GemName = String;
-
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Dep {
-    /// What gem this dependency uses.
-    pub gem_name: GemName,
-    /// Constraints on what version of the gem can be used.
-    pub version_constraints: VersionConstraints,
-}
-
-impl std::fmt::Debug for Dep {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}@{:?}", self.gem_name, self.version_constraints)
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct VersionConstraints {
-    pub inner: Vec<VersionConstraint>,
-}
-
-impl std::fmt::Debug for VersionConstraints {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.inner.fmt(f)
-    }
-}
-
-impl From<Vec<VersionConstraint>> for VersionConstraints {
-    fn from(constraints: Vec<VersionConstraint>) -> Self {
-        Self { inner: constraints }
-    }
-}
-
-impl From<VersionConstraints> for Vec<VersionConstraint> {
-    fn from(constraints: VersionConstraints) -> Self {
-        constraints.inner
-    }
-}
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde_as]
@@ -327,37 +305,6 @@ impl std::fmt::Debug for Metadata {
     }
 }
 
-#[derive(Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct VersionConstraint {
-    pub constraint_type: SemverConstraint,
-    pub version: Version,
-}
-
-impl std::fmt::Debug for VersionConstraint {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{} {}", self.constraint_type, self.version)
-    }
-}
-
-impl FromStr for VersionConstraint {
-    type Err = GemReleaseParse;
-
-    fn from_str(constr: &str) -> ParseResult<Self> {
-        if constr.is_empty() {
-            return Ok(VersionConstraint::default());
-        }
-
-        let (semver_constr, v) = constr
-            .split_once(' ')
-            .ok_or(GemReleaseParse::MissingSpace)?;
-        Ok(VersionConstraint {
-            constraint_type: semver_constr
-                .parse()
-                .map_err(GemReleaseParse::UnknownSemverType)?,
-            version: v.parse().map_err(GemReleaseParse::InvalidVersion)?,
-        })
-    }
-}
 #[cfg(test)]
 mod tests {
     use super::*;

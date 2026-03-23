@@ -6,14 +6,12 @@ const ZERO: VersionSegment = VersionSegment::Number(0);
 pub enum VersionError {
     #[error("Malformed version number string {version}")]
     MalformedVersion { version: String },
-    #[error("Invalid segment in version: {segment}")]
-    InvalidSegment { segment: String },
     #[error("Version cannot contain newlines: {version}")]
     ContainsNewlines { version: String },
     #[error("Version cannot start with a prerelease segment: {version}")]
     FirstSegmentIsPre { version: String },
-    #[error("Versions must be entirely ASCII characters")]
-    NoAscii,
+    #[error("Versions must be entirely ASCII alphanumeric characters")]
+    NoAsciiAlphanumeric,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -24,6 +22,14 @@ pub enum VersionSegment {
 }
 
 impl VersionSegment {
+    pub fn new(segment: &str) -> Self {
+        if let Ok(num) = segment.parse::<u32>() {
+            Self::Number(num)
+        } else {
+            Self::String(segment.to_string())
+        }
+    }
+
     pub fn is_zero(&self) -> bool {
         matches!(self, Self::Number(0))
     }
@@ -91,7 +97,7 @@ impl Version {
                         });
                     }
 
-                    segments.push(Self::parse_segment(&current_segment)?);
+                    segments.push(VersionSegment::new(&current_segment));
                     current_segment.clear();
                 }
                 '-' => {
@@ -101,7 +107,7 @@ impl Version {
                         });
                     }
 
-                    segments.push(Self::parse_segment(&current_segment)?);
+                    segments.push(VersionSegment::new(&current_segment));
                     current_segment.clear();
 
                     // Dash indicates prerelease, add "pre" marker
@@ -118,8 +124,8 @@ impl Version {
                     });
                 }
                 _ => {
-                    if !ch.is_ascii() {
-                        return Err(VersionError::NoAscii);
+                    if !ch.is_ascii_alphanumeric() {
+                        return Err(VersionError::NoAsciiAlphanumeric);
                     };
 
                     if segments.is_empty() && ch.is_alphabetic() {
@@ -139,25 +145,13 @@ impl Version {
             });
         }
 
-        segments.push(Self::parse_segment(&current_segment)?);
+        segments.push(VersionSegment::new(&current_segment));
 
         if segments.is_empty() {
             segments.push(ZERO);
         }
 
         Ok(segments)
-    }
-
-    fn parse_segment(segment: &str) -> Result<VersionSegment, VersionError> {
-        if let Ok(num) = segment.parse::<u32>() {
-            Ok(VersionSegment::Number(num))
-        } else if segment.chars().all(|c| c.is_alphanumeric()) {
-            Ok(VersionSegment::String(segment.to_string()))
-        } else {
-            Err(VersionError::InvalidSegment {
-                segment: segment.to_string(),
-            })
-        }
     }
 
     pub fn is_prerelease(&self) -> bool {
@@ -654,6 +648,6 @@ mod tests {
     #[test]
     fn must_be_ascii() {
         let err = Version::from_str("0𐌀").unwrap_err();
-        assert!(matches!(err, VersionError::NoAscii));
+        assert!(matches!(err, VersionError::NoAsciiAlphanumeric));
     }
 }

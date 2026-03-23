@@ -97,7 +97,7 @@ async fn fetch(req: Request, gemserver: &Gemserver) -> Result<(Item, Vec<Request
     let dep_versions = gemserver::parse_release_from_body(&dep_info_resp)?;
     let transitive_deps = dep_versions
         .iter()
-        .flat_map(|d| d.clone().deps.into_iter().map(|d| d.gem_name))
+        .flat_map(|d| d.clone().deps.into_iter().map(|d| d.name))
         .collect();
     Ok(((req, dep_versions), transitive_deps))
 }
@@ -114,7 +114,7 @@ pub async fn query_all_gem_deps_from_server(
 
     // Initial requests
     for d in root.deps.clone() {
-        let req = d.gem_name;
+        let req = d.name;
         debug!("Queuing {req}");
         in_flight.push(fetch(req, gemserver))
     }

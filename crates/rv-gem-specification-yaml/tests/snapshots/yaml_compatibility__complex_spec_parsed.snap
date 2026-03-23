@@ -62,107 +62,31 @@ Specification {
     dependencies: [
         Dependency {
             name: "json",
-            requirement: Requirement {
-                constraints: [
-                    VersionConstraint {
-                        operator: Pessimistic,
-                        version: Version {
-                            version: "2.0",
-                            segments: [
-                                Number(
-                                    2,
-                                ),
-                                Number(
-                                    0,
-                                ),
-                            ],
-                        },
-                    },
-                ],
-            },
+            requirement: [
+                ~> 2.0,
+            ],
             dep_type: Runtime,
         },
         Dependency {
             name: "nokogiri",
-            requirement: Requirement {
-                constraints: [
-                    VersionConstraint {
-                        operator: GreaterEqual,
-                        version: Version {
-                            version: "1.10.0",
-                            segments: [
-                                Number(
-                                    1,
-                                ),
-                                Number(
-                                    10,
-                                ),
-                                Number(
-                                    0,
-                                ),
-                            ],
-                        },
-                    },
-                    VersionConstraint {
-                        operator: Less,
-                        version: Version {
-                            version: "2.0",
-                            segments: [
-                                Number(
-                                    2,
-                                ),
-                                Number(
-                                    0,
-                                ),
-                            ],
-                        },
-                    },
-                ],
-            },
+            requirement: [
+                >= 1.10.0,
+                < 2.0,
+            ],
             dep_type: Runtime,
         },
         Dependency {
             name: "rspec",
-            requirement: Requirement {
-                constraints: [
-                    VersionConstraint {
-                        operator: Pessimistic,
-                        version: Version {
-                            version: "3.0",
-                            segments: [
-                                Number(
-                                    3,
-                                ),
-                                Number(
-                                    0,
-                                ),
-                            ],
-                        },
-                    },
-                ],
-            },
+            requirement: [
+                ~> 3.0,
+            ],
             dep_type: Development,
         },
         Dependency {
             name: "rake",
-            requirement: Requirement {
-                constraints: [
-                    VersionConstraint {
-                        operator: GreaterEqual,
-                        version: Version {
-                            version: "12.0",
-                            segments: [
-                                Number(
-                                    12,
-                                ),
-                                Number(
-                                    0,
-                                ),
-                            ],
-                        },
-                    },
-                ],
-            },
+            requirement: [
+                >= 12.0,
+            ],
             dep_type: Development,
         },
     ],
@@ -176,48 +100,12 @@ Specification {
     bindir: "bin",
     post_install_message: None,
     requirements: [],
-    required_ruby_version: Requirement {
-        constraints: [
-            VersionConstraint {
-                operator: GreaterEqual,
-                version: Version {
-                    version: "3.0.0",
-                    segments: [
-                        Number(
-                            3,
-                        ),
-                        Number(
-                            0,
-                        ),
-                        Number(
-                            0,
-                        ),
-                    ],
-                },
-            },
-        ],
-    },
-    required_rubygems_version: Requirement {
-        constraints: [
-            VersionConstraint {
-                operator: GreaterEqual,
-                version: Version {
-                    version: "3.0.0",
-                    segments: [
-                        Number(
-                            3,
-                        ),
-                        Number(
-                            0,
-                        ),
-                        Number(
-                            0,
-                        ),
-                    ],
-                },
-            },
-        ],
-    },
+    required_ruby_version: [
+        >= 3.0.0,
+    ],
+    required_rubygems_version: [
+        >= 3.0.0,
+    ],
     test_files: [],
     extra_rdoc_files: [],
     rdoc_options: [],

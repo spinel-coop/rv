@@ -40,27 +40,9 @@ Specification {
     dependencies: [
         Dependency {
             name: "old_style_dep",
-            requirement: Requirement {
-                constraints: [
-                    VersionConstraint {
-                        operator: Pessimistic,
-                        version: Version {
-                            version: "1.0.0",
-                            segments: [
-                                Number(
-                                    1,
-                                ),
-                                Number(
-                                    0,
-                                ),
-                                Number(
-                                    0,
-                                ),
-                            ],
-                        },
-                    },
-                ],
-            },
+            requirement: [
+                ~> 1.0.0,
+            ],
             dep_type: Runtime,
         },
     ],
@@ -69,36 +51,12 @@ Specification {
     bindir: "bin",
     post_install_message: None,
     requirements: [],
-    required_ruby_version: Requirement {
-        constraints: [
-            VersionConstraint {
-                operator: GreaterEqual,
-                version: Version {
-                    version: "0",
-                    segments: [
-                        Number(
-                            0,
-                        ),
-                    ],
-                },
-            },
-        ],
-    },
-    required_rubygems_version: Requirement {
-        constraints: [
-            VersionConstraint {
-                operator: GreaterEqual,
-                version: Version {
-                    version: "0",
-                    segments: [
-                        Number(
-                            0,
-                        ),
-                    ],
-                },
-            },
-        ],
-    },
+    required_ruby_version: [
+        >= 0,
+    ],
+    required_rubygems_version: [
+        >= 0,
+    ],
     test_files: [],
     extra_rdoc_files: [],
     rdoc_options: [],
