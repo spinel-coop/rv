@@ -373,7 +373,7 @@ impl std::fmt::Display for ChecksumAlgorithm<'_> {
 }
 
 /// Constrains the range of possible versions of a gem which could be selected.
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Copy)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum SemverConstraint {
     /// `=`
@@ -385,6 +385,7 @@ pub enum SemverConstraint {
     /// `<`
     LessThan,
     /// `>=`
+    #[default]
     GreaterThanOrEqual,
     /// `<=`
     LessThanOrEqual,

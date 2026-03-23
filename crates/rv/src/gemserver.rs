@@ -112,12 +112,12 @@ pub enum GemReleaseParse {
     UnknownSemverType(String),
     #[error("Unknown metadata key {key} in metadata field: {metadata}")]
     UnknownMetadataKey { key: String, metadata: String },
-    #[error("Invalid checksum in metadata field {metadata}: {source}")]
+    #[error("Invalid checksum in metadata field {metadata}")]
     InvalidChecksum {
         source: hex::FromHexError,
         metadata: String,
     },
-    #[error("Invalid constraint in metadata field {metadata}: {source}")]
+    #[error("Invalid constraint in metadata field {metadata}")]
     MetadataConstraintParse {
         source: Box<GemReleaseParse>,
         metadata: String,
@@ -198,7 +198,7 @@ impl GemRelease {
                         .split('&')
                         .map(VersionConstraint::from_str)
                         .collect::<ParseResult<Vec<_>>>()?;
-                    Ok::<_, GemReleaseParse>(Dep {
+                    Ok(Dep {
                         gem_name: gem_name.to_owned(),
                         version_constraints: version_constraint.into(),
                     })
@@ -327,7 +327,7 @@ impl std::fmt::Debug for Metadata {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VersionConstraint {
     pub constraint_type: SemverConstraint,
     pub version: Version,
@@ -343,10 +343,14 @@ impl FromStr for VersionConstraint {
     type Err = GemReleaseParse;
 
     fn from_str(constr: &str) -> ParseResult<Self> {
+        if constr.is_empty() {
+            return Ok(VersionConstraint::default());
+        }
+
         let (semver_constr, v) = constr
             .split_once(' ')
             .ok_or(GemReleaseParse::MissingSpace)?;
-        Ok::<_, GemReleaseParse>(VersionConstraint {
+        Ok(VersionConstraint {
             constraint_type: semver_constr
                 .parse()
                 .map_err(GemReleaseParse::UnknownSemverType)?,
@@ -372,6 +376,10 @@ mod tests {
             (
                 "8.1.2".parse().unwrap(),
                 "8.1.2 activesupport:= 8.1.2,globalid:>= 0.3.6|checksum:908dab3713b101859536375819f4156b07bdf4c232cc645e7538adb9e302f825,ruby:>= 3.2.0",
+            ),
+            (
+                "0.5.1".parse().unwrap(),
+                "0.5.1 |checksum:f8eb8f78342e3366509d2acb6ee87afec77e49c1545c7e7a76bdaab0f820db46,ruby:>= 1.8.1,rubygems:",
             ),
         ] {
             let actual = GemRelease::parse(input).unwrap();
