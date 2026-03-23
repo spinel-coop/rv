@@ -126,6 +126,43 @@ fn test_clean_install_respects_ruby() {
 }
 
 #[test]
+fn test_ci_respects_rv_setting_gem_home() {
+    use camino_tempfile::Utf8TempDir;
+
+    let mut test = RvTest::new();
+    test.create_ruby_dir("ruby-4.0.1");
+
+    let project_dir = test.temp_root().join("project");
+    std::fs::create_dir_all(project_dir.as_path()).unwrap();
+    let temp_dir = Utf8TempDir::new().expect("Failed to create temporary directory");
+
+    let install_path = temp_dir.path().as_str().replace('\\', "/");
+    let config_content = format!(
+        r#"
+	rv{{
+	  install-path "{}"
+	}}
+	"#,
+        install_path
+    );
+
+    std::fs::write(project_dir.join("rv.kdl"), config_content).expect("Failed to write config");
+
+    test.cwd = project_dir;
+
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.symlink-test");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.symlink-test.lock");
+    test.replace_source("http://gems.example.com", &test.server_url());
+
+    let mock = test.mock_gem_download("symlink-test-1.0.0.gem").create();
+
+    let output = test.ci(&[]);
+    output.assert_success();
+    output.assert_stdout_contains(&format!("1 gems installed to {}/ruby/4.0.0", install_path));
+    mock.assert();
+}
+
+#[test]
 fn test_clean_install_ignores_ruby_requests_outside_of_the_current_project() {
     let mut test = RvTest::new();
 

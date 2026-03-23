@@ -189,6 +189,8 @@ pub enum Error {
     ShellError(#[from] commands::shell::Error),
     #[error(transparent)]
     ToolError(#[from] commands::tool::Error),
+    #[error(transparent)]
+    ConfigError(#[from] crate::config::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
