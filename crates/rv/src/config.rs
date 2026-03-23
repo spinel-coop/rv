@@ -139,27 +139,13 @@ impl Config<'_> {
         global_args: &GlobalArgs,
         request: Option<RubyRequest>,
     ) -> Result<Self> {
-        let root = rv_dirs::root_dir();
-        let ruby_dirs = rv_dirs::canonical_ruby_dirs(&global_args.ruby_dir, &root)?;
-        let cache = global_args.cache_args.to_cache()?;
-
-        let project_root = rv_dirs::project_root(&root)?;
-        debug!("Found project directory in {}", project_root);
-
+        let mut config = Self::new(global_args, request)?;
         let home_dir = rv_dirs::home_dir();
 
-        let requested_ruby = RequestedRuby::new(request, &home_dir, &project_root)?;
-        let bundler_settings = BundlerSettings::new(&home_dir, &project_root);
-        let rv_settings = RvSettings::new(&home_dir, &project_root)?;
+        config.bundler_settings = BundlerSettings::new(&home_dir, &config.project_root);
+        config.rv_settings = RvSettings::new(&home_dir, &config.project_root)?;
 
-        Ok(Self {
-            ruby_dirs,
-            project_root,
-            cache,
-            requested_ruby,
-            bundler_settings,
-            rv_settings,
-        })
+        Ok(config)
     }
 
     #[cfg(test)]
