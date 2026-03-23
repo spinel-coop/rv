@@ -10,10 +10,8 @@ pub enum VersionError {
     InvalidSegment { segment: String },
     #[error("Version cannot contain newlines: {version}")]
     ContainsNewlines { version: String },
-    #[error("Version cannot contain consecutive dots: {version}")]
-    ConsecutiveDots { version: String },
-    #[error("Version cannot be pure alphabetic: {version}")]
-    PureAlphabetic { version: String },
+    #[error("Version cannot start with a prerelease segment: {version}")]
+    FirstSegmentIsPre { version: String },
     #[error("Versions must be entirely ASCII characters")]
     NoAscii,
 }
@@ -64,37 +62,19 @@ pub struct Version {
 
 impl Version {
     pub fn new(version: impl AsRef<str>) -> Result<Self, VersionError> {
-        let normalized = Self::normalize_version(version.as_ref())?;
-        if !normalized.is_ascii() {
-            return Err(VersionError::NoAscii);
+        let normalized = version.as_ref().trim();
+
+        if normalized.is_empty() {
+            return Ok(Self {
+                version: "0".into(),
+                segments: vec![VersionSegment::Number(0)],
+            });
         }
-        let segments = Self::parse_segments(&normalized)?;
+
         Ok(Self {
-            version: normalized,
-            segments,
+            version: normalized.to_string(),
+            segments: Self::parse_segments(normalized)?,
         })
-    }
-
-    fn normalize_version(version: &str) -> Result<String, VersionError> {
-        match version.trim() {
-            "" => Ok("0".into()),
-
-            // Check for invalid characters and patterns
-            v if v.contains('\n') => Err(VersionError::ContainsNewlines { version: v.into() }),
-            v if v.contains("..") => Err(VersionError::ConsecutiveDots { version: v.into() }),
-
-            // Check for obvious junk
-            v if v.chars().all(|c| c.is_alphabetic()) => {
-                Err(VersionError::PureAlphabetic { version: v.into() })
-            }
-
-            // Check for trailing dots or spaces within
-            v if v.ends_with('.') || v.contains(' ') => {
-                Err(VersionError::MalformedVersion { version: v.into() })
-            }
-
-            v => Ok(v.into()),
-        }
     }
 
     fn parse_segments(version: &str) -> Result<Vec<VersionSegment>, VersionError> {
@@ -105,28 +85,61 @@ impl Version {
         for ch in chars {
             match ch {
                 '.' => {
-                    if !current_segment.is_empty() {
-                        segments.push(Self::parse_segment(&current_segment)?);
-                        current_segment.clear();
+                    if current_segment.is_empty() {
+                        return Err(VersionError::MalformedVersion {
+                            version: version.into(),
+                        });
                     }
+
+                    segments.push(Self::parse_segment(&current_segment)?);
+                    current_segment.clear();
                 }
                 '-' => {
-                    if !current_segment.is_empty() {
-                        segments.push(Self::parse_segment(&current_segment)?);
-                        current_segment.clear();
+                    if current_segment.is_empty() {
+                        return Err(VersionError::MalformedVersion {
+                            version: version.into(),
+                        });
                     }
+
+                    segments.push(Self::parse_segment(&current_segment)?);
+                    current_segment.clear();
+
                     // Dash indicates prerelease, add "pre" marker
                     segments.push(VersionSegment::String("pre".to_string()));
                 }
+                '\n' => {
+                    return Err(VersionError::ContainsNewlines {
+                        version: version.into(),
+                    });
+                }
+                ' ' => {
+                    return Err(VersionError::MalformedVersion {
+                        version: version.into(),
+                    });
+                }
                 _ => {
+                    if !ch.is_ascii() {
+                        return Err(VersionError::NoAscii);
+                    };
+
+                    if segments.is_empty() && ch.is_alphabetic() {
+                        return Err(VersionError::FirstSegmentIsPre {
+                            version: version.into(),
+                        });
+                    };
+
                     current_segment.push(ch);
                 }
             }
         }
 
-        if !current_segment.is_empty() {
-            segments.push(Self::parse_segment(&current_segment)?);
+        if current_segment.is_empty() {
+            return Err(VersionError::MalformedVersion {
+                version: version.into(),
+            });
         }
+
+        segments.push(Self::parse_segment(&current_segment)?);
 
         if segments.is_empty() {
             segments.push(ZERO);
@@ -418,6 +431,7 @@ mod tests {
         assert!(
             Version::new("2.3422222.222.222222222.22222.ads0as.dasd0.ddd2222.2.qd3e.").is_err()
         );
+        assert!(Version::new(".0.0.pre").is_err());
     }
 
     #[test]
@@ -621,7 +635,7 @@ mod tests {
     #[test]
     fn test_sorted() {
         let versions: Vec<_> = [
-            ".0.0.pre",
+            "0.0.0.pre",
             "1.0.0.pre2",
             "1.0.0.rc",
             "1.0.0.rc2",
