@@ -2,7 +2,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use rv_cache::{CacheKey, CacheKeyHasher};
 use std::{fmt::Display, str::FromStr};
 
-use crate::{Ruby, engine::RubyEngine};
+use crate::{Versioned, engine::RubyEngine};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 pub type VersionPart = u32;
@@ -106,11 +106,11 @@ impl Default for RubyRequest {
 impl RubyRequest {
     /// Resolve the Ruby request to a specific version of ruby, chosen from
     /// the given list.
-    pub fn find_match_in(&self, rubies: &[Ruby]) -> Option<Ruby> {
+    pub fn find_match_in<T: Clone + Versioned>(&self, rubies: &[T]) -> Option<T> {
         rubies
             .iter()
             .rev()
-            .find(|r| r.version.satisfies(self))
+            .find(|r| r.version().satisfies(self))
             .cloned()
     }
 

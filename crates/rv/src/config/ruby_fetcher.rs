@@ -4,7 +4,6 @@ use std::{
 };
 
 use super::Config;
-use camino::Utf8PathBuf;
 use fs_err as fs;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -12,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 
 use rv_platform::HostPlatform;
-use rv_ruby::{Asset, Release, Ruby, request::RequestError, version::ParseVersionError};
+use rv_ruby::{Asset, Release, RemoteRuby, request::RequestError, version::ParseVersionError};
 
 // Use GitHub's TTL, but don't re-check more than every 60 seconds.
 const MINIMUM_CACHE_TTL: Duration = Duration::from_secs(60);
@@ -58,7 +57,7 @@ impl Config<'_> {
     ///
     /// On Windows, fetches from `oneclick/rubyinstaller2` (one release per Ruby version).
     /// On other platforms, fetches from `spinel-coop/rv-ruby` (all versions in one release).
-    pub async fn discover_remote_rubies(&self) -> Vec<Ruby> {
+    pub async fn discover_remote_rubies(&self) -> Vec<RemoteRuby> {
         // Detect host first — this decides which release source to query.
         let host = match HostPlatform::current() {
             Ok(h) => h,
@@ -91,7 +90,7 @@ impl Config<'_> {
         let desired_os = host.os();
         let desired_arch = host.arch();
 
-        let mut rubies: Vec<Ruby> = release
+        let mut rubies: Vec<RemoteRuby> = release
             .assets
             .iter()
             .filter_map(|asset| ruby_from_asset(asset).ok())
@@ -345,7 +344,7 @@ fn parse_max_age(header: &str) -> Option<Duration> {
 }
 
 /// Creates a Rubies info struct from a release asset
-fn ruby_from_asset(asset: &Asset) -> Result<Ruby> {
+fn ruby_from_asset(asset: &Asset) -> Result<RemoteRuby> {
     let caps = ARCH_REGEX.captures(&asset.name);
     let arch_match = caps.as_ref().and_then(|c| c.name("arch"));
     let arch_str = arch_match.map_or("unknown", |m| m.as_str());
@@ -364,15 +363,11 @@ fn ruby_from_asset(asset: &Asset) -> Result<Ruby> {
     let version: rv_ruby::version::RubyVersion = version_str.parse()?;
     let display_name = version.to_string();
 
-    Ok(Ruby {
+    Ok(RemoteRuby {
         key: format!("{display_name}-{os}-{arch}"),
         version,
-        path: Utf8PathBuf::from(&asset.browser_download_url),
-        managed: false,
-        symlink: None,
         arch: arch.to_string(),
         os: os.to_string(),
-        gem_root: None,
     })
 }
 
@@ -394,7 +389,7 @@ mod tests {
         let jtxt = fs_err::read_to_string("../../testdata/api.json").unwrap();
         let release: Release = serde_json::from_str(&jtxt).unwrap();
         let actual = ruby_from_asset(&release.assets[0]).unwrap();
-        let expected = Ruby {
+        let expected = RemoteRuby {
             key: "ruby-3.3.0-linux-aarch64".to_owned(),
             version: RubyVersion {
                 engine: rv_ruby::engine::RubyEngine::Ruby,
@@ -405,12 +400,8 @@ mod tests {
                 tiny: None,
                 prerelease: None,
             },
-            path: "https://github.com/spinel-coop/rv-ruby/releases/download/20251006/ruby-3.3.0.arm64_linux.tar.gz".into(),
-            managed: false,
-            symlink: None,
             arch: "aarch64".to_owned(),
             os: "linux".to_owned(),
-            gem_root: None,
         };
         assert_eq!(actual, expected);
     }

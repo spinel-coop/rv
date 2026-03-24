@@ -13,7 +13,7 @@ use rv_settings::RvSettings;
 use tracing::{debug, instrument};
 
 use rv_ruby::{
-    Ruby,
+    RemoteRuby, Ruby,
     request::{RequestError, RubyRequest, Source},
     version::RubyVersion,
 };
@@ -181,7 +181,7 @@ impl Config<'_> {
         self.discover_installed_rubies()
     }
 
-    pub async fn remote_rubies(&self) -> Vec<Ruby> {
+    pub async fn remote_rubies(&self) -> Vec<RemoteRuby> {
         self.discover_remote_rubies().await
     }
 

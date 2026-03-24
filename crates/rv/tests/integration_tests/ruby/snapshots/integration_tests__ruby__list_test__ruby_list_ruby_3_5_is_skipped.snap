@@ -4,14 +4,12 @@ expression: output.normalized_stdout()
 ---
 [
   {
-    "key": "ruby-4.0.0-macos-aarch64",
-    "version": "ruby-4.0.0",
-    "path": "http://...",
-    "managed": false,
-    "arch": "aarch64",
-    "os": "macos",
-    "gem_root": null,
-    "installed": false,
+    "Remote": {
+      "key": "ruby-4.0.0-macos-aarch64",
+      "version": "ruby-4.0.0",
+      "arch": "aarch64",
+      "os": "macos"
+    },
     "active": true
   }
 ]

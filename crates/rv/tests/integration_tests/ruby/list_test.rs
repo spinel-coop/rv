@@ -94,36 +94,39 @@ fn test_ruby_list_multiple_matching_rubies() {
     assert_snapshot!(output.normalized_stdout(), @r#"
     [
       {
-        "key": "ruby-3.1.4-macos-aarch64",
-        "version": "ruby-3.1.4",
-        "path": "/tmp/home/.local/share/rv/rubies/3.1.4",
-        "managed": true,
-        "arch": "aarch64",
-        "os": "macos",
-        "gem_root": null,
-        "installed": true,
+        "Installed": {
+          "key": "ruby-3.1.4-macos-aarch64",
+          "version": "ruby-3.1.4",
+          "path": "/tmp/home/.local/share/rv/rubies/3.1.4",
+          "managed": true,
+          "arch": "aarch64",
+          "os": "macos",
+          "gem_root": null
+        },
         "active": false
       },
       {
-        "key": "ruby-3.1.4-macos-aarch64",
-        "version": "ruby-3.1.4",
-        "path": "/tmp/home/.local/share/rv/rubies/ruby-3.1.4",
-        "managed": true,
-        "arch": "aarch64",
-        "os": "macos",
-        "gem_root": null,
-        "installed": true,
+        "Installed": {
+          "key": "ruby-3.1.4-macos-aarch64",
+          "version": "ruby-3.1.4",
+          "path": "/tmp/home/.local/share/rv/rubies/ruby-3.1.4",
+          "managed": true,
+          "arch": "aarch64",
+          "os": "macos",
+          "gem_root": null
+        },
         "active": false
       },
       {
-        "key": "ruby-3.2.0-macos-aarch64",
-        "version": "ruby-3.2.0",
-        "path": "/tmp/home/.local/share/rv/rubies/ruby-3.2.0",
-        "managed": true,
-        "arch": "aarch64",
-        "os": "macos",
-        "gem_root": null,
-        "installed": true,
+        "Installed": {
+          "key": "ruby-3.2.0-macos-aarch64",
+          "version": "ruby-3.2.0",
+          "path": "/tmp/home/.local/share/rv/rubies/ruby-3.2.0",
+          "managed": true,
+          "arch": "aarch64",
+          "os": "macos",
+          "gem_root": null
+        },
         "active": true
       }
     ]
@@ -135,47 +138,51 @@ fn test_ruby_list_multiple_matching_rubies() {
     assert_snapshot!(output.normalized_stdout(), @r#"
     [
       {
-        "key": "ruby-3.1.4-macos-aarch64",
-        "version": "ruby-3.1.4",
-        "path": "/tmp/home/.local/share/rv/rubies/3.1.4",
-        "managed": true,
-        "arch": "aarch64",
-        "os": "macos",
-        "gem_root": null,
-        "installed": true,
+        "Installed": {
+          "key": "ruby-3.1.4-macos-aarch64",
+          "version": "ruby-3.1.4",
+          "path": "/tmp/home/.local/share/rv/rubies/3.1.4",
+          "managed": true,
+          "arch": "aarch64",
+          "os": "macos",
+          "gem_root": null
+        },
         "active": false
       },
       {
-        "key": "ruby-3.1.4-macos-aarch64",
-        "version": "ruby-3.1.4",
-        "path": "/tmp/home/.local/share/rv/rubies/ruby-3.1.4",
-        "managed": true,
-        "arch": "aarch64",
-        "os": "macos",
-        "gem_root": null,
-        "installed": true,
+        "Installed": {
+          "key": "ruby-3.1.4-macos-aarch64",
+          "version": "ruby-3.1.4",
+          "path": "/tmp/home/.local/share/rv/rubies/ruby-3.1.4",
+          "managed": true,
+          "arch": "aarch64",
+          "os": "macos",
+          "gem_root": null
+        },
         "active": false
       },
       {
-        "key": "ruby-3.2.0-macos-aarch64",
-        "version": "ruby-3.2.0",
-        "path": "/tmp/home/.local/share/rv/rubies/3.2.0",
-        "managed": true,
-        "arch": "aarch64",
-        "os": "macos",
-        "gem_root": null,
-        "installed": true,
+        "Installed": {
+          "key": "ruby-3.2.0-macos-aarch64",
+          "version": "ruby-3.2.0",
+          "path": "/tmp/home/.local/share/rv/rubies/3.2.0",
+          "managed": true,
+          "arch": "aarch64",
+          "os": "macos",
+          "gem_root": null
+        },
         "active": false
       },
       {
-        "key": "ruby-3.2.0-macos-aarch64",
-        "version": "ruby-3.2.0",
-        "path": "/tmp/home/.local/share/rv/rubies/ruby-3.2.0",
-        "managed": true,
-        "arch": "aarch64",
-        "os": "macos",
-        "gem_root": null,
-        "installed": true,
+        "Installed": {
+          "key": "ruby-3.2.0-macos-aarch64",
+          "version": "ruby-3.2.0",
+          "path": "/tmp/home/.local/share/rv/rubies/ruby-3.2.0",
+          "managed": true,
+          "arch": "aarch64",
+          "os": "macos",
+          "gem_root": null
+        },
         "active": true
       }
     ]
@@ -191,47 +198,51 @@ fn test_ruby_list_multiple_matching_rubies() {
     assert_snapshot!(output.normalized_stdout(), @r#"
     [
       {
-        "key": "ruby-3.1.4-macos-aarch64",
-        "version": "ruby-3.1.4",
-        "path": "/tmp/home/.local/share/rv/rubies/3.1.4",
-        "managed": true,
-        "arch": "aarch64",
-        "os": "macos",
-        "gem_root": null,
-        "installed": true,
+        "Installed": {
+          "key": "ruby-3.1.4-macos-aarch64",
+          "version": "ruby-3.1.4",
+          "path": "/tmp/home/.local/share/rv/rubies/3.1.4",
+          "managed": true,
+          "arch": "aarch64",
+          "os": "macos",
+          "gem_root": null
+        },
         "active": false
       },
       {
-        "key": "ruby-3.1.4-macos-aarch64",
-        "version": "ruby-3.1.4",
-        "path": "/tmp/home/.local/share/rv/rubies/ruby-3.1.4",
-        "managed": true,
-        "arch": "aarch64",
-        "os": "macos",
-        "gem_root": null,
-        "installed": true,
+        "Installed": {
+          "key": "ruby-3.1.4-macos-aarch64",
+          "version": "ruby-3.1.4",
+          "path": "/tmp/home/.local/share/rv/rubies/ruby-3.1.4",
+          "managed": true,
+          "arch": "aarch64",
+          "os": "macos",
+          "gem_root": null
+        },
         "active": false
       },
       {
-        "key": "ruby-3.2.0-macos-aarch64",
-        "version": "ruby-3.2.0",
-        "path": "/tmp/home/.local/share/rv/rubies/3.2.0",
-        "managed": true,
-        "arch": "aarch64",
-        "os": "macos",
-        "gem_root": null,
-        "installed": true,
+        "Installed": {
+          "key": "ruby-3.2.0-macos-aarch64",
+          "version": "ruby-3.2.0",
+          "path": "/tmp/home/.local/share/rv/rubies/3.2.0",
+          "managed": true,
+          "arch": "aarch64",
+          "os": "macos",
+          "gem_root": null
+        },
         "active": false
       },
       {
-        "key": "ruby-3.2.0-macos-aarch64",
-        "version": "ruby-3.2.0",
-        "path": "/tmp/home/.local/share/rv/rubies/ruby-3.2.0",
-        "managed": true,
-        "arch": "aarch64",
-        "os": "macos",
-        "gem_root": null,
-        "installed": true,
+        "Installed": {
+          "key": "ruby-3.2.0-macos-aarch64",
+          "version": "ruby-3.2.0",
+          "path": "/tmp/home/.local/share/rv/rubies/ruby-3.2.0",
+          "managed": true,
+          "arch": "aarch64",
+          "os": "macos",
+          "gem_root": null
+        },
         "active": true
       }
     ]

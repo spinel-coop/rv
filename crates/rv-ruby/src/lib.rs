@@ -57,6 +57,43 @@ pub struct Asset {
     pub browser_download_url: String,
 }
 
+pub trait Versioned {
+    fn version(&self) -> &RubyVersion;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RemoteRuby {
+    /// Unique identifier for this Ruby installation
+    pub key: String,
+
+    /// Ruby version (e.g., "3.1.4", "9.4.0.0")
+    pub version: RubyVersion,
+
+    /// System architecture (aarch64, x86_64, etc.)
+    pub arch: String,
+
+    /// Operating system (macos, linux, windows, etc.)
+    pub os: String,
+}
+
+impl Versioned for RemoteRuby {
+    fn version(&self) -> &RubyVersion {
+        &self.version
+    }
+}
+
+impl PartialOrd for RemoteRuby {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for RemoteRuby {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.version.cmp(&other.version)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Ruby {
     /// Unique identifier for this Ruby installation
@@ -82,6 +119,12 @@ pub struct Ruby {
     pub os: String,
 
     pub gem_root: Option<Utf8PathBuf>,
+}
+
+impl Versioned for Ruby {
+    fn version(&self) -> &RubyVersion {
+        &self.version
+    }
 }
 
 impl Ruby {

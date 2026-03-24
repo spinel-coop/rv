@@ -1,6 +1,6 @@
 use crate::{Platform, Version, VersionPlatform};
 use pubgrub::Ranges;
-use rv_ruby::Ruby;
+use rv_ruby::Versioned;
 use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
@@ -235,11 +235,15 @@ impl Requirement {
 
     /// Resolve the Ruby request to a specific version of ruby, chosen from
     /// the given list.
-    pub fn find_match_in(&self, rubies: &[Ruby], allow_prerelease: bool) -> Option<Ruby> {
+    pub fn find_match_in<T: Versioned + Clone>(
+        &self,
+        rubies: &[T],
+        allow_prerelease: bool,
+    ) -> Option<T> {
         rubies
             .iter()
             .rev()
-            .find(|r| self.matches(&Version::from(&r.version), allow_prerelease))
+            .find(|r| self.matches(&Version::from(r.version()), allow_prerelease))
             .cloned()
     }
 
