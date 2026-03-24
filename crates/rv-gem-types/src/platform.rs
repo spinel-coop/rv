@@ -21,7 +21,7 @@ static OPENBSD_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"openbsd-?(\d+\.\d+
 static SOLARIS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"solaris-?(\d+\.\d+)?").unwrap());
 static PLATFORM_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+_platform)-?(\d+)?").unwrap());
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, Hash)]
 pub enum Platform {
     #[default]
     Ruby,
@@ -49,6 +49,13 @@ impl Platform {
             "ruby" | "" => Ok(Platform::Ruby),
             "current" => Ok(Platform::Current),
             str => Self::parse_platform_string(str),
+        }
+    }
+
+    pub fn from_lockfile(cpu: &str, os: Option<&str>) -> Self {
+        match cpu {
+            "ruby" => Platform::Ruby,
+            str => (str, os).into(),
         }
     }
 
