@@ -238,7 +238,12 @@ impl Requirement {
             .all(|constraint| constraint.matches(version))
     }
 
-    pub fn matches(&self, version: &Version) -> bool {
+    pub fn matches(&self, version: &Version, allow_prerelease: bool) -> bool {
+        // Check prerelease logic
+        if version.is_prerelease() && !allow_prerelease && !self.is_prerelease() {
+            return false;
+        }
+
         self.satisfied_by(version)
     }
 

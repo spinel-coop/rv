@@ -58,12 +58,7 @@ impl Dependency {
             return false;
         }
 
-        // Check prerelease logic
-        if version.is_prerelease() && !allow_prerelease && !self.requirement.is_prerelease() {
-            return false;
-        }
-
-        self.requirement.satisfied_by(version)
+        self.requirement.matches(version, allow_prerelease)
     }
 
     pub fn matches_spec(&self, name: &str, version: &Version) -> bool {
