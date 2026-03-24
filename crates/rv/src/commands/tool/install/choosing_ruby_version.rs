@@ -1,7 +1,6 @@
 use owo_colors::OwoColorize;
 use rv_gem_types::requirement::{ComparisonOperator, VersionConstraint};
 use rv_ruby::version::RubyVersion;
-use rv_version::VersionError;
 
 use crate::{
     commands::tool::install::{Error, Result},
@@ -67,34 +66,12 @@ fn select_ruby_version_for(
     })
 }
 
-fn ruby_version_to_gem_version(
-    ruby_version: &RubyVersion,
-) -> std::result::Result<rv_version::Version, VersionError> {
-    // Convert the ruby version to a string,
-    // but skip the engine. Do not put the engine into this string,
-    // because it would get counted as a string Segment in the Gem Version.
-    let mut s = String::new();
-    s.push_str(&format!("{}", ruby_version.major));
-    s.push_str(&format!(".{}", ruby_version.minor));
-    s.push_str(&format!(".{}", ruby_version.patch));
-
-    if let Some(tiny) = ruby_version.tiny {
-        s.push_str(&format!(".{tiny}"));
-    }
-    if let Some(ref prerelease) = ruby_version.prerelease {
-        s.push_str(&format!("-{prerelease}"));
-    }
-
-    // Parse the string into a gem version.
-    s.parse()
-}
-
 /// Use pubgrub to check if this Ruby version satisfies these Ruby version constraints.
 pub fn does_ruby_version_satisfy(
     ruby_version: &RubyVersion,
     ruby_constraints: &[VersionConstraint],
 ) -> bool {
-    let Ok(version) = ruby_version_to_gem_version(ruby_version) else {
+    let Ok(version) = ruby_version.number().parse::<rv_version::Version>() else {
         eprintln!(
             "{}: Ruby version {ruby_version} could not be evaluated because it doesn't match the RubyGems Gem::Version schema",
             "WARNING".yellow(),
