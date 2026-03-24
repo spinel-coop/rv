@@ -120,7 +120,7 @@ impl Dependency {
         if self.is_latest_version() {
             self.name.clone()
         } else {
-            format!("{} ({})", self.name, self.requirement)
+            self.to_string()
         }
     }
 }
