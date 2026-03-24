@@ -1,5 +1,6 @@
 use crate::{Platform, Version, VersionPlatform};
 use pubgrub::Ranges;
+use rv_ruby::Ruby;
 use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
@@ -232,6 +233,16 @@ impl Requirement {
         Self::new(vec![requirement])
     }
 
+    /// Resolve the Ruby request to a specific version of ruby, chosen from
+    /// the given list.
+    pub fn find_match_in(&self, rubies: &[Ruby], allow_prerelease: bool) -> Option<Ruby> {
+        rubies
+            .iter()
+            .rev()
+            .find(|r| self.matches(&Version::from(&r.version), allow_prerelease))
+            .cloned()
+    }
+
     pub fn satisfied_by(&self, version: &Version) -> bool {
         self.constraints
             .iter()
@@ -346,6 +357,7 @@ impl FromStr for Requirement {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rv_ruby::version::RubyVersion;
 
     #[track_caller]
     fn v(version: &str) -> Version {
@@ -508,5 +520,66 @@ mod tests {
         // Default requirement (>= 0) is not prerelease
         let default_req = Requirement::new(vec![""; 0]).unwrap();
         assert!(!default_req.is_prerelease());
+    }
+
+    fn ruby(version: &str) -> rv_ruby::Ruby {
+        let version = RubyVersion::from_str(version).unwrap();
+        let version_str = version.to_string();
+        rv_ruby::Ruby {
+            key: format!("{version_str}-macos-aarch64"),
+            version,
+            path: Default::default(),
+            managed: false,
+            symlink: None,
+            arch: "aarch64".into(),
+            os: "macos".into(),
+            gem_root: None,
+        }
+    }
+
+    #[test]
+    fn test_select_ruby_version_for() {
+        let constraints = vec![VersionConstraint {
+            operator: ComparisonOperator::LessThan,
+            version: "3.4".parse().unwrap(),
+        }];
+        let requirement: Requirement = constraints.into();
+
+        let rubies = vec![ruby("ruby-3.2.10"), ruby("ruby-3.3.10"), ruby("ruby-3.4.8")];
+
+        let expected = RubyVersion::from_str("ruby-3.3.10").unwrap();
+        let selected_ruby = requirement.find_match_in(&rubies, false).unwrap();
+
+        assert_eq!(expected, selected_ruby.version);
+    }
+
+    #[test]
+    fn test_select_ruby_version_for_prereleases() {
+        let constraints = vec![VersionConstraint {
+            operator: ComparisonOperator::LessThan,
+            version: "3.5".parse().unwrap(),
+        }];
+        let requirement: Requirement = constraints.into();
+
+        let rubies = vec![
+            ruby("ruby-3.2.10"),
+            ruby("ruby-3.3.10"),
+            ruby("ruby-3.4.8"),
+            ruby("3.5.0-preview1"),
+        ];
+
+        let expected = RubyVersion::from_str("ruby-3.5.0-preview1").unwrap();
+        let match_prereleases = true;
+        let selected_ruby = requirement
+            .find_match_in(&rubies, match_prereleases)
+            .unwrap();
+        assert_eq!(expected, selected_ruby.version);
+
+        let expected = RubyVersion::from_str("ruby-3.4.8").unwrap();
+        let match_prereleases = false;
+        let selected_ruby = requirement
+            .find_match_in(&rubies, match_prereleases)
+            .unwrap();
+        assert_eq!(expected, selected_ruby.version);
     }
 }

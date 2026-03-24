@@ -2845,6 +2845,7 @@ dependencies = [
  "pubgrub",
  "regex",
  "rv-platform",
+ "rv-ruby",
  "rv-version",
  "serde",
  "thiserror 2.0.17",
