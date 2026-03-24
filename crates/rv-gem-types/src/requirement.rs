@@ -2,7 +2,6 @@ use crate::{Platform, Version, VersionPlatform};
 use pubgrub::Ranges;
 use rv_ruby::Versioned;
 use serde::{Deserialize, Serialize};
-use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -17,7 +16,7 @@ pub enum RequirementError {
     Malformed { requirement: String },
 }
 
-#[derive(Clone, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Requirement {
     pub constraints: Vec<VersionConstraint>,
 }
@@ -64,7 +63,7 @@ impl From<Requirement> for Ranges<VersionPlatform> {
 }
 
 // Defaults to ">= 0"
-#[derive(Default, Clone, Ord, PartialOrd, Serialize, Deserialize)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct VersionConstraint {
     pub operator: ComparisonOperator,
     pub version: Version,
@@ -152,7 +151,7 @@ impl From<VersionConstraint> for Ranges<VersionPlatform> {
     }
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ComparisonOperator {
     Equal,
     NotEqual,
@@ -303,13 +302,6 @@ impl PartialEq for VersionConstraint {
 }
 
 impl Eq for VersionConstraint {}
-
-impl Hash for VersionConstraint {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.operator.hash(state);
-        self.version.version.hash(state);
-    }
-}
 
 impl VersionConstraint {
     pub fn new(operator: ComparisonOperator, version: Version) -> Self {
