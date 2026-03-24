@@ -210,7 +210,7 @@ fn parse_spec_dep<'i>(i: &mut Input<'i>) -> Res<ProjectDependency> {
 
 fn parse_dependency<'i>(i: &mut Input<'i>) -> Res<GemRange<'i>> {
     let name = parse_gem_name.parse_next(i)?;
-    let semver = opt(spec_dep_semver).parse_next(i)?;
+    let semver = opt(spec_dep_semver).parse_next(i)?.unwrap_or_default();
     let nonstandard = opt('!').parse_next(i)?;
     Ok(GemRange {
         name,

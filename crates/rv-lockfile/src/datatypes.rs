@@ -216,7 +216,7 @@ impl std::fmt::Display for GemVersion<'_> {
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct GemRange<'i> {
     pub name: &'i str,
-    pub semver: Option<Vec<VersionConstraint>>,
+    pub semver: Vec<VersionConstraint>,
     /// Dependencies specified with a source other than the main Rubygems index (e.g., git dependencies, path-based, dependencies) have a ! which means they are "pinned" to that source.
     /// According to <https://stackoverflow.com/questions/7517524/understanding-the-gemfile-lock-file>.
     pub nonstandard: bool,
@@ -226,8 +226,9 @@ impl std::fmt::Display for GemRange<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)?;
 
-        if let Some(semver) = &self.semver {
-            let gem_ranges = semver
+        if !self.semver.is_empty() {
+            let gem_ranges = self
+                .semver
                 .iter()
                 .map(|gem_range| gem_range.to_string())
                 .collect::<Vec<_>>()
