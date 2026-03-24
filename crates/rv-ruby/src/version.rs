@@ -204,20 +204,7 @@ impl RubyVersion {
 
 impl std::fmt::Display for RubyVersion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.engine)?;
-        write!(f, "-{}", self.major)?;
-        write!(f, ".{}", self.minor)?;
-        write!(f, ".{}", self.patch)?;
-
-        if let Some(tiny) = self.tiny {
-            write!(f, ".{tiny}")?;
-        }
-
-        if let Some(ref pre_release) = self.prerelease {
-            write!(f, "-{pre_release}")?;
-        };
-
-        Ok(())
+        write!(f, "{}-{}", self.engine, self.number())
     }
 }
 
