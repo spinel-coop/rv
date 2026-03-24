@@ -1,5 +1,5 @@
 use owo_colors::OwoColorize;
-use rv_gem_types::requirement::{ComparisonOperator, VersionConstraint};
+use rv_gem_types::requirement::Requirement;
 use rv_ruby::version::RubyVersion;
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
 /// This takes the tool's Ruby version constraints as a parameter.
 pub async fn ruby_to_use_for(
     config: &Config<'_>,
-    ruby_constraints: &[VersionConstraint],
+    ruby_constraints: &Requirement,
 ) -> Result<RubyVersion> {
     let installed_rubies = config.rubies();
 
@@ -36,11 +36,11 @@ enum MatchPrereleases {
 /// Find the highest Ruby version that meets these constraints from the available choices.
 fn select_ruby_version_for(
     candidate_rubies: &[rv_ruby::Ruby],
-    ruby_constraints: &[VersionConstraint],
+    ruby_constraints: &Requirement,
     match_prereleases: MatchPrereleases,
 ) -> std::result::Result<RubyVersion, Error> {
     // If the gem can be used with any Ruby version, then we'll use the latest available.
-    if ruby_constraints.is_empty() {
+    if ruby_constraints.is_latest_version() {
         let chosen = candidate_rubies
             .iter()
             .map(|r| r.version.clone())
@@ -62,14 +62,14 @@ fn select_ruby_version_for(
         }
     }
     Err(Error::NoMatchingRuby {
-        requirements: ruby_constraints.to_vec(),
+        requirement: ruby_constraints.clone(),
     })
 }
 
 /// Use pubgrub to check if this Ruby version satisfies these Ruby version constraints.
 pub fn does_ruby_version_satisfy(
     ruby_version: &RubyVersion,
-    ruby_constraints: &[VersionConstraint],
+    ruby_constraints: &Requirement,
 ) -> bool {
     let Ok(version) = ruby_version.number().parse::<rv_version::Version>() else {
         eprintln!(
@@ -78,47 +78,16 @@ pub fn does_ruby_version_satisfy(
         );
         return false;
     };
-    // Check each constraint to see if it fails.
-    for constraint in ruby_constraints {
-        if !meets_constraint(version.clone(), constraint) {
-            return false;
-        }
-    }
-    true
-}
-
-fn meets_constraint(version: rv_version::Version, constraint: &VersionConstraint) -> bool {
-    match constraint.operator {
-        ComparisonOperator::Equal => version == constraint.version,
-        ComparisonOperator::NotEqual => version != constraint.version,
-        ComparisonOperator::GreaterThan => version > constraint.version,
-        ComparisonOperator::LessThan => version < constraint.version,
-        ComparisonOperator::GreaterThanOrEqual => version >= constraint.version,
-        ComparisonOperator::LessThanOrEqual => version <= constraint.version,
-        ComparisonOperator::Pessimistic => {
-            let (low, high) = constraint.version.pessimistic_range();
-            version >= low && version < high
-        }
-    }
+    ruby_constraints.satisfied_by(&version)
 }
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
+    use rv_gem_types::{ComparisonOperator, VersionConstraint};
 
     use camino::Utf8PathBuf;
     use std::str::FromStr;
-
-    #[test]
-    fn test_eval() {
-        let chosen = "4.0.1".parse().unwrap();
-        let constraint = VersionConstraint {
-            operator: ComparisonOperator::GreaterThanOrEqual,
-            version: "3.2".parse().unwrap(),
-        };
-        assert!(meets_constraint(chosen, &constraint));
-    }
 
     fn ruby(version: &str) -> rv_ruby::Ruby {
         let version = RubyVersion::from_str(version).unwrap();
@@ -143,12 +112,13 @@ mod tests {
             operator: ComparisonOperator::LessThan,
             version: "3.4".parse().unwrap(),
         }];
+        let requirement: Requirement = constraints.into();
 
         let rubies = vec![ruby("ruby-3.2.10"), ruby("ruby-3.3.10"), ruby("ruby-3.4.8")];
 
         let expected = RubyVersion::from_str("ruby-3.3.10").unwrap();
         let selected_ruby =
-            select_ruby_version_for(&rubies, &constraints, MatchPrereleases::No).unwrap();
+            select_ruby_version_for(&rubies, &requirement, MatchPrereleases::No).unwrap();
 
         assert_eq!(expected, selected_ruby);
     }
@@ -159,6 +129,7 @@ mod tests {
             operator: ComparisonOperator::LessThan,
             version: "3.5".parse().unwrap(),
         }];
+        let requirement: Requirement = constraints.into();
 
         let rubies = vec![
             ruby("ruby-3.2.10"),
@@ -170,13 +141,13 @@ mod tests {
         let expected = RubyVersion::from_str("ruby-3.5.0-preview1").unwrap();
         let match_prereleases = MatchPrereleases::Yes;
         let selected_ruby =
-            select_ruby_version_for(&rubies, &constraints, match_prereleases).unwrap();
+            select_ruby_version_for(&rubies, &requirement, match_prereleases).unwrap();
         assert_eq!(expected, selected_ruby);
 
         let expected = RubyVersion::from_str("ruby-3.4.8").unwrap();
         let match_prereleases = MatchPrereleases::No;
         let selected_ruby =
-            select_ruby_version_for(&rubies, &constraints, match_prereleases).unwrap();
+            select_ruby_version_for(&rubies, &requirement, match_prereleases).unwrap();
         assert_eq!(expected, selected_ruby);
     }
 }

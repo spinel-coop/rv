@@ -51,10 +51,10 @@ pub enum Error {
     #[error("rv could not find any Ruby versions to install")]
     NoRubies,
     #[error(
-        "No available Ruby matched the Ruby requirements. The requirements were {requirements:?}"
+        "No available Ruby matched the Ruby requirements. The requirements were {requirement:?}"
     )]
     NoMatchingRuby {
-        requirements: Vec<rv_gem_types::requirement::VersionConstraint>,
+        requirement: rv_gem_types::requirement::Requirement,
     },
     #[error("Could not pin Ruby version for this tool: {0}")]
     CouldNotPinRubyVersion(std::io::Error),
