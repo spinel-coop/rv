@@ -14,8 +14,13 @@ pub(crate) async fn update_if_needed(global_args: &GlobalArgs, command: &Command
         return;
     }
 
-    let Ok(config) = &Config::with_settings(global_args, None) else {
-        return;
+    let config_result = Config::with_settings(global_args, None);
+    let config = match &config_result {
+        Ok(cfg) => cfg,
+        Err(e) => {
+            debug!("Error loading settings: {:?}", e);
+            return;
+        }
     };
 
     if config.rv_settings.update_mode == "none" {
