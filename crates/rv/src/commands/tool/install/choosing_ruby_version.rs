@@ -38,16 +38,6 @@ fn select_ruby_version_for(
     ruby_constraints: &Requirement,
     match_prereleases: MatchPrereleases,
 ) -> std::result::Result<RubyVersion, Error> {
-    // If the gem can be used with any Ruby version, then we'll use the latest available.
-    if ruby_constraints.is_latest_version() {
-        let chosen = candidate_rubies
-            .iter()
-            .map(|r| r.version.clone())
-            .max()
-            .ok_or(Error::NoRubies)?;
-        return Ok(chosen);
-    }
-
     // Otherwise, we'll use the latest Ruby the gem allows.
     for candidate_ruby in candidate_rubies.iter().rev() {
         let version = &candidate_ruby.version;

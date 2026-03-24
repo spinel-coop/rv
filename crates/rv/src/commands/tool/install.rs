@@ -48,8 +48,6 @@ pub enum Error {
     CouldNotChooseVersion(String),
     #[error(transparent)]
     InstallError(#[from] crate::commands::clean_install::Error),
-    #[error("rv could not find any Ruby versions to install")]
-    NoRubies,
     #[error(
         "No available Ruby matched the Ruby requirements. The requirements were {requirement:?}"
     )]
