@@ -345,9 +345,7 @@ fn parse_checksum<'i>(i: &mut Input<'i>) -> Res<Checksum<'i>> {
     // rack (3.2.3)
     let name = parse_gem_name.parse_next(i)?;
     space1.parse_next(i)?;
-    '('.parse_next(i)?;
-    let version = parse_version_platform.parse_next(i)?;
-    ')'.parse_next(i)?;
+    let version = delimited('(', parse_version_platform, ')').parse_next(i)?;
     let value = opt((space1, "sha256=")).parse_next(i)?;
     if value.is_some() {
         let sha256 = parse_hex_string.try_map(hex::decode).parse_next(i)?;
