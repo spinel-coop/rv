@@ -32,7 +32,6 @@ tokio = { workspace = true, features = [
   "fs",
 ] }
 tracing = { workspace = true }
-etcetera = { workspace = true }
 tracing-indicatif = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 tracing-oslog = { workspace = true }

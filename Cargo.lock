@@ -2712,7 +2712,6 @@ dependencies = [
  "dep-graph",
  "dircpy",
  "dunce",
- "etcetera",
  "flate2",
  "fs-err",
  "futures-util",
@@ -2854,7 +2853,6 @@ dependencies = [
 name = "rv-lockfile"
 version = "0.1.0"
 dependencies = [
- "camino",
  "criterion",
  "hex",
  "insta",
@@ -2863,7 +2861,6 @@ dependencies = [
  "rv-gem-types",
  "rv-ruby",
  "rv-version",
- "serde",
  "tempfile",
  "thiserror 2.0.17",
  "winnow 0.7.15",
