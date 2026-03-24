@@ -10,15 +10,11 @@ use url::Url;
 
 use crate::{
     GlobalArgs,
-    commands::{
-        clean_install::InstallStats,
-        tool::{Installed, install::choosing_ruby_version::ruby_to_use_for},
-    },
+    commands::{clean_install::InstallStats, tool::Installed},
     config::Config,
     gemserver::{self, GemName, GemRelease, Gemserver},
 };
 
-mod choosing_ruby_version;
 mod pubgrub_bridge;
 mod transitive_dep_query;
 
@@ -48,12 +44,6 @@ pub enum Error {
     CouldNotChooseVersion(String),
     #[error(transparent)]
     InstallError(#[from] crate::commands::clean_install::Error),
-    #[error(
-        "No available Ruby matched the Ruby requirements. The requirements were {requirement:?}"
-    )]
-    NoMatchingRuby {
-        requirement: rv_gem_types::requirement::Requirement,
-    },
     #[error("Could not pin Ruby version for this tool: {0}")]
     CouldNotPinRubyVersion(std::io::Error),
     #[error("This gem doesn't have any executables to install")]
@@ -156,7 +146,9 @@ pub(crate) async fn install(
         }
     }
 
-    let ruby_to_use = ruby_to_use_for(config, &release_to_install.metadata.ruby).await?;
+    let ruby_to_use = config
+        .best_ruby_matching_requirement(&release_to_install.metadata.ruby)
+        .await?;
     debug!("Selected Ruby {ruby_to_use} for this gem");
 
     debug!("Querying all transitive dependencies");

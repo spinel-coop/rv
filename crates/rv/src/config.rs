@@ -18,6 +18,8 @@ use rv_ruby::{
     version::RubyVersion,
 };
 
+use rv_gem_types::Requirement;
+
 use crate::GlobalArgs;
 
 pub mod bundler_settings;
@@ -42,6 +44,10 @@ pub enum Error {
     RvSettingsError(#[from] RvSettingsError),
     #[error("no matching ruby version found")]
     NoMatchingRuby,
+    #[error(
+        "No available Ruby matched the Ruby requirements. The requirements were {requirement:?}"
+    )]
+    NoRubyMatchingRequirement { requirement: Requirement },
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -202,6 +208,30 @@ impl Config<'_> {
     pub fn best_ruby(&self) -> Option<Ruby> {
         self.current_ruby()
             .or_else(|| self.highest_ruby_matching(&RubyRequest::default()))
+    }
+
+    pub async fn best_ruby_matching_requirement(
+        &self,
+        requirement: &Requirement,
+    ) -> Result<RubyVersion> {
+        let installed_rubies = self.rubies();
+
+        match requirement.find_match_in(&installed_rubies, false) {
+            Some(local_ruby) => Ok(local_ruby.version),
+            None => {
+                let remote_rubies = &self.remote_rubies().await;
+
+                match requirement
+                    .find_match_in(remote_rubies, false)
+                    .or_else(|| requirement.find_match_in(remote_rubies, true))
+                {
+                    Some(remote_ruby) => Ok(remote_ruby.version),
+                    None => Err(Error::NoRubyMatchingRequirement {
+                        requirement: requirement.clone(),
+                    }),
+                }
+            }
+        }
     }
 
     pub fn current_ruby(&self) -> Option<Ruby> {
