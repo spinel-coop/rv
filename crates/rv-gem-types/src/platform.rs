@@ -120,84 +120,11 @@ impl Platform {
             });
         };
         let cpu = *cpu;
-        let mut os = parts.get(1).map(|os| Cow::from(*os));
+        let os = parts.get(1).copied();
 
-        let cpu = if I386_REGEX.is_match(cpu) {
-            Some("x86")
-        } else if cpu == "dotnet" {
-            os = Some(match os {
-                Some(os_val) => format!("dotnet-{os_val}").into(),
-                None => "dotnet-".into(),
-            });
-            None
-        } else {
-            Some(cpu)
-        };
+        let platform: Platform = (cpu, os).into();
 
-        let (mut cpu, os) = if let Some(os) = os {
-            (cpu, os)
-        } else {
-            (None, Cow::from(cpu.unwrap()))
-        };
-
-        let (os, version) = if let Some(captures) = AIX_REGEX.captures(&os) {
-            ("aix", captures.get(1).map(|m| m.as_str()))
-        } else if os.contains("cygwin") {
-            ("cygwin", None)
-        } else if let Some(captures) = DARWIN_REGEX.captures(&os) {
-            ("darwin", captures.get(1).map(|m| m.as_str()))
-        } else if os == "macruby" {
-            ("macruby", None)
-        } else if let Some(captures) = MACRUBY_REGEX.captures(&os) {
-            ("macruby", captures.get(1).map(|m| m.as_str()))
-        } else if let Some(captures) = FREEBSD_REGEX.captures(&os) {
-            ("freebsd", captures.get(1).map(|m| m.as_str()))
-        } else if os == "java" || os == "jruby" {
-            ("java", None)
-        } else if let Some(captures) = JAVA_REGEX.captures(&os) {
-            ("java", captures.get(1).map(|m| m.as_str()))
-        } else if let Some(captures) = DALVIK_REGEX.captures(&os) {
-            ("dalvik", captures.get(1).map(|m| m.as_str()))
-        } else if os == "dotnet" {
-            ("dotnet", None)
-        } else if let Some(captures) = DOTNET_REGEX.captures(&os) {
-            ("dotnet", captures.get(1).map(|m| m.as_str()))
-        } else if let Some(captures) = LINUX_REGEX.captures(&os) {
-            ("linux", captures.get(1).map(|m| m.as_str()))
-        } else if os.contains("mingw32") {
-            ("mingw32", None)
-        } else if let Some(captures) = MINGW_REGEX.captures(&os) {
-            ("mingw", captures.get(1).map(|m| m.as_str()))
-        } else if let Some(captures) = MSWIN_REGEX.captures(&os) {
-            let os = captures.get(1).unwrap().as_str();
-
-            if cpu.is_none() && os.ends_with("32") {
-                cpu = Some("x86");
-            }
-
-            (os, captures.get(2).map(|m| m.as_str()))
-        } else if os.contains("netbsdelf") {
-            ("netbsdelf", None)
-        } else if let Some(captures) = OPENBSD_REGEX.captures(&os) {
-            ("openbsd", captures.get(1).map(|m| m.as_str()))
-        } else if let Some(captures) = SOLARIS_REGEX.captures(&os) {
-            ("solaris", captures.get(1).map(|m| m.as_str()))
-        } else if os.contains("wasi") {
-            ("wasi", None)
-        } else if let Some(captures) = PLATFORM_REGEX.captures(&os) {
-            (
-                captures.get(1).unwrap().as_str(),
-                captures.get(2).map(|m| m.as_str()),
-            )
-        } else {
-            ("unknown", None)
-        };
-
-        Ok(Platform::Specific {
-            cpu: cpu.map(str::to_string),
-            os: os.to_string(),
-            version: version.map(str::to_string),
-        })
+        Ok(platform)
     }
 
     pub fn to_array(&self) -> [Option<&str>; 3] {
@@ -324,6 +251,89 @@ impl FromStr for Platform {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Platform::new(s)
+    }
+}
+
+impl From<(&str, Option<&str>)> for Platform {
+    fn from((cpu, os): (&str, Option<&str>)) -> Self {
+        let mut os = os.map(Cow::from);
+
+        let cpu = if I386_REGEX.is_match(cpu) {
+            Some("x86")
+        } else if cpu == "dotnet" {
+            os = Some(match os {
+                Some(os_val) => format!("dotnet-{os_val}").into(),
+                None => "dotnet-".into(),
+            });
+            None
+        } else {
+            Some(cpu)
+        };
+
+        let (mut cpu, os) = if let Some(os) = os {
+            (cpu, os)
+        } else {
+            (None, Cow::from(cpu.unwrap()))
+        };
+
+        let (os, version) = if let Some(captures) = AIX_REGEX.captures(&os) {
+            ("aix", captures.get(1).map(|m| m.as_str()))
+        } else if os.contains("cygwin") {
+            ("cygwin", None)
+        } else if let Some(captures) = DARWIN_REGEX.captures(&os) {
+            ("darwin", captures.get(1).map(|m| m.as_str()))
+        } else if os == "macruby" {
+            ("macruby", None)
+        } else if let Some(captures) = MACRUBY_REGEX.captures(&os) {
+            ("macruby", captures.get(1).map(|m| m.as_str()))
+        } else if let Some(captures) = FREEBSD_REGEX.captures(&os) {
+            ("freebsd", captures.get(1).map(|m| m.as_str()))
+        } else if os == "java" || os == "jruby" {
+            ("java", None)
+        } else if let Some(captures) = JAVA_REGEX.captures(&os) {
+            ("java", captures.get(1).map(|m| m.as_str()))
+        } else if let Some(captures) = DALVIK_REGEX.captures(&os) {
+            ("dalvik", captures.get(1).map(|m| m.as_str()))
+        } else if os == "dotnet" {
+            ("dotnet", None)
+        } else if let Some(captures) = DOTNET_REGEX.captures(&os) {
+            ("dotnet", captures.get(1).map(|m| m.as_str()))
+        } else if let Some(captures) = LINUX_REGEX.captures(&os) {
+            ("linux", captures.get(1).map(|m| m.as_str()))
+        } else if os.contains("mingw32") {
+            ("mingw32", None)
+        } else if let Some(captures) = MINGW_REGEX.captures(&os) {
+            ("mingw", captures.get(1).map(|m| m.as_str()))
+        } else if let Some(captures) = MSWIN_REGEX.captures(&os) {
+            let os = captures.get(1).unwrap().as_str();
+
+            if cpu.is_none() && os.ends_with("32") {
+                cpu = Some("x86");
+            }
+
+            (os, captures.get(2).map(|m| m.as_str()))
+        } else if os.contains("netbsdelf") {
+            ("netbsdelf", None)
+        } else if let Some(captures) = OPENBSD_REGEX.captures(&os) {
+            ("openbsd", captures.get(1).map(|m| m.as_str()))
+        } else if let Some(captures) = SOLARIS_REGEX.captures(&os) {
+            ("solaris", captures.get(1).map(|m| m.as_str()))
+        } else if os.contains("wasi") {
+            ("wasi", None)
+        } else if let Some(captures) = PLATFORM_REGEX.captures(&os) {
+            (
+                captures.get(1).unwrap().as_str(),
+                captures.get(2).map(|m| m.as_str()),
+            )
+        } else {
+            ("unknown", None)
+        };
+
+        Platform::Specific {
+            cpu: cpu.map(str::to_string),
+            os: os.to_string(),
+            version: version.map(str::to_string),
+        }
     }
 }
 
