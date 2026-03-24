@@ -8,7 +8,7 @@ use tabled::{
 
 use anstream::println;
 use owo_colors::OwoColorize;
-use rv_ruby::{Ruby, canonical_name::CanonicalName, version::RubyVersion};
+use rv_ruby::{Ruby, canonical_name::CanonicalName, request::RubyRequest, version::RubyVersion};
 use serde::Serialize;
 use tracing::{info, warn};
 
@@ -112,23 +112,24 @@ pub(crate) async fn list(
     }
 
     let requested = config.ruby_request();
-    let mut active_ruby = requested.find_match_in(&installed_rubies);
-    let active_installed = active_ruby.is_some();
+    let mut active_ruby = false;
 
     // Might have multiple installed rubies with the same version (e.g., "ruby-3.2.0" and "mruby-3.2.0").
     let mut rubies_map: BTreeMap<RubyVersion, Vec<JsonRubyEntry>> = BTreeMap::new();
 
-    for ruby in installed_rubies {
-        rubies_map
-            .entry(ruby.version.clone())
-            .or_default()
-            .push(JsonRubyEntry {
-                active: active(&ruby, &active_ruby),
+    for ruby in installed_rubies.into_iter().rev() {
+        rubies_map.entry(ruby.version.clone()).or_default().insert(
+            0,
+            JsonRubyEntry {
+                active: active(&mut active_ruby, &ruby.version, &requested),
                 installed: true,
                 ruby,
                 color: true,
-            });
+            },
+        );
     }
+
+    let active_installed = active_ruby;
 
     if !version_filter.installed_only {
         let remote_rubies = config.remote_rubies().await;
@@ -139,21 +140,19 @@ pub(crate) async fn list(
             latest_patch_version(&remote_rubies)
         };
 
-        active_ruby = active_ruby.or_else(|| requested.find_match_in(&selected_remote_rubies));
-
         // Add selected remote rubies that are not already installed to the list
-        for ruby in selected_remote_rubies {
+        for ruby in selected_remote_rubies.into_iter().rev() {
             rubies_map
                 .entry(ruby.version.clone())
                 .or_insert(vec![JsonRubyEntry {
-                    active: active(&ruby, &active_ruby),
+                    active: active(&mut active_ruby, &ruby.version, &requested),
                     installed: false,
                     ruby,
                     color: true,
                 }]);
         }
 
-        let insert_requested_if_available = || {
+        if !active_ruby {
             let ruby = requested.find_match_in(&remote_rubies);
 
             if let Some(ref ruby) = ruby {
@@ -166,11 +165,7 @@ pub(crate) async fn list(
                         color: true,
                     }]);
             };
-
-            ruby
         };
-
-        active_ruby.or_else(insert_requested_if_available);
 
         if rubies_map.is_empty() && format == OutputFormat::Text {
             warn!("No rubies found for your platform.");
@@ -186,8 +181,16 @@ pub(crate) async fn list(
     print_entries(entries, format, no_color, &explanation)
 }
 
-fn active(ruby: &Ruby, active_ruby: &Option<Ruby>) -> bool {
-    active_ruby.as_ref().is_some_and(|a| a == ruby)
+fn active(active_set: &mut bool, version: &RubyVersion, requested: &RubyRequest) -> bool {
+    if *active_set {
+        return false;
+    }
+
+    let should_activate = version.satisfies(requested);
+
+    *active_set |= should_activate;
+
+    should_activate
 }
 
 fn latest_patch_version(remote_rubies: &Vec<Ruby>) -> Vec<Ruby> {
