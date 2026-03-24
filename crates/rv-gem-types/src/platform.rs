@@ -7,7 +7,7 @@ use std::{borrow::Cow, str::FromStr};
 // Cached regexes for platform parsing to avoid repeated compilation
 static I386_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"i\d86").unwrap());
 static AIX_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"aix-?(\d)?").unwrap());
-static DARWIN_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"darwin-?(\d)?").unwrap());
+static DARWIN_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"darwin-?(\d+)?").unwrap());
 static MACRUBY_REGEX: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^macruby-?(\d+(?:\.\d+)*)?").unwrap());
 static FREEBSD_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"freebsd-?(\d+)?").unwrap());
@@ -399,6 +399,14 @@ mod tests {
                     Some("x86".to_string()),
                     Some("mswin32".to_string()),
                     Some("80".to_string()),
+                ],
+            ),
+            (
+                "arm64-darwin-22",
+                [
+                    Some("arm64".to_string()),
+                    Some("darwin".to_string()),
+                    Some("22".to_string()),
                 ],
             ),
         ];
