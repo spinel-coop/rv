@@ -1,4 +1,3 @@
-use owo_colors::OwoColorize;
 use rv_gem_types::requirement::Requirement;
 use rv_ruby::version::RubyVersion;
 
@@ -57,28 +56,13 @@ fn select_ruby_version_for(
             continue;
         }
 
-        if does_ruby_version_satisfy(&candidate_ruby.version, ruby_constraints) {
-            return Ok(candidate_ruby.version.clone());
+        if ruby_constraints.satisfied_by(&rv_version::Version::from(version)) {
+            return Ok(version.clone());
         }
     }
     Err(Error::NoMatchingRuby {
         requirement: ruby_constraints.clone(),
     })
-}
-
-/// Use pubgrub to check if this Ruby version satisfies these Ruby version constraints.
-pub fn does_ruby_version_satisfy(
-    ruby_version: &RubyVersion,
-    ruby_constraints: &Requirement,
-) -> bool {
-    let Ok(version) = ruby_version.number().parse::<rv_version::Version>() else {
-        eprintln!(
-            "{}: Ruby version {ruby_version} could not be evaluated because it doesn't match the RubyGems Gem::Version schema",
-            "WARNING".yellow(),
-        );
-        return false;
-    };
-    ruby_constraints.satisfied_by(&version)
 }
 
 #[cfg(test)]

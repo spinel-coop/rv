@@ -4,6 +4,7 @@ use crate::{
     engine::RubyEngine,
     request::{ReleasedRubyRequest, RequestError, RubyRequest, VersionPart},
 };
+use rv_version::{Version, VersionSegment};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 /// A specific version of Ruby, which can be run and downloaded.
@@ -115,6 +116,29 @@ impl From<RubyVersion> for RubyRequest {
             tiny: version.tiny,
             prerelease: version.prerelease,
         })
+    }
+}
+
+impl From<&RubyVersion> for Version {
+    fn from(version: &RubyVersion) -> Self {
+        let mut segments = vec![
+            VersionSegment::Number(version.major),
+            VersionSegment::Number(version.minor),
+            VersionSegment::Number(version.patch),
+        ];
+
+        if let Some(tiny) = version.tiny {
+            segments.push(VersionSegment::Number(tiny))
+        };
+
+        if let Some(ref prerelease) = version.prerelease {
+            segments.push(VersionSegment::String(prerelease.to_string()))
+        };
+
+        Self {
+            version: version.number(),
+            segments,
+        }
     }
 }
 

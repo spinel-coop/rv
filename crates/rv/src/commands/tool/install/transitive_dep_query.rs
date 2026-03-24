@@ -131,10 +131,10 @@ pub async fn query_all_gem_deps_from_server(
             let candidate_versions = dep_info
                 .into_iter()
                 .filter(|version| {
-                    super::choosing_ruby_version::does_ruby_version_satisfy(
-                        &ruby_to_use.clone(),
-                        &version.metadata.ruby,
-                    )
+                    version
+                        .metadata
+                        .ruby
+                        .satisfied_by(&rv_version::Version::from(ruby_to_use))
                 })
                 .collect();
             results.insert(dep_name, candidate_versions);

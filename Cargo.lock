@@ -2889,6 +2889,7 @@ dependencies = [
  "regex",
  "rv-cache",
  "rv-dirs",
+ "rv-version",
  "serde",
  "serde_with",
  "thiserror 2.0.17",
