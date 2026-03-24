@@ -337,7 +337,9 @@ impl std::fmt::Display for VersionConstraint {
 
 impl std::fmt::Display for Requirement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let constraints: Vec<String> = self.constraints.iter().map(|c| c.to_string()).collect();
+        let mut constraints: Vec<String> = self.constraints.iter().map(|c| c.to_string()).collect();
+        constraints.sort();
+        constraints.reverse();
         write!(f, "{}", constraints.join(", "))
     }
 }
@@ -453,6 +455,11 @@ mod tests {
         assert!(!req.satisfied_by(&v("1.3")));
         assert!(!req.satisfied_by(&v("1.5")));
         assert!(!req.satisfied_by(&v("1.7")));
+
+        // displays sorted in a stable way
+        assert_eq!(req.to_string(), ">= 1.4, <= 1.6, != 1.5");
+        let req2 = Requirement::new(vec![">= 1.4", "!= 1.5", "<= 1.6"]).unwrap();
+        assert_eq!(req2.to_string(), ">= 1.4, <= 1.6, != 1.5");
     }
 
     #[test]
