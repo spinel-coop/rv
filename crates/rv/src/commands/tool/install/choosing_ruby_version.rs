@@ -47,7 +47,6 @@ mod tests {
     use super::*;
     use rv_gem_types::{ComparisonOperator, VersionConstraint};
 
-    use camino::Utf8PathBuf;
     use std::str::FromStr;
 
     fn ruby(version: &str) -> rv_ruby::Ruby {
@@ -56,9 +55,7 @@ mod tests {
         rv_ruby::Ruby {
             key: format!("{version_str}-macos-aarch64"),
             version,
-            path: Utf8PathBuf::from(format!(
-                "https://github.com/spinel-coop/rv-ruby/releases/download/latest/{version_str}.arm64_linux.tar.gz"
-            )),
+            path: Default::default(),
             managed: false,
             symlink: None,
             arch: "aarch64".into(),
