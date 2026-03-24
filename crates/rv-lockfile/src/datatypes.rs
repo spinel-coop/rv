@@ -192,7 +192,7 @@ impl std::fmt::Display for PathSection<'_> {
 }
 
 /// A (gem, version) pair.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct GemVersion<'i> {
     /// Name of the gem.
     pub name: &'i str,

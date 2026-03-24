@@ -449,7 +449,7 @@ fn retain_gems_to_be_installed(lockfile: &mut GemfileDotLock) {
 
         let mut by_name: HashMap<&str, Spec> = HashMap::new();
         for spec in &gem_section.specs {
-            let gem_version = spec.gem_version;
+            let gem_version = &spec.gem_version;
 
             let Ok(vp) = VersionPlatform::from_str(gem_version.version) else {
                 continue;
@@ -1204,7 +1204,7 @@ async fn download_gems<'i>(
         let mut hm = HashMap::new();
         for checksum in checks {
             hm.insert(
-                checksum.gem_version,
+                checksum.gem_version.clone(),
                 HowToChecksum {
                     algorithm: match checksum.algorithm {
                         ChecksumAlgorithm::None => continue,
@@ -1892,11 +1892,11 @@ async fn download_gem<'i>(
     let (cached, downloaded) = stats.counts();
     span.pb_set_message(&format!("{cached} cached, {downloaded} downloaded"));
 
-    let gem_version = spec.gem_version;
+    let gem_version = &spec.gem_version;
     let full_name = gem_version.full_name();
 
     // Validate the checksums.
-    if let Some(checksum) = checksums.get(&gem_version) {
+    if let Some(checksum) = checksums.get(gem_version) {
         match checksum.algorithm {
             KnownChecksumAlgos::Sha256 => {
                 let actual = sha2::Sha256::digest(&contents);
