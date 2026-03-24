@@ -2,6 +2,7 @@ use std::{collections::HashMap, fs};
 
 use owo_colors::OwoColorize;
 use reqwest::StatusCode;
+use rv_gem_types::VersionPlatform;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_version::Version as GemVersion;
 use tracing::debug;
@@ -223,7 +224,7 @@ pub(crate) async fn install(
 /// When building a lockfile from a resolved gem list, there's no actual lockfile
 /// on disk or anything, so this holds the data (e.g. strings) that the lockfile views.
 struct LockfileBuilder {
-    versions_needed: Vec<(String, String)>,
+    versions_needed: Vec<(String, VersionPlatform)>,
     gemserver_remote: String,
 }
 
@@ -232,10 +233,7 @@ impl LockfileBuilder {
         url: &Url,
         versions_needed: pubgrub::SelectedDependencies<pubgrub_bridge::DepProvider>,
     ) -> Self {
-        let versions_needed: Vec<_> = versions_needed
-            .into_iter()
-            .map(|(gem_name, v)| (gem_name, v.to_string()))
-            .collect();
+        let versions_needed = versions_needed.into_iter().collect();
         let gemserver_remote = url.to_string();
         Self {
             gemserver_remote,
@@ -250,8 +248,8 @@ impl LockfileBuilder {
             remote: Some(&self.gemserver_remote),
             specs: Vec::new(),
         };
-        for (gem_name, version) in &self.versions_needed {
-            let spec = Self::spec_for_gem_dep(gem_name, version);
+        for (gem_name, version_platform) in &self.versions_needed {
+            let spec = Self::spec_for_gem_dep(gem_name, version_platform);
             gem_section.specs.push(spec);
         }
         lockfile.gem.push(gem_section);
@@ -260,7 +258,7 @@ impl LockfileBuilder {
 
     fn spec_for_gem_dep<'a>(
         gem_name: &'a GemName,
-        version: &'a str,
+        version_platform: &VersionPlatform,
     ) -> rv_lockfile::datatypes::Spec<'a> {
         rv_lockfile::datatypes::Spec {
             // We don't need to know the deps here, we've already resolved all dependencies.
@@ -268,7 +266,7 @@ impl LockfileBuilder {
             deps: Vec::new(),
             gem_version: rv_lockfile::datatypes::GemVersion {
                 name: gem_name,
-                version,
+                version_platform: version_platform.clone(),
             },
         }
     }

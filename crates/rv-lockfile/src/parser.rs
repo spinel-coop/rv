@@ -9,8 +9,8 @@ use winnow::{
     token::{take_until, take_while},
 };
 
-use rv_gem_types::ProjectDependency;
 use rv_gem_types::requirement::{ComparisonOperator, Requirement, VersionConstraint};
+use rv_gem_types::{Platform, ProjectDependency, VersionPlatform};
 use rv_ruby::version::RubyVersion;
 use rv_version::{Version, VersionSegment};
 
@@ -32,7 +32,7 @@ enum Section<'i> {
     Git(GitSection<'i>),
     Gem(GemSection<'i>),
     Path(PathSection<'i>),
-    Platforms(Vec<&'i str>),
+    Platforms(Vec<Platform>),
     Dependencies(Vec<GemRange<'i>>),
     RubyVersion(RubyVersionSection),
     BundledWith(BundledWithSection),
@@ -190,8 +190,11 @@ fn parse_spec<'i>(i: &mut Input<'i>) -> Res<Spec<'i>> {
 fn parse_spec_no_delimiters<'i>(i: &mut Input<'i>) -> Res<Spec<'i>> {
     let name = parse_gem_name.parse_next(i)?;
     space1.parse_next(i)?;
-    let version = delimited('(', parse_version_platform, ")\n").parse_next(i)?;
-    let gem_version = GemVersion { name, version };
+    let version_platform = delimited('(', parse_version_platform, ")\n").parse_next(i)?;
+    let gem_version = GemVersion {
+        name,
+        version_platform,
+    };
     let deps = repeat(0.., parse_spec_dep).parse_next(i)?;
     Ok(Spec { gem_version, deps })
 }
@@ -254,11 +257,20 @@ fn parse_gem_name<'i>(i: &mut Input<'i>) -> Res<&'i str> {
     .parse_next(i)
 }
 
-fn parse_platform<'i>(i: &mut Input<'i>) -> Res<&'i str> {
-    take_while(0.., |c: char| {
-        c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.'
-    })
-    .parse_next(i)
+fn parse_platform<'i>(i: &mut Input<'i>) -> Res<Platform> {
+    let cpu = take_while(1.., |c: char| c.is_ascii_alphanumeric() || c == '_').parse_next(i)?;
+
+    let os = opt(preceded(
+        '-',
+        take_while(1.., |c: char| {
+            c.is_ascii_alphanumeric() || c == '_' || c == '.' || c == '-'
+        }),
+    ))
+    .parse_next(i)?;
+
+    let platform = Platform::from_lockfile(cpu, os);
+
+    Ok(platform)
 }
 
 fn parse_ruby_version_inner<'i>(i: &mut Input<'i>) -> Res<RubyVersion> {
@@ -315,21 +327,13 @@ fn parse_segments<'i>(i: &mut Input<'i>) -> Res<Vec<VersionSegment>> {
     Ok(segments)
 }
 
-fn parse_version_platform<'i>(i: &mut Input<'i>) -> Res<&'i str> {
-    parse_version_platform_inner.take().parse_next(i)
-}
+fn parse_version_platform<'i>(i: &mut Input<'i>) -> Res<VersionPlatform> {
+    let version = parse_version.parse_next(i)?;
+    let platform = opt(preceded('-', parse_platform))
+        .parse_next(i)?
+        .unwrap_or_default();
 
-fn parse_version_platform_inner<'i>(i: &mut Input<'i>) -> Res<()> {
-    // [0-9]+
-    let _major = parse_num.parse_next(i)?;
-
-    // (?>\.[0-9a-zA-Z]+)*
-    let _other_segments: Vec<_> = repeat(0.., ('.', parse_alphanum)).parse_next(i)?;
-
-    // (-[0-9A-Za-z_-]+)?
-    let _platform: Option<(char, &str)> = opt(('-', parse_platform)).parse_next(i)?;
-
-    Ok(())
+    Ok(VersionPlatform { version, platform })
 }
 
 fn parse_hex_string<'i>(i: &mut Input<'i>) -> Res<&'i str> {
@@ -345,20 +349,24 @@ fn parse_checksum<'i>(i: &mut Input<'i>) -> Res<Checksum<'i>> {
     // rack (3.2.3)
     let name = parse_gem_name.parse_next(i)?;
     space1.parse_next(i)?;
-    '('.parse_next(i)?;
-    let version = parse_version_platform.parse_next(i)?;
-    ')'.parse_next(i)?;
+    let version_platform = delimited('(', parse_version_platform, ')').parse_next(i)?;
     let value = opt((space1, "sha256=")).parse_next(i)?;
     if value.is_some() {
         let sha256 = parse_hex_string.try_map(hex::decode).parse_next(i)?;
         Ok(Checksum {
-            gem_version: GemVersion { name, version },
+            gem_version: GemVersion {
+                name,
+                version_platform,
+            },
             value: sha256,
             algorithm: ChecksumAlgorithm::SHA256,
         })
     } else {
         Ok(Checksum {
-            gem_version: GemVersion { name, version },
+            gem_version: GemVersion {
+                name,
+                version_platform,
+            },
             value: vec![],
             algorithm: ChecksumAlgorithm::None,
         })
@@ -439,7 +447,7 @@ fn parse_git_section<'i>(i: &mut Input<'i>) -> Res<GitSection<'i>> {
     })
 }
 
-fn parse_platforms<'i>(i: &mut Input<'i>) -> Res<Vec<&'i str>> {
+fn parse_platforms<'i>(i: &mut Input<'i>) -> Res<Vec<Platform>> {
     "PLATFORMS\n".parse_next(i)?;
     repeat(1.., delimited(space1, parse_platform, line_ending)).parse_next(i)
 }

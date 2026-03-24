@@ -1,8 +1,8 @@
 //! Most of the types in this module borrow a string from their input,
 //! so they have a lifetime 'i, which is short for 'input.
 
-use rv_gem_types::ProjectDependency;
 use rv_gem_types::requirement::VersionConstraint;
+use rv_gem_types::{Platform, ProjectDependency, VersionPlatform};
 use rv_ruby::version::RubyVersion;
 use rv_version::Version;
 
@@ -18,7 +18,7 @@ pub struct GemfileDotLock<'i> {
     pub path: Vec<PathSection<'i>>,
 
     /// Lists every triple that Bundler has resolved and included in this lockfile.
-    pub platforms: Vec<&'i str>,
+    pub platforms: Vec<Platform>,
 
     /// Lists every gem that this lockfile has been resolved to include
     pub dependencies: Vec<GemRange<'i>>,
@@ -191,24 +191,24 @@ impl std::fmt::Display for PathSection<'_> {
     }
 }
 
-/// A (gem, version) pair.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+/// A (gem, version_platform) pair.
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct GemVersion<'i> {
     /// Name of the gem.
     pub name: &'i str,
-    /// Version of the gem.
-    pub version: &'i str,
+    /// Full version of the gem.
+    pub version_platform: VersionPlatform,
 }
 
 impl<'i> GemVersion<'i> {
     pub fn full_name(&self) -> String {
-        format!("{}-{}", self.name, self.version)
+        format!("{}-{}", self.name, self.version_platform)
     }
 }
 
 impl std::fmt::Display for GemVersion<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} ({})", self.name, self.version)
+        write!(f, "{} ({})", self.name, self.version_platform)
     }
 }
 

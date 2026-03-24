@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::Platform;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub struct VersionPlatform {
     pub version: Version,
     pub platform: Platform,

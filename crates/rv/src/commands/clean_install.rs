@@ -443,28 +443,22 @@ async fn ci_inner_work(
 
 fn retain_gems_to_be_installed(lockfile: &mut GemfileDotLock) {
     lockfile.gem.iter_mut().for_each(|gem_section| {
-        use rv_gem_types::VersionPlatform;
         use std::collections::HashMap;
-        use std::str::FromStr;
 
         let mut by_name: HashMap<&str, Spec> = HashMap::new();
         for spec in &gem_section.specs {
-            let gem_version = spec.gem_version;
+            let gem_version = &spec.gem_version;
 
-            let Ok(vp) = VersionPlatform::from_str(gem_version.version) else {
-                continue;
-            };
+            let vp = &gem_version.version_platform;
 
             if !vp.platform.is_local() {
                 continue;
             }
 
             if let Some(other_spec) = by_name.get_mut(gem_version.name) {
-                let Ok(other_vp) = VersionPlatform::from_str(other_spec.gem_version.version) else {
-                    continue;
-                };
+                let other_vp = &other_spec.gem_version.version_platform;
 
-                if vp > other_vp {
+                if *vp > *other_vp {
                     *other_spec = spec.clone();
                 }
             } else {
@@ -1204,7 +1198,7 @@ async fn download_gems<'i>(
         let mut hm = HashMap::new();
         for checksum in checks {
             hm.insert(
-                checksum.gem_version,
+                checksum.gem_version.clone(),
                 HowToChecksum {
                     algorithm: match checksum.algorithm {
                         ChecksumAlgorithm::None => continue,
@@ -1798,8 +1792,8 @@ where
 
 fn url_for_spec(remote: &str, spec: &Spec<'_>) -> Result<Url> {
     let gem_name = spec.gem_version.name;
-    let gem_version = spec.gem_version.version;
-    let path = format!("gems/{gem_name}-{gem_version}.gem");
+    let gem_version_platform = &spec.gem_version.version_platform;
+    let path = format!("gems/{gem_name}-{gem_version_platform}.gem");
     let url = url::Url::parse(remote)
         .map_err(|err| Error::BadRemote {
             remote: remote.to_owned(),
@@ -1892,11 +1886,11 @@ async fn download_gem<'i>(
     let (cached, downloaded) = stats.counts();
     span.pb_set_message(&format!("{cached} cached, {downloaded} downloaded"));
 
-    let gem_version = spec.gem_version;
+    let gem_version = &spec.gem_version;
     let full_name = gem_version.full_name();
 
     // Validate the checksums.
-    if let Some(checksum) = checksums.get(&gem_version) {
+    if let Some(checksum) = checksums.get(gem_version) {
         match checksum.algorithm {
             KnownChecksumAlgos::Sha256 => {
                 let actual = sha2::Sha256::digest(&contents);
@@ -2277,7 +2271,8 @@ SHA512:
         let expected_version = "24.1.0.0";
 
         assert_eq!(
-            libv8.gem_version.version, expected_version,
+            libv8.gem_version.version_platform.to_string(),
+            expected_version,
             "should select platform-specific version for current platform"
         );
     }
