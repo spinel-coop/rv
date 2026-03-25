@@ -55,7 +55,7 @@ pub(crate) async fn install(
     gem_server: String,
     force: bool,
 ) -> Result<Installed> {
-    let config = &Config::new(global_args, None)?;
+    let mut config = Config::new(global_args, None)?;
 
     config.self_update_if_needed().await;
 
@@ -76,7 +76,7 @@ pub(crate) async fn install(
 
     let gem_server: Url = gem_server.parse().map_err(|_| Error::BadUrl(gem_server))?;
 
-    let mut gemserver = Gemserver::new(config, gem_server)?;
+    let mut gemserver = Gemserver::new(&config, gem_server)?;
 
     // Look up the gem to install.
     let releases_resp = gemserver
@@ -173,9 +173,10 @@ pub(crate) async fn install(
     };
     let lockfile = lockfile_builder.lockfile();
 
+    config = Config::new(global_args, Some(ruby_to_use.clone().into()))?;
+
     let result = crate::commands::clean_install::install_tool_lockfile(
-        global_args,
-        Some(ruby_to_use.clone().into()),
+        &config,
         lockfile,
         install_path.clone(),
     )

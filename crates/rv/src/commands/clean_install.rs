@@ -20,7 +20,6 @@ use rv_lockfile::datatypes::GemfileDotLock;
 use rv_lockfile::datatypes::GitSection;
 use rv_lockfile::datatypes::PathSection;
 use rv_lockfile::datatypes::Spec;
-use rv_ruby::request::RubyRequest;
 use sha2::Digest;
 use tracing::debug;
 use tracing::info;
@@ -274,13 +273,10 @@ pub struct InstallStats {
 }
 
 pub(crate) async fn install_tool_lockfile(
-    global_args: &GlobalArgs,
-    request: Option<RubyRequest>,
+    config: &Config<'_>,
     lockfile: GemfileDotLock<'_>,
     install_path: Utf8PathBuf,
 ) -> Result<InstallStats> {
-    let config = &Config::new(global_args, request.clone())?;
-
     let ruby = ruby_install_if_needed(config).await?;
     let extensions_scope = ruby.extensions_scope();
     let inner_args = CiInnerArgs {
