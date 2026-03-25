@@ -40,11 +40,9 @@ fn all_dependencies(gem_info: HashMap<GemName, Vec<GemRelease>>) -> DepProvider 
 
 #[cfg(test)]
 mod tests {
-    use serde::{Deserialize, Serialize};
-
     use super::*;
+    use rv_gem_types::ComparisonOperator;
     use rv_gem_types::requirement::{Requirement, VersionConstraint};
-    use rv_gem_types::{ComparisonOperator, Platform, Version};
     use std::str::FromStr;
 
     fn vp(input: &str) -> VersionPlatform {
@@ -86,39 +84,11 @@ mod tests {
 
     #[test]
     fn test_resolution() {
-        /// All the information about a release of a gem available on some Gemserver.
-        #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-        pub struct PrevGemRelease {
-            pub version: Version,
-            pub platform: Platform,
-            pub deps: Vec<rv_gem_types::ProjectDependency>,
-            pub metadata: crate::gemserver::Metadata,
-        }
-
-        impl From<PrevGemRelease> for GemRelease {
-            fn from(prev: PrevGemRelease) -> Self {
-                let PrevGemRelease {
-                    version,
-                    platform,
-                    deps,
-                    metadata,
-                } = prev;
-                GemRelease {
-                    version_platform: VersionPlatform { version, platform },
-                    deps,
-                    metadata,
-                }
-            }
-        }
-
-        let gem_info: HashMap<String, Vec<PrevGemRelease>> = serde_json::from_str(include_str!(
+        // All the information about a release of a gem available on some Gemserver.
+        let gem_info: HashMap<String, Vec<GemRelease>> = serde_json::from_str(include_str!(
             "../../../../testdata/all_nokogiri_transitive_deps.json"
         ))
         .unwrap();
-        let gem_info: HashMap<String, Vec<GemRelease>> = gem_info
-            .into_iter()
-            .map(|(k, releases)| (k, releases.into_iter().map(GemRelease::from).collect()))
-            .collect();
         let mut out: Vec<_> = solve("nokogiri".to_owned(), r("1.19.0-arm64-darwin"), gem_info)
             .unwrap()
             .into_iter()

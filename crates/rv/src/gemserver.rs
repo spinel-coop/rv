@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use rv_gem_types::requirement::VersionConstraint;
+use rv_gem_types::requirement::{Requirement, VersionConstraint};
 use rv_gem_types::{Platform, ProjectDependency, VersionPlatform};
 use rv_version::Version;
 use serde::{Deserialize, Serialize};
@@ -246,7 +246,8 @@ fn parse_metadata(metadata: &str) -> ParseResult<Metadata> {
                     .map_err(|err| GemReleaseParse::MetadataConstraintParse {
                         source: Box::new(err),
                         metadata: md_str.to_owned(),
-                    })?;
+                    })?
+                    .into();
             }
             "rubygems" => {
                 out.rubygems = v
@@ -256,7 +257,8 @@ fn parse_metadata(metadata: &str) -> ParseResult<Metadata> {
                     .map_err(|err| GemReleaseParse::MetadataConstraintParse {
                         source: Box::new(err),
                         metadata: md_str.to_owned(),
-                    })?;
+                    })?
+                    .into();
             }
             _ => {
                 return Err(GemReleaseParse::UnknownMetadataKey {
@@ -286,13 +288,27 @@ fn parse_version_constraint(constr: &str) -> ParseResult<VersionConstraint> {
 
 pub type GemName = String;
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde_as]
 pub struct Metadata {
     #[serde_as(as = "serde_with::hex::Hex")]
     pub checksum: Vec<u8>,
-    pub ruby: Vec<VersionConstraint>,
-    pub rubygems: Vec<VersionConstraint>,
+    pub ruby: Requirement,
+    pub rubygems: Requirement,
+}
+
+impl Default for Metadata {
+    fn default() -> Self {
+        Self {
+            checksum: vec![],
+            ruby: Requirement {
+                constraints: vec![],
+            },
+            rubygems: Requirement {
+                constraints: vec![],
+            },
+        }
+    }
 }
 
 impl std::fmt::Debug for Metadata {

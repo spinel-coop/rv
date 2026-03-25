@@ -4,6 +4,7 @@ use crate::{
     engine::RubyEngine,
     request::{ReleasedRubyRequest, RequestError, RubyRequest, VersionPart},
 };
+use rv_version::{Version, VersionSegment};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 /// A specific version of Ruby, which can be run and downloaded.
@@ -118,6 +119,29 @@ impl From<RubyVersion> for RubyRequest {
     }
 }
 
+impl From<&RubyVersion> for Version {
+    fn from(version: &RubyVersion) -> Self {
+        let mut segments = vec![
+            VersionSegment::Number(version.major),
+            VersionSegment::Number(version.minor),
+            VersionSegment::Number(version.patch),
+        ];
+
+        if let Some(tiny) = version.tiny {
+            segments.push(VersionSegment::Number(tiny))
+        };
+
+        if let Some(ref prerelease) = version.prerelease {
+            segments.push(VersionSegment::String(prerelease.to_string()))
+        };
+
+        Self {
+            version: version.number(),
+            segments,
+        }
+    }
+}
+
 impl RubyVersion {
     /// Does this version satisfy the given Ruby requested range?
     pub fn satisfies(&self, request: &RubyRequest) -> bool {
@@ -204,20 +228,7 @@ impl RubyVersion {
 
 impl std::fmt::Display for RubyVersion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.engine)?;
-        write!(f, "-{}", self.major)?;
-        write!(f, ".{}", self.minor)?;
-        write!(f, ".{}", self.patch)?;
-
-        if let Some(tiny) = self.tiny {
-            write!(f, ".{tiny}")?;
-        }
-
-        if let Some(ref pre_release) = self.prerelease {
-            write!(f, "-{pre_release}")?;
-        };
-
-        Ok(())
+        write!(f, "{}-{}", self.engine, self.number())
     }
 }
 

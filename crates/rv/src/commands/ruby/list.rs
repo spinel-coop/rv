@@ -8,7 +8,9 @@ use tabled::{
 
 use anstream::println;
 use owo_colors::OwoColorize;
-use rv_ruby::{Ruby, canonical_name::CanonicalName, version::RubyVersion};
+use rv_ruby::{
+    RemoteRuby, Ruby, canonical_name::CanonicalName, request::RubyRequest, version::RubyVersion,
+};
 use serde::Serialize;
 use tracing::{info, warn};
 
@@ -35,8 +37,7 @@ type Result<T> = miette::Result<T, Error>;
 #[cfg_attr(test, derive(PartialEq))]
 struct JsonRubyEntry {
     #[serde(flatten)]
-    ruby: Ruby,
-    installed: bool,
+    ruby: RubyEntry,
     active: bool,
     #[serde(skip)]
     color: bool,
@@ -48,11 +49,27 @@ impl JsonRubyEntry {
     }
 }
 
+#[derive(Serialize, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+enum RubyEntry {
+    Installed(Ruby),
+    Remote(RemoteRuby),
+}
+
+impl RubyEntry {
+    pub fn canonical_name(&self) -> String {
+        match self {
+            Self::Installed(ruby) => ruby.version.canonical_name(),
+            Self::Remote(remote_ruby) => remote_ruby.version.canonical_name(),
+        }
+    }
+}
+
 impl tabled::Tabled for JsonRubyEntry {
     const LENGTH: usize = 2;
 
     fn fields(&self) -> Vec<Cow<'_, str>> {
-        let canonical_name = self.ruby.version.canonical_name();
+        let canonical_name = self.ruby.canonical_name();
 
         let name = if self.active {
             format!("* {canonical_name}")
@@ -60,18 +77,23 @@ impl tabled::Tabled for JsonRubyEntry {
             format!("  {canonical_name}")
         };
 
-        let installed = if self.installed {
-            let short_executable_path = rv_dirs::unexpand(&self.ruby.executable_path());
+        let installed = match &self.ruby {
+            RubyEntry::Installed(ruby) => {
+                let short_executable_path = rv_dirs::unexpand(&ruby.executable_path());
 
-            if self.color {
-                short_executable_path.cyan().to_string().into()
-            } else {
-                short_executable_path.into()
+                if self.color {
+                    short_executable_path.cyan().to_string().into()
+                } else {
+                    short_executable_path.into()
+                }
             }
-        } else if self.color {
-            "[available]".dimmed().to_string().into()
-        } else {
-            "[available]".to_string().into()
+            RubyEntry::Remote(_) => {
+                if self.color {
+                    "[available]".dimmed().to_string().into()
+                } else {
+                    "[available]".to_string().into()
+                }
+            }
         };
         vec![name.into(), installed]
     }
@@ -112,23 +134,23 @@ pub(crate) async fn list(
     }
 
     let requested = config.ruby_request();
-    let mut active_ruby = requested.find_match_in(&installed_rubies);
-    let active_installed = active_ruby.is_some();
+    let mut active_ruby = false;
 
     // Might have multiple installed rubies with the same version (e.g., "ruby-3.2.0" and "mruby-3.2.0").
     let mut rubies_map: BTreeMap<RubyVersion, Vec<JsonRubyEntry>> = BTreeMap::new();
 
-    for ruby in installed_rubies {
-        rubies_map
-            .entry(ruby.version.clone())
-            .or_default()
-            .push(JsonRubyEntry {
-                active: active(&ruby, &active_ruby),
-                installed: true,
-                ruby,
+    for ruby in installed_rubies.into_iter().rev() {
+        rubies_map.entry(ruby.version.clone()).or_default().insert(
+            0,
+            JsonRubyEntry {
+                active: active(&mut active_ruby, &ruby.version, &requested),
+                ruby: RubyEntry::Installed(ruby),
                 color: true,
-            });
+            },
+        );
     }
+
+    let active_installed = active_ruby;
 
     if !version_filter.installed_only {
         let remote_rubies = config.remote_rubies().await;
@@ -139,38 +161,30 @@ pub(crate) async fn list(
             latest_patch_version(&remote_rubies)
         };
 
-        active_ruby = active_ruby.or_else(|| requested.find_match_in(&selected_remote_rubies));
-
         // Add selected remote rubies that are not already installed to the list
-        for ruby in selected_remote_rubies {
+        for ruby in selected_remote_rubies.into_iter().rev() {
             rubies_map
                 .entry(ruby.version.clone())
                 .or_insert(vec![JsonRubyEntry {
-                    active: active(&ruby, &active_ruby),
-                    installed: false,
-                    ruby,
+                    active: active(&mut active_ruby, &ruby.version, &requested),
+                    ruby: RubyEntry::Remote(ruby),
                     color: true,
                 }]);
         }
 
-        let insert_requested_if_available = || {
+        if !active_ruby {
             let ruby = requested.find_match_in(&remote_rubies);
 
             if let Some(ref ruby) = ruby {
                 rubies_map
                     .entry(ruby.version.clone())
                     .or_insert(vec![JsonRubyEntry {
-                        ruby: ruby.clone(),
-                        installed: false,
+                        ruby: RubyEntry::Remote(ruby.clone()),
                         active: true,
                         color: true,
                     }]);
             };
-
-            ruby
         };
-
-        active_ruby.or_else(insert_requested_if_available);
 
         if rubies_map.is_empty() && format == OutputFormat::Text {
             warn!("No rubies found for your platform.");
@@ -186,11 +200,19 @@ pub(crate) async fn list(
     print_entries(entries, format, no_color, &explanation)
 }
 
-fn active(ruby: &Ruby, active_ruby: &Option<Ruby>) -> bool {
-    active_ruby.as_ref().is_some_and(|a| a == ruby)
+fn active(active_set: &mut bool, version: &RubyVersion, requested: &RubyRequest) -> bool {
+    if *active_set {
+        return false;
+    }
+
+    let should_activate = version.satisfies(requested);
+
+    *active_set |= should_activate;
+
+    should_activate
 }
 
-fn latest_patch_version(remote_rubies: &Vec<Ruby>) -> Vec<Ruby> {
+fn latest_patch_version(remote_rubies: &Vec<RemoteRuby>) -> Vec<RemoteRuby> {
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
     struct NonPatchRelease {
         engine: rv_ruby::engine::RubyEngine,
@@ -207,7 +229,7 @@ fn latest_patch_version(remote_rubies: &Vec<Ruby>) -> Vec<Ruby> {
             }
         }
     }
-    let mut available_rubies: BTreeMap<NonPatchRelease, Ruby> = BTreeMap::new();
+    let mut available_rubies: BTreeMap<NonPatchRelease, RemoteRuby> = BTreeMap::new();
     for ruby in remote_rubies {
         // Skip 3.5 series since they only include pre-releases
         if ruby.version.major == 3 && ruby.version.minor == 5 {
@@ -300,20 +322,14 @@ mod tests {
             .unwrap();
     }
 
-    fn ruby(version: &str) -> Ruby {
+    fn ruby(version: &str) -> RemoteRuby {
         let version = RubyVersion::from_str(version).unwrap();
         let version_str = version.to_string();
-        Ruby {
+        RemoteRuby {
             key: format!("{version_str}-macos-aarch64"),
             version,
-            path: Utf8PathBuf::from(format!(
-                "https://github.com/spinel-coop/rv-ruby/releases/download/latest/{version_str}.arm64_linux.tar.gz"
-            )),
-            managed: false,
-            symlink: None,
             arch: "aarch64".into(),
             os: "macos".into(),
-            gem_root: None,
         }
     }
 
@@ -321,8 +337,8 @@ mod tests {
     fn test_latest_patch_version() {
         struct Test {
             name: &'static str,
-            input: Vec<Ruby>,
-            expected: Vec<Ruby>,
+            input: Vec<RemoteRuby>,
+            expected: Vec<RemoteRuby>,
         }
 
         let tests = vec![

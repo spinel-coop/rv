@@ -4,25 +4,21 @@ expression: output.normalized_stdout()
 ---
 [
   {
-    "key": "ruby-3.4.7-macos-aarch64",
-    "version": "ruby-3.4.7",
-    "path": "http://...",
-    "managed": false,
-    "arch": "aarch64",
-    "os": "macos",
-    "gem_root": null,
-    "installed": false,
+    "Remote": {
+      "key": "ruby-3.4.7-macos-aarch64",
+      "version": "ruby-3.4.7",
+      "arch": "aarch64",
+      "os": "macos"
+    },
     "active": true
   },
   {
-    "key": "ruby-3.4.8-macos-aarch64",
-    "version": "ruby-3.4.8",
-    "path": "http://...",
-    "managed": false,
-    "arch": "aarch64",
-    "os": "macos",
-    "gem_root": null,
-    "installed": false,
+    "Remote": {
+      "key": "ruby-3.4.8-macos-aarch64",
+      "version": "ruby-3.4.8",
+      "arch": "aarch64",
+      "os": "macos"
+    },
     "active": false
   }
 ]
