@@ -1,7 +1,7 @@
 use crate::utils::is_homebrew_install;
 use crate::{Commands, GlobalArgs, config::Config};
 use axoupdater::AxoUpdater;
-use rv_dirs::user_config_dir;
+use rv_dirs::user_state_dir;
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::debug;
@@ -33,11 +33,11 @@ pub(crate) async fn update_if_needed(global_args: &GlobalArgs, command: &Command
         return;
     }
 
-    let config_dir = user_config_dir();
+    let state_dir = user_state_dir("/".into());
 
-    fs_err::create_dir_all(config_dir.clone()).unwrap();
+    fs_err::create_dir_all(state_dir.clone()).unwrap();
 
-    let update_timestamp_file = config_dir.join(UPDATE_CHECK_FILENAME);
+    let update_timestamp_file = state_dir.join(UPDATE_CHECK_FILENAME);
 
     let now_secs = match SystemTime::now().duration_since(UNIX_EPOCH) {
         Ok(dur) => dur.as_secs(),
