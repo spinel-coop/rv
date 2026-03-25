@@ -1,3 +1,4 @@
+use crate::GlobalArgs;
 use camino::Utf8PathBuf;
 use config::{
     Config as ConfigRs, Environment, File, FileStoredFormat, Format, Map, Value, ValueKind,
@@ -29,7 +30,7 @@ pub struct RvSettings {
 }
 
 fn default_update_mode() -> String {
-    "install".to_string()
+    "install".into()
 }
 
 #[derive(Debug, Clone)]
@@ -111,7 +112,11 @@ impl RvSettings {
         Ok(found_files.into_iter().next())
     }
 
-    pub fn new(home_dir: &Utf8PathBuf, project_dir: &Utf8PathBuf) -> Result<Self> {
+    pub(crate) fn new(
+        global_args: &GlobalArgs,
+        home_dir: &Utf8PathBuf,
+        project_dir: &Utf8PathBuf,
+    ) -> Result<Self> {
         // Possible Project Paths
         let local_paths = [
             project_dir.join("rv"),
@@ -142,6 +147,13 @@ impl RvSettings {
         }
 
         builder = builder.add_source(Environment::with_prefix("RV"));
+
+        // overwrite with flags
+        builder = if global_args.offline {
+            builder.set_override("update_mode", "none").unwrap()
+        } else {
+            builder
+        };
 
         let s = match builder.build() {
             Ok(config) => config,
@@ -183,9 +195,19 @@ impl RvSettings {
 mod tests {
     use super::*;
     use camino_tempfile::Utf8TempDir;
+    use rv_cache::CacheArgs;
     use std::fs::File;
     use std::io::Write;
     use tempfile::tempdir;
+
+    // Helper function to create a fake GlobalArgs for tests
+    fn fake_global_args() -> GlobalArgs {
+        GlobalArgs {
+            ruby_dir: Vec::new(),
+            cache_args: CacheArgs::default(),
+            offline: false,
+        }
+    }
 
     #[test]
     fn test_local_config() {
@@ -206,7 +228,7 @@ rv{
 
         std::fs::write(&config_file, config_content).expect("Failed to write config");
 
-        let rv_settings = RvSettings::new(&home_dir, &project_dir);
+        let rv_settings = RvSettings::new(&fake_global_args(), &home_dir, &project_dir);
 
         assert_eq!(
             String::from("/home/path"),
@@ -221,8 +243,8 @@ rv{
         let home_dir = temp_dir.path().join("home");
         let project_dir = temp_dir.path().join("project");
 
-        let rv_settings =
-            RvSettings::new(&home_dir, &project_dir).expect("Failed to load settings");
+        let rv_settings = RvSettings::new(&fake_global_args(), &home_dir, &project_dir)
+            .expect("Failed to load settings");
 
         assert!(rv_settings.install_path.is_none());
     }
