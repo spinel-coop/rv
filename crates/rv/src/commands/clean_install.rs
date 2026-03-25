@@ -31,7 +31,7 @@ use url::Url;
 use crate::commands::clean_install::checksums::ArchiveChecksums;
 use crate::commands::clean_install::checksums::HashReader;
 use crate::commands::clean_install::checksums::Hashed;
-use crate::commands::ruby::install::install as ruby_install;
+use crate::commands::ruby::install::install_if_needed as ruby_install_if_needed;
 use crate::commands::run::Invocation;
 use crate::progress::WorkProgress;
 use crate::{GlobalArgs, config::Config, http_client::rv_http_client};
@@ -231,17 +231,7 @@ pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Resu
 
     config.self_update_if_needed().await;
 
-    // We need some Ruby installed, because we need to run Ruby code when installing
-    // gems. Ensure Ruby is installed here so we can use it later.
-    if config.current_ruby().is_none() {
-        ruby_install(global_args, None, None, None, false).await?;
-    }
-
-    // Now that it's installed, we can use Ruby to query various directories
-    // we'll need to know later.
-    let ruby = config
-        .current_ruby()
-        .expect("Ruby should be installed after the check above");
+    let ruby = ruby_install_if_needed(config).await?;
     let extensions_scope = ruby.extensions_scope();
     let lockfile_path = find_lockfile_path(&args.gemfile)?;
     let install_path = config.gem_home(&ruby);
@@ -291,15 +281,7 @@ pub(crate) async fn install_tool_lockfile(
 ) -> Result<InstallStats> {
     let config = &Config::new(global_args, request.clone())?;
 
-    // We need some Ruby installed, because we need to run Ruby code when installing
-    // gems. Ensure Ruby is installed here so we can use it later.
-    if config.current_ruby().is_none() {
-        ruby_install(global_args, None, request, None, false).await?;
-    }
-
-    let ruby = config
-        .current_ruby()
-        .expect("Ruby should be installed after the check above");
+    let ruby = ruby_install_if_needed(config).await?;
     let extensions_scope = ruby.extensions_scope();
     let inner_args = CiInnerArgs {
         max_concurrent_requests: 10,

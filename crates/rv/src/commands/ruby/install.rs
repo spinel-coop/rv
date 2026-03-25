@@ -12,7 +12,7 @@ use tracing::{debug, info_span};
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 
 use rv_platform::HostPlatform;
-use rv_ruby::request::RubyRequest;
+use rv_ruby::{Ruby, request::RubyRequest};
 
 use crate::progress::WorkProgress;
 use crate::{GlobalArgs, config::Config};
@@ -60,6 +60,38 @@ pub(crate) async fn install(
 
     config.self_update_if_needed().await;
 
+    install_inner(config, install_dir, tarball_path, force).await?;
+
+    Ok(())
+}
+
+pub(crate) async fn install_if_needed(config: &Config<'_>) -> Result<Ruby> {
+    if config.current_ruby().is_none() {
+        let request = config.ruby_request();
+
+        // Not installed, try to install it.
+        // None means it'll install in whatever default ruby location it chooses.
+        debug!("Ruby not found, so installing {request}");
+        let install_dir = None;
+        let tarball_path = None;
+        install_inner(config, install_dir, tarball_path, false).await?
+    }
+
+    // Now that it's installed, we can use Ruby to query various directories
+    // we'll need to know later.
+    let ruby = config
+        .current_ruby()
+        .expect("Ruby should be installed after the check above");
+
+    Ok(ruby)
+}
+
+async fn install_inner(
+    config: &Config<'_>,
+    install_dir: Option<String>,
+    tarball_path: Option<Utf8PathBuf>,
+    force: bool,
+) -> Result<()> {
     let progress = WorkProgress::new();
 
     let request = config.ruby_request();
