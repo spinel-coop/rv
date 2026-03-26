@@ -317,15 +317,7 @@ pub(crate) async fn install_tool_lockfile(
     let progress = WorkProgress::new();
 
     // Do the work.
-    let result = ci_inner_work(config, &inner_args, &progress, lockfile).await;
-
-    // Cleanup tool dir in case of errors, so retrying tool install is not skipped as "already
-    // installed"
-    if result.is_err() {
-        tokio::fs::remove_dir_all(&install_path).await.unwrap();
-    }
-
-    result
+    ci_inner_work(config, &inner_args, &progress, lockfile).await
 }
 
 async fn ci_inner_work(

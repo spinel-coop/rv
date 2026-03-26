@@ -175,18 +175,26 @@ pub(crate) async fn install(
     let lockfile_builder = LockfileBuilder::new(&gemserver.url, versions_needed);
     let lockfile = lockfile_builder.lockfile();
 
-    let InstallStats {
-        executables_installed,
-    } = crate::commands::clean_install::install_tool_lockfile(
+    let result = crate::commands::clean_install::install_tool_lockfile(
         global_args,
         Some(ruby_to_use.clone().into()),
         lockfile,
         install_path.clone(),
     )
-    .await?;
-    if executables_installed == 0 {
-        fs::remove_dir_all(install_path).unwrap();
-        return Err(Error::NoExecutables);
+    .await;
+
+    match result {
+        Ok(InstallStats {
+            executables_installed: 0,
+        }) => {
+            fs::remove_dir_all(install_path).unwrap();
+            return Err(Error::NoExecutables);
+        }
+        Ok(_) => {}
+        Err(error) => {
+            fs::remove_dir_all(install_path).unwrap();
+            return Err(Error::InstallError(error));
+        }
     }
     let pin_path = install_path.join(".ruby-version");
     fs::write(&pin_path, format!("{ruby_to_use}\n")).map_err(Error::CouldNotPinRubyVersion)?;
