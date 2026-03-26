@@ -21,10 +21,7 @@ fn test_tool_install_twice() {
     let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
     let ruby_mock = test.mock_ruby_download("4.0.0").create();
 
-    let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
-    let info_endpoint_mock = test
-        .mock_info_endpoint("indirect", &info_endpoint_content)
-        .create();
+    let info_endpoint_mock = test.mock_info_endpoint("indirect").create();
 
     let tarball_mock = test.mock_gem_download("indirect-1.2.0.gem").create();
 
@@ -63,10 +60,7 @@ fn test_tool_install_non_latest_version() {
     let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
     let ruby_mock = test.mock_ruby_download("4.0.0").create();
 
-    let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
-    let info_endpoint_mock = test
-        .mock_info_endpoint("indirect", &info_endpoint_content)
-        .create();
+    let info_endpoint_mock = test.mock_info_endpoint("indirect").create();
 
     let tarball_mock = test.mock_gem_download("indirect-1.1.0.gem").create();
 
@@ -96,10 +90,7 @@ fn test_tool_install_writes_ruby_version_file() {
     let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
     let ruby_mock = test.mock_ruby_download("4.0.0").create();
 
-    let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
-    let info_endpoint_mock = test
-        .mock_info_endpoint("indirect", &info_endpoint_content)
-        .create();
+    let info_endpoint_mock = test.mock_info_endpoint("indirect").create();
 
     let tarball_mock = test.mock_gem_download("indirect-1.2.0.gem").create();
 
@@ -129,10 +120,7 @@ fn test_tool_install_package_data_tar_gz_with_trailing_garbage() {
     let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
     let ruby_mock = test.mock_ruby_download("4.0.0").create();
 
-    let info_endpoint_content = fs_err::read("tests/fixtures/info-alba-gem").unwrap();
-    let info_endpoint_mock = test
-        .mock_info_endpoint("alba", &info_endpoint_content)
-        .create();
+    let info_endpoint_mock = test.mock_info_endpoint("alba").create();
 
     let tarball_mock = test.mock_gem_download("alba-3.10.0.gem").create();
 
