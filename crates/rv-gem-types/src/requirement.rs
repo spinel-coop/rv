@@ -534,10 +534,12 @@ mod tests {
             version,
             path: Default::default(),
             managed: false,
+            enable_shared: false,
             symlink: None,
             arch: "aarch64".into(),
             os: "macos".into(),
             gem_root: None,
+            rubygems_platform: "arm64-darwin-23".to_string(),
         }
     }
 

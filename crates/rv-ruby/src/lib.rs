@@ -118,7 +118,14 @@ pub struct Ruby {
     /// Operating system (macos, linux, windows, etc.)
     pub os: String,
 
+    /// Default gem home
     pub gem_root: Option<Utf8PathBuf>,
+
+    /// Whether this Ruby was built as a shared library
+    pub enable_shared: bool,
+
+    /// Rubygems platform string
+    pub rubygems_platform: String,
 }
 
 impl Versioned for Ruby {
@@ -211,6 +218,23 @@ impl Ruby {
     pub fn gem_scope(&self) -> String {
         format!("{}/{}", self.version.engine.name(), self.version.abi())
     }
+
+    /// path scope for extensions
+    pub fn extensions_scope(&self) -> String {
+        format!(
+            "{}/{}",
+            self.rubygems_platform,
+            self.extension_api_version()
+        )
+    }
+
+    fn extension_api_version(&self) -> String {
+        if self.enable_shared {
+            self.version.abi()
+        } else {
+            format!("{}-static", self.version.abi())
+        }
+    }
 }
 
 impl PartialOrd for Ruby {
@@ -270,12 +294,14 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
 
     // try the full script with all features (works for most Ruby implementations)
     let full_script = r#"
+        require "rubygems"
         puts(Object.const_defined?(:RUBY_ENGINE) ? RUBY_ENGINE : 'ruby')
         puts(Object.const_defined?(:RUBY_ENGINE_VERSION) ? RUBY_ENGINE_VERSION : RUBY_VERSION)
-        puts(Object.const_defined?(:RUBY_PLATFORM) ? RUBY_PLATFORM : 'unknown')
+        puts(Gem::Platform.local.to_s)
         puts(Object.const_defined?(:RbConfig) && RbConfig::CONFIG['host_cpu'] ? RbConfig::CONFIG['host_cpu'] : 'unknown')
         puts(Object.const_defined?(:RbConfig) && RbConfig::CONFIG['host_os'] ? RbConfig::CONFIG['host_os'] : 'unknown')
-        puts(begin; require 'rubygems'; Gem.default_dir; rescue ScriptError, NoMethodError; end)
+        puts(Object.const_defined?(:RbConfig) && RbConfig::CONFIG['ENABLE_SHARED'] ? RbConfig::CONFIG['ENABLED_SHARED'] : 'no')
+        puts(begin; Gem.default_dir; rescue ScriptError, NoMethodError; end)
         puts(Object.const_defined?(:RUBY_DESCRIPTION) ? RUBY_DESCRIPTION : '')
     "#;
 
@@ -305,6 +331,7 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
     let ruby_platform = lines.next().unwrap_or("unknown");
     let host_cpu = lines.next().unwrap_or("unknown");
     let host_os = lines.next().unwrap_or("unknown");
+    let enable_shared = lines.next().unwrap_or("no");
     let gem_root = lines.next().unwrap_or_default();
     let description = lines.next().unwrap_or_default();
     let ruby_description = parse_description(description);
@@ -345,6 +372,8 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
         os,
         gem_root,
         managed: false,
+        enable_shared: enable_shared == "no",
+        rubygems_platform: ruby_platform.to_string(),
         // path and symlink are replaced in the caller
         path: Default::default(),
         symlink: Default::default(),
@@ -416,6 +445,7 @@ fn ruby_049_version() -> Result<Ruby, RubyError> {
     let arch = normalize_arch(ARCH);
     let os = normalize_os(OS);
     let key = format!("{version}-{os}-{arch}");
+    let rubygems_platform = format!("{os}-{arch}");
 
     Ok(Ruby {
         key,
@@ -424,6 +454,8 @@ fn ruby_049_version() -> Result<Ruby, RubyError> {
         os,
         gem_root: None,
         managed: false,
+        enable_shared: false,
+        rubygems_platform,
         // path and symlink are replaced in the caller
         path: Default::default(),
         symlink: Default::default(),
@@ -465,10 +497,12 @@ mod tests {
             version: RubyVersion::from_str("3.1.4").unwrap(),
             path: dummy_path.clone(),
             managed: false,
+            enable_shared: false,
             symlink: None,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
             gem_root: None,
+            rubygems_platform: "arm64-darwin-23".to_string(),
         };
 
         let ruby2 = Ruby {
@@ -476,10 +510,12 @@ mod tests {
             version: RubyVersion::from_str("ruby-3.2.0").unwrap(),
             path: dummy_path.clone(),
             managed: false,
+            enable_shared: false,
             symlink: None,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
             gem_root: None,
+            rubygems_platform: "arm64-darwin-23".to_string(),
         };
 
         let ruby2_managed = Ruby {
@@ -487,10 +523,12 @@ mod tests {
             version: RubyVersion::from_str("ruby-3.2.0").unwrap(),
             path: dummy_path.clone(),
             managed: true,
+            enable_shared: false,
             symlink: None,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
             gem_root: None,
+            rubygems_platform: "arm64-darwin-23".to_string(),
         };
 
         let jruby = Ruby {
@@ -498,10 +536,12 @@ mod tests {
             version: RubyVersion::from_str("jruby-9.4.0.0").unwrap(),
             path: dummy_path,
             managed: false,
+            enable_shared: false,
             symlink: None,
             arch: "aarch64".to_string(),
             os: "macos".to_string(),
             gem_root: None,
+            rubygems_platform: "arm64-darwin-23".to_string(),
         };
 
         // Test version ordering within same implementation (higher versions last)

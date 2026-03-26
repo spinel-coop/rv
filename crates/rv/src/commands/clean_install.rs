@@ -196,8 +196,6 @@ pub enum Error {
     },
     #[error(transparent)]
     UrlError(#[from] url::ParseError),
-    #[error("Could not read extensions scope from RubyGems")]
-    BadExtensionsScope,
     #[error("File {filename} did not match {algo} locked checksum in gem {gem_name}")]
     LockfileChecksumFail {
         filename: String,
@@ -242,7 +240,7 @@ pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Resu
     let ruby = config
         .current_ruby()
         .expect("Ruby should be installed after the check above");
-    let extensions_scope = find_exts_scope(config)?;
+    let extensions_scope = ruby.extensions_scope();
     let lockfile_path = find_lockfile_path(&args.gemfile)?;
     let install_path = config.gem_home(&ruby);
     let inner_args = CiInnerArgs {
@@ -300,7 +298,7 @@ pub(crate) async fn install_tool_lockfile(
     let ruby = config
         .current_ruby()
         .expect("Ruby should be installed after the check above");
-    let extensions_scope = find_exts_scope(config)?;
+    let extensions_scope = ruby.extensions_scope();
     let inner_args = CiInnerArgs {
         max_concurrent_requests: 10,
         max_concurrent_installs: 20,
@@ -1465,26 +1463,6 @@ impl CompileNativeExtResult {
     pub fn success(&self) -> bool {
         self.outputs.iter().all(|o| o.status.success())
     }
-}
-
-fn find_exts_scope(config: &Config) -> Result<String> {
-    debug!("Finding extensions scope");
-    let exts_scope = crate::commands::run::capture_run_no_install(
-        Invocation::ruby(vec![]),
-        config,
-        vec![
-            "-e".to_string(),
-            "puts File.join(Gem::Platform.local.to_s, Gem.extension_api_version)".to_string(),
-        ],
-        None,
-    )?
-    .stdout;
-
-    let extensions_scope = String::from_utf8(exts_scope)
-        .map(|s| s.trim().to_string())
-        .map_err(|_| Error::BadExtensionsScope)?;
-    debug!("Found extensions scope: {extensions_scope}");
-    Ok(extensions_scope)
 }
 
 static EXTCONF_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)extconf").unwrap());
