@@ -160,7 +160,7 @@ pub(crate) async fn install(
     debug!("Resolving all dependencies via PubGrub");
     let versions_needed = crate::resolver::solve(
         gem_name.clone(),
-        release_to_install.clone(),
+        target_version.clone(),
         gemserver.gems_to_deps,
     )
     .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;

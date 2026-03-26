@@ -11,11 +11,11 @@ pub type ResolutionError = pubgrub::PubGrubError<DepProvider>;
 
 pub fn solve(
     gem: GemName,
-    release: GemRelease,
+    version_platform: VersionPlatform,
     gem_info: HashMap<GemName, HashMap<VersionPlatform, GemRelease>>,
 ) -> Result<Vec<(ReleaseTuple, GemRelease)>, ResolutionError> {
     let provider = all_dependencies(&gem_info);
-    let solution = pubgrub::resolve(&provider, gem, release.version_platform)?;
+    let solution = pubgrub::resolve(&provider, gem, version_platform)?;
 
     Ok(solution
         .into_iter()
