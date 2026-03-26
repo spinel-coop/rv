@@ -2,18 +2,14 @@ use crate::utils::is_homebrew_install;
 use crate::{Commands, GlobalArgs, config::Config};
 use axoupdater::AxoUpdater;
 use rv_dirs::user_state_dir;
-use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::{env, fs};
 use tracing::debug;
 
 const UPDATE_CHECK_FILENAME: &str = "rv_last_update_check";
 const CHECK_INTERVAL_SECS: u64 = 60 * 60; // 1 hour
 
-pub(crate) async fn update_if_needed(global_args: &GlobalArgs, command: &Commands) {
-    if let Commands::Shell(_) = command {
-        return;
-    }
-
+pub(crate) async fn update_if_needed(global_args: &GlobalArgs) {
     let config_result = Config::with_settings(global_args, None);
     let config = match &config_result {
         Ok(cfg) => cfg,
@@ -93,4 +89,20 @@ pub(crate) async fn update_if_needed(global_args: &GlobalArgs, command: &Command
     } else {
         debug!("No update needed");
     }
+}
+
+pub(crate) async fn allowed_to_autoupdate(command: &Commands) -> bool {
+    if let Commands::Shell(_) = command {
+        return false;
+    }
+
+    let ci_vars = ["CI", "CONTINUOUS_INTEGRATION"];
+
+    for var in ci_vars.iter() {
+        if env::var(var).is_ok() {
+            return false;
+        }
+    }
+
+    true
 }

@@ -28,7 +28,6 @@ use crate::commands::run::{RunArgs, run};
 use crate::commands::self_cmd::{SelfArgs, self_cmd};
 use crate::commands::shell::{ShellArgs, shell};
 use crate::commands::tool::{ToolArgs, tool};
-use crate::update::update_if_needed;
 
 const STYLES: Styles = Styles::styled()
     .header(AnsiColor::Green.on_default().bold())
@@ -296,7 +295,9 @@ async fn main_inner() -> Result<()> {
 
     reg.init();
 
-    update_if_needed(&cli.global_args(), &cli.command).await;
+    if update::allowed_to_autoupdate(&cli.command).await {
+        update::update_if_needed(&cli.global_args()).await;
+    }
 
     run_cmd(&cli.global_args(), cli.command).await
 }
