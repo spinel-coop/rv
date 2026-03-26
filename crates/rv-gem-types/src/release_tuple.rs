@@ -2,13 +2,13 @@ use crate::{Platform, PlatformError};
 use crate::{Version, VersionError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct NameTuple {
+pub struct ReleaseTuple {
     pub name: String,
     pub version: Version,
     pub platform: Platform,
 }
 
-impl NameTuple {
+impl ReleaseTuple {
     pub fn new(name: String, version: Version, platform: Option<Platform>) -> Self {
         let platform = platform.unwrap_or(Platform::Ruby);
 
@@ -19,12 +19,12 @@ impl NameTuple {
         }
     }
 
-    pub fn from_array(array: &[String]) -> Result<Self, NameTupleError> {
+    pub fn from_array(array: &[String]) -> Result<Self, ReleaseTupleError> {
         let Some(name) = array.first().cloned() else {
-            return Err(NameTupleError::InvalidArray);
+            return Err(ReleaseTupleError::InvalidArray);
         };
         let Some(version) = array.get(1).map(Version::new) else {
-            return Err(NameTupleError::InvalidArray);
+            return Err(ReleaseTupleError::InvalidArray);
         };
         let version = version?;
         let platform = array.get(2).map(Platform::new).transpose()?;
@@ -68,13 +68,13 @@ impl NameTuple {
     }
 }
 
-impl std::fmt::Display for NameTuple {
+impl std::fmt::Display for ReleaseTuple {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.full_name())
     }
 }
 
-impl Ord for NameTuple {
+impl Ord for ReleaseTuple {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // Sort by name, then version, then platform priority
         match self.name.cmp(&other.name) {
@@ -87,20 +87,20 @@ impl Ord for NameTuple {
     }
 }
 
-impl PartialOrd for NameTuple {
+impl PartialOrd for ReleaseTuple {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl From<(String, Version, Option<Platform>)> for NameTuple {
+impl From<(String, Version, Option<Platform>)> for ReleaseTuple {
     fn from((name, version, platform): (String, Version, Option<Platform>)) -> Self {
         Self::new(name, version, platform)
     }
 }
 
-impl TryFrom<&[String]> for NameTuple {
-    type Error = NameTupleError;
+impl TryFrom<&[String]> for ReleaseTuple {
+    type Error = ReleaseTupleError;
 
     fn try_from(array: &[String]) -> Result<Self, Self::Error> {
         Self::from_array(array)
@@ -108,12 +108,12 @@ impl TryFrom<&[String]> for NameTuple {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-pub enum NameTupleError {
-    #[error("Invalid array length for NameTuple")]
+pub enum ReleaseTupleError {
+    #[error("Invalid array length for ReleaseTuple")]
     InvalidArray,
-    #[error("Invalid version in NameTuple")]
+    #[error("Invalid version in ReleaseTuple")]
     InvalidVersion(#[from] VersionError),
-    #[error("Invalid platform in NameTuple")]
+    #[error("Invalid platform in ReleaseTuple")]
     InvalidPlatform(#[from] PlatformError),
 }
 
@@ -122,16 +122,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_name_tuple_creation() {
-        let tuple = NameTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
+    fn test_release_tuple_creation() {
+        let tuple = ReleaseTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
         assert_eq!(tuple.name, "test");
         assert_eq!(tuple.version, Version::new("1.0").unwrap());
         assert_eq!(tuple.platform, Platform::Ruby);
     }
 
     #[test]
-    fn test_name_tuple_with_platform() {
-        let tuple = NameTuple::new(
+    fn test_release_tuple_with_platform() {
+        let tuple = ReleaseTuple::new(
             "test".to_string(),
             Version::new("1.0").unwrap(),
             Some(Platform::new("linux").unwrap()),
@@ -141,10 +141,10 @@ mod tests {
 
     #[test]
     fn test_full_name() {
-        let tuple = NameTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
+        let tuple = ReleaseTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
         assert_eq!(tuple.full_name(), "test-1.0");
 
-        let tuple = NameTuple::new(
+        let tuple = ReleaseTuple::new(
             "test".to_string(),
             Version::new("1.0").unwrap(),
             Some(Platform::new("linux").unwrap()),
@@ -154,10 +154,10 @@ mod tests {
 
     #[test]
     fn test_spec_name() {
-        let tuple = NameTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
+        let tuple = ReleaseTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
         assert_eq!(tuple.spec_name(), "test-1.0.gemspec");
 
-        let tuple = NameTuple::new(
+        let tuple = ReleaseTuple::new(
             "test".to_string(),
             Version::new("1.0").unwrap(),
             Some(Platform::new("linux").unwrap()),
@@ -167,10 +167,10 @@ mod tests {
 
     #[test]
     fn test_package_name() {
-        let tuple = NameTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
+        let tuple = ReleaseTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
         assert_eq!(tuple.spec_name(), "test-1.0.gemspec");
 
-        let tuple = NameTuple::new(
+        let tuple = ReleaseTuple::new(
             "test".to_string(),
             Version::new("1.0").unwrap(),
             Some(Platform::new("linux").unwrap()),
@@ -180,10 +180,10 @@ mod tests {
 
     #[test]
     fn test_to_array() {
-        let tuple = NameTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
+        let tuple = ReleaseTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
         assert_eq!(tuple.to_array(), ["test", "1.0", "ruby"]);
 
-        let tuple = NameTuple::new(
+        let tuple = ReleaseTuple::new(
             "test".to_string(),
             Version::new("1.0").unwrap(),
             Some(Platform::new("linux").unwrap()),
@@ -194,31 +194,31 @@ mod tests {
     #[test]
     fn test_from_array() {
         let array = ["test".to_string(), "1.0".to_string()];
-        let tuple = NameTuple::from_array(&array).unwrap();
+        let tuple = ReleaseTuple::from_array(&array).unwrap();
         assert_eq!(tuple.name, "test");
         assert_eq!(tuple.version, Version::new("1.0").unwrap());
         assert_eq!(tuple.platform, Platform::Ruby);
 
         let array = ["test".to_string(), "1.0".to_string(), "linux".to_string()];
-        let tuple = NameTuple::from_array(&array).unwrap();
+        let tuple = ReleaseTuple::from_array(&array).unwrap();
         assert_eq!(&tuple.platform.to_string(), "linux");
     }
 
     #[test]
     fn test_prerelease() {
-        let tuple = NameTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
+        let tuple = ReleaseTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
         assert!(!tuple.is_prerelease());
 
-        let tuple = NameTuple::new("test".to_string(), Version::new("1.0.alpha").unwrap(), None);
+        let tuple = ReleaseTuple::new("test".to_string(), Version::new("1.0.alpha").unwrap(), None);
         assert!(tuple.is_prerelease());
     }
 
     #[test]
     fn test_sorting() {
-        let tuple1 = NameTuple::new("a".to_string(), Version::new("1.0").unwrap(), None);
-        let tuple2 = NameTuple::new("b".to_string(), Version::new("1.0").unwrap(), None);
-        let tuple3 = NameTuple::new("a".to_string(), Version::new("2.0").unwrap(), None);
-        let tuple4 = NameTuple::new(
+        let tuple1 = ReleaseTuple::new("a".to_string(), Version::new("1.0").unwrap(), None);
+        let tuple2 = ReleaseTuple::new("b".to_string(), Version::new("1.0").unwrap(), None);
+        let tuple3 = ReleaseTuple::new("a".to_string(), Version::new("2.0").unwrap(), None);
+        let tuple4 = ReleaseTuple::new(
             "a".to_string(),
             Version::new("1.0").unwrap(),
             Some(Platform::new("linux").unwrap()),
@@ -231,10 +231,10 @@ mod tests {
 
     #[test]
     fn test_display() {
-        let tuple = NameTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
+        let tuple = ReleaseTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
         assert_eq!(tuple.to_string(), "test-1.0");
 
-        let tuple = NameTuple::new(
+        let tuple = ReleaseTuple::new(
             "test".to_string(),
             Version::new("1.0").unwrap(),
             Some(Platform::new("linux").unwrap()),

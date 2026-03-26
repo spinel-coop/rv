@@ -219,7 +219,7 @@ fn test_parse_minimal_ruby_project() {
     let gem_names: Vec<&str> = lockfile
         .gem
         .iter()
-        .flat_map(|g| g.specs.iter().map(|s| s.gem_version.name.as_ref()))
+        .flat_map(|g| g.specs.iter().map(|s| s.release_tuple.name.as_ref()))
         .collect();
     assert!(gem_names.contains(&"rake"), "should contain rake");
     assert!(gem_names.contains(&"rspec"), "should contain rspec");

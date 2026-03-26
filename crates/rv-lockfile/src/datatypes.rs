@@ -2,7 +2,7 @@
 //! so they have a lifetime 'i, which is short for 'input.
 
 use rv_gem_types::requirement::Requirement;
-use rv_gem_types::{NameTuple, Platform, ProjectDependency};
+use rv_gem_types::{Platform, ProjectDependency, ReleaseTuple};
 use rv_ruby::version::RubyVersion;
 use rv_version::Version;
 
@@ -271,13 +271,13 @@ impl std::fmt::Display for BundledWithSection {
 /// Gem which has been locked and came from some particular source.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Spec {
-    pub gem_version: NameTuple,
+    pub release_tuple: ReleaseTuple,
     pub deps: Vec<ProjectDependency>,
 }
 
 impl std::fmt::Display for Spec {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "    {}", self.gem_version.to_gemfile_lock())?;
+        writeln!(f, "    {}", self.release_tuple.to_gemfile_lock())?;
 
         if !self.deps.is_empty() {
             let dep_strs = self
@@ -297,7 +297,7 @@ impl std::fmt::Display for Spec {
 /// Checksum of a particular gem version.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Checksum<'i> {
-    pub gem_version: NameTuple,
+    pub release_tuple: ReleaseTuple,
     pub algorithm: ChecksumAlgorithm<'i>,
     pub value: Vec<u8>,
 }
@@ -305,11 +305,11 @@ pub struct Checksum<'i> {
 impl std::fmt::Display for Checksum<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.algorithm {
-            ChecksumAlgorithm::None => write!(f, "  {}", self.gem_version.to_gemfile_lock()),
+            ChecksumAlgorithm::None => write!(f, "  {}", self.release_tuple.to_gemfile_lock()),
             other => write!(
                 f,
                 "  {} {}={}",
-                self.gem_version.to_gemfile_lock(),
+                self.release_tuple.to_gemfile_lock(),
                 other,
                 hex::encode(&self.value)
             ),

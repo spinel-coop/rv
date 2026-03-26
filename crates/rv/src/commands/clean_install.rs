@@ -12,7 +12,7 @@ use owo_colors::OwoColorize;
 use rayon::ThreadPoolBuildError;
 use regex::Regex;
 use reqwest::Client;
-use rv_gem_types::NameTuple;
+use rv_gem_types::ReleaseTuple;
 use rv_gem_types::Specification as GemSpecification;
 use rv_lockfile::datatypes::ChecksumAlgorithm;
 use rv_lockfile::datatypes::GemSection;
@@ -439,26 +439,26 @@ fn retain_gems_to_be_installed(lockfile: &mut GemfileDotLock) {
 
         let mut by_name: HashMap<String, Spec> = HashMap::new();
         for spec in &gem_section.specs {
-            let gem_version = &spec.gem_version;
+            let release_tuple = &spec.release_tuple;
 
-            if !gem_version.platform.is_local() {
+            if !release_tuple.platform.is_local() {
                 continue;
             }
 
-            if let Some(other_spec) = by_name.get_mut(&gem_version.name) {
-                let other_gem_version = &other_spec.gem_version;
+            if let Some(other_spec) = by_name.get_mut(&release_tuple.name) {
+                let other_release_tuple = &other_spec.release_tuple;
 
-                if *gem_version > *other_gem_version {
+                if *release_tuple > *other_release_tuple {
                     *other_spec = spec.clone();
                 }
             } else {
-                by_name.insert(gem_version.name.clone(), spec.clone());
+                by_name.insert(release_tuple.name.clone(), spec.clone());
             }
         }
 
         gem_section
             .specs
-            .retain(|spec| by_name.get(&spec.gem_version.name) == Some(spec))
+            .retain(|spec| by_name.get(&spec.release_tuple.name) == Some(spec))
     })
 }
 
@@ -467,7 +467,7 @@ fn discard_installed_gems(lockfile: &mut GemfileDotLock, install_layout: &Instal
         use std::path::Path;
 
         gem_section.specs.retain(|spec| {
-            let full_name = &spec.gem_version.full_name();
+            let full_name = &spec.release_tuple.full_name();
             let gem_path = install_layout.gem_path(full_name);
             let spec_path = install_layout.spec_path(full_name);
             let extensions_dir = install_layout.extensions_dir(full_name);
@@ -542,11 +542,11 @@ fn install_path(
         // find the .gemspec file(s)
         let dep = path_section.specs.iter().find(|s| {
             path.to_string_lossy()
-                .contains(&format!("{}.gemspec", s.gem_version.name))
+                .contains(&format!("{}.gemspec", s.release_tuple.name))
         });
 
         if let Some(dep) = dep {
-            let full_name = dep.gem_version.full_name();
+            let full_name = dep.release_tuple.full_name();
             let cache_key = format!("{path_key}-{full_name}.gemspec");
             let cached_gemspec_path = cached_gemspecs_dir.join(&cache_key);
 
@@ -700,11 +700,11 @@ fn install_git_repo(
         let specs = repo.specs();
         let dep = specs.iter().find(|s| {
             path.to_string_lossy()
-                .contains(&format!("{}.gemspec", s.gem_version.name))
+                .contains(&format!("{}.gemspec", s.release_tuple.name))
         });
         if let Some(dep) = dep {
             // check the cache for "gitsha-full_name.gemspec", if not:
-            let full_name = dep.gem_version.full_name();
+            let full_name = dep.release_tuple.full_name();
             let cache_key = format!("{gitsha}-{full_name}.gemspec");
             let cached_gemspec_path = cached_gemspecs_dir.join(&cache_key);
             let cached = std::fs::exists(&cached_gemspec_path).is_ok_and(|exists| exists);
@@ -935,7 +935,7 @@ fn install_single_gem(
     download: DownloadedRubygems,
     args: &CiInnerArgs,
 ) -> Result<GemSpecification> {
-    let full_name = download.spec.gem_version.full_name();
+    let full_name = download.spec.release_tuple.full_name();
     // Actually unpack the tarball here.
     let dep_gemspec_res = download.unpack_tarball(args)?;
     debug!("Unpacked tarball {full_name}");
@@ -1188,7 +1188,7 @@ async fn download_gems<'i>(
         let mut hm = HashMap::new();
         for checksum in checks {
             hm.insert(
-                checksum.gem_version.clone(),
+                checksum.release_tuple.clone(),
                 HowToChecksum {
                     algorithm: match checksum.algorithm {
                         ChecksumAlgorithm::None => continue,
@@ -1275,7 +1275,7 @@ impl<'i> DownloadedRubygems<'i> {
         // Unpack the tarball into DIR/gems/
         // It should contain a metadata zip, and a data zip
         // (and optionally, a checksum zip).
-        let full_name = self.spec.gem_version.full_name();
+        let full_name = self.spec.release_tuple.full_name();
         debug!("Unpacking {full_name}");
 
         // First, create the data's destination.
@@ -1781,7 +1781,7 @@ where
 }
 
 fn url_for_spec(remote: &str, spec: &Spec) -> Result<Url> {
-    let package_name = spec.gem_version.package_name();
+    let package_name = spec.release_tuple.package_name();
     let path = format!("gems/{package_name}");
     let url = url::Url::parse(remote)
         .map_err(|err| Error::BadRemote {
@@ -1797,7 +1797,7 @@ fn url_for_spec(remote: &str, spec: &Spec) -> Result<Url> {
 async fn download_gem_source<'i>(
     config: &Config<'_>,
     gem_source: &'i GemSection<'i>,
-    checksums: &HashMap<NameTuple, HowToChecksum>,
+    checksums: &HashMap<ReleaseTuple, HowToChecksum>,
     args: &CiInnerArgs,
     progress: &WorkProgress,
     stats: &DownloadStats,
@@ -1835,7 +1835,7 @@ async fn download_gem<'i>(
     remote: &str,
     spec: &'i Spec,
     client: &Client,
-    checksums: &HashMap<NameTuple, HowToChecksum>,
+    checksums: &HashMap<ReleaseTuple, HowToChecksum>,
     stats: &DownloadStats,
     span: &tracing::Span,
 ) -> Result<DownloadedRubygems<'i>> {
@@ -1875,11 +1875,11 @@ async fn download_gem<'i>(
     let (cached, downloaded) = stats.counts();
     span.pb_set_message(&format!("{cached} cached, {downloaded} downloaded"));
 
-    let gem_version = &spec.gem_version;
-    let full_name = gem_version.full_name();
+    let release_tuple = &spec.release_tuple;
+    let full_name = release_tuple.full_name();
 
     // Validate the checksums.
-    if let Some(checksum) = checksums.get(gem_version) {
+    if let Some(checksum) = checksums.get(release_tuple) {
         match checksum.algorithm {
             KnownChecksumAlgos::Sha256 => {
                 let actual = sha2::Sha256::digest(&contents);
@@ -2178,8 +2178,8 @@ SHA512:
         discard_installed_gems(&mut lockfile, &install_layout);
 
         assert_eq!(lockfile.gem_spec_count(), 2);
-        assert_eq!(lockfile.gem[0].specs[0].gem_version.name, "rake");
-        assert_eq!(lockfile.gem[1].specs[0].gem_version.name, "rack");
+        assert_eq!(lockfile.gem[0].specs[0].release_tuple.name, "rake");
+        assert_eq!(lockfile.gem[1].specs[0].release_tuple.name, "rack");
 
         let mut lockfile = rv_lockfile::parse(input).unwrap();
 
@@ -2192,7 +2192,7 @@ SHA512:
         discard_installed_gems(&mut lockfile, &install_layout);
 
         assert_eq!(lockfile.gem_spec_count(), 1);
-        assert_eq!(lockfile.gem[0].specs[0].gem_version.name, "rack");
+        assert_eq!(lockfile.gem[0].specs[0].release_tuple.name, "rack");
     }
 
     #[test]
@@ -2213,7 +2213,7 @@ SHA512:
         // Count how many libv8-node variants exist before filtering
         let libv8_before: Vec<_> = all_specs
             .iter()
-            .filter(|s| s.gem_version.name == "libv8-node")
+            .filter(|s| s.release_tuple.name == "libv8-node")
             .collect();
         assert!(
             libv8_before.len() > 1,
@@ -2234,7 +2234,7 @@ SHA512:
         // Should only have ONE libv8-node after filtering
         let libv8_after: Vec<_> = filtered_specs
             .iter()
-            .filter(|s| s.gem_version.name == "libv8-node")
+            .filter(|s| s.release_tuple.name == "libv8-node")
             .collect();
         assert_eq!(
             libv8_after.len(),
@@ -2260,7 +2260,7 @@ SHA512:
         let expected_version = "24.1.0.0";
 
         assert_eq!(
-            libv8.gem_version.full_version(),
+            libv8.release_tuple.full_version(),
             expected_version,
             "should select platform-specific version for current platform"
         );

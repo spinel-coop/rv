@@ -2,7 +2,7 @@ use std::fs;
 
 use owo_colors::OwoColorize;
 use reqwest::StatusCode;
-use rv_gem_types::NameTuple;
+use rv_gem_types::ReleaseTuple;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_version::Version;
 use tracing::debug;
@@ -212,7 +212,7 @@ pub(crate) async fn install(
 /// When building a lockfile from a resolved gem list, there's no actual lockfile
 /// on disk or anything, so this holds the data (e.g. strings) that the lockfile views.
 struct LockfileBuilder {
-    versions_needed: Vec<NameTuple>,
+    versions_needed: Vec<ReleaseTuple>,
     gemserver_remote: String,
 }
 
@@ -223,7 +223,7 @@ impl LockfileBuilder {
     ) -> Self {
         let versions_needed: Vec<_> = versions_needed
             .into_iter()
-            .map(|(p, vp)| NameTuple {
+            .map(|(p, vp)| ReleaseTuple {
                 name: p,
                 version: vp.version,
                 platform: vp.platform,
@@ -243,20 +243,20 @@ impl LockfileBuilder {
             remote: Some(&self.gemserver_remote),
             specs: Vec::new(),
         };
-        for name_tuple in &self.versions_needed {
-            let spec = Self::spec_for_gem_dep(name_tuple);
+        for release_tuple in &self.versions_needed {
+            let spec = Self::spec_for_gem_dep(release_tuple);
             gem_section.specs.push(spec);
         }
         lockfile.gem.push(gem_section);
         lockfile
     }
 
-    fn spec_for_gem_dep(name_tuple: &NameTuple) -> rv_lockfile::datatypes::Spec {
+    fn spec_for_gem_dep(release_tuple: &ReleaseTuple) -> rv_lockfile::datatypes::Spec {
         rv_lockfile::datatypes::Spec {
             // We don't need to know the deps here, we've already resolved all dependencies.
             // A real Gemfile.lock would populate them, but for this command we don't need to.
             deps: Vec::new(),
-            gem_version: name_tuple.clone(),
+            release_tuple: release_tuple.clone(),
         }
     }
 }

@@ -10,7 +10,7 @@ use winnow::{
 };
 
 use rv_gem_types::requirement::{ComparisonOperator, Requirement, VersionConstraint};
-use rv_gem_types::{NameTuple, Platform, ProjectDependency};
+use rv_gem_types::{Platform, ProjectDependency, ReleaseTuple};
 use rv_ruby::version::RubyVersion;
 use rv_version::{Version, VersionSegment};
 
@@ -188,10 +188,13 @@ fn parse_spec<'i>(i: &mut Input<'i>) -> Res<Spec> {
 }
 
 fn parse_spec_no_delimiters<'i>(i: &mut Input<'i>) -> Res<Spec> {
-    let gem_version = parse_name_tuple.parse_next(i)?;
+    let release_tuple = parse_release_tuple.parse_next(i)?;
     line_ending.parse_next(i)?;
     let deps = repeat(0.., parse_spec_dep).parse_next(i)?;
-    Ok(Spec { gem_version, deps })
+    Ok(Spec {
+        release_tuple,
+        deps,
+    })
 }
 
 fn parse_spec_dep<'i>(i: &mut Input<'i>) -> Res<ProjectDependency> {
@@ -341,7 +344,7 @@ fn parse_segments<'i>(i: &mut Input<'i>) -> Res<Vec<VersionSegment>> {
     Ok(segments)
 }
 
-fn parse_name_tuple<'i>(i: &mut Input<'i>) -> Res<NameTuple> {
+fn parse_release_tuple<'i>(i: &mut Input<'i>) -> Res<ReleaseTuple> {
     let name = parse_gem_name.parse_next(i)?.to_string();
     space1.parse_next(i)?;
     '('.parse_next(i)?;
@@ -363,18 +366,18 @@ fn parse_bool<'i>(i: &mut Input<'i>) -> Res<bool> {
 fn parse_checksum<'i>(i: &mut Input<'i>) -> Res<Checksum<'i>> {
     // nokogiri (1.18.10-arm-linux-gnu) sha256=51f4f25ab5d5ba1012d6b16aad96b840a10b067b93f35af6a55a2c104a7ee322
     // rack (3.2.3)
-    let name_tuple = parse_name_tuple.parse_next(i)?;
+    let release_tuple = parse_release_tuple.parse_next(i)?;
     let value = opt((space1, "sha256=")).parse_next(i)?;
     if value.is_some() {
         let sha256 = parse_hex_string.try_map(hex::decode).parse_next(i)?;
         Ok(Checksum {
-            gem_version: name_tuple,
+            release_tuple,
             value: sha256,
             algorithm: ChecksumAlgorithm::SHA256,
         })
     } else {
         Ok(Checksum {
-            gem_version: name_tuple,
+            release_tuple,
             value: vec![],
             algorithm: ChecksumAlgorithm::None,
         })
