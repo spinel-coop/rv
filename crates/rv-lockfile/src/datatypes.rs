@@ -217,8 +217,9 @@ impl std::fmt::Display for GemRange<'_> {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub enum LockfileIndentation {
+    #[default]
     Standard,
     ThreeSpaces,
 }

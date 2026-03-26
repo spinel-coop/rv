@@ -14,6 +14,7 @@ use rv_gem_types::{
     Platform, ProjectDependency, ReleaseTuple, Requirement, VersionConstraint, VersionPlatform,
 };
 use rv_lockfile::datatypes::GemfileDotLock;
+use rv_ruby::version::RubyVersion;
 use std::str::FromStr;
 use url::Url;
 
@@ -106,12 +107,16 @@ pub(crate) async fn sync(global_args: &GlobalArgs, args: SyncArgs) -> Result<()>
     };
 
     let gemfile_ruby = if let Some(requirement) = ruby_requirement {
-        config.best_ruby_matching_requirement(&requirement).await?
+        Some(config.best_ruby_matching_requirement(&requirement).await?)
     } else {
-        config.current_ruby().ok_or(Error::NoMatchingRuby)?.version
+        None
     };
 
-    gemserver.add_transitive_deps(&root, &gemfile_ruby).await?;
+    let ruby_to_use = gemfile_ruby
+        .clone()
+        .unwrap_or(config.current_ruby().ok_or(Error::NoMatchingRuby)?.version);
+
+    gemserver.add_transitive_deps(&root, &ruby_to_use).await?;
 
     let gems_to_deps = gemserver.gems_to_deps;
 
@@ -127,11 +132,16 @@ pub(crate) async fn sync(global_args: &GlobalArgs, args: SyncArgs) -> Result<()>
 
     // Make a Gemfile.lock in-memory, install it via `rv ci`.
     let platform = Platform::local();
-    let lockfile_builder =
-        LockfileBuilder::new(&gemserver.url, versions_needed, platform, dependencies);
+    let lockfile_builder = LockfileBuilder::new(
+        &gemserver.url,
+        versions_needed,
+        platform,
+        dependencies,
+        gemfile_ruby,
+    );
     let lockfile = lockfile_builder.lockfile();
 
-    config = Config::with_settings(global_args, Some(gemfile_ruby.clone().into()))?;
+    config = Config::with_settings(global_args, Some(ruby_to_use.clone().into()))?;
 
     crate::commands::clean_install::install_inline_lockfile(&config, lockfile.clone(), None)
         .await?;
@@ -177,6 +187,7 @@ struct LockfileBuilder {
     gemserver_remote: String,
     platform: Platform,
     dependencies: Vec<(String, Requirement)>,
+    ruby: Option<RubyVersion>,
 }
 
 impl LockfileBuilder {
@@ -185,6 +196,7 @@ impl LockfileBuilder {
         mut versions_needed: Vec<(ReleaseTuple, GemRelease)>,
         platform: Platform,
         dependencies: Vec<ProjectDependency>,
+        ruby: Option<RubyVersion>,
     ) -> Self {
         versions_needed.sort_by_key(|k| k.0.clone());
         let gemserver_remote = url.to_string();
@@ -197,6 +209,7 @@ impl LockfileBuilder {
             versions_needed,
             platform,
             dependencies,
+            ruby,
         }
     }
 
@@ -229,6 +242,13 @@ impl LockfileBuilder {
         }
 
         lockfile.checksums = Some(checksums);
+        if let Some(cruby_version) = &self.ruby {
+            lockfile.ruby_version = Some(rv_lockfile::datatypes::RubyVersionSection {
+                indentation: Default::default(),
+                cruby_version: cruby_version.clone(),
+                engine_version: Default::default(),
+            });
+        }
         lockfile
     }
 
