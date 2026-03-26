@@ -228,6 +228,7 @@ impl LockfileBuilder {
             lockfile.dependencies.push(range);
         }
 
+        lockfile.checksums = Some(checksums);
         lockfile
     }
 
