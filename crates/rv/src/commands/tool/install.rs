@@ -4,7 +4,7 @@ use owo_colors::OwoColorize;
 use reqwest::StatusCode;
 use rv_gem_types::VersionPlatform;
 use rv_lockfile::datatypes::GemfileDotLock;
-use rv_version::Version as GemVersion;
+use rv_version::Version;
 use tracing::debug;
 use url::Url;
 
@@ -27,7 +27,7 @@ pub enum Error {
     #[error("{gem_name} doesn't exist on {server}")]
     NotFound { gem_name: String, server: String },
     #[error("No version {0} available")]
-    NoVersionFound(GemVersion),
+    NoVersionFound(Version),
     #[error("The gem does not actually have any releases published")]
     NoReleasesPublished,
     #[error(transparent)]
