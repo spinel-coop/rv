@@ -27,7 +27,7 @@ impl std::fmt::Display for ProjectDependency {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)?;
 
-        if !self.requirement.is_latest_version() {
+        if !self.is_latest_version() {
             write!(f, " ({})", self.requirement)?;
         }
 
@@ -44,5 +44,45 @@ impl ProjectDependency {
         let requirement = Requirement::new(requirements)?;
 
         Ok(Self { name, requirement })
+    }
+
+    pub fn to_lock_name(&self) -> String {
+        if self.is_latest_version() {
+            self.name.clone()
+        } else {
+            self.to_string()
+        }
+    }
+
+    pub fn is_latest_version(&self) -> bool {
+        self.requirement.is_latest_version()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dependency_creation() {
+        let dep = ProjectDependency::new("test".to_string(), vec!["~> 1.0".to_string()]).unwrap();
+        assert_eq!(dep.name, "test");
+        assert!(!dep.is_latest_version());
+    }
+
+    #[test]
+    fn test_dependency_latest_version() {
+        let dep = ProjectDependency::new("test".to_string(), vec![]).unwrap();
+        assert_eq!(dep.name, "test");
+        assert!(dep.is_latest_version());
+    }
+
+    #[test]
+    fn test_dependency_to_lock_name() {
+        let dep = ProjectDependency::new("test".to_string(), vec![">= 1.0".to_string()]).unwrap();
+        assert_eq!(dep.to_lock_name(), "test (>= 1.0)");
+
+        let dep = ProjectDependency::new("test".to_string(), vec![]).unwrap();
+        assert_eq!(dep.to_lock_name(), "test");
     }
 }

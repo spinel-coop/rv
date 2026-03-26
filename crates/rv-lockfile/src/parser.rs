@@ -588,7 +588,7 @@ GEM
             let original_input = input;
             let mut input = LocatingSlice::new(input);
             let out = parse_spec_dep.parse_next(&mut input).unwrap();
-            assert_eq!(original_input.trim(), out.to_string());
+            assert_eq!(original_input.trim(), out.to_lock_name());
         }
     }
 
