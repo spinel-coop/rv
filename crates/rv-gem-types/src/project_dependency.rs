@@ -27,16 +27,8 @@ impl std::fmt::Display for ProjectDependency {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)?;
 
-        let constraints = &self.requirement.constraints;
-
-        if !constraints.is_empty() {
-            let gem_ranges = constraints
-                .iter()
-                .map(|constraint| constraint.to_string())
-                .collect::<Vec<_>>()
-                .join(", ");
-
-            write!(f, " ({})", gem_ranges)?;
+        if !self.requirement.is_latest_version() {
+            write!(f, " ({})", self.requirement)?;
         }
 
         Ok(())

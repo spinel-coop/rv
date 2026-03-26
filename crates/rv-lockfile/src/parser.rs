@@ -202,22 +202,28 @@ fn parse_spec_no_delimiters<'i>(i: &mut Input<'i>) -> Res<Spec<'i>> {
 fn parse_spec_dep<'i>(i: &mut Input<'i>) -> Res<ProjectDependency> {
     "      ".parse_next(i)?;
     let name = parse_gem_name.parse_next(i)?.to_string();
-    let constraints = opt(spec_dep_semver).parse_next(i)?.unwrap_or(vec![]);
-    let requirement = Requirement::from(constraints);
+    let requirement = parse_requirement.parse_next(i)?;
     line_ending.parse_next(i)?;
     Ok(ProjectDependency { name, requirement })
 }
 
 fn parse_dependency<'i>(i: &mut Input<'i>) -> Res<GemRange<'i>> {
     let name = parse_gem_name.parse_next(i)?;
-    let constraints = opt(spec_dep_semver).parse_next(i)?;
-    let requirement = constraints.map_or(Requirement::default(), Requirement::from);
+    let requirement = parse_requirement.parse_next(i)?;
     let nonstandard = opt('!').parse_next(i)?;
     Ok(GemRange {
         name,
         requirement,
         nonstandard: nonstandard.is_some(),
     })
+}
+
+fn parse_requirement<'i>(i: &mut Input<'i>) -> Res<Requirement> {
+    let requirement = opt(spec_dep_semver)
+        .parse_next(i)?
+        .map_or(Requirement::default(), Requirement::from);
+
+    Ok(requirement)
 }
 
 fn spec_dep_semver<'i>(i: &mut Input<'i>) -> Res<Vec<VersionConstraint>> {
