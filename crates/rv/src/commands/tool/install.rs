@@ -123,11 +123,10 @@ pub(crate) async fn install(
 
     debug!("Selected {} {}", gem_name, release_to_install.full_name());
 
+    let target_version = release_to_install.version_platform();
+
     // Check if the tool was already installed.
-    let install_path = super::tool_dir_for(
-        &gem_name,
-        &release_to_install.version_platform().to_string(),
-    );
+    let install_path = super::tool_dir_for(&gem_name, &target_version.to_string());
     let already_installed = install_path.exists();
     if already_installed {
         if force {
@@ -136,7 +135,7 @@ pub(crate) async fn install(
             println!(
                 "{} {} already installed at {}",
                 gem_name.cyan(),
-                release_to_install.version_platform(),
+                target_version,
                 install_path.cyan(),
             );
             return Ok(Installed {
@@ -195,7 +194,7 @@ pub(crate) async fn install(
     println!(
         "Installed {} version {} to {}",
         gem_name.cyan(),
-        release_to_install.version_platform(),
+        target_version,
         install_path.cyan(),
     );
     Ok(Installed {
