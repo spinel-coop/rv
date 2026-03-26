@@ -52,6 +52,44 @@ fn test_tool_install_twice() {
     output.assert_stdout_contains(&expected_info_message);
 }
 
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+#[test]
+fn test_tool_install_resolves_platform_specific_gems() {
+    let mut test = RvTest::new();
+
+    let releases_mock = test.mock_releases_all_platforms(["4.0.2"].to_vec());
+    let ruby_mock = test.mock_ruby_download("4.0.2").create();
+
+    let nokogiri_info_endpoint_mock = test.mock_info_endpoint("nokogiri").create();
+
+    let racc_info_endpoint_mock = test.mock_info_endpoint("racc").create();
+
+    let nokogiri_tarball_mock = test
+        .mock_gem_download("nokogiri-1.19.0-arm64-darwin.gem")
+        .create();
+    let racc_tarball_mock = test.mock_gem_download("racc-1.8.1.gem").create();
+
+    // Install it, with an explicit version.
+    let output = test.tool_install(&["nokogiri@1.19.0"]);
+    output.assert_success();
+
+    let tool_home = "/tmp/home/.local/share/rv/tools/nokogiri@1.19.0-arm64-darwin";
+    let expected_info_message = format!(
+        "Installed {} version 1.19.0-arm64-darwin to {}",
+        "nokogiri".cyan(),
+        tool_home.cyan()
+    );
+
+    output.assert_stdout_contains(&expected_info_message);
+
+    releases_mock.assert();
+    ruby_mock.assert();
+    nokogiri_info_endpoint_mock.assert();
+    racc_info_endpoint_mock.assert();
+    nokogiri_tarball_mock.assert();
+    racc_tarball_mock.assert();
+}
+
 /// Tests users can explicitly install an older version of a gem.
 #[test]
 fn test_tool_install_non_latest_version() {

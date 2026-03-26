@@ -49,14 +49,6 @@ mod tests {
         VersionPlatform::from_str(input).unwrap()
     }
 
-    fn r(input: &str) -> GemRelease {
-        GemRelease {
-            version_platform: VersionPlatform::from_str(input).unwrap(),
-            deps: Default::default(),
-            metadata: Default::default(),
-        }
-    }
-
     /// Tests that the conversion from RubyGems requirements to PubGrub ranges is correct.
     #[test]
     fn test_mapping() {
@@ -80,24 +72,5 @@ mod tests {
             let actual = Ranges::from(Requirement::from(input));
             assert_eq!(actual, expected);
         }
-    }
-
-    #[test]
-    fn test_resolution() {
-        // All the information about a release of a gem available on some Gemserver.
-        let gem_info: HashMap<String, Vec<GemRelease>> = serde_json::from_str(include_str!(
-            "../../../../testdata/all_nokogiri_transitive_deps.json"
-        ))
-        .unwrap();
-        let mut out: Vec<_> = solve("nokogiri".to_owned(), r("1.19.0-arm64-darwin"), gem_info)
-            .unwrap()
-            .into_iter()
-            .collect();
-        out.sort();
-        let mut resolved_nokogiri = String::new();
-        for (k, v) in out {
-            resolved_nokogiri.push_str(&format!("{k}: {v}\n"));
-        }
-        insta::assert_snapshot!(resolved_nokogiri);
     }
 }
