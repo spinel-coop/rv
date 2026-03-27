@@ -12,7 +12,7 @@ use crate::{
     GlobalArgs,
     commands::{clean_install::InstallStats, tool::Installed},
     config::Config,
-    gemserver::{self, GemName, Gemserver},
+    gemserver::{self, GemName, GemRelease, Gemserver},
 };
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -215,7 +215,7 @@ pub(crate) async fn install(
 /// When building a lockfile from a resolved gem list, there's no actual lockfile
 /// on disk or anything, so this holds the data (e.g. strings) that the lockfile views.
 struct LockfileBuilder {
-    versions_needed: Vec<ReleaseTuple>,
+    versions_needed: Vec<(ReleaseTuple, GemRelease)>,
     gemserver_remote: String,
 }
 
@@ -227,11 +227,16 @@ impl LockfileBuilder {
             remote: Some(&self.gemserver_remote),
             specs: Vec::new(),
         };
-        for release_tuple in &self.versions_needed {
+        let mut checksums = vec![];
+        for (release_tuple, gem_release) in &self.versions_needed {
             let spec = Self::spec_for_gem_dep(release_tuple);
             gem_section.specs.push(spec);
+            let checksum = Self::checksum_for_spec(release_tuple, gem_release);
+            checksums.push(checksum);
         }
+
         lockfile.gem.push(gem_section);
+        lockfile.checksums = Some(checksums);
         lockfile
     }
 
@@ -241,6 +246,17 @@ impl LockfileBuilder {
             // A real Gemfile.lock would populate them, but for this command we don't need to.
             deps: Vec::new(),
             release_tuple: release_tuple.clone(),
+        }
+    }
+
+    fn checksum_for_spec<'a>(
+        release_tuple: &ReleaseTuple,
+        gem_release: &GemRelease,
+    ) -> rv_lockfile::datatypes::Checksum<'a> {
+        rv_lockfile::datatypes::Checksum {
+            release_tuple: release_tuple.clone(),
+            algorithm: rv_lockfile::datatypes::ChecksumAlgorithm::SHA256,
+            value: gem_release.metadata.checksum.clone(),
         }
     }
 }

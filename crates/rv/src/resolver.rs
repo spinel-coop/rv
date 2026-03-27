@@ -13,16 +13,21 @@ pub fn solve(
     gem: GemName,
     release: GemRelease,
     gem_info: HashMap<GemName, HashMap<VersionPlatform, GemRelease>>,
-) -> Result<Vec<ReleaseTuple>, ResolutionError> {
-    let provider = all_dependencies(gem_info);
+) -> Result<Vec<(ReleaseTuple, GemRelease)>, ResolutionError> {
+    let provider = all_dependencies(&gem_info);
     let solution = pubgrub::resolve(&provider, gem, release.version_platform)?;
 
     Ok(solution
         .into_iter()
-        .map(|(p, vp)| ReleaseTuple {
-            name: p,
-            version: vp.version,
-            platform: vp.platform,
+        .map(|(p, vp)| {
+            let gem_release = gem_info[&p][&vp].clone();
+            let release_tuple = ReleaseTuple {
+                name: p,
+                version: vp.version,
+                platform: vp.platform,
+            };
+
+            (release_tuple, gem_release)
         })
         .collect())
 }
@@ -32,7 +37,7 @@ pub fn solve(
 /// and what dependencies that gem-version pair has).
 /// This is really just taking the `gem_info` hashmap and organizing it in a way that PubGrub can understand.
 fn all_dependencies(
-    gem_info: HashMap<GemName, HashMap<VersionPlatform, GemRelease>>,
+    gem_info: &HashMap<GemName, HashMap<VersionPlatform, GemRelease>>,
 ) -> DepProvider {
     let mut m = DepProvider::new();
 
@@ -40,9 +45,10 @@ fn all_dependencies(
         for (version_platform, gem_release) in gem_releases {
             m.add_dependencies(
                 package.clone(),
-                version_platform,
+                version_platform.clone(),
                 gem_release
                     .deps
+                    .clone()
                     .into_iter()
                     .map(|dep| (dep.name, dep.requirement.into())),
             );
