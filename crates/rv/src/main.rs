@@ -27,6 +27,7 @@ use crate::commands::ruby::{RubyArgs, ruby};
 use crate::commands::run::{RunArgs, run};
 use crate::commands::self_cmd::{SelfArgs, self_cmd};
 use crate::commands::shell::{ShellArgs, shell};
+use crate::commands::sync::{SyncArgs, sync};
 use crate::commands::tool::{ToolArgs, tool};
 
 const STYLES: Styles = Styles::styled()
@@ -116,6 +117,8 @@ enum Commands {
     Cache(CacheCommandArgs),
     #[command(about = "Configure your shell to use rv")]
     Shell(ShellArgs),
+    #[command(about = "Update the project's environment", hide = true)]
+    Sync(SyncArgs),
     #[command(about = "Clean install from a Gemfile.lock", visible_alias = "ci")]
     CleanInstall(CleanInstallArgs),
     #[command(
@@ -197,6 +200,8 @@ pub enum Error {
     SelfCmdError(#[from] commands::self_cmd::Error),
     #[error(transparent)]
     ShellError(#[from] commands::shell::Error),
+    #[error(transparent)]
+    SyncError(#[from] commands::sync::Error),
     #[error(transparent)]
     ToolError(#[from] commands::tool::Error),
     #[error(transparent)]
@@ -308,6 +313,7 @@ async fn run_cmd(global_args: &GlobalArgs, command: Commands) -> Result<()> {
         Commands::Cache(cache_args) => cache(global_args, cache_args)?,
         Commands::SelfCmd(self_args) => self_cmd(global_args, self_args).await?,
         Commands::Shell(shell_args) => shell(global_args, &mut Cli::command(), shell_args)?,
+        Commands::Sync(sync_args) => sync(global_args, sync_args).await?,
         Commands::Tool(tool_args) => tool(global_args, tool_args).await?,
         Commands::Run(run_args) => run(global_args, run_args).await?,
     };

@@ -17,6 +17,7 @@ use crate::config::Config;
 use crate::gemserver::http_fetcher::HttpFetcher;
 use crate::gemserver::storage::{FilesystemStorage, Storage};
 use crate::gemserver::updater::Updater;
+use crate::resolver::{ResolutionPackage, ResolutionRoot};
 
 pub mod http_fetcher;
 pub mod storage;
@@ -25,7 +26,7 @@ pub mod updater;
 pub struct Gemserver {
     pub url: Url,
     // Maps gem names to their dependency lists.
-    pub gems_to_deps: HashMap<String, HashMap<VersionPlatform, GemRelease>>,
+    pub gems_to_deps: HashMap<ResolutionPackage, HashMap<VersionPlatform, GemRelease>>,
     updater: Arc<Updater>,
     storage: Arc<dyn Storage>,
 }
@@ -71,7 +72,7 @@ impl Gemserver {
 
     pub async fn add_transitive_deps(
         &mut self,
-        root: &GemRelease,
+        root: &ResolutionRoot,
         ruby_to_use: &RubyVersion,
     ) -> Result<()> {
         debug!("Querying all transitive dependencies");
@@ -128,12 +129,12 @@ impl Gemserver {
 
     pub async fn query_all_gem_deps(
         &self,
-        root: &GemRelease,
-        gems_to_deps: &mut HashMap<String, HashMap<VersionPlatform, GemRelease>>,
+        root: &ResolutionRoot,
+        gems_to_deps: &mut HashMap<ResolutionPackage, HashMap<VersionPlatform, GemRelease>>,
         ruby_to_use: &RubyVersion,
     ) -> Result<()> {
         let results = Rc::new(Mutex::new(HashMap::<
-            String,
+            ResolutionPackage,
             HashMap<VersionPlatform, GemRelease>,
         >::new()));
         let mut in_flight = FuturesUnordered::new();
@@ -165,7 +166,7 @@ impl Gemserver {
                     })
                     .map(|release| (release.version_platform.clone(), release))
                     .collect();
-                results.insert(dep_name, candidate_versions);
+                results.insert(ResolutionPackage::Gem(dep_name), candidate_versions);
             }
 
             for req in new_deps {

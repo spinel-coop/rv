@@ -2848,6 +2848,7 @@ dependencies = [
  "rv-ruby",
  "rv-version",
  "serde",
+ "serde_with",
  "thiserror 2.0.17",
 ]
 

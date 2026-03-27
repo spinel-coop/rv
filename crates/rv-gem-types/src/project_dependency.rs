@@ -6,6 +6,7 @@ pub struct ProjectDependency {
     /// What gem this dependency uses.
     pub name: String,
     /// Constraints on what version of the gem can be used.
+    #[serde(flatten)]
     pub requirement: Requirement,
 }
 

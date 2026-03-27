@@ -13,6 +13,7 @@ use crate::{
     commands::{clean_install::InstallStats, tool::Installed},
     config::Config,
     gemserver::{self, GemName, GemRelease, Gemserver},
+    resolver::{ResolutionPackage, ResolutionRoot},
 };
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -120,10 +121,18 @@ pub(crate) async fn install(
 
     let target_version = release_to_install.version_platform();
 
+    let root_package = ResolutionPackage::Gem(gem_name.clone());
+
     gemserver.gems_to_deps.insert(
-        gem_name.clone(),
+        root_package.clone(),
         [(target_version.clone(), release_to_install.clone())].into(),
     );
+
+    let root = ResolutionRoot {
+        package: root_package,
+        version_platform: target_version.clone(),
+        deps: release_to_install.deps.clone(),
+    };
 
     // Check if the tool was already installed.
     let install_path = super::tool_dir_for(&gem_name, &target_version.to_string());
@@ -150,20 +159,14 @@ pub(crate) async fn install(
         .await?;
     debug!("Selected Ruby {ruby_to_use} for this gem");
 
-    gemserver
-        .add_transitive_deps(&release_to_install, &ruby_to_use)
-        .await?;
+    gemserver.add_transitive_deps(&root, &ruby_to_use).await?;
 
     // OK, now we know all transitive dependencies, and have a dependency graph.
     // Now, translate the dependency constraint list into a PubGrub system, and resolve
     // (i.e. figure out which version of every gem will be used.)
     debug!("Resolving all dependencies via PubGrub");
-    let versions_needed = crate::resolver::solve(
-        gem_name.clone(),
-        target_version.clone(),
-        gemserver.gems_to_deps,
-    )
-    .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
+    let versions_needed = crate::resolver::solve(&root, &gemserver.gems_to_deps)
+        .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
     debug!("All dependencies resolved");
 
     // Make a Gemfile.lock in-memory, install it via `rv ci`.
@@ -175,10 +178,10 @@ pub(crate) async fn install(
 
     config = Config::new(global_args, Some(ruby_to_use.clone().into()))?;
 
-    let result = crate::commands::clean_install::install_tool_lockfile(
+    let result = crate::commands::clean_install::install_inline_lockfile(
         &config,
         lockfile,
-        install_path.clone(),
+        Some(install_path.clone()),
     )
     .await;
 

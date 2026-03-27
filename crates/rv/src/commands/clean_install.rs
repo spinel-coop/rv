@@ -272,13 +272,14 @@ pub struct InstallStats {
     pub executables_installed: usize,
 }
 
-pub(crate) async fn install_tool_lockfile(
+pub(crate) async fn install_inline_lockfile(
     config: &Config<'_>,
     lockfile: GemfileDotLock<'_>,
-    install_path: Utf8PathBuf,
+    install_path: Option<Utf8PathBuf>,
 ) -> Result<InstallStats> {
     let ruby = ruby_install_if_needed(config).await?;
     let extensions_scope = ruby.extensions_scope();
+    let install_path = install_path.unwrap_or(config.gem_home(&ruby));
     let inner_args = CiInnerArgs {
         max_concurrent_requests: 10,
         max_concurrent_installs: 20,
