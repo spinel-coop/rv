@@ -304,7 +304,7 @@ impl std::fmt::Display for Spec<'_> {
             let dep_strs = self
                 .deps
                 .iter()
-                .map(|d| d.to_lock_name())
+                .map(|d| d.to_gemfile_lock())
                 .collect::<Vec<_>>()
                 .join("\n      ");
 

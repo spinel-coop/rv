@@ -46,7 +46,7 @@ impl ProjectDependency {
         Ok(Self { name, requirement })
     }
 
-    pub fn to_lock_name(&self) -> String {
+    pub fn to_gemfile_lock(&self) -> String {
         if self.is_latest_version() {
             self.name.clone()
         } else {
@@ -78,11 +78,11 @@ mod tests {
     }
 
     #[test]
-    fn test_dependency_to_lock_name() {
+    fn test_dependency_to_gemfile_lock() {
         let dep = ProjectDependency::new("test".to_string(), vec![">= 1.0".to_string()]).unwrap();
-        assert_eq!(dep.to_lock_name(), "test (>= 1.0)");
+        assert_eq!(dep.to_gemfile_lock(), "test (>= 1.0)");
 
         let dep = ProjectDependency::new("test".to_string(), vec![]).unwrap();
-        assert_eq!(dep.to_lock_name(), "test");
+        assert_eq!(dep.to_gemfile_lock(), "test");
     }
 }
