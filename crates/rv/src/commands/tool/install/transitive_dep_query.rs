@@ -10,10 +10,10 @@ use tracing::debug;
 use super::Result;
 use crate::gemserver::{self, GemRelease, Gemserver};
 
-type Request = String; // Gem name
-type Item = (String, Vec<GemRelease>); // (name, deps) pair.
-
-async fn fetch(req: Request, gemserver: &Gemserver) -> Result<(Item, Vec<Request>)> {
+async fn fetch(
+    req: String,
+    gemserver: &Gemserver,
+) -> Result<((String, Vec<GemRelease>), Vec<String>)> {
     debug!("Fetching {req}");
     let dep_info_resp = gemserver.get_releases_for_gem(&req).await?;
     let dep_versions = gemserver::parse_release_from_body(&dep_info_resp)?;
@@ -32,7 +32,7 @@ pub async fn query_all_gem_deps(
 ) -> Result<()> {
     let results = Rc::new(Mutex::new(HashMap::<String, Vec<GemRelease>>::new()));
     let mut in_flight = FuturesUnordered::new();
-    let seen_requests = Rc::new(Mutex::new(HashSet::<Request>::new()));
+    let seen_requests = Rc::new(Mutex::new(HashSet::<String>::new()));
 
     // Initial requests
     for d in root.deps.clone() {
