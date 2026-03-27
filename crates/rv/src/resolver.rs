@@ -1,28 +1,30 @@
 use std::collections::HashMap;
 
-use pubgrub::{OfflineDependencyProvider, Ranges, SelectedDependencies};
 use rv_gem_types::VersionPlatform;
 
 use super::gemserver::{GemName, GemRelease};
+
+use pubgrub::Ranges;
+
+pub type DepProvider = pubgrub::OfflineDependencyProvider<GemName, Ranges<VersionPlatform>>;
+pub type ResolutionError = pubgrub::PubGrubError<DepProvider>;
+pub type ResolutionResult = pubgrub::SelectedDependencies<DepProvider>;
 
 pub fn solve(
     gem: GemName,
     release: GemRelease,
     gem_info: HashMap<GemName, Vec<GemRelease>>,
-) -> Result<SelectedDependencies<DepProvider>, pubgrub::PubGrubError<DepProvider>> {
+) -> Result<ResolutionResult, ResolutionError> {
     let provider = all_dependencies(gem_info);
     pubgrub::resolve(&provider, gem, release.version_platform)
 }
-
-pub type DepProvider = OfflineDependencyProvider<GemName, Ranges<VersionPlatform>>;
 
 /// Build a PubGrub "dependency provider", i.e. something that can be queried
 /// with all the information of a GemServer (which gems are available, what versions that gem has,
 /// and what dependencies that gem-version pair has).
 /// This is really just taking the `gem_info` hashmap and organizing it in a way that PubGrub can understand.
 fn all_dependencies(gem_info: HashMap<GemName, Vec<GemRelease>>) -> DepProvider {
-    let mut m: OfflineDependencyProvider<GemName, Ranges<VersionPlatform>> =
-        OfflineDependencyProvider::new();
+    let mut m = DepProvider::new();
     for (package, gem_releases) in gem_info {
         for gem_release in gem_releases {
             m.add_dependencies(
