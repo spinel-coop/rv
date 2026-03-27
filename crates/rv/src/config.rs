@@ -4,6 +4,7 @@ use std::{
     str::FromStr,
 };
 
+use bundler_settings::Error as BundlerSettingsError;
 use rv_settings::Error as RvSettingsError;
 
 use bundler_settings::BundlerSettings;
@@ -42,6 +43,8 @@ pub enum Error {
     JoinPathsError(#[from] JoinPathsError),
     #[error(transparent)]
     RvSettingsError(#[from] RvSettingsError),
+    #[error(transparent)]
+    BundlerSettingsError(#[from] BundlerSettingsError),
     #[error("no matching ruby version found")]
     NoMatchingRuby,
     #[error(
@@ -53,12 +56,12 @@ pub enum Error {
 type Result<T> = miette::Result<T, Error>;
 
 #[derive(Debug, Clone)]
-pub struct Config<'input> {
+pub struct Config {
     pub ruby_dirs: IndexSet<Utf8PathBuf>,
     pub project_root: Utf8PathBuf,
     pub cache: rv_cache::Cache,
     pub requested_ruby: RequestedRuby,
-    pub bundler_settings: BundlerSettings<'input>,
+    pub bundler_settings: BundlerSettings,
     pub rv_settings: RvSettings,
 }
 
@@ -116,7 +119,7 @@ impl RequestedRuby {
     }
 }
 
-impl Config<'_> {
+impl Config {
     pub(crate) fn new(global_args: &GlobalArgs, request: Option<RubyRequest>) -> Result<Self> {
         let root = rv_dirs::root_dir();
         let ruby_dirs = rv_dirs::canonical_ruby_dirs(&global_args.ruby_dir, &root)?;
@@ -148,7 +151,7 @@ impl Config<'_> {
         let mut config = Self::new(global_args, request)?;
         let home_dir = rv_dirs::home_dir();
 
-        config.bundler_settings = BundlerSettings::new(&home_dir, &config.project_root);
+        config.bundler_settings = BundlerSettings::new(&home_dir, &config.project_root)?;
         config.rv_settings = RvSettings::new(global_args, &home_dir, &config.project_root)?;
 
         Ok(config)

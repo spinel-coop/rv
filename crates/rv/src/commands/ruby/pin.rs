@@ -105,7 +105,7 @@ fn set_pinned_ruby(config: &Config, version: String) -> Result<()> {
     Ok(())
 }
 
-async fn show_pinned_ruby(config: &Config<'_>, resolved: bool) -> Result<()> {
+async fn show_pinned_ruby(config: &Config, resolved: bool) -> Result<()> {
     let (ruby, source) = match &config.requested_ruby {
         RequestedRuby::Project(duple) | RequestedRuby::User(duple) => duple,
         _ => return Err(Error::NoRubyRequest),

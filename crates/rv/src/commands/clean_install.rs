@@ -321,7 +321,7 @@ pub(crate) async fn install_tool_lockfile(
 }
 
 async fn ci_inner_work(
-    config: &Config<'_>,
+    config: &Config,
     args: &CiInnerArgs,
     progress: &WorkProgress,
     mut lockfile: GemfileDotLock<'_>,
@@ -1166,7 +1166,7 @@ impl DownloadStats {
 
 /// Downloads all Rubygem server gems from a Gemfile.lock
 async fn download_gems<'i>(
-    config: &Config<'_>,
+    config: &Config,
     lockfile: &'i GemfileDotLock<'i>,
     args: &CiInnerArgs,
     progress: &WorkProgress,
@@ -1775,7 +1775,7 @@ fn url_for_spec(remote: &str, spec: &Spec) -> Result<Url> {
 /// Downloads all gems from a particular gem source,
 /// e.g. from gems.coop or rubygems or something.
 async fn download_gem_source<'i>(
-    config: &Config<'_>,
+    config: &Config,
     gem_source: &'i GemSection<'i>,
     checksums: &HashMap<ReleaseTuple, HowToChecksum>,
     args: &CiInnerArgs,
@@ -1811,7 +1811,7 @@ async fn download_gem_source<'i>(
 
 /// Download a single gem, from the given URL, using the given client.
 async fn download_gem<'i>(
-    config: &Config<'_>,
+    config: &Config,
     remote: &str,
     spec: &'i Spec,
     client: &Client,

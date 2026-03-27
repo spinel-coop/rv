@@ -104,7 +104,7 @@ pub(crate) async fn install(
 
 // downloads a remote ruby archive (tarball or zip)
 async fn download_tarball(
-    config: &Config<'_>,
+    config: &Config,
     version: &str,
     progress: &WorkProgress,
 ) -> Result<Utf8PathBuf> {
@@ -249,7 +249,7 @@ async fn write_to_filesystem(
 }
 
 async fn download_ruby_archive(
-    config: &Config<'_>,
+    config: &Config,
     url: &str,
     archive_path: &Utf8PathBuf,
     version: &str,
