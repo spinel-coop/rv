@@ -373,7 +373,7 @@ async fn ci_inner_work(
 
     // Phase 3 (Compiles, 80-100%) - start_phase called inside compile_gems after filtering
     let compile_start = Instant::now();
-    let gems_compiled = compile_gems(config, specs, args, progress)?;
+    let gems_compiled = compile_gems(config, &specs, args, progress)?;
     let compile_elapsed = compile_start.elapsed();
 
     let total_elapsed = fetch_elapsed + install_elapsed + compile_elapsed;
@@ -977,7 +977,7 @@ fn check_macos_dev_tools() -> Result<()> {
 
 fn compile_gems(
     config: &Config,
-    specs: Vec<GemSpecification>,
+    specs: &[GemSpecification],
     args: &CiInnerArgs,
     progress: &WorkProgress,
 ) -> Result<GemsCompiled> {
@@ -986,7 +986,7 @@ fn compile_gems(
 
     let install_layout = &args.install_layout;
 
-    let (info, deps) = make_dep_graph(&specs, install_layout)?;
+    let (info, deps) = make_dep_graph(specs, install_layout)?;
     let deps_count = info.count;
 
     if deps_count == 0 {
