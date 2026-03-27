@@ -52,7 +52,7 @@ pub(crate) async fn pin(
     let ruby_request = RubyRequest::from_str(&request)?;
 
     let version = if resolved {
-        let resolved = &Config::new(global_args, Some(ruby_request.clone()))?
+        let resolved = Config::new(global_args, Some(ruby_request.clone()))?
             .find_matching_remote_ruby()
             .await?;
 
