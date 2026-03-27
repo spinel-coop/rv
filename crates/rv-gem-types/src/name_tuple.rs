@@ -1,17 +1,16 @@
+use crate::{Platform, PlatformError};
 use crate::{Version, VersionError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NameTuple {
     pub name: String,
     pub version: Version,
-    pub platform: String,
+    pub platform: Platform,
 }
 
 impl NameTuple {
-    pub fn new(name: String, version: Version, platform: Option<String>) -> Self {
-        let platform = platform
-            .filter(|p| !p.is_empty())
-            .unwrap_or_else(|| "ruby".to_string());
+    pub fn new(name: String, version: Version, platform: Option<Platform>) -> Self {
+        let platform = platform.unwrap_or(Platform::Ruby);
 
         Self {
             name,
@@ -28,15 +27,19 @@ impl NameTuple {
             return Err(NameTupleError::InvalidArray);
         };
         let version = version?;
-        let platform = array.get(2).cloned();
+        let platform = array.get(2).map(Platform::new).transpose()?;
         Ok(Self::new(name, version, platform))
     }
 
     pub fn full_name(&self) -> String {
-        if self.platform == "ruby" {
-            format!("{}-{}", self.name, self.version)
+        format!("{}-{}", self.name, self.full_version())
+    }
+
+    pub fn full_version(&self) -> String {
+        if matches!(self.platform, Platform::Ruby) {
+            self.version.to_string()
         } else {
-            format!("{}-{}-{}", self.name, self.version, self.platform)
+            format!("{}-{}", self.version, self.platform)
         }
     }
 
@@ -44,12 +47,20 @@ impl NameTuple {
         format!("{}.gemspec", self.full_name())
     }
 
+    pub fn package_name(&self) -> String {
+        format!("{}.gem", self.full_name())
+    }
+
     pub fn to_array(&self) -> [String; 3] {
         [
             self.name.clone(),
             self.version.to_string(),
-            self.platform.clone(),
+            self.platform.to_string(),
         ]
+    }
+
+    pub fn to_gemfile_lock(&self) -> String {
+        format!("{} ({})", self.name, self.full_version())
     }
 
     pub fn is_prerelease(&self) -> bool {
@@ -67,20 +78,10 @@ impl Ord for NameTuple {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // Sort by name, then version, then platform priority
         match self.name.cmp(&other.name) {
-            std::cmp::Ordering::Equal => {
-                match self.version.cmp(&other.version) {
-                    std::cmp::Ordering::Equal => {
-                        // Ruby platform has priority -1, others have priority 1
-                        let self_priority = if self.platform == "ruby" { -1 } else { 1 };
-                        let other_priority = if other.platform == "ruby" { -1 } else { 1 };
-                        match self_priority.cmp(&other_priority) {
-                            std::cmp::Ordering::Equal => self.platform.cmp(&other.platform),
-                            other => other,
-                        }
-                    }
-                    other => other,
-                }
-            }
+            std::cmp::Ordering::Equal => match self.version.cmp(&other.version) {
+                std::cmp::Ordering::Equal => self.platform.cmp(&other.platform),
+                other => other,
+            },
             other => other,
         }
     }
@@ -92,8 +93,8 @@ impl PartialOrd for NameTuple {
     }
 }
 
-impl From<(String, Version, Option<String>)> for NameTuple {
-    fn from((name, version, platform): (String, Version, Option<String>)) -> Self {
+impl From<(String, Version, Option<Platform>)> for NameTuple {
+    fn from((name, version, platform): (String, Version, Option<Platform>)) -> Self {
         Self::new(name, version, platform)
     }
 }
@@ -112,6 +113,8 @@ pub enum NameTupleError {
     InvalidArray,
     #[error("Invalid version in NameTuple")]
     InvalidVersion(#[from] VersionError),
+    #[error("Invalid platform in NameTuple")]
+    InvalidPlatform(#[from] PlatformError),
 }
 
 #[cfg(test)]
@@ -123,7 +126,7 @@ mod tests {
         let tuple = NameTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
         assert_eq!(tuple.name, "test");
         assert_eq!(tuple.version, Version::new("1.0").unwrap());
-        assert_eq!(tuple.platform, "ruby");
+        assert_eq!(tuple.platform, Platform::Ruby);
     }
 
     #[test]
@@ -131,9 +134,9 @@ mod tests {
         let tuple = NameTuple::new(
             "test".to_string(),
             Version::new("1.0").unwrap(),
-            Some("linux".to_string()),
+            Some(Platform::new("linux").unwrap()),
         );
-        assert_eq!(tuple.platform, "linux");
+        assert_eq!(&tuple.platform.to_string(), "linux");
     }
 
     #[test]
@@ -144,7 +147,7 @@ mod tests {
         let tuple = NameTuple::new(
             "test".to_string(),
             Version::new("1.0").unwrap(),
-            Some("linux".to_string()),
+            Some(Platform::new("linux").unwrap()),
         );
         assert_eq!(tuple.full_name(), "test-1.0-linux");
     }
@@ -157,9 +160,22 @@ mod tests {
         let tuple = NameTuple::new(
             "test".to_string(),
             Version::new("1.0").unwrap(),
-            Some("linux".to_string()),
+            Some(Platform::new("linux").unwrap()),
         );
         assert_eq!(tuple.spec_name(), "test-1.0-linux.gemspec");
+    }
+
+    #[test]
+    fn test_package_name() {
+        let tuple = NameTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
+        assert_eq!(tuple.spec_name(), "test-1.0.gemspec");
+
+        let tuple = NameTuple::new(
+            "test".to_string(),
+            Version::new("1.0").unwrap(),
+            Some(Platform::new("linux").unwrap()),
+        );
+        assert_eq!(tuple.package_name(), "test-1.0-linux.gem");
     }
 
     #[test]
@@ -170,7 +186,7 @@ mod tests {
         let tuple = NameTuple::new(
             "test".to_string(),
             Version::new("1.0").unwrap(),
-            Some("linux".to_string()),
+            Some(Platform::new("linux").unwrap()),
         );
         assert_eq!(tuple.to_array(), ["test", "1.0", "linux"]);
     }
@@ -181,11 +197,11 @@ mod tests {
         let tuple = NameTuple::from_array(&array).unwrap();
         assert_eq!(tuple.name, "test");
         assert_eq!(tuple.version, Version::new("1.0").unwrap());
-        assert_eq!(tuple.platform, "ruby");
+        assert_eq!(tuple.platform, Platform::Ruby);
 
         let array = ["test".to_string(), "1.0".to_string(), "linux".to_string()];
         let tuple = NameTuple::from_array(&array).unwrap();
-        assert_eq!(tuple.platform, "linux");
+        assert_eq!(&tuple.platform.to_string(), "linux");
     }
 
     #[test]
@@ -205,7 +221,7 @@ mod tests {
         let tuple4 = NameTuple::new(
             "a".to_string(),
             Version::new("1.0").unwrap(),
-            Some("linux".to_string()),
+            Some(Platform::new("linux").unwrap()),
         );
 
         assert!(tuple1 < tuple2);
@@ -221,7 +237,7 @@ mod tests {
         let tuple = NameTuple::new(
             "test".to_string(),
             Version::new("1.0").unwrap(),
-            Some("linux".to_string()),
+            Some(Platform::new("linux").unwrap()),
         );
         assert_eq!(tuple.to_string(), "test-1.0-linux");
     }

@@ -10,7 +10,7 @@ use winnow::{
 };
 
 use rv_gem_types::requirement::{ComparisonOperator, Requirement, VersionConstraint};
-use rv_gem_types::{Platform, ProjectDependency, VersionPlatform};
+use rv_gem_types::{NameTuple, Platform, ProjectDependency};
 use rv_ruby::version::RubyVersion;
 use rv_version::{Version, VersionSegment};
 
@@ -181,20 +181,15 @@ fn parse_empty_lines<'i>(i: &mut Input<'i>) -> Res<()> {
     Ok(())
 }
 
-fn parse_spec<'i>(i: &mut Input<'i>) -> Res<Spec<'i>> {
+fn parse_spec<'i>(i: &mut Input<'i>) -> Res<Spec> {
     "    ".parse_next(i)?;
     let spec = parse_spec_no_delimiters.parse_next(i)?;
     Ok(spec)
 }
 
-fn parse_spec_no_delimiters<'i>(i: &mut Input<'i>) -> Res<Spec<'i>> {
-    let name = parse_gem_name.parse_next(i)?;
-    space1.parse_next(i)?;
-    let version_platform = delimited('(', parse_version_platform, ")\n").parse_next(i)?;
-    let gem_version = GemVersion {
-        name,
-        version_platform,
-    };
+fn parse_spec_no_delimiters<'i>(i: &mut Input<'i>) -> Res<Spec> {
+    let gem_version = parse_name_tuple.parse_next(i)?;
+    line_ending.parse_next(i)?;
     let deps = repeat(0.., parse_spec_dep).parse_next(i)?;
     Ok(Spec { gem_version, deps })
 }
@@ -264,7 +259,21 @@ fn parse_gem_name<'i>(i: &mut Input<'i>) -> Res<&'i str> {
     .parse_next(i)
 }
 
+fn parse_specific_platform<'i>(i: &mut Input<'i>) -> Res<Platform> {
+    let platform = parse_cpu_and_os.parse_next(i)?.into();
+
+    Ok(platform)
+}
+
 fn parse_platform<'i>(i: &mut Input<'i>) -> Res<Platform> {
+    let (cpu, os) = parse_cpu_and_os.parse_next(i)?;
+
+    let platform = Platform::from_lockfile(cpu, os);
+
+    Ok(platform)
+}
+
+fn parse_cpu_and_os<'i>(i: &mut Input<'i>) -> Res<(&'i str, Option<&'i str>)> {
     let cpu = take_while(1.., |c: char| c.is_ascii_alphanumeric() || c == '_').parse_next(i)?;
 
     let os = opt(preceded(
@@ -275,9 +284,7 @@ fn parse_platform<'i>(i: &mut Input<'i>) -> Res<Platform> {
     ))
     .parse_next(i)?;
 
-    let platform = Platform::from_lockfile(cpu, os);
-
-    Ok(platform)
+    Ok((cpu, os))
 }
 
 fn parse_ruby_version_inner<'i>(i: &mut Input<'i>) -> Res<RubyVersion> {
@@ -334,13 +341,15 @@ fn parse_segments<'i>(i: &mut Input<'i>) -> Res<Vec<VersionSegment>> {
     Ok(segments)
 }
 
-fn parse_version_platform<'i>(i: &mut Input<'i>) -> Res<VersionPlatform> {
+fn parse_name_tuple<'i>(i: &mut Input<'i>) -> Res<NameTuple> {
+    let name = parse_gem_name.parse_next(i)?.to_string();
+    space1.parse_next(i)?;
+    '('.parse_next(i)?;
     let version = parse_version.parse_next(i)?;
-    let platform = opt(preceded('-', parse_platform))
-        .parse_next(i)?
-        .unwrap_or_default();
+    let platform = opt(preceded('-', parse_specific_platform)).parse_next(i)?;
+    ')'.parse_next(i)?;
 
-    Ok(VersionPlatform { version, platform })
+    Ok((name, version, platform).into())
 }
 
 fn parse_hex_string<'i>(i: &mut Input<'i>) -> Res<&'i str> {
@@ -354,26 +363,18 @@ fn parse_bool<'i>(i: &mut Input<'i>) -> Res<bool> {
 fn parse_checksum<'i>(i: &mut Input<'i>) -> Res<Checksum<'i>> {
     // nokogiri (1.18.10-arm-linux-gnu) sha256=51f4f25ab5d5ba1012d6b16aad96b840a10b067b93f35af6a55a2c104a7ee322
     // rack (3.2.3)
-    let name = parse_gem_name.parse_next(i)?;
-    space1.parse_next(i)?;
-    let version_platform = delimited('(', parse_version_platform, ')').parse_next(i)?;
+    let name_tuple = parse_name_tuple.parse_next(i)?;
     let value = opt((space1, "sha256=")).parse_next(i)?;
     if value.is_some() {
         let sha256 = parse_hex_string.try_map(hex::decode).parse_next(i)?;
         Ok(Checksum {
-            gem_version: GemVersion {
-                name,
-                version_platform,
-            },
+            gem_version: name_tuple,
             value: sha256,
             algorithm: ChecksumAlgorithm::SHA256,
         })
     } else {
         Ok(Checksum {
-            gem_version: GemVersion {
-                name,
-                version_platform,
-            },
+            gem_version: name_tuple,
             value: vec![],
             algorithm: ChecksumAlgorithm::None,
         })

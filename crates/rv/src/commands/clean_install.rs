@@ -12,10 +12,10 @@ use owo_colors::OwoColorize;
 use rayon::ThreadPoolBuildError;
 use regex::Regex;
 use reqwest::Client;
+use rv_gem_types::NameTuple;
 use rv_gem_types::Specification as GemSpecification;
 use rv_lockfile::datatypes::ChecksumAlgorithm;
 use rv_lockfile::datatypes::GemSection;
-use rv_lockfile::datatypes::GemVersion;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_lockfile::datatypes::GitSection;
 use rv_lockfile::datatypes::PathSection;
@@ -437,30 +437,28 @@ fn retain_gems_to_be_installed(lockfile: &mut GemfileDotLock) {
     lockfile.gem.iter_mut().for_each(|gem_section| {
         use std::collections::HashMap;
 
-        let mut by_name: HashMap<&str, Spec> = HashMap::new();
+        let mut by_name: HashMap<String, Spec> = HashMap::new();
         for spec in &gem_section.specs {
             let gem_version = &spec.gem_version;
 
-            let vp = &gem_version.version_platform;
-
-            if !vp.platform.is_local() {
+            if !gem_version.platform.is_local() {
                 continue;
             }
 
-            if let Some(other_spec) = by_name.get_mut(gem_version.name) {
-                let other_vp = &other_spec.gem_version.version_platform;
+            if let Some(other_spec) = by_name.get_mut(&gem_version.name) {
+                let other_gem_version = &other_spec.gem_version;
 
-                if *vp > *other_vp {
+                if *gem_version > *other_gem_version {
                     *other_spec = spec.clone();
                 }
             } else {
-                by_name.insert(gem_version.name, spec.clone());
+                by_name.insert(gem_version.name.clone(), spec.clone());
             }
         }
 
         gem_section
             .specs
-            .retain(|spec| by_name.get(spec.gem_version.name) == Some(spec))
+            .retain(|spec| by_name.get(&spec.gem_version.name) == Some(spec))
     })
 }
 
@@ -1230,7 +1228,7 @@ async fn download_gems<'i>(
 /// A gem downloaded from a RubyGems source.
 struct DownloadedRubygems<'i> {
     contents: Bytes,
-    spec: &'i Spec<'i>,
+    spec: &'i Spec,
 }
 
 /// A gem downloaded from a git source.
@@ -1245,7 +1243,7 @@ impl<'i> DownloadedGitRepo<'i> {
         self.source.remote.to_string()
     }
 
-    pub fn specs(&self) -> Vec<Spec<'i>> {
+    pub fn specs(&self) -> Vec<Spec> {
         self.source.specs.clone()
     }
 
@@ -1782,10 +1780,9 @@ where
     })
 }
 
-fn url_for_spec(remote: &str, spec: &Spec<'_>) -> Result<Url> {
-    let gem_name = spec.gem_version.name;
-    let gem_version_platform = &spec.gem_version.version_platform;
-    let path = format!("gems/{gem_name}-{gem_version_platform}.gem");
+fn url_for_spec(remote: &str, spec: &Spec) -> Result<Url> {
+    let package_name = spec.gem_version.package_name();
+    let path = format!("gems/{package_name}");
     let url = url::Url::parse(remote)
         .map_err(|err| Error::BadRemote {
             remote: remote.to_owned(),
@@ -1800,7 +1797,7 @@ fn url_for_spec(remote: &str, spec: &Spec<'_>) -> Result<Url> {
 async fn download_gem_source<'i>(
     config: &Config<'_>,
     gem_source: &'i GemSection<'i>,
-    checksums: &HashMap<GemVersion<'i>, HowToChecksum>,
+    checksums: &HashMap<NameTuple, HowToChecksum>,
     args: &CiInnerArgs,
     progress: &WorkProgress,
     stats: &DownloadStats,
@@ -1836,9 +1833,9 @@ async fn download_gem_source<'i>(
 async fn download_gem<'i>(
     config: &Config<'_>,
     remote: &str,
-    spec: &'i Spec<'i>,
+    spec: &'i Spec,
     client: &Client,
-    checksums: &HashMap<GemVersion<'i>, HowToChecksum>,
+    checksums: &HashMap<NameTuple, HowToChecksum>,
     stats: &DownloadStats,
     span: &tracing::Span,
 ) -> Result<DownloadedRubygems<'i>> {
@@ -2263,7 +2260,7 @@ SHA512:
         let expected_version = "24.1.0.0";
 
         assert_eq!(
-            libv8.gem_version.version_platform.to_string(),
+            libv8.gem_version.full_version(),
             expected_version,
             "should select platform-specific version for current platform"
         );

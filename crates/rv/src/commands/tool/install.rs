@@ -2,7 +2,7 @@ use std::fs;
 
 use owo_colors::OwoColorize;
 use reqwest::StatusCode;
-use rv_gem_types::VersionPlatform;
+use rv_gem_types::NameTuple;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_version::Version;
 use tracing::debug;
@@ -212,7 +212,7 @@ pub(crate) async fn install(
 /// When building a lockfile from a resolved gem list, there's no actual lockfile
 /// on disk or anything, so this holds the data (e.g. strings) that the lockfile views.
 struct LockfileBuilder {
-    versions_needed: Vec<(String, VersionPlatform)>,
+    versions_needed: Vec<NameTuple>,
     gemserver_remote: String,
 }
 
@@ -221,7 +221,14 @@ impl LockfileBuilder {
         url: &Url,
         versions_needed: pubgrub::SelectedDependencies<crate::resolver::DepProvider>,
     ) -> Self {
-        let versions_needed = versions_needed.into_iter().collect();
+        let versions_needed: Vec<_> = versions_needed
+            .into_iter()
+            .map(|(p, vp)| NameTuple {
+                name: p,
+                version: vp.version,
+                platform: vp.platform,
+            })
+            .collect();
         let gemserver_remote = url.to_string();
         Self {
             gemserver_remote,
@@ -236,26 +243,20 @@ impl LockfileBuilder {
             remote: Some(&self.gemserver_remote),
             specs: Vec::new(),
         };
-        for (gem_name, version_platform) in &self.versions_needed {
-            let spec = Self::spec_for_gem_dep(gem_name, version_platform);
+        for name_tuple in &self.versions_needed {
+            let spec = Self::spec_for_gem_dep(name_tuple);
             gem_section.specs.push(spec);
         }
         lockfile.gem.push(gem_section);
         lockfile
     }
 
-    fn spec_for_gem_dep<'a>(
-        gem_name: &'a GemName,
-        version_platform: &VersionPlatform,
-    ) -> rv_lockfile::datatypes::Spec<'a> {
+    fn spec_for_gem_dep(name_tuple: &NameTuple) -> rv_lockfile::datatypes::Spec {
         rv_lockfile::datatypes::Spec {
             // We don't need to know the deps here, we've already resolved all dependencies.
             // A real Gemfile.lock would populate them, but for this command we don't need to.
             deps: Vec::new(),
-            gem_version: rv_lockfile::datatypes::GemVersion {
-                name: gem_name,
-                version_platform: version_platform.clone(),
-            },
+            gem_version: name_tuple.clone(),
         }
     }
 }
