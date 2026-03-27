@@ -16,6 +16,7 @@ pub mod gemserver;
 pub mod http_client;
 pub mod output_format;
 pub mod progress;
+pub mod resolver;
 pub mod script_metadata;
 pub mod tar_utils;
 

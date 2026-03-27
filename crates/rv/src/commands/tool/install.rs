@@ -15,8 +15,6 @@ use crate::{
     gemserver::{self, GemName, Gemserver},
 };
 
-mod pubgrub_bridge;
-
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error(transparent)]
@@ -156,7 +154,7 @@ pub(crate) async fn install(
     // Now, translate the dependency constraint list into a PubGrub system, and resolve
     // (i.e. figure out which version of every gem will be used.)
     debug!("Resolving all dependencies via PubGrub");
-    let versions_needed = pubgrub_bridge::solve(
+    let versions_needed = crate::resolver::solve(
         gem_name.clone(),
         release_to_install.clone(),
         gemserver.gems_to_deps,
@@ -219,7 +217,7 @@ struct LockfileBuilder {
 impl LockfileBuilder {
     pub fn new(
         url: &Url,
-        versions_needed: pubgrub::SelectedDependencies<pubgrub_bridge::DepProvider>,
+        versions_needed: pubgrub::SelectedDependencies<crate::resolver::DepProvider>,
     ) -> Self {
         let versions_needed = versions_needed.into_iter().collect();
         let gemserver_remote = url.to_string();
