@@ -13,7 +13,7 @@ pub type ResolutionResult = pubgrub::SelectedDependencies<DepProvider>;
 pub fn solve(
     gem: GemName,
     release: GemRelease,
-    gem_info: HashMap<GemName, Vec<GemRelease>>,
+    gem_info: HashMap<GemName, HashMap<VersionPlatform, GemRelease>>,
 ) -> Result<ResolutionResult, ResolutionError> {
     let provider = all_dependencies(gem_info);
     pubgrub::resolve(&provider, gem, release.version_platform)
@@ -23,13 +23,16 @@ pub fn solve(
 /// with all the information of a GemServer (which gems are available, what versions that gem has,
 /// and what dependencies that gem-version pair has).
 /// This is really just taking the `gem_info` hashmap and organizing it in a way that PubGrub can understand.
-fn all_dependencies(gem_info: HashMap<GemName, Vec<GemRelease>>) -> DepProvider {
+fn all_dependencies(
+    gem_info: HashMap<GemName, HashMap<VersionPlatform, GemRelease>>,
+) -> DepProvider {
     let mut m = DepProvider::new();
+
     for (package, gem_releases) in gem_info {
-        for gem_release in gem_releases {
+        for (version_platform, gem_release) in gem_releases {
             m.add_dependencies(
                 package.clone(),
-                gem_release.version_platform,
+                version_platform,
                 gem_release
                     .deps
                     .into_iter()

@@ -25,7 +25,7 @@ pub mod updater;
 pub struct Gemserver {
     pub url: Url,
     // Maps gem names to their dependency lists.
-    pub gems_to_deps: HashMap<String, Vec<GemRelease>>,
+    pub gems_to_deps: HashMap<String, HashMap<VersionPlatform, GemRelease>>,
     updater: Arc<Updater>,
     storage: Arc<dyn Storage>,
 }
@@ -129,10 +129,13 @@ impl Gemserver {
     pub async fn query_all_gem_deps(
         &self,
         root: &GemRelease,
-        gems_to_deps: &mut HashMap<String, Vec<GemRelease>>,
+        gems_to_deps: &mut HashMap<String, HashMap<VersionPlatform, GemRelease>>,
         ruby_to_use: &RubyVersion,
     ) -> Result<()> {
-        let results = Rc::new(Mutex::new(HashMap::<String, Vec<GemRelease>>::new()));
+        let results = Rc::new(Mutex::new(HashMap::<
+            String,
+            HashMap<VersionPlatform, GemRelease>,
+        >::new()));
         let mut in_flight = FuturesUnordered::new();
         let seen_requests = Rc::new(Mutex::new(HashSet::<String>::new()));
 
@@ -152,7 +155,7 @@ impl Gemserver {
                 // chosen Ruby version.
                 // We should filter these out now, so that we minimize the number
                 // of deps that PubGrub has to consider.
-                let candidate_versions = dep_info
+                let candidate_versions: HashMap<VersionPlatform, GemRelease> = dep_info
                     .into_iter()
                     .filter(|release| {
                         release
@@ -160,6 +163,7 @@ impl Gemserver {
                             .ruby
                             .satisfied_by(&rv_version::Version::from(ruby_to_use))
                     })
+                    .map(|release| (release.version_platform.clone(), release))
                     .collect();
                 results.insert(dep_name, candidate_versions);
             }

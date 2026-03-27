@@ -98,9 +98,6 @@ pub(crate) async fn install(
     if releases.is_empty() {
         return Err(Error::NoReleasesPublished);
     }
-    gemserver
-        .gems_to_deps
-        .insert(gem_name.clone(), releases.clone());
 
     let release_to_install = match gem_version {
         Some(user_choice) => releases
@@ -120,6 +117,11 @@ pub(crate) async fn install(
     debug!("Selected {} {}", gem_name, release_to_install.full_name());
 
     let target_version = release_to_install.version_platform();
+
+    gemserver.gems_to_deps.insert(
+        gem_name.clone(),
+        [(target_version.clone(), release_to_install.clone())].into(),
+    );
 
     // Check if the tool was already installed.
     let install_path = super::tool_dir_for(&gem_name, &target_version.to_string());
