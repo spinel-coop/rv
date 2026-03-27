@@ -165,7 +165,10 @@ pub(crate) async fn install(
     debug!("All dependencies resolved");
 
     // Make a Gemfile.lock in-memory, install it via `rv ci`.
-    let lockfile_builder = LockfileBuilder::new(&gemserver.url, versions_needed);
+    let lockfile_builder = LockfileBuilder {
+        gemserver_remote: gemserver.url.to_string(),
+        versions_needed,
+    };
     let lockfile = lockfile_builder.lockfile();
 
     let result = crate::commands::clean_install::install_tool_lockfile(
@@ -217,25 +220,6 @@ struct LockfileBuilder {
 }
 
 impl LockfileBuilder {
-    pub fn new(
-        url: &Url,
-        versions_needed: pubgrub::SelectedDependencies<crate::resolver::DepProvider>,
-    ) -> Self {
-        let versions_needed: Vec<_> = versions_needed
-            .into_iter()
-            .map(|(p, vp)| ReleaseTuple {
-                name: p,
-                version: vp.version,
-                platform: vp.platform,
-            })
-            .collect();
-        let gemserver_remote = url.to_string();
-        Self {
-            gemserver_remote,
-            versions_needed,
-        }
-    }
-
     /// Create an in-memory Gemfile.lock that views/borrows its data from this builder.
     pub fn lockfile(&self) -> GemfileDotLock<'_> {
         let mut lockfile = rv_lockfile::datatypes::GemfileDotLock::default();

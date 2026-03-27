@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use rv_gem_types::VersionPlatform;
+use rv_gem_types::{ReleaseTuple, VersionPlatform};
 
 use super::gemserver::{GemName, GemRelease};
 
@@ -8,15 +8,23 @@ use pubgrub::Ranges;
 
 pub type DepProvider = pubgrub::OfflineDependencyProvider<GemName, Ranges<VersionPlatform>>;
 pub type ResolutionError = pubgrub::PubGrubError<DepProvider>;
-pub type ResolutionResult = pubgrub::SelectedDependencies<DepProvider>;
 
 pub fn solve(
     gem: GemName,
     release: GemRelease,
     gem_info: HashMap<GemName, HashMap<VersionPlatform, GemRelease>>,
-) -> Result<ResolutionResult, ResolutionError> {
+) -> Result<Vec<ReleaseTuple>, ResolutionError> {
     let provider = all_dependencies(gem_info);
-    pubgrub::resolve(&provider, gem, release.version_platform)
+    let solution = pubgrub::resolve(&provider, gem, release.version_platform)?;
+
+    Ok(solution
+        .into_iter()
+        .map(|(p, vp)| ReleaseTuple {
+            name: p,
+            version: vp.version,
+            platform: vp.platform,
+        })
+        .collect())
 }
 
 /// Build a PubGrub "dependency provider", i.e. something that can be queried
