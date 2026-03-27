@@ -1,11 +1,16 @@
+use futures_util::{StreamExt, stream::FuturesUnordered};
+use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 use std::sync::Arc;
+use std::{rc::Rc, sync::Mutex};
 
 use rv_gem_types::requirement::{Requirement, VersionConstraint};
 use rv_gem_types::{Platform, ProjectDependency, VersionPlatform};
+use rv_ruby::version::RubyVersion;
 use rv_version::Version;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
+use tracing::debug;
 use url::Url;
 
 use crate::config::Config;
@@ -19,6 +24,8 @@ pub mod updater;
 
 pub struct Gemserver {
     pub url: Url,
+    // Maps gem names to their dependency lists.
+    pub gems_to_deps: HashMap<String, Vec<GemRelease>>,
     updater: Arc<Updater>,
     storage: Arc<dyn Storage>,
 }
@@ -31,6 +38,8 @@ pub enum Error {
     StorageError(#[from] storage::Error),
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),
+    #[error("Could not parse a version from the server: {0}")]
+    GemReleaseParse(#[from] GemReleaseParse),
     #[error("Could not create the cache dir: {0}")]
     CouldNotCreateCacheDir(std::io::Error),
     #[error("The url {url} unexpectedly returned an empty response")]
@@ -56,7 +65,22 @@ impl Gemserver {
             url,
             storage: Arc::new(storage),
             updater: Arc::new(updater),
+            gems_to_deps: Default::default(),
         })
+    }
+
+    pub async fn add_transitive_deps(
+        &mut self,
+        root: &GemRelease,
+        ruby_to_use: &RubyVersion,
+    ) -> Result<()> {
+        debug!("Querying all transitive dependencies");
+        let mut transitive_deps = Default::default();
+        self.query_all_gem_deps(root, &mut transitive_deps, ruby_to_use)
+            .await?;
+        self.gems_to_deps.extend(transitive_deps);
+        debug!("Retrieved all transitive deps.");
+        Ok(())
     }
 
     /// Returns the response body from the server SERVER/info/GEM_NAME.
@@ -89,6 +113,71 @@ impl Gemserver {
         let index_body = String::from_utf8_lossy(&blob.content).to_string();
 
         Ok(index_body)
+    }
+
+    async fn fetch(&self, req: String) -> Result<((String, Vec<GemRelease>), Vec<String>)> {
+        debug!("Fetching {req}");
+        let dep_info_resp = self.get_releases_for_gem(&req).await?;
+        let dep_versions = parse_release_from_body(&dep_info_resp)?;
+        let transitive_deps = dep_versions
+            .iter()
+            .flat_map(|d| d.clone().deps.into_iter().map(|d| d.name))
+            .collect();
+        Ok(((req, dep_versions), transitive_deps))
+    }
+
+    pub async fn query_all_gem_deps(
+        &self,
+        root: &GemRelease,
+        gems_to_deps: &mut HashMap<String, Vec<GemRelease>>,
+        ruby_to_use: &RubyVersion,
+    ) -> Result<()> {
+        let results = Rc::new(Mutex::new(HashMap::<String, Vec<GemRelease>>::new()));
+        let mut in_flight = FuturesUnordered::new();
+        let seen_requests = Rc::new(Mutex::new(HashSet::<String>::new()));
+
+        // Initial requests
+        for d in &root.deps {
+            let req = d.name.clone();
+            debug!("Queuing {req}");
+            in_flight.push(self.fetch(req))
+        }
+
+        // Keep fetching new dependencies we discover.
+        while let Some(res) = in_flight.next().await {
+            let ((dep_name, dep_info), new_deps) = res?;
+            {
+                let mut results = results.lock().expect("Lock poisoned");
+                // Skip possible versions that are incompatible with our
+                // chosen Ruby version.
+                // We should filter these out now, so that we minimize the number
+                // of deps that PubGrub has to consider.
+                let candidate_versions = dep_info
+                    .into_iter()
+                    .filter(|release| {
+                        release
+                            .metadata
+                            .ruby
+                            .satisfied_by(&rv_version::Version::from(ruby_to_use))
+                    })
+                    .collect();
+                results.insert(dep_name, candidate_versions);
+            }
+
+            for req in new_deps {
+                if seen_requests
+                    .lock()
+                    .expect("Lock poisoned")
+                    .insert(req.clone())
+                {
+                    debug!("Queuing {req}");
+                    in_flight.push(self.fetch(req));
+                }
+            }
+        }
+
+        *gems_to_deps = Rc::into_inner(results).unwrap().into_inner().unwrap();
+        Ok(())
     }
 }
 

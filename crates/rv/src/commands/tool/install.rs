@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs};
+use std::fs;
 
 use owo_colors::OwoColorize;
 use reqwest::StatusCode;
@@ -12,11 +12,10 @@ use crate::{
     GlobalArgs,
     commands::{clean_install::InstallStats, tool::Installed},
     config::Config,
-    gemserver::{self, GemName, GemRelease, Gemserver},
+    gemserver::{self, GemName, Gemserver},
 };
 
 mod pubgrub_bridge;
-mod transitive_dep_query;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -77,10 +76,7 @@ pub(crate) async fn install(
 
     let gem_server: Url = gem_server.parse().map_err(|_| Error::BadUrl(gem_server))?;
 
-    let gemserver = Gemserver::new(config, gem_server)?;
-
-    // Maps gem names to their dependency lists.
-    let mut gems_to_deps: HashMap<GemName, Vec<GemRelease>> = HashMap::new();
+    let mut gemserver = Gemserver::new(config, gem_server)?;
 
     // Look up the gem to install.
     let releases_resp = gemserver
@@ -104,7 +100,9 @@ pub(crate) async fn install(
     if releases.is_empty() {
         return Err(Error::NoReleasesPublished);
     }
-    gems_to_deps.insert(gem_name.clone(), releases.clone());
+    gemserver
+        .gems_to_deps
+        .insert(gem_name.clone(), releases.clone());
 
     let release_to_install = match gem_version {
         Some(user_choice) => releases
@@ -150,25 +148,20 @@ pub(crate) async fn install(
         .await?;
     debug!("Selected Ruby {ruby_to_use} for this gem");
 
-    debug!("Querying all transitive dependencies");
-    let mut transitive_deps = Default::default();
-    transitive_dep_query::query_all_gem_deps(
-        &release_to_install,
-        &gemserver,
-        &mut transitive_deps,
-        &ruby_to_use,
-    )
-    .await?;
-    gems_to_deps.extend(transitive_deps);
-    debug!("Retrieved all transitive deps.");
+    gemserver
+        .add_transitive_deps(&release_to_install, &ruby_to_use)
+        .await?;
 
     // OK, now we know all transitive dependencies, and have a dependency graph.
     // Now, translate the dependency constraint list into a PubGrub system, and resolve
     // (i.e. figure out which version of every gem will be used.)
     debug!("Resolving all dependencies via PubGrub");
-    let versions_needed =
-        pubgrub_bridge::solve(gem_name.clone(), release_to_install.clone(), gems_to_deps)
-            .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
+    let versions_needed = pubgrub_bridge::solve(
+        gem_name.clone(),
+        release_to_install.clone(),
+        gemserver.gems_to_deps,
+    )
+    .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
     debug!("All dependencies resolved");
 
     // Make a Gemfile.lock in-memory, install it via `rv ci`.
