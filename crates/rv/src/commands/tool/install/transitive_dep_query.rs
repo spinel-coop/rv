@@ -35,7 +35,7 @@ pub async fn query_all_gem_deps(
     let seen_requests = Rc::new(Mutex::new(HashSet::<String>::new()));
 
     // Initial requests
-    for d in root.deps.clone() {
+    for d in root.deps {
         let req = d.name;
         debug!("Queuing {req}");
         in_flight.push(fetch(req, gemserver))
