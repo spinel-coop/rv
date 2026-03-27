@@ -25,7 +25,7 @@ async fn fetch(
 }
 
 pub async fn query_all_gem_deps(
-    root: GemRelease,
+    root: &GemRelease,
     gemserver: &Gemserver,
     gems_to_deps: &mut HashMap<String, Vec<GemRelease>>,
     ruby_to_use: &RubyVersion,
@@ -35,8 +35,8 @@ pub async fn query_all_gem_deps(
     let seen_requests = Rc::new(Mutex::new(HashSet::<String>::new()));
 
     // Initial requests
-    for d in root.deps {
-        let req = d.name;
+    for d in &root.deps {
+        let req = d.name.clone();
         debug!("Queuing {req}");
         in_flight.push(fetch(req, gemserver))
     }
