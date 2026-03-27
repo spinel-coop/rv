@@ -32,14 +32,6 @@ impl NameTuple {
         Ok(Self::new(name, version, platform))
     }
 
-    pub fn null() -> Self {
-        Self {
-            name: String::new(),
-            version: Version::new("0").unwrap(),
-            platform: String::new(),
-        }
-    }
-
     pub fn full_name(&self) -> String {
         if self.platform == "ruby" {
             format!("{}-{}", self.name, self.version)
@@ -232,13 +224,5 @@ mod tests {
             Some("linux".to_string()),
         );
         assert_eq!(tuple.to_string(), "test-1.0-linux");
-    }
-
-    #[test]
-    fn test_null() {
-        let tuple = NameTuple::null();
-        assert_eq!(tuple.name, "");
-        assert_eq!(tuple.version, Version::new("0").unwrap());
-        assert_eq!(tuple.platform, "");
     }
 }
