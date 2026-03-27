@@ -9,7 +9,7 @@ pub mod version_platform;
 pub use dependency::{Dependency, DependencyError, DependencyType};
 pub use name_tuple::{NameTuple, NameTupleError};
 pub use platform::Platform;
-pub use project_dependency::ProjectDependency;
+pub use project_dependency::{ProjectDependency, ProjectDependencyError};
 pub use requirement::{ComparisonOperator, Requirement, VersionConstraint};
 pub use rv_version::{Version, VersionError};
 pub use specification::{Specification, SpecificationError};
