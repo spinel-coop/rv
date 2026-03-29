@@ -107,7 +107,7 @@ impl BundlerSettings {
     pub fn token_for(&self, host: &str) -> Option<String> {
         let key = format!("BUNDLE_{}", host.to_uppercase().replace('.', "__"));
 
-        self.get_string(&key).or_else(|| std::env::var(&key).ok())
+        self.get_string(&key)
     }
 }
 
@@ -280,5 +280,31 @@ BUNDLE_DEPLOYMENT: true
         let bundler_settings = BundlerSettings::new(&home_dir, &project_dir).unwrap();
 
         assert_eq!(None, bundler_settings.path())
+    }
+
+    #[test]
+    fn test_token_for_from_config_file_only() {
+        let temp_dir = Utf8TempDir::new().expect("Failed to create temporary directory");
+        let home_dir = temp_dir.path().join("home");
+        let project_dir = temp_dir.path().join("project");
+
+        // write a local config with the token
+        let config_dir = project_dir.join(".bundle");
+        std::fs::create_dir_all(&config_dir).unwrap();
+        let config_file = config_dir.join("config");
+
+        let config_content = r#"---
+
+BUNDLE_GITHUB__COM: config-token
+"#;
+        std::fs::write(&config_file, config_content).expect("Failed to write config");
+
+        let settings = BundlerSettings::new(&home_dir, &project_dir).unwrap();
+        assert_eq!(
+            Some("config-token".to_string()),
+            settings.token_for("github.com")
+        );
+
+        assert_eq!(None, settings.token_for("rubygems.com"));
     }
 }
