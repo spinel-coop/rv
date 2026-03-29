@@ -73,7 +73,7 @@ base64 = "0.22.1"
 dep-graph = { workspace = true }
 pubgrub = { workspace = true }
 tabled = { version = "0.20.0", features = ["ansi"] }
-config = { version = "0.15.19", default-features = false, features = [
+config = { version = "0.15.22", default-features = false, features = [
   "yaml",
   "convert-case",
 ] }
