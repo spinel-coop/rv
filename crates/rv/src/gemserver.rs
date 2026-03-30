@@ -1,5 +1,5 @@
 use futures_util::{StreamExt, stream::FuturesUnordered};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::{rc::Rc, sync::Mutex};
@@ -247,7 +247,7 @@ pub fn parse_release_from_body(index_body: &str) -> ParseResult<Vec<GemRelease>>
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GemRelease {
     pub version_platform: VersionPlatform,
-    pub deps: Vec<ProjectDependency>,
+    pub deps: BTreeSet<ProjectDependency>,
     pub metadata: Metadata,
 }
 
@@ -280,7 +280,7 @@ impl GemRelease {
         let version = v;
         let (deps, metadata) = rest.split_once('|').ok_or(GemReleaseParse::MissingPipe)?;
 
-        let deps: Vec<_> = if deps.is_empty() {
+        let deps: BTreeSet<_> = if deps.is_empty() {
             Default::default()
         } else {
             deps.split(',')
@@ -297,7 +297,7 @@ impl GemRelease {
                         requirement: version_constraint.into(),
                     })
                 })
-                .collect::<ParseResult<Vec<_>>>()?
+                .collect::<ParseResult<BTreeSet<_>>>()?
         };
         let metadata = parse_metadata(metadata)?;
 

@@ -131,7 +131,11 @@ pub(crate) async fn install(
     let root = ResolutionRoot {
         package: root_package,
         version_platform: target_version.clone(),
-        deps: release_to_install.deps.clone(),
+        deps: release_to_install
+            .deps
+            .clone()
+            .into_iter()
+            .collect::<Vec<_>>(),
     };
 
     // Check if the tool was already installed.

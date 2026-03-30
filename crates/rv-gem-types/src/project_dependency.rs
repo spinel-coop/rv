@@ -1,7 +1,7 @@
 use crate::Requirement;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct ProjectDependency {
     /// What gem this dependency uses.
     pub name: String,

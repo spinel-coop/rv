@@ -222,7 +222,7 @@ impl LockfileBuilder {
         };
         let mut checksums = vec![];
         for (release_tuple, gem_release) in &self.versions_needed {
-            let mut deps = gem_release.deps.clone();
+            let mut deps = gem_release.deps.clone().into_iter().collect::<Vec<_>>();
             deps.sort_by_key(|d| d.name.clone());
             let spec = Self::spec_for_gem_dep(release_tuple, &deps);
             gem_section.specs.push(spec);
