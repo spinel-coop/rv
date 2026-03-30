@@ -334,3 +334,80 @@ impl std::fmt::Display for ChecksumAlgorithm<'_> {
         }
     }
 }
+
+pub(crate) trait SerializeGemfileLock {
+    fn to_gemfile_lock(&self) -> String;
+}
+
+impl SerializeGemfileLock for RubyVersion {
+    fn to_gemfile_lock(&self) -> String {
+        use std::fmt::Write;
+        let mut version = format!(
+            "{} {}.{}.{}",
+            self.engine, self.major, self.minor, self.patch
+        );
+
+        if let Some(tiny) = self.tiny {
+            version.push('.');
+            write!(&mut version, "{}", tiny).unwrap();
+        }
+        if let Some(patchlevel) = self.patchlevel {
+            version.push('p');
+            write!(&mut version, "{}", patchlevel).unwrap();
+        }
+        if let Some(ref prerelease) = self.prerelease {
+            version.push('.');
+            version.push_str(prerelease);
+        }
+        version
+    }
+}
+
+impl SerializeGemfileLock for ProjectDependency {
+    fn to_gemfile_lock(&self) -> String {
+        if self.is_latest_version() {
+            self.name.clone()
+        } else {
+            self.to_string()
+        }
+    }
+}
+
+impl SerializeGemfileLock for ReleaseTuple {
+    fn to_gemfile_lock(&self) -> String {
+        format!("{} ({})", self.name, self.full_version())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::datatypes::SerializeGemfileLock;
+
+    #[test]
+    fn test_ruby_version_to_gemfile_lock() {
+        use rv_ruby::version::RubyVersion;
+
+        let ruby = RubyVersion {
+            engine: "ruby".into(),
+            major: 4,
+            minor: 0,
+            patch: 0,
+            patchlevel: None,
+            tiny: None,
+            prerelease: None,
+        };
+
+        assert_eq!(ruby.to_gemfile_lock(), "ruby 4.0.0");
+    }
+
+    #[test]
+    fn test_dependency_to_gemfile_lock() {
+        use rv_gem_types::ProjectDependency;
+
+        let dep = ProjectDependency::new("test".to_string(), vec![">= 1.0".to_string()]).unwrap();
+        assert_eq!(dep.to_gemfile_lock(), "test (>= 1.0)");
+
+        let dep = ProjectDependency::new("test".to_string(), vec![]).unwrap();
+        assert_eq!(dep.to_gemfile_lock(), "test");
+    }
+}

@@ -202,28 +202,6 @@ impl RubyVersion {
     pub fn is_prerelease(&self) -> bool {
         self.prerelease.is_some()
     }
-
-    pub fn to_gemfile_lock(&self) -> String {
-        use std::fmt::Write;
-        let mut version = format!(
-            "{} {}.{}.{}",
-            self.engine, self.major, self.minor, self.patch
-        );
-
-        if let Some(tiny) = self.tiny {
-            version.push('.');
-            write!(&mut version, "{}", tiny).unwrap();
-        }
-        if let Some(patchlevel) = self.patchlevel {
-            version.push('p');
-            write!(&mut version, "{}", patchlevel).unwrap();
-        }
-        if let Some(ref prerelease) = self.prerelease {
-            version.push('.');
-            version.push_str(prerelease);
-        }
-        version
-    }
 }
 
 impl std::fmt::Display for RubyVersion {

@@ -59,10 +59,6 @@ impl ReleaseTuple {
         ]
     }
 
-    pub fn to_gemfile_lock(&self) -> String {
-        format!("{} ({})", self.name, self.full_version())
-    }
-
     pub fn is_prerelease(&self) -> bool {
         self.version.is_prerelease()
     }
