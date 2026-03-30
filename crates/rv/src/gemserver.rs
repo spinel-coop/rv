@@ -120,7 +120,10 @@ impl Gemserver {
         &self,
         req: String,
         ruby: &Version,
-    ) -> Result<((String, HashMap<VersionPlatform, GemRelease>), Vec<String>)> {
+    ) -> Result<(
+        (ResolutionPackage, HashMap<VersionPlatform, GemRelease>),
+        Vec<String>,
+    )> {
         debug!("Fetching {req}");
         let dep_info_resp = self.get_releases_for_gem(&req).await?;
         let dep_versions = parse_release_from_body(&dep_info_resp, Some(ruby))?;
@@ -135,7 +138,7 @@ impl Gemserver {
                 (release.version_platform.clone(), release)
             })
             .collect();
-        Ok(((req, dep_info), new_dep_names))
+        Ok(((ResolutionPackage::Gem(req), dep_info), new_dep_names))
     }
 
     pub async fn query_all_gem_deps(
@@ -161,11 +164,11 @@ impl Gemserver {
 
         // Keep fetching new dependencies we discover.
         while let Some(res) = in_flight.next().await {
-            let ((dep_name, candidate_versions), new_deps) = res?;
+            let ((dep_package, candidate_versions), new_deps) = res?;
             {
                 let mut results = results.lock().expect("Lock poisoned");
 
-                results.insert(ResolutionPackage::Gem(dep_name), candidate_versions);
+                results.insert(dep_package, candidate_versions);
             }
 
             for req in new_deps {
