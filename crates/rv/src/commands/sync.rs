@@ -183,7 +183,7 @@ fn find_gemfile_path(gemfile: &Option<Utf8PathBuf>) -> Result<(Utf8PathBuf, Utf8
 /// When building a lockfile from a resolved gem list, there's no actual lockfile
 /// on disk or anything, so this holds the data (e.g. strings) that the lockfile views.
 struct LockfileBuilder {
-    versions_needed: Vec<(ReleaseTuple, GemRelease)>,
+    versions_needed: Vec<(String, GemRelease)>,
     gemserver_remote: String,
     platform: Platform,
     dependencies: Vec<(String, Requirement)>,
@@ -193,7 +193,7 @@ struct LockfileBuilder {
 impl LockfileBuilder {
     pub fn new(
         url: &Url,
-        mut versions_needed: Vec<(ReleaseTuple, GemRelease)>,
+        mut versions_needed: Vec<(String, GemRelease)>,
         platform: Platform,
         dependencies: Vec<ProjectDependency>,
         ruby: Option<RubyVersion>,
@@ -221,12 +221,17 @@ impl LockfileBuilder {
             specs: Vec::new(),
         };
         let mut checksums = vec![];
-        for (release_tuple, gem_release) in &self.versions_needed {
+        for (name, gem_release) in &self.versions_needed {
             let mut deps = gem_release.deps.clone().into_iter().collect::<Vec<_>>();
             deps.sort_by_key(|d| d.name.clone());
+            let release_tuple = ReleaseTuple {
+                name: name.clone(),
+                version: gem_release.version().clone(),
+                platform: gem_release.platform().clone(),
+            };
             let spec = Self::spec_for_gem_dep(release_tuple.clone(), &deps);
             gem_section.specs.push(spec);
-            let checksum = Self::checksum_for_spec(release_tuple.clone(), gem_release);
+            let checksum = Self::checksum_for_spec(release_tuple, gem_release);
             checksums.push(checksum);
         }
         lockfile.gem.push(gem_section);

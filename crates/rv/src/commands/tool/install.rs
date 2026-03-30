@@ -222,7 +222,7 @@ pub(crate) async fn install(
 /// When building a lockfile from a resolved gem list, there's no actual lockfile
 /// on disk or anything, so this holds the data (e.g. strings) that the lockfile views.
 struct LockfileBuilder {
-    versions_needed: Vec<(ReleaseTuple, GemRelease)>,
+    versions_needed: Vec<(String, GemRelease)>,
     gemserver_remote: String,
 }
 
@@ -235,10 +235,15 @@ impl LockfileBuilder {
             specs: Vec::new(),
         };
         let mut checksums = vec![];
-        for (release_tuple, gem_release) in &self.versions_needed {
+        for (name, gem_release) in &self.versions_needed {
+            let release_tuple = ReleaseTuple {
+                name: name.clone(),
+                version: gem_release.version().clone(),
+                platform: gem_release.platform().clone(),
+            };
             let spec = Self::spec_for_gem_dep(release_tuple.clone());
             gem_section.specs.push(spec);
-            let checksum = Self::checksum_for_spec(release_tuple.clone(), gem_release);
+            let checksum = Self::checksum_for_spec(release_tuple, gem_release);
             checksums.push(checksum);
         }
 

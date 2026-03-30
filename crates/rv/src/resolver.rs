@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 
-use rv_gem_types::{ProjectDependency, ReleaseTuple, VersionPlatform};
+use rv_gem_types::{ProjectDependency, VersionPlatform};
 
 use super::gemserver::{GemName, GemRelease};
 
@@ -36,7 +36,7 @@ pub struct ResolutionRoot {
 pub fn solve(
     root: &ResolutionRoot,
     gem_info: &HashMap<ResolutionPackage, HashMap<VersionPlatform, GemRelease>>,
-) -> Result<Vec<(ReleaseTuple, GemRelease)>, ResolutionError> {
+) -> Result<Vec<(String, GemRelease)>, ResolutionError> {
     let provider = all_dependencies(root, gem_info);
     let solution = pubgrub::resolve(
         &provider,
@@ -48,14 +48,7 @@ pub fn solve(
         .into_iter()
         .filter_map(|(p, vp)| match p {
             ResolutionPackage::Gem(ref name) if name != "bundler" => {
-                let gem_release = gem_info[&p][&vp].clone();
-                let release_tuple = ReleaseTuple {
-                    name: name.to_string(),
-                    version: vp.version,
-                    platform: vp.platform,
-                };
-
-                Some((release_tuple, gem_release))
+                Some((name.to_string(), gem_info[&p][&vp].clone()))
             }
             _ => None,
         })
