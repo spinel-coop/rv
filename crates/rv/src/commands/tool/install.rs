@@ -236,9 +236,9 @@ impl LockfileBuilder {
         };
         let mut checksums = vec![];
         for (release_tuple, gem_release) in &self.versions_needed {
-            let spec = Self::spec_for_gem_dep(release_tuple);
+            let spec = Self::spec_for_gem_dep(release_tuple.clone());
             gem_section.specs.push(spec);
-            let checksum = Self::checksum_for_spec(release_tuple, gem_release);
+            let checksum = Self::checksum_for_spec(release_tuple.clone(), gem_release);
             checksums.push(checksum);
         }
 
@@ -247,21 +247,21 @@ impl LockfileBuilder {
         lockfile
     }
 
-    fn spec_for_gem_dep(release_tuple: &ReleaseTuple) -> rv_lockfile::datatypes::Spec {
+    fn spec_for_gem_dep(release_tuple: ReleaseTuple) -> rv_lockfile::datatypes::Spec {
         rv_lockfile::datatypes::Spec {
             // We don't need to know the deps here, we've already resolved all dependencies.
             // A real Gemfile.lock would populate them, but for this command we don't need to.
             deps: Vec::new(),
-            release_tuple: release_tuple.clone(),
+            release_tuple,
         }
     }
 
     fn checksum_for_spec<'a>(
-        release_tuple: &ReleaseTuple,
+        release_tuple: ReleaseTuple,
         gem_release: &GemRelease,
     ) -> rv_lockfile::datatypes::Checksum<'a> {
         rv_lockfile::datatypes::Checksum {
-            release_tuple: release_tuple.clone(),
+            release_tuple,
             algorithm: rv_lockfile::datatypes::ChecksumAlgorithm::SHA256,
             value: gem_release.metadata.checksum.clone(),
         }
