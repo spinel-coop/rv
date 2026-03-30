@@ -47,7 +47,7 @@ pub fn solve(
     Ok(solution
         .into_iter()
         .filter_map(|(p, vp)| match p {
-            ResolutionPackage::Gem(ref name) if name.as_str() != "bundler" => {
+            ResolutionPackage::Gem(ref name) if name != "bundler" => {
                 let gem_release = gem_info[&p][&vp].clone();
                 let release_tuple = ReleaseTuple {
                     name: name.to_string(),
