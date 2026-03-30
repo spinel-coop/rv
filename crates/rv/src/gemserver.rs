@@ -122,7 +122,7 @@ impl Gemserver {
         let dep_versions = parse_release_from_body(&dep_info_resp)?;
         let transitive_deps = dep_versions
             .iter()
-            .flat_map(|d| d.clone().deps.into_iter().map(|d| d.name))
+            .flat_map(|d| d.deps.iter().map(|d| d.name.clone()))
             .collect();
         Ok(((req, dep_versions), transitive_deps))
     }
