@@ -21,10 +21,7 @@ fn test_tool_install_twice() {
     let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
     let ruby_mock = test.mock_ruby_download("4.0.0").create();
 
-    let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
-    let info_endpoint_mock = test
-        .mock_info_endpoint("indirect", &info_endpoint_content)
-        .create();
+    let info_endpoint_mock = test.mock_info_endpoint("indirect").create();
 
     let tarball_mock = test.mock_gem_download("indirect-1.2.0.gem").create();
 
@@ -55,6 +52,44 @@ fn test_tool_install_twice() {
     output.assert_stdout_contains(&expected_info_message);
 }
 
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+#[test]
+fn test_tool_install_resolves_platform_specific_gems() {
+    let mut test = RvTest::new();
+
+    let releases_mock = test.mock_releases_all_platforms(["4.0.2"].to_vec());
+    let ruby_mock = test.mock_ruby_download("4.0.2").create();
+
+    let nokogiri_info_endpoint_mock = test.mock_info_endpoint("nokogiri").create();
+
+    let racc_info_endpoint_mock = test.mock_info_endpoint("racc").create();
+
+    let nokogiri_tarball_mock = test
+        .mock_gem_download("nokogiri-1.19.0-arm64-darwin.gem")
+        .create();
+    let racc_tarball_mock = test.mock_gem_download("racc-1.8.1.gem").create();
+
+    // Install it, with an explicit version.
+    let output = test.tool_install(&["nokogiri@1.19.0"]);
+    output.assert_success();
+
+    let tool_home = "/tmp/home/.local/share/rv/tools/nokogiri@1.19.0-arm64-darwin";
+    let expected_info_message = format!(
+        "Installed {} version 1.19.0-arm64-darwin to {}",
+        "nokogiri".cyan(),
+        tool_home.cyan()
+    );
+
+    output.assert_stdout_contains(&expected_info_message);
+
+    releases_mock.assert();
+    ruby_mock.assert();
+    nokogiri_info_endpoint_mock.assert();
+    racc_info_endpoint_mock.assert();
+    nokogiri_tarball_mock.assert();
+    racc_tarball_mock.assert();
+}
+
 /// Tests users can explicitly install an older version of a gem.
 #[test]
 fn test_tool_install_non_latest_version() {
@@ -63,10 +98,7 @@ fn test_tool_install_non_latest_version() {
     let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
     let ruby_mock = test.mock_ruby_download("4.0.0").create();
 
-    let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
-    let info_endpoint_mock = test
-        .mock_info_endpoint("indirect", &info_endpoint_content)
-        .create();
+    let info_endpoint_mock = test.mock_info_endpoint("indirect").create();
 
     let tarball_mock = test.mock_gem_download("indirect-1.1.0.gem").create();
 
@@ -96,10 +128,7 @@ fn test_tool_install_writes_ruby_version_file() {
     let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
     let ruby_mock = test.mock_ruby_download("4.0.0").create();
 
-    let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
-    let info_endpoint_mock = test
-        .mock_info_endpoint("indirect", &info_endpoint_content)
-        .create();
+    let info_endpoint_mock = test.mock_info_endpoint("indirect").create();
 
     let tarball_mock = test.mock_gem_download("indirect-1.2.0.gem").create();
 
@@ -129,10 +158,7 @@ fn test_tool_install_package_data_tar_gz_with_trailing_garbage() {
     let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
     let ruby_mock = test.mock_ruby_download("4.0.0").create();
 
-    let info_endpoint_content = fs_err::read("tests/fixtures/info-alba-gem").unwrap();
-    let info_endpoint_mock = test
-        .mock_info_endpoint("alba", &info_endpoint_content)
-        .create();
+    let info_endpoint_mock = test.mock_info_endpoint("alba").create();
 
     let tarball_mock = test.mock_gem_download("alba-3.10.0.gem").create();
 

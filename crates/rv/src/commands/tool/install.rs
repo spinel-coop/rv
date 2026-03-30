@@ -1,10 +1,10 @@
-use std::{collections::HashMap, fs};
+use std::fs;
 
 use owo_colors::OwoColorize;
 use reqwest::StatusCode;
-use rv_gem_types::VersionPlatform;
+use rv_gem_types::ReleaseTuple;
 use rv_lockfile::datatypes::GemfileDotLock;
-use rv_version::Version as GemVersion;
+use rv_version::Version;
 use tracing::debug;
 use url::Url;
 
@@ -15,9 +15,6 @@ use crate::{
     gemserver::{self, GemName, GemRelease, Gemserver},
 };
 
-mod pubgrub_bridge;
-mod transitive_dep_query;
-
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error(transparent)]
@@ -27,7 +24,7 @@ pub enum Error {
     #[error("{gem_name} doesn't exist on {server}")]
     NotFound { gem_name: String, server: String },
     #[error("No version {0} available")]
-    NoVersionFound(GemVersion),
+    NoVersionFound(Version),
     #[error("The gem does not actually have any releases published")]
     NoReleasesPublished,
     #[error(transparent)]
@@ -77,10 +74,7 @@ pub(crate) async fn install(
 
     let gem_server: Url = gem_server.parse().map_err(|_| Error::BadUrl(gem_server))?;
 
-    let gemserver = Gemserver::new(config, gem_server)?;
-
-    // Maps gem names to their dependency lists.
-    let mut gems_to_deps: HashMap<GemName, Vec<GemRelease>> = HashMap::new();
+    let mut gemserver = Gemserver::new(config, gem_server)?;
 
     // Look up the gem to install.
     let releases_resp = gemserver
@@ -104,7 +98,6 @@ pub(crate) async fn install(
     if releases.is_empty() {
         return Err(Error::NoReleasesPublished);
     }
-    gems_to_deps.insert(gem_name.clone(), releases.clone());
 
     let release_to_install = match gem_version {
         Some(user_choice) => releases
@@ -123,11 +116,15 @@ pub(crate) async fn install(
 
     debug!("Selected {} {}", gem_name, release_to_install.full_name());
 
-    // Check if the tool was already installed.
-    let install_path = super::tool_dir_for(
-        &gem_name,
-        &release_to_install.version_platform().to_string(),
+    let target_version = release_to_install.version_platform();
+
+    gemserver.gems_to_deps.insert(
+        gem_name.clone(),
+        [(target_version.clone(), release_to_install.clone())].into(),
     );
+
+    // Check if the tool was already installed.
+    let install_path = super::tool_dir_for(&gem_name, &target_version.to_string());
     let already_installed = install_path.exists();
     if already_installed {
         if force {
@@ -136,7 +133,7 @@ pub(crate) async fn install(
             println!(
                 "{} {} already installed at {}",
                 gem_name.cyan(),
-                release_to_install.version_platform(),
+                target_version,
                 install_path.cyan(),
             );
             return Ok(Installed {
@@ -151,45 +148,49 @@ pub(crate) async fn install(
         .await?;
     debug!("Selected Ruby {ruby_to_use} for this gem");
 
-    debug!("Querying all transitive dependencies");
-    let mut transitive_deps = Default::default();
-    transitive_dep_query::query_all_gem_deps(
-        config,
-        &mut transitive_deps,
-        release_to_install.clone(),
-        &gem_name,
-        &gemserver,
-        &ruby_to_use,
-    )
-    .await?;
-    gems_to_deps.extend(transitive_deps);
-    debug!("Retrieved all transitive deps.");
+    gemserver
+        .add_transitive_deps(&release_to_install, &ruby_to_use)
+        .await?;
 
     // OK, now we know all transitive dependencies, and have a dependency graph.
     // Now, translate the dependency constraint list into a PubGrub system, and resolve
     // (i.e. figure out which version of every gem will be used.)
     debug!("Resolving all dependencies via PubGrub");
-    let versions_needed =
-        pubgrub_bridge::solve(gem_name.clone(), release_to_install.clone(), gems_to_deps)
-            .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
+    let versions_needed = crate::resolver::solve(
+        gem_name.clone(),
+        release_to_install.clone(),
+        gemserver.gems_to_deps,
+    )
+    .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
     debug!("All dependencies resolved");
 
     // Make a Gemfile.lock in-memory, install it via `rv ci`.
-    let lockfile_builder = LockfileBuilder::new(&gemserver.url, versions_needed);
+    let lockfile_builder = LockfileBuilder {
+        gemserver_remote: gemserver.url.to_string(),
+        versions_needed,
+    };
     let lockfile = lockfile_builder.lockfile();
 
-    let InstallStats {
-        executables_installed,
-    } = crate::commands::clean_install::install_tool_lockfile(
+    let result = crate::commands::clean_install::install_tool_lockfile(
         global_args,
         Some(ruby_to_use.clone().into()),
         lockfile,
         install_path.clone(),
     )
-    .await?;
-    if executables_installed == 0 {
-        fs::remove_dir_all(install_path).unwrap();
-        return Err(Error::NoExecutables);
+    .await;
+
+    match result {
+        Ok(InstallStats {
+            executables_installed: 0,
+        }) => {
+            fs::remove_dir_all(install_path).unwrap();
+            return Err(Error::NoExecutables);
+        }
+        Ok(_) => {}
+        Err(error) => {
+            fs::remove_dir_all(install_path).unwrap();
+            return Err(Error::InstallError(error));
+        }
     }
     let pin_path = install_path.join(".ruby-version");
     fs::write(&pin_path, format!("{ruby_to_use}\n")).map_err(Error::CouldNotPinRubyVersion)?;
@@ -197,7 +198,7 @@ pub(crate) async fn install(
     println!(
         "Installed {} version {} to {}",
         gem_name.cyan(),
-        release_to_install.version_platform(),
+        target_version,
         install_path.cyan(),
     );
     Ok(Installed {
@@ -214,23 +215,11 @@ pub(crate) async fn install(
 /// When building a lockfile from a resolved gem list, there's no actual lockfile
 /// on disk or anything, so this holds the data (e.g. strings) that the lockfile views.
 struct LockfileBuilder {
-    versions_needed: Vec<(String, VersionPlatform)>,
+    versions_needed: Vec<(ReleaseTuple, GemRelease)>,
     gemserver_remote: String,
 }
 
 impl LockfileBuilder {
-    pub fn new(
-        url: &Url,
-        versions_needed: pubgrub::SelectedDependencies<pubgrub_bridge::DepProvider>,
-    ) -> Self {
-        let versions_needed = versions_needed.into_iter().collect();
-        let gemserver_remote = url.to_string();
-        Self {
-            gemserver_remote,
-            versions_needed,
-        }
-    }
-
     /// Create an in-memory Gemfile.lock that views/borrows its data from this builder.
     pub fn lockfile(&self) -> GemfileDotLock<'_> {
         let mut lockfile = rv_lockfile::datatypes::GemfileDotLock::default();
@@ -238,26 +227,36 @@ impl LockfileBuilder {
             remote: Some(&self.gemserver_remote),
             specs: Vec::new(),
         };
-        for (gem_name, version_platform) in &self.versions_needed {
-            let spec = Self::spec_for_gem_dep(gem_name, version_platform);
+        let mut checksums = vec![];
+        for (release_tuple, gem_release) in &self.versions_needed {
+            let spec = Self::spec_for_gem_dep(release_tuple);
             gem_section.specs.push(spec);
+            let checksum = Self::checksum_for_spec(release_tuple, gem_release);
+            checksums.push(checksum);
         }
+
         lockfile.gem.push(gem_section);
+        lockfile.checksums = Some(checksums);
         lockfile
     }
 
-    fn spec_for_gem_dep<'a>(
-        gem_name: &'a GemName,
-        version_platform: &VersionPlatform,
-    ) -> rv_lockfile::datatypes::Spec<'a> {
+    fn spec_for_gem_dep(release_tuple: &ReleaseTuple) -> rv_lockfile::datatypes::Spec {
         rv_lockfile::datatypes::Spec {
             // We don't need to know the deps here, we've already resolved all dependencies.
             // A real Gemfile.lock would populate them, but for this command we don't need to.
             deps: Vec::new(),
-            gem_version: rv_lockfile::datatypes::GemVersion {
-                name: gem_name,
-                version_platform: version_platform.clone(),
-            },
+            release_tuple: release_tuple.clone(),
+        }
+    }
+
+    fn checksum_for_spec<'a>(
+        release_tuple: &ReleaseTuple,
+        gem_release: &GemRelease,
+    ) -> rv_lockfile::datatypes::Checksum<'a> {
+        rv_lockfile::datatypes::Checksum {
+            release_tuple: release_tuple.clone(),
+            algorithm: rv_lockfile::datatypes::ChecksumAlgorithm::SHA256,
+            value: gem_release.metadata.checksum.clone(),
         }
     }
 }

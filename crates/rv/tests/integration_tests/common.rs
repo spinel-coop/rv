@@ -384,8 +384,9 @@ impl RvTest {
             .with_header("location", location)
     }
 
-    pub fn mock_info_endpoint(&mut self, name: &str, content: &[u8]) -> Mock {
+    pub fn mock_info_endpoint(&mut self, name: &str) -> Mock {
         let path = format!("/info/{}", name);
+        let content = fs_err::read(format!("tests/fixtures/info-{name}-gem")).unwrap();
         self.server
             .mock("GET", path.as_str())
             .with_status(200)

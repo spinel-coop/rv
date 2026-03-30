@@ -1,8 +1,8 @@
 //! Most of the types in this module borrow a string from their input,
 //! so they have a lifetime 'i, which is short for 'input.
 
-use rv_gem_types::requirement::VersionConstraint;
-use rv_gem_types::{Platform, ProjectDependency, VersionPlatform};
+use rv_gem_types::requirement::Requirement;
+use rv_gem_types::{Platform, ProjectDependency, ReleaseTuple};
 use rv_ruby::version::RubyVersion;
 use rv_version::Version;
 
@@ -113,7 +113,7 @@ pub struct GitSection<'i> {
     /// Optional gemspec glob
     pub glob: Option<&'i str>,
     /// All gems which came from this source in particular.
-    pub specs: Vec<Spec<'i>>,
+    pub specs: Vec<Spec>,
 }
 
 impl std::fmt::Display for GitSection<'_> {
@@ -151,7 +151,7 @@ pub struct GemSection<'i> {
     /// Location of the RubyGems server.
     pub remote: Option<&'i str>,
     /// All gems which came from this source in particular.
-    pub specs: Vec<Spec<'i>>,
+    pub specs: Vec<Spec>,
 }
 
 impl std::fmt::Display for GemSection<'_> {
@@ -175,7 +175,7 @@ pub struct PathSection<'i> {
     /// The filesystem path that sourced these dependencies.
     pub remote: &'i str,
     /// All gems which came from this source in particular.
-    pub specs: Vec<Spec<'i>>,
+    pub specs: Vec<Spec>,
 }
 
 impl std::fmt::Display for PathSection<'_> {
@@ -191,32 +191,11 @@ impl std::fmt::Display for PathSection<'_> {
     }
 }
 
-/// A (gem, version_platform) pair.
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct GemVersion<'i> {
-    /// Name of the gem.
-    pub name: &'i str,
-    /// Full version of the gem.
-    pub version_platform: VersionPlatform,
-}
-
-impl<'i> GemVersion<'i> {
-    pub fn full_name(&self) -> String {
-        format!("{}-{}", self.name, self.version_platform)
-    }
-}
-
-impl std::fmt::Display for GemVersion<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} ({})", self.name, self.version_platform)
-    }
-}
-
 /// A range of possible versions of a certain gem.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct GemRange<'i> {
     pub name: &'i str,
-    pub semver: Option<Vec<VersionConstraint>>,
+    pub requirement: Requirement,
     /// Dependencies specified with a source other than the main Rubygems index (e.g., git dependencies, path-based, dependencies) have a ! which means they are "pinned" to that source.
     /// According to <https://stackoverflow.com/questions/7517524/understanding-the-gemfile-lock-file>.
     pub nonstandard: bool,
@@ -226,14 +205,8 @@ impl std::fmt::Display for GemRange<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)?;
 
-        if let Some(semver) = &self.semver {
-            let gem_ranges = semver
-                .iter()
-                .map(|gem_range| gem_range.to_string())
-                .collect::<Vec<_>>()
-                .join(", ");
-
-            write!(f, " ({})", gem_ranges)?;
+        if !self.requirement.is_latest_version() {
+            write!(f, " ({})", self.requirement)?;
         }
 
         if self.nonstandard {
@@ -297,20 +270,20 @@ impl std::fmt::Display for BundledWithSection {
 
 /// Gem which has been locked and came from some particular source.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct Spec<'i> {
-    pub gem_version: GemVersion<'i>,
+pub struct Spec {
+    pub release_tuple: ReleaseTuple,
     pub deps: Vec<ProjectDependency>,
 }
 
-impl std::fmt::Display for Spec<'_> {
+impl std::fmt::Display for Spec {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "    {}", self.gem_version)?;
+        writeln!(f, "    {}", self.release_tuple.to_gemfile_lock())?;
 
         if !self.deps.is_empty() {
             let dep_strs = self
                 .deps
                 .iter()
-                .map(|d| d.to_string())
+                .map(|d| d.to_gemfile_lock())
                 .collect::<Vec<_>>()
                 .join("\n      ");
 
@@ -324,7 +297,7 @@ impl std::fmt::Display for Spec<'_> {
 /// Checksum of a particular gem version.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Checksum<'i> {
-    pub gem_version: GemVersion<'i>,
+    pub release_tuple: ReleaseTuple,
     pub algorithm: ChecksumAlgorithm<'i>,
     pub value: Vec<u8>,
 }
@@ -332,11 +305,11 @@ pub struct Checksum<'i> {
 impl std::fmt::Display for Checksum<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.algorithm {
-            ChecksumAlgorithm::None => write!(f, "  {}", self.gem_version),
+            ChecksumAlgorithm::None => write!(f, "  {}", self.release_tuple.to_gemfile_lock()),
             other => write!(
                 f,
                 "  {} {}={}",
-                self.gem_version,
+                self.release_tuple.to_gemfile_lock(),
                 other,
                 hex::encode(&self.value)
             ),
@@ -359,5 +332,82 @@ impl std::fmt::Display for ChecksumAlgorithm<'_> {
             Self::Unknown(algo) => write!(f, "{algo}"),
             Self::SHA256 => write!(f, "sha256"),
         }
+    }
+}
+
+pub(crate) trait SerializeGemfileLock {
+    fn to_gemfile_lock(&self) -> String;
+}
+
+impl SerializeGemfileLock for RubyVersion {
+    fn to_gemfile_lock(&self) -> String {
+        use std::fmt::Write;
+        let mut version = format!(
+            "{} {}.{}.{}",
+            self.engine, self.major, self.minor, self.patch
+        );
+
+        if let Some(tiny) = self.tiny {
+            version.push('.');
+            write!(&mut version, "{}", tiny).unwrap();
+        }
+        if let Some(patchlevel) = self.patchlevel {
+            version.push('p');
+            write!(&mut version, "{}", patchlevel).unwrap();
+        }
+        if let Some(ref prerelease) = self.prerelease {
+            version.push('.');
+            version.push_str(prerelease);
+        }
+        version
+    }
+}
+
+impl SerializeGemfileLock for ProjectDependency {
+    fn to_gemfile_lock(&self) -> String {
+        if self.is_latest_version() {
+            self.name.clone()
+        } else {
+            self.to_string()
+        }
+    }
+}
+
+impl SerializeGemfileLock for ReleaseTuple {
+    fn to_gemfile_lock(&self) -> String {
+        format!("{} ({})", self.name, self.full_version())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::datatypes::SerializeGemfileLock;
+
+    #[test]
+    fn test_ruby_version_to_gemfile_lock() {
+        use rv_ruby::version::RubyVersion;
+
+        let ruby = RubyVersion {
+            engine: "ruby".into(),
+            major: 4,
+            minor: 0,
+            patch: 0,
+            patchlevel: None,
+            tiny: None,
+            prerelease: None,
+        };
+
+        assert_eq!(ruby.to_gemfile_lock(), "ruby 4.0.0");
+    }
+
+    #[test]
+    fn test_dependency_to_gemfile_lock() {
+        use rv_gem_types::ProjectDependency;
+
+        let dep = ProjectDependency::new("test".to_string(), vec![">= 1.0".to_string()]).unwrap();
+        assert_eq!(dep.to_gemfile_lock(), "test (>= 1.0)");
+
+        let dep = ProjectDependency::new("test".to_string(), vec![]).unwrap();
+        assert_eq!(dep.to_gemfile_lock(), "test");
     }
 }

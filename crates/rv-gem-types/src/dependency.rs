@@ -110,14 +110,6 @@ impl Dependency {
             .map(|constraint| constraint.to_string())
             .collect()
     }
-
-    pub fn to_lock_name(&self) -> String {
-        if self.is_latest_version() {
-            self.name.clone()
-        } else {
-            self.to_string()
-        }
-    }
 }
 
 impl std::fmt::Display for Dependency {
@@ -265,15 +257,6 @@ mod tests {
 
         let dep = Dependency::new("test".to_string(), vec![], None).unwrap();
         assert_eq!(dep.to_string(), "test (>= 0)");
-    }
-
-    #[test]
-    fn test_dependency_to_lock_name() {
-        let dep = Dependency::new("test".to_string(), vec![">= 1.0".to_string()], None).unwrap();
-        assert_eq!(dep.to_lock_name(), "test (>= 1.0)");
-
-        let dep = Dependency::new("test".to_string(), vec![], None).unwrap();
-        assert_eq!(dep.to_lock_name(), "test");
     }
 
     #[test]

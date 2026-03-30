@@ -15,10 +15,7 @@ fn test_tool_list() {
     let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
     let ruby_mock = test.mock_ruby_download("4.0.0").create();
 
-    let info_endpoint_content = fs_err::read("tests/fixtures/info-indirect-gem").unwrap();
-    let info_endpoint_mock = test
-        .mock_info_endpoint("indirect", &info_endpoint_content)
-        .create();
+    let info_endpoint_mock = test.mock_info_endpoint("indirect").create();
 
     let tarball_mock = test.mock_gem_download("indirect-1.2.0.gem").create();
 
