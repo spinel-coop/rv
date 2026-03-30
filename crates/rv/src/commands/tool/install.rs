@@ -104,17 +104,14 @@ pub(crate) async fn install(
 
     let release_to_install = match gem_version {
         Some(user_choice) => releases
-            .iter()
+            .into_iter()
             .filter(|gem_release| gem_release.version() == &user_choice)
             .max_by(|x, y| x.version_platform().cmp(y.version_platform()))
-            .map_or_else(
-                || Err(Error::NoVersionFound(user_choice)),
-                |v| Ok(v.to_owned()),
-            )?,
+            .map_or_else(|| Err(Error::NoVersionFound(user_choice)), Ok)?,
         _ => releases
-            .iter()
+            .into_iter()
             .max_by(|x, y| x.version_platform().cmp(y.version_platform()))
-            .map_or_else(|| Err(Error::NoReleasesPublished), |v| Ok(v.to_owned()))?,
+            .map_or_else(|| Err(Error::NoReleasesPublished), Ok)?,
     };
 
     debug!("Selected {} {}", gem_name, release_to_install.full_name());
