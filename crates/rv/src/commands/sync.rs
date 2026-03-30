@@ -222,14 +222,12 @@ impl LockfileBuilder {
         };
         let mut checksums = vec![];
         for (name, gem_release) in &self.versions_needed {
-            let mut deps = gem_release.deps.clone().into_iter().collect::<Vec<_>>();
-            deps.sort_by_key(|d| d.name.clone());
             let release_tuple = ReleaseTuple {
                 name: name.clone(),
                 version: gem_release.version().clone(),
                 platform: gem_release.platform().clone(),
             };
-            let spec = Self::spec_for_gem_dep(release_tuple.clone(), &deps);
+            let spec = Self::spec_for_gem_dep(release_tuple.clone(), gem_release);
             gem_section.specs.push(spec);
             let checksum = Self::checksum_for_spec(release_tuple, gem_release);
             checksums.push(checksum);
@@ -259,10 +257,12 @@ impl LockfileBuilder {
 
     fn spec_for_gem_dep(
         release_tuple: ReleaseTuple,
-        deps: &[ProjectDependency],
+        gem_release: &GemRelease,
     ) -> rv_lockfile::datatypes::Spec {
+        let mut deps = gem_release.deps.clone().into_iter().collect::<Vec<_>>();
+        deps.sort_by_key(|d| d.name.clone());
         rv_lockfile::datatypes::Spec {
-            deps: deps.to_vec(),
+            deps,
             release_tuple,
         }
     }
