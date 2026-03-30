@@ -116,10 +116,14 @@ impl Gemserver {
         Ok(index_body)
     }
 
-    async fn fetch(&self, req: String) -> Result<((String, Vec<GemRelease>), Vec<String>)> {
+    async fn fetch(
+        &self,
+        req: String,
+        ruby: &Version,
+    ) -> Result<((String, Vec<GemRelease>), Vec<String>)> {
         debug!("Fetching {req}");
         let dep_info_resp = self.get_releases_for_gem(&req).await?;
-        let dep_versions = parse_release_from_body(&dep_info_resp)?;
+        let dep_versions = parse_release_from_body(&dep_info_resp, Some(ruby))?;
         let transitive_deps = dep_versions
             .iter()
             .flat_map(|d| d.deps.iter().map(|d| d.name.clone()))
@@ -137,15 +141,15 @@ impl Gemserver {
             ResolutionPackage,
             HashMap<VersionPlatform, GemRelease>,
         >::new()));
+        let target_ruby = Version::from(ruby_to_use);
         let mut in_flight = FuturesUnordered::new();
         let seen_requests = Rc::new(Mutex::new(HashSet::<String>::new()));
-        let target_ruby = rv_version::Version::from(ruby_to_use);
 
         // Initial requests
         for d in &root.deps {
             let req = d.name.clone();
             debug!("Queuing {req}");
-            in_flight.push(self.fetch(req))
+            in_flight.push(self.fetch(req, &target_ruby))
         }
 
         // Keep fetching new dependencies we discover.
@@ -153,13 +157,8 @@ impl Gemserver {
             let ((dep_name, dep_info), new_deps) = res?;
             {
                 let mut results = results.lock().expect("Lock poisoned");
-                // Skip possible versions that are incompatible with our
-                // chosen Ruby version.
-                // We should filter these out now, so that we minimize the number
-                // of deps that PubGrub has to consider.
                 let candidate_versions: HashMap<VersionPlatform, GemRelease> = dep_info
                     .into_iter()
-                    .filter(|release| release.metadata.ruby.satisfied_by(&target_ruby))
                     .map(|release| (release.version_platform.clone(), release))
                     .collect();
                 results.insert(ResolutionPackage::Gem(dep_name), candidate_versions);
@@ -172,7 +171,7 @@ impl Gemserver {
                     .insert(req.clone())
                 {
                     debug!("Queuing {req}");
-                    in_flight.push(self.fetch(req));
+                    in_flight.push(self.fetch(req, &target_ruby));
                 }
             }
         }
@@ -218,7 +217,10 @@ pub type ParseResult<T> = std::result::Result<T, GemReleaseParse>;
 
 /// Given a response body from the server SERVER/info/GEM_NAME,
 /// parse it into a list of versions.
-pub fn parse_release_from_body(index_body: &str) -> ParseResult<Vec<GemRelease>> {
+pub fn parse_release_from_body(
+    index_body: &str,
+    ruby: Option<&Version>,
+) -> ParseResult<Vec<GemRelease>> {
     index_body
         .lines()
         .filter_map(|line| {
@@ -228,10 +230,19 @@ pub fn parse_release_from_body(index_body: &str) -> ParseResult<Vec<GemRelease>>
 
             let gem_release = GemRelease::parse(line);
 
-            if let Ok(release) = &gem_release
-                && !release.platform().is_local()
-            {
-                return None;
+            if let Ok(release) = &gem_release {
+                if !release.platform().is_local() {
+                    return None;
+                }
+
+                // Skip possible versions that are incompatible with our target Ruby version.
+                // We should filter these out now, so that we minimize the number of deps that
+                // PubGrub has to consider.
+                if let Some(ruby_version) = ruby
+                    && !release.metadata.ruby.satisfied_by(ruby_version)
+                {
+                    return None;
+                }
             }
 
             Some(gem_release)
@@ -445,7 +456,7 @@ mod tests {
         let resp = "---
 2.2.2 actionmailer:= 2.2.2,actionpack:= 2.2.2,activerecord:= 2.2.2,activeresource:= 2.2.2,activesupport:= 2.2.2,rake:>= 0.8.3|checksum:84fd0ee92f92088cff81d1a4bcb61306bd4b7440b8634d7ac3d1396571a2133f
 2.3.2 actionmailer:= 2.3.2,actionpack:= 2.3.2,activerecord:= 2.3.2,activeresource:= 2.3.2,activesupport:= 2.3.2,rake:>= 0.8.3|checksum:ac61e0356987df34dbbafb803b98f153a663d3878a31f1db7333b7cd987fd044";
-        let actual_parsed_response = parse_release_from_body(resp).unwrap();
+        let actual_parsed_response = parse_release_from_body(resp, None).unwrap();
         assert_eq!(actual_parsed_response.len(), 2);
         insta::assert_debug_snapshot!(actual_parsed_response);
     }
@@ -466,7 +477,7 @@ mod tests {
 1.19.0-x86_64-linux-musl racc:~> 1.4|checksum:1c4ca6b381622420073ce6043443af1d321e8ed93cc18b08e2666e5bd02ffae4,ruby:< 4.1.dev&>= 3.2,rubygems:>= 3.3.22
 1.19.0 mini_portile2:~> 2.8.2,racc:~> 1.4|checksum:e304d21865f62518e04f2bf59f93bd3a97ca7b07e7f03952946d8e1c05f45695,ruby:>= 3.2";
 
-        let actual_parsed_response = parse_release_from_body(resp).unwrap();
+        let actual_parsed_response = parse_release_from_body(resp, None).unwrap();
         assert_eq!(actual_parsed_response.len(), 2);
 
         #[cfg(all(target_os = "macos", target_arch = "aarch64"))]

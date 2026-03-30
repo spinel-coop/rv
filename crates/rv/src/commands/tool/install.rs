@@ -96,7 +96,7 @@ pub(crate) async fn install(
             other => Error::from(other),
         })?;
 
-    let releases = gemserver::parse_release_from_body(&releases_resp)?;
+    let releases = gemserver::parse_release_from_body(&releases_resp, None)?;
     debug!("Found {} releases for the gem {}", releases.len(), gem_name);
     if releases.is_empty() {
         return Err(Error::NoReleasesPublished);
