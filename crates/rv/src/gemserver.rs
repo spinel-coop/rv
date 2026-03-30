@@ -139,6 +139,7 @@ impl Gemserver {
         >::new()));
         let mut in_flight = FuturesUnordered::new();
         let seen_requests = Rc::new(Mutex::new(HashSet::<String>::new()));
+        let target_ruby = rv_version::Version::from(ruby_to_use);
 
         // Initial requests
         for d in &root.deps {
@@ -158,12 +159,7 @@ impl Gemserver {
                 // of deps that PubGrub has to consider.
                 let candidate_versions: HashMap<VersionPlatform, GemRelease> = dep_info
                     .into_iter()
-                    .filter(|release| {
-                        release
-                            .metadata
-                            .ruby
-                            .satisfied_by(&rv_version::Version::from(ruby_to_use))
-                    })
+                    .filter(|release| release.metadata.ruby.satisfied_by(&target_ruby))
                     .map(|release| (release.version_platform.clone(), release))
                     .collect();
                 results.insert(ResolutionPackage::Gem(dep_name), candidate_versions);
