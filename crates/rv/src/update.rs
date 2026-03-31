@@ -91,7 +91,7 @@ pub(crate) async fn update_if_needed(global_args: &GlobalArgs) {
     }
 }
 
-pub(crate) async fn allowed_to_autoupdate(command: &Commands) -> bool {
+pub(crate) fn allowed_to_autoupdate(command: &Commands) -> bool {
     if let Commands::Shell(_) = command {
         return false;
     }

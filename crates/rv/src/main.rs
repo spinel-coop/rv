@@ -295,7 +295,7 @@ async fn main_inner() -> Result<()> {
 
     reg.init();
 
-    if update::allowed_to_autoupdate(&cli.command).await {
+    if update::allowed_to_autoupdate(&cli.command) {
         update::update_if_needed(&cli.global_args()).await;
     }
 
