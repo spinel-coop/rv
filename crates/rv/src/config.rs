@@ -11,7 +11,7 @@ use bundler_settings::BundlerSettings;
 use camino::{FromPathBufError, Utf8Path, Utf8PathBuf};
 use indexmap::IndexSet;
 use rv_settings::RvSettings;
-use tracing::{debug, instrument};
+use tracing::{debug, error, instrument};
 
 use rv_ruby::{
     RemoteRuby, Ruby,
@@ -151,7 +151,9 @@ impl Config {
         let mut config = Self::new(global_args, request)?;
         let home_dir = rv_dirs::home_dir();
 
-        config.bundler_settings = BundlerSettings::new(&home_dir, &config.project_root)?;
+        config.bundler_settings = BundlerSettings::new(&home_dir, &config.project_root)
+            .inspect_err(|err| error!("{}", err))
+            .unwrap_or_default();
         config.rv_settings = RvSettings::new(global_args, &home_dir, &config.project_root)?;
 
         Ok(config)

@@ -33,17 +33,17 @@ impl BundlerSettings {
         );
 
         builder = builder.add_source(
+            Environment::with_prefix("BUNDLE")
+                .keep_prefix(true)
+                .convert_case(config::Case::UpperSnake),
+        );
+
+        builder = builder.add_source(
             File::new(
                 project_dir.join(".bundle/config").as_str(),
                 FileFormat::Yaml,
             )
             .required(false),
-        );
-
-        builder = builder.add_source(
-            Environment::with_prefix("BUNDLE")
-                .keep_prefix(true)
-                .convert_case(config::Case::UpperSnake),
         );
 
         let config = builder
@@ -83,16 +83,16 @@ impl BundlerSettings {
         let path_system_opt = self.get_bool("BUNDLE_PATH__SYSTEM");
         let deployment_opt = self.get_bool("BUNDLE_DEPLOYMENT");
 
-        if path_system_opt.unwrap_or(false) {
-            return None;
-        }
-
         if let Some(ref p) = path_opt {
             let result = absolute(p)
                 .ok()
                 .and_then(|pb| Utf8PathBuf::from_path_buf(pb).ok());
 
             return result;
+        }
+
+        if path_system_opt.unwrap_or(false) {
+            return None;
         }
 
         if deployment_opt.unwrap_or(false) {
