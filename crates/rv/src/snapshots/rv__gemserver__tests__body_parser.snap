@@ -4,23 +4,7 @@ expression: actual_parsed_response
 ---
 [
     GemRelease {
-        version_platform: VersionPlatform {
-            version: Version {
-                version: "2.2.2",
-                segments: [
-                    Number(
-                        2,
-                    ),
-                    Number(
-                        2,
-                    ),
-                    Number(
-                        2,
-                    ),
-                ],
-            },
-            platform: Ruby,
-        },
+        version_platform: 2.2.2,
         deps: {
             actionmailer@[= 2.2.2],
             actionpack@[= 2.2.2],
@@ -36,23 +20,7 @@ expression: actual_parsed_response
         },
     },
     GemRelease {
-        version_platform: VersionPlatform {
-            version: Version {
-                version: "2.3.2",
-                segments: [
-                    Number(
-                        2,
-                    ),
-                    Number(
-                        3,
-                    ),
-                    Number(
-                        2,
-                    ),
-                ],
-            },
-            platform: Ruby,
-        },
+        version_platform: 2.3.2,
         deps: {
             actionmailer@[= 2.3.2],
             actionpack@[= 2.3.2],
