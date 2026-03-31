@@ -131,14 +131,8 @@ pub(crate) async fn sync(global_args: &GlobalArgs, args: SyncArgs) -> Result<()>
     let lockfile_path = gemfile_path.with_extension("lock");
 
     // Make a Gemfile.lock in-memory, install it via `rv ci`.
-    let platform = Platform::local();
-    let lockfile_builder = LockfileBuilder::new(
-        &gemserver.url,
-        versions_needed,
-        platform,
-        dependencies,
-        gemfile_ruby,
-    );
+    let lockfile_builder =
+        LockfileBuilder::new(&gemserver.url, versions_needed, dependencies, gemfile_ruby);
     let lockfile = lockfile_builder.lockfile();
 
     config = Config::with_settings(global_args, Some(ruby_to_use.clone().into()))?;
@@ -185,7 +179,6 @@ fn find_gemfile_path(gemfile: &Option<Utf8PathBuf>) -> Result<(Utf8PathBuf, Utf8
 struct LockfileBuilder {
     versions_needed: Vec<(String, GemReleaseGroup)>,
     gemserver_remote: String,
-    platform: Platform,
     dependencies: Vec<(String, Requirement)>,
     ruby: Option<RubyVersion>,
 }
@@ -194,7 +187,6 @@ impl LockfileBuilder {
     pub fn new(
         url: &Url,
         mut versions_needed: Vec<(String, GemReleaseGroup)>,
-        platform: Platform,
         dependencies: Vec<ProjectDependency>,
         ruby: Option<RubyVersion>,
     ) -> Self {
@@ -207,7 +199,6 @@ impl LockfileBuilder {
         Self {
             gemserver_remote,
             versions_needed,
-            platform,
             dependencies,
             ruby,
         }
@@ -221,12 +212,24 @@ impl LockfileBuilder {
             specs: Vec::new(),
         };
         let mut checksums = vec![];
+        let mut platforms = vec![];
+        let mut include_ruby = true;
         for (name, gem_release_group) in &self.versions_needed {
+            if matches!(gem_release_group.platform(), Platform::Specific { .. }) {
+                include_ruby = false;
+            }
+
             for gem_release in &gem_release_group.releases {
+                let platform = gem_release.platform();
+
+                if *platform != Platform::Ruby {
+                    platforms.push(platform.clone());
+                }
+
                 let release_tuple = ReleaseTuple {
                     name: name.clone(),
                     version: gem_release.version().clone(),
-                    platform: gem_release.platform().clone(),
+                    platform: platform.clone(),
                 };
 
                 let spec = Self::spec_for_gem_dep(release_tuple.clone(), gem_release);
@@ -236,7 +239,11 @@ impl LockfileBuilder {
             }
         }
         lockfile.gem.push(gem_section);
-        lockfile.platforms.push(self.platform.clone());
+        if include_ruby {
+            platforms.push(Platform::Ruby);
+        }
+        platforms.sort();
+        lockfile.platforms = platforms;
         for (name, requirement) in &self.dependencies {
             let range = rv_lockfile::datatypes::GemRange {
                 name,
