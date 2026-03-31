@@ -19,7 +19,6 @@ pub mod progress;
 pub mod script_metadata;
 pub mod tar_utils;
 pub mod update;
-pub mod utils;
 
 use crate::commands::cache::{CacheCommandArgs, cache};
 use crate::commands::clean_install::{CleanInstallArgs, ci};

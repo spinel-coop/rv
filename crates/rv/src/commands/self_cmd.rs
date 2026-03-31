@@ -1,7 +1,7 @@
 use axoupdater::AxoUpdater;
 use clap::{Args, Subcommand};
 
-use crate::{GlobalArgs, utils::is_homebrew_install};
+use crate::{GlobalArgs, update::is_homebrew_install};
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {

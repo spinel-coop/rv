@@ -1,10 +1,11 @@
-use crate::utils::is_homebrew_install;
 use crate::{Commands, GlobalArgs, config::Config};
 use axoupdater::AxoUpdater;
 use rv_dirs::user_state_dir;
+use std::path::PathBuf;
+use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{env, fs};
-use tracing::debug;
+use tracing::{debug, error};
 
 const UPDATE_CHECK_FILENAME: &str = "rv_last_update_check";
 const CHECK_INTERVAL_SECS: u64 = 60 * 60; // 1 hour
@@ -23,12 +24,6 @@ pub(crate) async fn update_if_needed(global_args: &GlobalArgs) {
         return;
     }
 
-    // Check if installed via Homebrew
-    if is_homebrew_install() {
-        debug!("Detected Homebrew installation, skipping auto update.");
-        return;
-    }
-
     let state_dir = user_state_dir("/".into());
 
     fs_err::create_dir_all(state_dir.clone()).unwrap();
@@ -38,16 +33,21 @@ pub(crate) async fn update_if_needed(global_args: &GlobalArgs) {
     let now_secs = match SystemTime::now().duration_since(UNIX_EPOCH) {
         Ok(dur) => dur.as_secs(),
         Err(e) => {
-            eprintln!("SystemTime before UNIX_EPOCH: {}", e);
-            0
+            error!("SystemTime before UNIX_EPOCH: {}", e);
+            return;
         }
     };
 
     if update_timestamp_file.exists() {
-        let contents = fs::read_to_string(update_timestamp_file.clone())
-            .expect("Can't read update timestamp file");
+        let Ok(contents) = fs::read_to_string(update_timestamp_file.clone()) else {
+            error!("Can't read update timestamp file.");
+            return;
+        };
 
-        let last_check = contents.trim().parse::<u64>().unwrap();
+        let Some(last_check) = contents.trim().parse::<u64>().ok() else {
+            error!("Failed to parse update timestamp");
+            return;
+        };
 
         if now_secs >= last_check && now_secs - last_check < CHECK_INTERVAL_SECS {
             let minutes = (now_secs - last_check) / 60;
@@ -59,7 +59,16 @@ pub(crate) async fn update_if_needed(global_args: &GlobalArgs) {
         }
     }
 
-    fs::write(&update_timestamp_file, now_secs.to_string()).unwrap();
+    // Check if installed via Homebrew
+    if is_homebrew_install() {
+        debug!("Detected Homebrew installation, skipping auto update.");
+        return;
+    }
+
+    if let Err(e) = fs::write(&update_timestamp_file, now_secs.to_string()) {
+        error!("Failed to write update timestamp file: {}", e);
+        return;
+    }
 
     let mut updater = AxoUpdater::new_for("rv");
 
@@ -82,7 +91,7 @@ pub(crate) async fn update_if_needed(global_args: &GlobalArgs) {
                     debug!("Successfully updated");
                 }
                 Err(e) => {
-                    debug!("Update failed: {:?}", e);
+                    error!("Update failed: {:?}", e);
                 }
             }
         }
@@ -105,4 +114,60 @@ pub(crate) fn allowed_to_autoupdate(command: &Commands) -> bool {
     }
 
     true
+}
+
+pub fn brew_prefix() -> Option<PathBuf> {
+    if cfg!(target_os = "windows") {
+        return None;
+    }
+
+    let brew_path = which::which("brew").ok()?;
+    let output = Command::new(brew_path).arg("--prefix").output().ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let prefix = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if prefix.is_empty() {
+        return None;
+    }
+
+    Some(PathBuf::from(prefix))
+}
+
+pub fn is_homebrew_install() -> bool {
+    if cfg!(target_family = "windows") {
+        return false;
+    }
+
+    let exe_path = match env::current_exe() {
+        Ok(p) => p,
+        Err(_) => return false,
+    };
+
+    let brew_prefix = match brew_prefix() {
+        Some(p) => p,
+        None => return false,
+    };
+
+    if !exe_path.starts_with(&brew_prefix) {
+        return false;
+    }
+
+    let rel_path = match exe_path.strip_prefix(&brew_prefix) {
+        Ok(p) => p,
+        Err(_) => return false,
+    };
+
+    let has_bin = rel_path.components().any(|c| c.as_os_str() == "bin");
+
+    let exe_name = match exe_path.file_name() {
+        Some(n) => n,
+        None => return false,
+    };
+
+    let ends_with_exe = matches!(rel_path.components().next_back(), Some(std::path::Component::Normal(n)) if n == exe_name);
+
+    has_bin && ends_with_exe
 }
