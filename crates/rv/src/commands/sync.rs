@@ -7,7 +7,7 @@ use crate::commands::run::Invocation;
 use crate::{
     GlobalArgs,
     config::Config,
-    gemserver::{self, GemRelease, Gemserver},
+    gemserver::{self, GemRelease, GemReleaseGroup, Gemserver},
     resolver::{ResolutionPackage, ResolutionRoot},
 };
 use rv_gem_types::{
@@ -98,7 +98,7 @@ pub(crate) async fn sync(global_args: &GlobalArgs, args: SyncArgs) -> Result<()>
     let gem_server: Url = global_source
         .parse()
         .map_err(|_| Error::BadUrl(global_source))?;
-    let mut gemserver = Gemserver::new(&config, gem_server)?;
+    let mut gemserver = Gemserver::new(&config, gem_server, false)?;
 
     let root = ResolutionRoot {
         package: ResolutionPackage::Gemfile,
@@ -183,7 +183,7 @@ fn find_gemfile_path(gemfile: &Option<Utf8PathBuf>) -> Result<(Utf8PathBuf, Utf8
 /// When building a lockfile from a resolved gem list, there's no actual lockfile
 /// on disk or anything, so this holds the data (e.g. strings) that the lockfile views.
 struct LockfileBuilder {
-    versions_needed: Vec<(String, GemRelease)>,
+    versions_needed: Vec<(String, GemReleaseGroup)>,
     gemserver_remote: String,
     platform: Platform,
     dependencies: Vec<(String, Requirement)>,
@@ -193,7 +193,7 @@ struct LockfileBuilder {
 impl LockfileBuilder {
     pub fn new(
         url: &Url,
-        mut versions_needed: Vec<(String, GemRelease)>,
+        mut versions_needed: Vec<(String, GemReleaseGroup)>,
         platform: Platform,
         dependencies: Vec<ProjectDependency>,
         ruby: Option<RubyVersion>,
@@ -221,16 +221,19 @@ impl LockfileBuilder {
             specs: Vec::new(),
         };
         let mut checksums = vec![];
-        for (name, gem_release) in &self.versions_needed {
-            let release_tuple = ReleaseTuple {
-                name: name.clone(),
-                version: gem_release.version().clone(),
-                platform: gem_release.platform().clone(),
-            };
-            let spec = Self::spec_for_gem_dep(release_tuple.clone(), gem_release);
-            gem_section.specs.push(spec);
-            let checksum = Self::checksum_for_spec(release_tuple, gem_release);
-            checksums.push(checksum);
+        for (name, gem_release_group) in &self.versions_needed {
+            for gem_release in &gem_release_group.releases {
+                let release_tuple = ReleaseTuple {
+                    name: name.clone(),
+                    version: gem_release.version().clone(),
+                    platform: gem_release.platform().clone(),
+                };
+
+                let spec = Self::spec_for_gem_dep(release_tuple.clone(), gem_release);
+                gem_section.specs.push(spec);
+                let checksum = Self::checksum_for_spec(release_tuple, gem_release);
+                checksums.push(checksum);
+            }
         }
         lockfile.gem.push(gem_section);
         lockfile.platforms.push(self.platform.clone());

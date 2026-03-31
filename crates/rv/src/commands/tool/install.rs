@@ -12,7 +12,7 @@ use crate::{
     GlobalArgs,
     commands::{clean_install::InstallStats, tool::Installed},
     config::Config,
-    gemserver::{self, GemName, GemRelease, Gemserver},
+    gemserver::{self, GemName, GemRelease, GemReleaseGroup, Gemserver},
     resolver::{ResolutionPackage, ResolutionRoot},
 };
 
@@ -77,7 +77,7 @@ pub(crate) async fn install(
 
     let gem_server: Url = gem_server.parse().map_err(|_| Error::BadUrl(gem_server))?;
 
-    let mut gemserver = Gemserver::new(&config, gem_server)?;
+    let mut gemserver = Gemserver::new(&config, gem_server, true)?;
 
     // Look up the gem to install.
     let releases_resp = gemserver
@@ -96,7 +96,7 @@ pub(crate) async fn install(
             other => Error::from(other),
         })?;
 
-    let releases = gemserver::parse_release_from_body(&releases_resp, None)?;
+    let releases = gemserver::parse_release_from_body(&releases_resp, None, true)?;
     debug!("Found {} releases for the gem {}", releases.len(), gem_name);
     if releases.is_empty() {
         return Err(Error::NoReleasesPublished);
@@ -122,7 +122,14 @@ pub(crate) async fn install(
 
     gemserver.gems_to_deps.insert(
         root_package.clone(),
-        [(target_version.clone(), release_to_install.clone())].into(),
+        [(
+            target_version.clone(),
+            GemReleaseGroup {
+                key: target_version.clone(),
+                releases: [release_to_install.clone()].to_vec(),
+            },
+        )]
+        .into(),
     );
 
     let root = ResolutionRoot {
@@ -222,7 +229,7 @@ pub(crate) async fn install(
 /// When building a lockfile from a resolved gem list, there's no actual lockfile
 /// on disk or anything, so this holds the data (e.g. strings) that the lockfile views.
 struct LockfileBuilder {
-    versions_needed: Vec<(String, GemRelease)>,
+    versions_needed: Vec<(String, GemReleaseGroup)>,
     gemserver_remote: String,
 }
 
@@ -235,16 +242,19 @@ impl LockfileBuilder {
             specs: Vec::new(),
         };
         let mut checksums = vec![];
-        for (name, gem_release) in &self.versions_needed {
-            let release_tuple = ReleaseTuple {
-                name: name.clone(),
-                version: gem_release.version().clone(),
-                platform: gem_release.platform().clone(),
-            };
-            let spec = Self::spec_for_gem_dep(release_tuple.clone());
-            gem_section.specs.push(spec);
-            let checksum = Self::checksum_for_spec(release_tuple, gem_release);
-            checksums.push(checksum);
+        for (name, gem_release_group) in &self.versions_needed {
+            for gem_release in &gem_release_group.releases {
+                let release_tuple = ReleaseTuple {
+                    name: name.clone(),
+                    version: gem_release.version().clone(),
+                    platform: gem_release.platform().clone(),
+                };
+
+                let spec = Self::spec_for_gem_dep(release_tuple.clone());
+                gem_section.specs.push(spec);
+                let checksum = Self::checksum_for_spec(release_tuple, gem_release);
+                checksums.push(checksum);
+            }
         }
 
         lockfile.gem.push(gem_section);

@@ -3,7 +3,7 @@ use std::fmt::Display;
 
 use rv_gem_types::{ProjectDependency, VersionPlatform};
 
-use super::gemserver::{GemName, GemRelease};
+use super::gemserver::{GemName, GemReleaseGroup};
 
 use pubgrub::Ranges;
 
@@ -35,8 +35,8 @@ pub struct ResolutionRoot {
 
 pub fn solve(
     root: &ResolutionRoot,
-    gem_info: &HashMap<ResolutionPackage, HashMap<VersionPlatform, GemRelease>>,
-) -> Result<Vec<(String, GemRelease)>, ResolutionError> {
+    gem_info: &HashMap<ResolutionPackage, HashMap<VersionPlatform, GemReleaseGroup>>,
+) -> Result<Vec<(String, GemReleaseGroup)>, ResolutionError> {
     let provider = all_dependencies(root, gem_info);
     let solution = pubgrub::resolve(
         &provider,
@@ -61,7 +61,7 @@ pub fn solve(
 /// This is really just taking the `gem_info` hashmap and organizing it in a way that PubGrub can understand.
 fn all_dependencies(
     root: &ResolutionRoot,
-    gem_info: &HashMap<ResolutionPackage, HashMap<VersionPlatform, GemRelease>>,
+    gem_info: &HashMap<ResolutionPackage, HashMap<VersionPlatform, GemReleaseGroup>>,
 ) -> DepProvider {
     let mut m = DepProvider::new();
 
@@ -80,7 +80,7 @@ fn all_dependencies(
                 package.clone(),
                 version_platform.clone(),
                 gem_release
-                    .deps
+                    .deps()
                     .clone()
                     .into_iter()
                     .map(|dep| (ResolutionPackage::Gem(dep.name), dep.requirement.into())),
