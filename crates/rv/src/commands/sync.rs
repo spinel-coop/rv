@@ -33,10 +33,8 @@ pub enum Error {
     BadUrl(String),
     #[error("no matching ruby version found")]
     NoMatchingRuby,
-    #[error("{gem_name} doesn't exist on {server}")]
-    NotFound { gem_name: String, server: String },
-    #[error("The gem does not actually have any releases published")]
-    NoReleasesPublished,
+    #[error("Error parsing Gemfile: {0}")]
+    GemfileError(String),
     #[error(transparent)]
     GemserverError(#[from] gemserver::Error),
     #[error("Could not parse a version from the server: {0}")]
@@ -79,17 +77,26 @@ pub(crate) async fn sync(global_args: &GlobalArgs, args: SyncArgs) -> Result<()>
 
     let (gemfile_path, gemfile_dir) = find_gemfile_path(&args.gemfile)?;
 
-    let script = include_str!("../../scripts/serialize_gemfile.rb").to_string();
+    let cached_gemfiles_dir = config
+        .cache
+        .shard(rv_cache::CacheBucket::Gemfile, "gemfiles")
+        .into_path_buf();
+    fs_err::create_dir_all(&cached_gemfiles_dir)?;
 
-    let result = crate::commands::run::capture_run_no_install(
-        Invocation::ruby(vec![]),
-        &config,
-        vec!["--disable-gems".to_string(), "-e".to_string(), script],
-        Some(&gemfile_dir),
-    )?;
+    let timestamp = rv_cache::Timestamp::from_path(gemfile_path.as_std_path())?;
+    let cache_key = rv_cache::cache_digest((gemfile_path.clone(), timestamp));
+    let cached_gemfile_path = cached_gemfiles_dir.join(&cache_key);
 
-    let output = String::from_utf8(result.stdout).unwrap();
-    let gemfile: Gemfile = serde_json::from_str(output.as_str()).expect("not well formatted");
+    let gemfile_contents = if !cached_gemfile_path.exists() {
+        debug!("Serializing {gemfile_path} to JSON");
+        cache_gemfile_path(&config, &gemfile_dir, &gemfile_path, &cached_gemfile_path)?
+    } else {
+        debug!("Using serialized Gemfile ({gemfile_path}) from cache at {cached_gemfile_path}");
+        std::fs::read_to_string(&cached_gemfile_path)?
+    };
+
+    let gemfile: Gemfile =
+        serde_json::from_str(gemfile_contents.as_str()).expect("not well formatted");
 
     let global_source = gemfile.global_source;
     let dependencies = gemfile.deps;
@@ -167,6 +174,40 @@ fn find_gemfile_path(gemfile: &Option<Utf8PathBuf>) -> Result<(Utf8PathBuf, Utf8
 
     debug!("found Gemfile file in {}", gemfile_dir);
     Ok((gemfile_path.clone(), gemfile_dir.into()))
+}
+
+fn cache_gemfile_path(
+    config: &Config,
+    gemfile_dir: &Utf8PathBuf,
+    gemfile_path: &Utf8PathBuf,
+    cached_path: &Utf8PathBuf,
+) -> Result<String> {
+    let script = include_str!("../../scripts/serialize_gemfile.rb").to_string();
+
+    let result = crate::commands::run::capture_run_no_install(
+        Invocation::ruby(vec![]),
+        config,
+        vec![
+            "--disable-gems".to_string(),
+            "-e".to_string(),
+            script,
+            gemfile_path.to_string(),
+        ],
+        Some(gemfile_dir),
+    )?;
+
+    let error = String::from_utf8(result.stderr).unwrap();
+
+    if !result.status.success() {
+        return Err(Error::GemfileError(error));
+    }
+
+    let json_contents = String::from_utf8(result.stdout).unwrap();
+
+    debug!("writing JSON Gemfile to {}", cached_path);
+    fs_err::write(cached_path, &json_contents)?;
+
+    Ok(json_contents)
 }
 
 /// Owns the information needed to create a lockfile.

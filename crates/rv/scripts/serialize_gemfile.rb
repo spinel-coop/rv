@@ -42,8 +42,10 @@ class GemfileSerializer
   end
 end
 
+gemfile_path = ARGV[0]
+
 gemfile_serializer = GemfileSerializer.new
 
-gemfile_serializer.instance_eval(File.read("Gemfile"))
+gemfile_serializer.instance_eval(File.read(gemfile_path))
 
 puts gemfile_serializer.instance_variable_get(:@gemfile).to_json
