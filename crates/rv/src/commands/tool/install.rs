@@ -57,6 +57,8 @@ pub(crate) async fn install(
 ) -> Result<Installed> {
     let config = &Config::new(global_args, None)?;
 
+    config.self_update_if_needed().await;
+
     // Check if 'gem' is in 'gem@version' format.
     // If `gem_version` is None, it means "latest". Otherwise it's a specific version.
     let (gem_name, gem_version) = if let Some((name, gem_version)) = gem.split_once('@') {

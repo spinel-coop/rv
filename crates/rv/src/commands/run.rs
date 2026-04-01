@@ -143,6 +143,8 @@ pub(crate) async fn run_command(
 ) -> Result<()> {
     let config = &Config::with_settings(global_args, request)?;
 
+    config.self_update_if_needed().await;
+
     let install = !no_install;
     if config.current_ruby().is_none() && install {
         let request = config.ruby_request();

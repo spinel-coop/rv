@@ -1,4 +1,3 @@
-use crate::{Commands, GlobalArgs, config::Config};
 use axoupdater::AxoUpdater;
 use rv_dirs::user_state_dir;
 use std::path::PathBuf;
@@ -10,17 +9,8 @@ use tracing::{debug, error};
 const UPDATE_CHECK_FILENAME: &str = "rv_last_update_check";
 const CHECK_INTERVAL_SECS: u64 = 60 * 60; // 1 hour
 
-pub(crate) async fn update_if_needed(global_args: &GlobalArgs) {
-    let config_result = Config::with_settings(global_args, None);
-    let config = match &config_result {
-        Ok(cfg) => cfg,
-        Err(e) => {
-            debug!("Error loading settings: {:?}", e);
-            return;
-        }
-    };
-
-    if config.rv_settings.update_mode == "none" {
+pub(crate) async fn update_if_needed(update_mode: &str) {
+    if update_mode == "none" || is_ci_env() {
         return;
     }
 
@@ -79,7 +69,7 @@ pub(crate) async fn update_if_needed(global_args: &GlobalArgs) {
 
     if updater.is_update_needed().await.unwrap() {
         debug!("Update needed.");
-        if config.rv_settings.update_mode == "warning" {
+        if update_mode == "warning" {
             println!("⚠️ There is a new version of `rv`. Please update using `rv self update`.");
         } else {
             println!("⬆️ Installing new version of `rv`...");
@@ -100,20 +90,16 @@ pub(crate) async fn update_if_needed(global_args: &GlobalArgs) {
     }
 }
 
-pub(crate) fn allowed_to_autoupdate(command: &Commands) -> bool {
-    if let Commands::Shell(_) = command {
-        return false;
-    }
-
+pub(crate) fn is_ci_env() -> bool {
     let ci_vars = ["CI", "CONTINUOUS_INTEGRATION"];
 
     for var in ci_vars.iter() {
         if env::var(var).is_ok() {
-            return false;
+            return true;
         }
     }
 
-    true
+    false
 }
 
 pub fn brew_prefix() -> Option<PathBuf> {

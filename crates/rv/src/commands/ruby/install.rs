@@ -58,6 +58,8 @@ pub(crate) async fn install(
 ) -> Result<()> {
     let config = &Config::new(global_args, request)?;
 
+    config.self_update_if_needed().await;
+
     let progress = WorkProgress::new();
 
     let request = config.ruby_request();
