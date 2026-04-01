@@ -29,7 +29,10 @@ pub fn init(shell: Shell) -> Result<()> {
                 _rv_autoload_hook() {{
                     eval \"$({current_exe} shell env bash)\"
                 }}
-                trap '[[ \"$BASH_COMMAND\" != \"$PROMPT_COMMAND\" ]] && _rv_autoload_hook' DEBUG
+                if [[ \";${{PROMPT_COMMAND:-}};\" != *\";_rv_autoload_hook;\"* ]]
+                then
+                    PROMPT_COMMAND=\"_rv_autoload_hook${{PROMPT_COMMAND:+;$PROMPT_COMMAND}}\"
+                fi
                 _rv_autoload_hook
             "};
         }
