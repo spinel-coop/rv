@@ -121,21 +121,9 @@ jobs:
         run: rustup show
 
       - name: Install nextest
-        uses: taiki-e/install-action@5faf876256ccfc7ba64a4f87314c3457cc374b98 # v2.68.22
+        uses: taiki-e/install-action@a1df9120380005ebdc788c62449b841b205541dd # v2.71.0
         with:
           tool: cargo-nextest
-        if: matrix.runs-on != 'windows-11-arm'
-
-      # Workaround https://github.com/actions/partner-runner-images/issues/169
-      - name: Install nextest (windows-11-arm)
-        run: |
-          $tmp = New-TemporaryFile | Rename-Item -NewName { $_ -replace 'tmp$', 'zip' } -PassThru
-          Invoke-WebRequest -OutFile $tmp https://get.nexte.st/latest/windows-arm
-          $cargoHome = if ($Env:CARGO_HOME) { $Env:CARGO_HOME } else { Join-Path $Env:USERPROFILE ".cargo" }
-          $outputDir = Join-Path $cargoHome "bin"
-          $tmp | Expand-Archive -DestinationPath $outputDir -Force
-          $tmp | Remove-Item
-        if: matrix.runs-on == 'windows-11-arm'
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
