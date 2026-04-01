@@ -229,6 +229,8 @@ type UnpackResult<T> = std::result::Result<T, UnpackError>;
 pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Result<()> {
     let config = &Config::with_settings(global_args, None)?;
 
+    config.self_update_if_needed().await;
+
     // We need some Ruby installed, because we need to run Ruby code when installing
     // gems. Ensure Ruby is installed here so we can use it later.
     if config.current_ruby().is_none() {
