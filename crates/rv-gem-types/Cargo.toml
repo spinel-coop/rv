@@ -14,6 +14,7 @@ rv-platform = { workspace = true }
 rv-version = { workspace = true }
 rv-ruby = { workspace = true }
 serde = { workspace = true }
+serde_with = { workspace = true }
 
 [dev-dependencies]
 insta = { workspace = true }

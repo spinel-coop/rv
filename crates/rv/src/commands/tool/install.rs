@@ -12,7 +12,8 @@ use crate::{
     GlobalArgs,
     commands::{clean_install::InstallStats, tool::Installed},
     config::Config,
-    gemserver::{self, GemName, GemRelease, Gemserver},
+    gemserver::{self, GemName, GemRelease, GemReleaseGroup, Gemserver},
+    resolver::{ResolutionPackage, ResolutionRoot},
 };
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -55,7 +56,7 @@ pub(crate) async fn install(
     gem_server: String,
     force: bool,
 ) -> Result<Installed> {
-    let config = &Config::new(global_args, None)?;
+    let mut config = Config::new(global_args, None)?;
 
     config.self_update_if_needed().await;
 
@@ -76,7 +77,7 @@ pub(crate) async fn install(
 
     let gem_server: Url = gem_server.parse().map_err(|_| Error::BadUrl(gem_server))?;
 
-    let mut gemserver = Gemserver::new(config, gem_server)?;
+    let mut gemserver = Gemserver::new(&config, gem_server, true)?;
 
     // Look up the gem to install.
     let releases_resp = gemserver
@@ -95,7 +96,7 @@ pub(crate) async fn install(
             other => Error::from(other),
         })?;
 
-    let releases = gemserver::parse_release_from_body(&releases_resp)?;
+    let releases = gemserver::parse_release_from_body(&releases_resp, None, true)?;
     debug!("Found {} releases for the gem {}", releases.len(), gem_name);
     if releases.is_empty() {
         return Err(Error::NoReleasesPublished);
@@ -103,27 +104,43 @@ pub(crate) async fn install(
 
     let release_to_install = match gem_version {
         Some(user_choice) => releases
-            .iter()
+            .into_iter()
             .filter(|gem_release| gem_release.version() == &user_choice)
             .max_by(|x, y| x.version_platform().cmp(y.version_platform()))
-            .map_or_else(
-                || Err(Error::NoVersionFound(user_choice)),
-                |v| Ok(v.to_owned()),
-            )?,
+            .map_or_else(|| Err(Error::NoVersionFound(user_choice)), Ok)?,
         _ => releases
-            .iter()
+            .into_iter()
             .max_by(|x, y| x.version_platform().cmp(y.version_platform()))
-            .map_or_else(|| Err(Error::NoReleasesPublished), |v| Ok(v.to_owned()))?,
+            .map_or_else(|| Err(Error::NoReleasesPublished), Ok)?,
     };
 
     debug!("Selected {} {}", gem_name, release_to_install.full_name());
 
     let target_version = release_to_install.version_platform();
 
+    let root_package = ResolutionPackage::Gem(gem_name.clone());
+
     gemserver.gems_to_deps.insert(
-        gem_name.clone(),
-        [(target_version.clone(), release_to_install.clone())].into(),
+        root_package.clone(),
+        [(
+            target_version.clone(),
+            GemReleaseGroup {
+                key: target_version.clone(),
+                releases: [release_to_install.clone()].to_vec(),
+            },
+        )]
+        .into(),
     );
+
+    let root = ResolutionRoot {
+        package: root_package,
+        version_platform: target_version.clone(),
+        deps: release_to_install
+            .deps
+            .clone()
+            .into_iter()
+            .collect::<Vec<_>>(),
+    };
 
     // Check if the tool was already installed.
     let install_path = super::tool_dir_for(&gem_name, &target_version.to_string());
@@ -150,20 +167,14 @@ pub(crate) async fn install(
         .await?;
     debug!("Selected Ruby {ruby_to_use} for this gem");
 
-    gemserver
-        .add_transitive_deps(&release_to_install, &ruby_to_use)
-        .await?;
+    gemserver.add_transitive_deps(&root, &ruby_to_use).await?;
 
     // OK, now we know all transitive dependencies, and have a dependency graph.
     // Now, translate the dependency constraint list into a PubGrub system, and resolve
     // (i.e. figure out which version of every gem will be used.)
     debug!("Resolving all dependencies via PubGrub");
-    let versions_needed = crate::resolver::solve(
-        gem_name.clone(),
-        release_to_install.clone(),
-        gemserver.gems_to_deps,
-    )
-    .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
+    let versions_needed = crate::resolver::solve(&root, &gemserver.gems_to_deps)
+        .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
     debug!("All dependencies resolved");
 
     // Make a Gemfile.lock in-memory, install it via `rv ci`.
@@ -173,11 +184,12 @@ pub(crate) async fn install(
     };
     let lockfile = lockfile_builder.lockfile();
 
-    let result = crate::commands::clean_install::install_tool_lockfile(
-        global_args,
-        Some(ruby_to_use.clone().into()),
+    config = Config::new(global_args, Some(ruby_to_use.clone().into()))?;
+
+    let result = crate::commands::clean_install::install_inline_lockfile(
+        &config,
         lockfile,
-        install_path.clone(),
+        Some(install_path.clone()),
     )
     .await;
 
@@ -217,7 +229,7 @@ pub(crate) async fn install(
 /// When building a lockfile from a resolved gem list, there's no actual lockfile
 /// on disk or anything, so this holds the data (e.g. strings) that the lockfile views.
 struct LockfileBuilder {
-    versions_needed: Vec<(ReleaseTuple, GemRelease)>,
+    versions_needed: Vec<(String, GemReleaseGroup)>,
     gemserver_remote: String,
 }
 
@@ -230,11 +242,19 @@ impl LockfileBuilder {
             specs: Vec::new(),
         };
         let mut checksums = vec![];
-        for (release_tuple, gem_release) in &self.versions_needed {
-            let spec = Self::spec_for_gem_dep(release_tuple);
-            gem_section.specs.push(spec);
-            let checksum = Self::checksum_for_spec(release_tuple, gem_release);
-            checksums.push(checksum);
+        for (name, gem_release_group) in &self.versions_needed {
+            for gem_release in &gem_release_group.releases {
+                let release_tuple = ReleaseTuple {
+                    name: name.clone(),
+                    version: gem_release.version().clone(),
+                    platform: gem_release.platform().clone(),
+                };
+
+                let spec = Self::spec_for_gem_dep(release_tuple.clone());
+                gem_section.specs.push(spec);
+                let checksum = Self::checksum_for_spec(release_tuple, gem_release);
+                checksums.push(checksum);
+            }
         }
 
         lockfile.gem.push(gem_section);
@@ -242,21 +262,21 @@ impl LockfileBuilder {
         lockfile
     }
 
-    fn spec_for_gem_dep(release_tuple: &ReleaseTuple) -> rv_lockfile::datatypes::Spec {
+    fn spec_for_gem_dep(release_tuple: ReleaseTuple) -> rv_lockfile::datatypes::Spec {
         rv_lockfile::datatypes::Spec {
             // We don't need to know the deps here, we've already resolved all dependencies.
             // A real Gemfile.lock would populate them, but for this command we don't need to.
             deps: Vec::new(),
-            release_tuple: release_tuple.clone(),
+            release_tuple,
         }
     }
 
     fn checksum_for_spec<'a>(
-        release_tuple: &ReleaseTuple,
+        release_tuple: ReleaseTuple,
         gem_release: &GemRelease,
     ) -> rv_lockfile::datatypes::Checksum<'a> {
         rv_lockfile::datatypes::Checksum {
-            release_tuple: release_tuple.clone(),
+            release_tuple,
             algorithm: rv_lockfile::datatypes::ChecksumAlgorithm::SHA256,
             value: gem_release.metadata.checksum.clone(),
         }

@@ -1,0 +1,332 @@
+use camino::{Utf8Path, Utf8PathBuf};
+use clap::Args;
+use serde::Deserialize;
+use tracing::debug;
+
+use crate::commands::run::Invocation;
+use crate::{
+    GlobalArgs,
+    config::Config,
+    gemserver::{self, GemRelease, GemReleaseGroup, Gemserver},
+    resolver::{ResolutionPackage, ResolutionRoot},
+};
+use rv_gem_types::{
+    Platform, ProjectDependency, ReleaseTuple, Requirement, VersionConstraint, VersionPlatform,
+};
+use rv_lockfile::datatypes::GemfileDotLock;
+use rv_ruby::version::RubyVersion;
+use std::str::FromStr;
+use url::Url;
+
+#[derive(Debug, Args)]
+pub struct SyncArgs {
+    /// Path to Gemfile
+    #[arg(long, env = "BUNDLE_GEMFILE")]
+    gemfile: Option<Utf8PathBuf>,
+}
+
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum Error {
+    #[error(transparent)]
+    Config(#[from] crate::config::Error),
+    #[error("{0} is not a valid URL")]
+    BadUrl(String),
+    #[error("no matching ruby version found")]
+    NoMatchingRuby,
+    #[error("Error parsing Gemfile: {0}")]
+    GemfileError(String),
+    #[error(transparent)]
+    GemserverError(#[from] gemserver::Error),
+    #[error("Could not parse a version from the server: {0}")]
+    GemReleaseParse(#[from] gemserver::GemReleaseParse),
+    #[error(transparent)]
+    Run(#[from] crate::commands::run::Error),
+    #[error(transparent)]
+    Install(#[from] crate::commands::clean_install::Error),
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
+    #[error(transparent)]
+    Parse(#[from] rv_lockfile::ParseErrors),
+    #[error(transparent)]
+    RequirementError(#[from] rv_gem_types::requirement::RequirementError),
+    #[error(transparent)]
+    ProjectDependencyError(#[from] rv_gem_types::project_dependency::ProjectDependencyError),
+    #[error("A Gemfile file was not found")]
+    MissingImplicitGemfile,
+    #[error("Gemfile \"{0}\" does not exist")]
+    MissingGemfile(String),
+    #[error(
+        "The gemfile path must be inside a directory with a parent, but it wasn't. Path was {0}"
+    )]
+    InvalidGemfilePath(String),
+    #[error("rv could not resolve the Gemfile:\n\n{0}")]
+    ResolutionError(String),
+}
+
+type Result<T> = miette::Result<T, Error>;
+
+#[derive(Deserialize, Debug)]
+struct Gemfile {
+    global_source: String,
+    deps: Vec<ProjectDependency>,
+    ruby: Option<Vec<VersionConstraint>>,
+}
+
+pub(crate) async fn sync(global_args: &GlobalArgs, args: SyncArgs) -> Result<()> {
+    let mut config = Config::new(global_args, None)?;
+
+    let (gemfile_path, gemfile_dir) = find_gemfile_path(&args.gemfile)?;
+
+    let cached_gemfiles_dir = config
+        .cache
+        .shard(rv_cache::CacheBucket::Gemfile, "gemfiles")
+        .into_path_buf();
+    fs_err::create_dir_all(&cached_gemfiles_dir)?;
+
+    let timestamp = rv_cache::Timestamp::from_path(gemfile_path.as_std_path())?;
+    let cache_key = rv_cache::cache_digest((gemfile_path.clone(), timestamp));
+    let cached_gemfile_path = cached_gemfiles_dir.join(&cache_key);
+
+    let gemfile_contents = if !cached_gemfile_path.exists() {
+        debug!("Serializing {gemfile_path} to JSON");
+        cache_gemfile_path(&config, &gemfile_dir, &gemfile_path, &cached_gemfile_path)?
+    } else {
+        debug!("Using serialized Gemfile ({gemfile_path}) from cache at {cached_gemfile_path}");
+        std::fs::read_to_string(&cached_gemfile_path)?
+    };
+
+    let gemfile: Gemfile =
+        serde_json::from_str(gemfile_contents.as_str()).expect("not well formatted");
+
+    let global_source = gemfile.global_source;
+    let dependencies = gemfile.deps;
+    let ruby_requirement = gemfile.ruby.map(Requirement::from);
+
+    let gem_server: Url = global_source
+        .parse()
+        .map_err(|_| Error::BadUrl(global_source))?;
+    let mut gemserver = Gemserver::new(&config, gem_server, false)?;
+
+    let root = ResolutionRoot {
+        package: ResolutionPackage::Gemfile,
+        version_platform: VersionPlatform::from_str("0").unwrap(),
+        deps: dependencies.clone(),
+    };
+
+    let gemfile_ruby = if let Some(requirement) = ruby_requirement {
+        Some(config.best_ruby_matching_requirement(&requirement).await?)
+    } else {
+        None
+    };
+
+    let ruby_to_use = gemfile_ruby
+        .clone()
+        .unwrap_or(config.current_ruby().ok_or(Error::NoMatchingRuby)?.version);
+
+    gemserver.add_transitive_deps(&root, &ruby_to_use).await?;
+
+    let gems_to_deps = gemserver.gems_to_deps;
+
+    // OK, now we know all transitive dependencies, and have a dependency graph.
+    // Now, translate the dependency constraint list into a PubGrub system, and resolve
+    // (i.e. figure out which version of every gem will be used.)
+    debug!("Resolving all dependencies via PubGrub");
+    let versions_needed = crate::resolver::solve(&root, &gems_to_deps)
+        .map_err(|e| Error::ResolutionError(e.to_string()))?;
+    debug!("All dependencies resolved");
+
+    let lockfile_path = gemfile_path.with_extension("lock");
+
+    // Make a Gemfile.lock in-memory, install it via `rv ci`.
+    let lockfile_builder =
+        LockfileBuilder::new(&gemserver.url, versions_needed, dependencies, gemfile_ruby);
+    let lockfile = lockfile_builder.lockfile();
+
+    config = Config::with_settings(global_args, Some(ruby_to_use.clone().into()))?;
+
+    crate::commands::clean_install::install_inline_lockfile(&config, lockfile.clone(), None)
+        .await?;
+
+    let lockfile_contents = lockfile.to_string();
+    std::fs::write(&lockfile_path, &lockfile_contents)?;
+
+    Ok(())
+}
+
+fn find_gemfile_path(gemfile: &Option<Utf8PathBuf>) -> Result<(Utf8PathBuf, Utf8PathBuf)> {
+    let Some(gemfile) = gemfile else {
+        let gemfile_path = rv_dirs::canonicalize_utf8(Utf8Path::new("Gemfile"))
+            .map_err(|_| Error::MissingImplicitGemfile)?;
+        let gemfile_dir = gemfile_path
+            .parent()
+            .expect("if we could canonicalize it, it must have a parent");
+
+        debug!("found Gemfile file in {}", gemfile_dir);
+        return Ok((gemfile_path.clone(), gemfile_dir.into()));
+    };
+
+    let gemfile_path = rv_dirs::canonicalize_utf8(gemfile)
+        .map_err(|_| Error::MissingGemfile(gemfile.to_string()))?;
+
+    let gemfile_dir = gemfile_path
+        .parent()
+        .ok_or(Error::InvalidGemfilePath(gemfile.to_string()))?;
+
+    debug!("found Gemfile file in {}", gemfile_dir);
+    Ok((gemfile_path.clone(), gemfile_dir.into()))
+}
+
+fn cache_gemfile_path(
+    config: &Config,
+    gemfile_dir: &Utf8PathBuf,
+    gemfile_path: &Utf8PathBuf,
+    cached_path: &Utf8PathBuf,
+) -> Result<String> {
+    let script = include_str!("../../scripts/serialize_gemfile.rb").to_string();
+
+    let result = crate::commands::run::capture_run_no_install(
+        Invocation::ruby(vec![]),
+        config,
+        vec![
+            "--disable-gems".to_string(),
+            "-e".to_string(),
+            script,
+            gemfile_path.to_string(),
+        ],
+        Some(gemfile_dir),
+    )?;
+
+    let error = String::from_utf8(result.stderr).unwrap();
+
+    if !result.status.success() {
+        return Err(Error::GemfileError(error));
+    }
+
+    let json_contents = String::from_utf8(result.stdout).unwrap();
+
+    debug!("writing JSON Gemfile to {}", cached_path);
+    fs_err::write(cached_path, &json_contents)?;
+
+    Ok(json_contents)
+}
+
+/// Owns the information needed to create a lockfile.
+/// Currently the lockfile has to borrow from something, it does not
+/// actually hold any owned data (strings). It just views data
+/// from somewhere else (e.g. a file on disk, a network buffer, etc).
+///
+/// When building a lockfile from a resolved gem list, there's no actual lockfile
+/// on disk or anything, so this holds the data (e.g. strings) that the lockfile views.
+struct LockfileBuilder {
+    versions_needed: Vec<(String, GemReleaseGroup)>,
+    gemserver_remote: String,
+    dependencies: Vec<(String, Requirement)>,
+    ruby: Option<RubyVersion>,
+}
+
+impl LockfileBuilder {
+    pub fn new(
+        url: &Url,
+        mut versions_needed: Vec<(String, GemReleaseGroup)>,
+        dependencies: Vec<ProjectDependency>,
+        ruby: Option<RubyVersion>,
+    ) -> Self {
+        versions_needed.sort_by_key(|k| k.0.clone());
+        let gemserver_remote = url.to_string();
+        let mut dependencies: Vec<_> = dependencies
+            .into_iter()
+            .map(|d| (d.name.to_string(), d.requirement))
+            .collect();
+        dependencies.sort();
+        Self {
+            gemserver_remote,
+            versions_needed,
+            dependencies,
+            ruby,
+        }
+    }
+
+    /// Create an in-memory Gemfile.lock that views/borrows its data from this builder.
+    pub fn lockfile(&self) -> GemfileDotLock<'_> {
+        let mut lockfile = rv_lockfile::datatypes::GemfileDotLock::default();
+        let mut gem_section = rv_lockfile::datatypes::GemSection {
+            remote: Some(&self.gemserver_remote),
+            specs: Vec::new(),
+        };
+        let mut checksums = vec![];
+        let mut platforms = vec![];
+        let mut include_ruby = true;
+        for (name, gem_release_group) in &self.versions_needed {
+            if matches!(gem_release_group.platform(), Platform::Specific { .. }) {
+                include_ruby = false;
+            }
+
+            for gem_release in &gem_release_group.releases {
+                let platform = gem_release.platform();
+
+                if *platform != Platform::Ruby {
+                    platforms.push(platform.clone());
+                }
+
+                let release_tuple = ReleaseTuple {
+                    name: name.clone(),
+                    version: gem_release.version().clone(),
+                    platform: platform.clone(),
+                };
+
+                let spec = Self::spec_for_gem_dep(release_tuple.clone(), gem_release);
+                gem_section.specs.push(spec);
+                let checksum = Self::checksum_for_spec(release_tuple, gem_release);
+                checksums.push(checksum);
+            }
+        }
+        lockfile.gem.push(gem_section);
+        if include_ruby {
+            platforms.push(Platform::Ruby);
+        }
+        platforms.sort();
+        lockfile.platforms = platforms;
+        for (name, requirement) in &self.dependencies {
+            let range = rv_lockfile::datatypes::GemRange {
+                name,
+                requirement: requirement.clone(),
+                nonstandard: false,
+            };
+
+            lockfile.dependencies.push(range);
+        }
+
+        lockfile.checksums = Some(checksums);
+        if let Some(cruby_version) = &self.ruby {
+            lockfile.ruby_version = Some(rv_lockfile::datatypes::RubyVersionSection {
+                indentation: Default::default(),
+                cruby_version: cruby_version.clone(),
+                engine_version: Default::default(),
+            });
+        }
+        lockfile
+    }
+
+    fn spec_for_gem_dep(
+        release_tuple: ReleaseTuple,
+        gem_release: &GemRelease,
+    ) -> rv_lockfile::datatypes::Spec {
+        let mut deps = gem_release.deps.clone().into_iter().collect::<Vec<_>>();
+        deps.sort_by_key(|d| d.name.clone());
+        rv_lockfile::datatypes::Spec {
+            deps,
+            release_tuple,
+        }
+    }
+
+    fn checksum_for_spec<'a>(
+        release_tuple: ReleaseTuple,
+        gem_release: &GemRelease,
+    ) -> rv_lockfile::datatypes::Checksum<'a> {
+        rv_lockfile::datatypes::Checksum {
+            release_tuple,
+            algorithm: rv_lockfile::datatypes::ChecksumAlgorithm::SHA256,
+            value: gem_release.metadata.checksum.clone(),
+        }
+    }
+}

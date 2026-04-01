@@ -2,7 +2,7 @@ use crate::{Platform, Version, VersionPlatform};
 use pubgrub::Ranges;
 use rv_ruby::Versioned;
 use serde::{Deserialize, Serialize};
-use std::hash::{Hash, Hasher};
+use serde_with::DeserializeFromStr;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -17,7 +17,7 @@ pub enum RequirementError {
     Malformed { requirement: String },
 }
 
-#[derive(Clone, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct Requirement {
     pub constraints: Vec<VersionConstraint>,
 }
@@ -64,7 +64,7 @@ impl From<Requirement> for Ranges<VersionPlatform> {
 }
 
 // Defaults to ">= 0"
-#[derive(Default, Clone, Ord, PartialOrd, Serialize, Deserialize)]
+#[derive(Default, Clone, Ord, PartialOrd, Serialize, DeserializeFromStr)]
 pub struct VersionConstraint {
     pub operator: ComparisonOperator,
     pub version: Version,
@@ -106,6 +106,14 @@ impl TryFrom<&str> for VersionConstraint {
         let version = VersionConstraint::version_from(str, operator.as_ref())?;
 
         Ok(Self { operator, version })
+    }
+}
+
+impl FromStr for VersionConstraint {
+    type Err = RequirementError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::try_from(s)
     }
 }
 
@@ -152,7 +160,7 @@ impl From<VersionConstraint> for Ranges<VersionPlatform> {
     }
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum ComparisonOperator {
     Equal,
     NotEqual,
@@ -304,13 +312,6 @@ impl PartialEq for VersionConstraint {
 
 impl Eq for VersionConstraint {}
 
-impl Hash for VersionConstraint {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.operator.hash(state);
-        self.version.version.hash(state);
-    }
-}
-
 impl VersionConstraint {
     pub fn new(operator: ComparisonOperator, version: Version) -> Self {
         Self { operator, version }
@@ -345,7 +346,9 @@ impl std::fmt::Display for VersionConstraint {
 
 impl std::fmt::Display for Requirement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let constraints: Vec<String> = self.constraints.iter().map(|c| c.to_string()).collect();
+        let mut constraints: Vec<String> = self.constraints.iter().map(|c| c.to_string()).collect();
+        constraints.sort();
+        constraints.reverse();
         write!(f, "{}", constraints.join(", "))
     }
 }
@@ -461,6 +464,11 @@ mod tests {
         assert!(!req.satisfied_by(&v("1.3")));
         assert!(!req.satisfied_by(&v("1.5")));
         assert!(!req.satisfied_by(&v("1.7")));
+
+        // displays sorted in a stable way
+        assert_eq!(req.to_string(), ">= 1.4, <= 1.6, != 1.5");
+        let req2 = Requirement::new(vec![">= 1.4", "!= 1.5", "<= 1.6"]).unwrap();
+        assert_eq!(req2.to_string(), ">= 1.4, <= 1.6, != 1.5");
     }
 
     #[test]

@@ -6,7 +6,7 @@ use rv_gem_types::{Platform, ProjectDependency, ReleaseTuple};
 use rv_ruby::version::RubyVersion;
 use rv_version::Version;
 
-#[derive(Debug, Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
 pub struct GemfileDotLock<'i> {
     /// Dependencies sourced from a Git repo.
     pub git: Vec<GitSection<'i>>,
@@ -95,7 +95,7 @@ impl std::fmt::Display for GemfileDotLock<'_> {
 }
 
 /// Git source that gems could come from.
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct GitSection<'i> {
     /// Location of the Git repo.
     pub remote: &'i str,
@@ -146,7 +146,7 @@ impl std::fmt::Display for GitSection<'_> {
 }
 
 /// Rubygems server source that gems could come from.
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct GemSection<'i> {
     /// Location of the RubyGems server.
     pub remote: Option<&'i str>,
@@ -170,7 +170,7 @@ impl std::fmt::Display for GemSection<'_> {
 }
 
 /// Filesystem path that gems could come from.
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct PathSection<'i> {
     /// The filesystem path that sourced these dependencies.
     pub remote: &'i str,
@@ -192,7 +192,7 @@ impl std::fmt::Display for PathSection<'_> {
 }
 
 /// A range of possible versions of a certain gem.
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct GemRange<'i> {
     pub name: &'i str,
     pub requirement: Requirement,
@@ -217,8 +217,9 @@ impl std::fmt::Display for GemRange<'_> {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub enum LockfileIndentation {
+    #[default]
     Standard,
     ThreeSpaces,
 }
@@ -232,7 +233,7 @@ impl std::fmt::Display for LockfileIndentation {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RubyVersionSection {
     pub indentation: LockfileIndentation,
     pub cruby_version: RubyVersion,
@@ -256,7 +257,7 @@ impl std::fmt::Display for RubyVersionSection {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct BundledWithSection {
     pub indentation: LockfileIndentation,
     pub bundler_version: Version,
@@ -269,7 +270,7 @@ impl std::fmt::Display for BundledWithSection {
 }
 
 /// Gem which has been locked and came from some particular source.
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Spec {
     pub release_tuple: ReleaseTuple,
     pub deps: Vec<ProjectDependency>,
@@ -295,7 +296,7 @@ impl std::fmt::Display for Spec {
 }
 
 /// Checksum of a particular gem version.
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Checksum<'i> {
     pub release_tuple: ReleaseTuple,
     pub algorithm: ChecksumAlgorithm<'i>,
@@ -317,7 +318,7 @@ impl std::fmt::Display for Checksum<'_> {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub enum ChecksumAlgorithm<'i> {
     None,
     Unknown(&'i str),

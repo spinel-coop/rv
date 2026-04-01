@@ -1,11 +1,12 @@
 use crate::Requirement;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct ProjectDependency {
     /// What gem this dependency uses.
     pub name: String,
     /// Constraints on what version of the gem can be used.
+    #[serde(flatten)]
     pub requirement: Requirement,
 }
 

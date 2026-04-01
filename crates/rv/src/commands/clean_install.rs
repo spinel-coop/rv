@@ -20,7 +20,6 @@ use rv_lockfile::datatypes::GemfileDotLock;
 use rv_lockfile::datatypes::GitSection;
 use rv_lockfile::datatypes::PathSection;
 use rv_lockfile::datatypes::Spec;
-use rv_ruby::request::RubyRequest;
 use sha2::Digest;
 use tracing::debug;
 use tracing::info;
@@ -31,7 +30,7 @@ use url::Url;
 use crate::commands::clean_install::checksums::ArchiveChecksums;
 use crate::commands::clean_install::checksums::HashReader;
 use crate::commands::clean_install::checksums::Hashed;
-use crate::commands::ruby::install::install as ruby_install;
+use crate::commands::ruby::install::install_if_needed as ruby_install_if_needed;
 use crate::commands::run::Invocation;
 use crate::progress::WorkProgress;
 use crate::{GlobalArgs, config::Config, http_client::rv_http_client};
@@ -231,17 +230,7 @@ pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Resu
 
     config.self_update_if_needed().await;
 
-    // We need some Ruby installed, because we need to run Ruby code when installing
-    // gems. Ensure Ruby is installed here so we can use it later.
-    if config.current_ruby().is_none() {
-        ruby_install(global_args, None, None, None, false).await?;
-    }
-
-    // Now that it's installed, we can use Ruby to query various directories
-    // we'll need to know later.
-    let ruby = config
-        .current_ruby()
-        .expect("Ruby should be installed after the check above");
+    let ruby = ruby_install_if_needed(config).await?;
     let extensions_scope = ruby.extensions_scope();
     let lockfile_path = find_lockfile_path(&args.gemfile)?;
     let install_path = config.gem_home(&ruby);
@@ -283,24 +272,14 @@ pub struct InstallStats {
     pub executables_installed: usize,
 }
 
-pub(crate) async fn install_tool_lockfile(
-    global_args: &GlobalArgs,
-    request: Option<RubyRequest>,
+pub(crate) async fn install_inline_lockfile(
+    config: &Config<'_>,
     lockfile: GemfileDotLock<'_>,
-    install_path: Utf8PathBuf,
+    install_path: Option<Utf8PathBuf>,
 ) -> Result<InstallStats> {
-    let config = &Config::new(global_args, request.clone())?;
-
-    // We need some Ruby installed, because we need to run Ruby code when installing
-    // gems. Ensure Ruby is installed here so we can use it later.
-    if config.current_ruby().is_none() {
-        ruby_install(global_args, None, request, None, false).await?;
-    }
-
-    let ruby = config
-        .current_ruby()
-        .expect("Ruby should be installed after the check above");
+    let ruby = ruby_install_if_needed(config).await?;
     let extensions_scope = ruby.extensions_scope();
+    let install_path = install_path.unwrap_or(config.gem_home(&ruby));
     let inner_args = CiInnerArgs {
         max_concurrent_requests: 10,
         max_concurrent_installs: 20,
@@ -395,7 +374,7 @@ async fn ci_inner_work(
 
     // Phase 3 (Compiles, 80-100%) - start_phase called inside compile_gems after filtering
     let compile_start = Instant::now();
-    let gems_compiled = compile_gems(config, specs, args, progress)?;
+    let gems_compiled = compile_gems(config, &specs, args, progress)?;
     let compile_elapsed = compile_start.elapsed();
 
     let total_elapsed = fetch_elapsed + install_elapsed + compile_elapsed;
@@ -999,7 +978,7 @@ fn check_macos_dev_tools() -> Result<()> {
 
 fn compile_gems(
     config: &Config,
-    specs: Vec<GemSpecification>,
+    specs: &[GemSpecification],
     args: &CiInnerArgs,
     progress: &WorkProgress,
 ) -> Result<GemsCompiled> {
@@ -1008,7 +987,7 @@ fn compile_gems(
 
     let install_layout = &args.install_layout;
 
-    let (info, deps) = make_dep_graph(&specs, install_layout)?;
+    let (info, deps) = make_dep_graph(specs, install_layout)?;
     let deps_count = info.count;
 
     if deps_count == 0 {

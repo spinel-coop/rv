@@ -1,33 +1,56 @@
 use std::collections::HashMap;
+use std::fmt::Display;
 
-use rv_gem_types::{ReleaseTuple, VersionPlatform};
+use rv_gem_types::{ProjectDependency, VersionPlatform};
 
-use super::gemserver::{GemName, GemRelease};
+use super::gemserver::{GemName, GemReleaseGroup};
 
 use pubgrub::Ranges;
 
-pub type DepProvider = pubgrub::OfflineDependencyProvider<GemName, Ranges<VersionPlatform>>;
+pub type DepProvider =
+    pubgrub::OfflineDependencyProvider<ResolutionPackage, Ranges<VersionPlatform>>;
 pub type ResolutionError = pubgrub::PubGrubError<DepProvider>;
 
+#[derive(Clone, Ord, PartialOrd, PartialEq, Eq, Hash, Debug)]
+pub enum ResolutionPackage {
+    Gem(GemName),
+    Gemfile,
+}
+
+impl Display for ResolutionPackage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Gem(gem_name) => write!(f, "{gem_name}"),
+            Self::Gemfile => write!(f, "the gemfile"),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ResolutionRoot {
+    pub package: ResolutionPackage,
+    pub version_platform: VersionPlatform,
+    pub deps: Vec<ProjectDependency>,
+}
+
 pub fn solve(
-    gem: GemName,
-    release: GemRelease,
-    gem_info: HashMap<GemName, HashMap<VersionPlatform, GemRelease>>,
-) -> Result<Vec<(ReleaseTuple, GemRelease)>, ResolutionError> {
-    let provider = all_dependencies(&gem_info);
-    let solution = pubgrub::resolve(&provider, gem, release.version_platform)?;
+    root: &ResolutionRoot,
+    gem_info: &HashMap<ResolutionPackage, HashMap<VersionPlatform, GemReleaseGroup>>,
+) -> Result<Vec<(String, GemReleaseGroup)>, ResolutionError> {
+    let provider = all_dependencies(root, gem_info);
+    let solution = pubgrub::resolve(
+        &provider,
+        root.package.clone(),
+        root.version_platform.clone(),
+    )?;
 
     Ok(solution
         .into_iter()
-        .map(|(p, vp)| {
-            let gem_release = gem_info[&p][&vp].clone();
-            let release_tuple = ReleaseTuple {
-                name: p,
-                version: vp.version,
-                platform: vp.platform,
-            };
-
-            (release_tuple, gem_release)
+        .filter_map(|(p, vp)| match p {
+            ResolutionPackage::Gem(ref name) if name != "bundler" => {
+                Some((name.to_string(), gem_info[&p][&vp].clone()))
+            }
+            _ => None,
         })
         .collect())
 }
@@ -37,9 +60,19 @@ pub fn solve(
 /// and what dependencies that gem-version pair has).
 /// This is really just taking the `gem_info` hashmap and organizing it in a way that PubGrub can understand.
 fn all_dependencies(
-    gem_info: &HashMap<GemName, HashMap<VersionPlatform, GemRelease>>,
+    root: &ResolutionRoot,
+    gem_info: &HashMap<ResolutionPackage, HashMap<VersionPlatform, GemReleaseGroup>>,
 ) -> DepProvider {
     let mut m = DepProvider::new();
+
+    m.add_dependencies(
+        root.package.clone(),
+        root.version_platform.clone(),
+        root.deps
+            .clone()
+            .into_iter()
+            .map(|dep| (ResolutionPackage::Gem(dep.name), dep.requirement.into())),
+    );
 
     for (package, gem_releases) in gem_info {
         for (version_platform, gem_release) in gem_releases {
@@ -47,10 +80,10 @@ fn all_dependencies(
                 package.clone(),
                 version_platform.clone(),
                 gem_release
-                    .deps
+                    .deps()
                     .clone()
                     .into_iter()
-                    .map(|dep| (dep.name, dep.requirement.into())),
+                    .map(|dep| (ResolutionPackage::Gem(dep.name), dep.requirement.into())),
             );
         }
     }

@@ -262,6 +262,8 @@ pub enum CacheBucket {
     Gem,
     /// Git repos for Git gem deps.
     Git,
+    /// Gemfile information serialized in JSON-format.
+    Gemfile,
     /// YAML-format gemspec.
     Gemspec,
     /// Getting all transitive dependencies of a gem
@@ -274,6 +276,7 @@ impl CacheBucket {
             Self::Ruby => "ruby-v0",
             Self::Gem => "gem-v0",
             Self::Git => "git-v0",
+            Self::Gemfile => "gemfile-v0",
             Self::Gemspec => "gemspec-v0",
             Self::GemDeps => "gemdeps-v0",
         }

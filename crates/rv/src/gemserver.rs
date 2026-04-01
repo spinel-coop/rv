@@ -1,5 +1,6 @@
 use futures_util::{StreamExt, stream::FuturesUnordered};
-use std::collections::{HashMap, HashSet};
+use std::cmp::Ordering;
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::{rc::Rc, sync::Mutex};
@@ -17,6 +18,7 @@ use crate::config::Config;
 use crate::gemserver::http_fetcher::HttpFetcher;
 use crate::gemserver::storage::{FilesystemStorage, Storage};
 use crate::gemserver::updater::Updater;
+use crate::resolver::{ResolutionPackage, ResolutionRoot};
 
 pub mod http_fetcher;
 pub mod storage;
@@ -25,7 +27,8 @@ pub mod updater;
 pub struct Gemserver {
     pub url: Url,
     // Maps gem names to their dependency lists.
-    pub gems_to_deps: HashMap<String, HashMap<VersionPlatform, GemRelease>>,
+    pub gems_to_deps: HashMap<ResolutionPackage, HashMap<VersionPlatform, GemReleaseGroup>>,
+    current_platform_only: bool,
     updater: Arc<Updater>,
     storage: Arc<dyn Storage>,
 }
@@ -49,7 +52,7 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 impl Gemserver {
-    pub fn new(config: &Config, url: Url) -> Result<Self> {
+    pub fn new(config: &Config, url: Url, current_platform_only: bool) -> Result<Self> {
         let cache_dir = config
             .cache
             .shard(rv_cache::CacheBucket::GemDeps, "compact_index")
@@ -63,6 +66,7 @@ impl Gemserver {
 
         Ok(Self {
             url,
+            current_platform_only,
             storage: Arc::new(storage),
             updater: Arc::new(updater),
             gems_to_deps: Default::default(),
@@ -71,7 +75,7 @@ impl Gemserver {
 
     pub async fn add_transitive_deps(
         &mut self,
-        root: &GemRelease,
+        root: &ResolutionRoot,
         ruby_to_use: &RubyVersion,
     ) -> Result<()> {
         debug!("Querying all transitive dependencies");
@@ -115,27 +119,44 @@ impl Gemserver {
         Ok(index_body)
     }
 
-    async fn fetch(&self, req: String) -> Result<((String, Vec<GemRelease>), Vec<String>)> {
+    async fn fetch(
+        &self,
+        req: String,
+        ruby: &Version,
+        current_platform_only: bool,
+    ) -> Result<(
+        (ResolutionPackage, HashMap<VersionPlatform, GemReleaseGroup>),
+        Vec<String>,
+    )> {
         debug!("Fetching {req}");
         let dep_info_resp = self.get_releases_for_gem(&req).await?;
-        let dep_versions = parse_release_from_body(&dep_info_resp)?;
-        let transitive_deps = dep_versions
-            .iter()
-            .flat_map(|d| d.clone().deps.into_iter().map(|d| d.name))
+        let dep_versions =
+            parse_release_group_from_body(&dep_info_resp, Some(ruby), current_platform_only)?;
+        let mut new_dep_names = Vec::new();
+        let dep_info = dep_versions
+            .into_iter()
+            .map(|release_group| {
+                for dep in &release_group.deps() {
+                    new_dep_names.push(dep.name.clone());
+                }
+
+                (release_group.key.clone(), release_group)
+            })
             .collect();
-        Ok(((req, dep_versions), transitive_deps))
+        Ok(((ResolutionPackage::Gem(req), dep_info), new_dep_names))
     }
 
     pub async fn query_all_gem_deps(
         &self,
-        root: &GemRelease,
-        gems_to_deps: &mut HashMap<String, HashMap<VersionPlatform, GemRelease>>,
+        root: &ResolutionRoot,
+        gems_to_deps: &mut HashMap<ResolutionPackage, HashMap<VersionPlatform, GemReleaseGroup>>,
         ruby_to_use: &RubyVersion,
     ) -> Result<()> {
         let results = Rc::new(Mutex::new(HashMap::<
-            String,
-            HashMap<VersionPlatform, GemRelease>,
+            ResolutionPackage,
+            HashMap<VersionPlatform, GemReleaseGroup>,
         >::new()));
+        let target_ruby = Version::from(ruby_to_use);
         let mut in_flight = FuturesUnordered::new();
         let seen_requests = Rc::new(Mutex::new(HashSet::<String>::new()));
 
@@ -143,29 +164,16 @@ impl Gemserver {
         for d in &root.deps {
             let req = d.name.clone();
             debug!("Queuing {req}");
-            in_flight.push(self.fetch(req))
+            in_flight.push(self.fetch(req, &target_ruby, self.current_platform_only))
         }
 
         // Keep fetching new dependencies we discover.
         while let Some(res) = in_flight.next().await {
-            let ((dep_name, dep_info), new_deps) = res?;
+            let ((dep_package, candidate_versions), new_deps) = res?;
             {
                 let mut results = results.lock().expect("Lock poisoned");
-                // Skip possible versions that are incompatible with our
-                // chosen Ruby version.
-                // We should filter these out now, so that we minimize the number
-                // of deps that PubGrub has to consider.
-                let candidate_versions: HashMap<VersionPlatform, GemRelease> = dep_info
-                    .into_iter()
-                    .filter(|release| {
-                        release
-                            .metadata
-                            .ruby
-                            .satisfied_by(&rv_version::Version::from(ruby_to_use))
-                    })
-                    .map(|release| (release.version_platform.clone(), release))
-                    .collect();
-                results.insert(dep_name, candidate_versions);
+
+                results.insert(dep_package, candidate_versions);
             }
 
             for req in new_deps {
@@ -175,7 +183,7 @@ impl Gemserver {
                     .insert(req.clone())
                 {
                     debug!("Queuing {req}");
-                    in_flight.push(self.fetch(req));
+                    in_flight.push(self.fetch(req, &target_ruby, self.current_platform_only));
                 }
             }
         }
@@ -220,33 +228,122 @@ pub enum GemReleaseParse {
 pub type ParseResult<T> = std::result::Result<T, GemReleaseParse>;
 
 /// Given a response body from the server SERVER/info/GEM_NAME,
+/// parse it into a list of version groups (versions with the same dependencies that can be
+/// resolved as a single package)
+pub fn parse_release_group_from_body(
+    index_body: &str,
+    ruby: Option<&Version>,
+    local_only: bool,
+) -> ParseResult<Vec<GemReleaseGroup>> {
+    let releases = parse_release_from_body(index_body, ruby, local_only)?;
+
+    let groups = releases
+        .chunk_by(|a, b| a.version() == b.version() && a.deps == b.deps)
+        .filter(|rs| rs.iter().any(|r| r.platform().is_local()))
+        .map(GemReleaseGroup::new)
+        .collect();
+
+    Ok(groups)
+}
+
+/// Given a response body from the server SERVER/info/GEM_NAME,
 /// parse it into a list of versions.
-pub fn parse_release_from_body(index_body: &str) -> ParseResult<Vec<GemRelease>> {
-    index_body
-        .lines()
-        .filter_map(|line| {
-            if line == "---" {
-                return None;
-            }
+pub fn parse_release_from_body(
+    index_body: &str,
+    ruby: Option<&Version>,
+    local_only: bool,
+) -> ParseResult<Vec<GemRelease>> {
+    let mut releases = Vec::new();
 
-            let gem_release = GemRelease::parse(line);
+    for line in index_body.lines() {
+        if line == "---" {
+            continue;
+        }
 
-            if let Ok(release) = &gem_release
-                && !release.platform().is_local()
-            {
-                return None;
-            }
+        let gem_release = GemRelease::parse(line)?;
+        let gem_platform = gem_release.platform();
 
-            Some(gem_release)
-        })
-        .collect()
+        if !gem_platform.is_local() && (local_only || gem_platform.generic() != Platform::Ruby) {
+            continue;
+        };
+
+        // Skip possible versions that are incompatible with our target Ruby version.
+        // We should filter these out now, so that we minimize the number of deps that
+        // PubGrub has to consider.
+        if let Some(ruby_version) = ruby
+            && !gem_release.metadata.ruby.satisfied_by(ruby_version)
+        {
+            continue;
+        }
+
+        releases.push(gem_release);
+    }
+
+    Ok(releases)
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct GemReleaseGroup {
+    pub key: VersionPlatform,
+
+    pub releases: Vec<GemRelease>,
+}
+
+impl GemReleaseGroup {
+    fn new(releases: &[GemRelease]) -> Self {
+        let representative = &releases[0];
+        let platform = if *representative.platform() == Platform::Ruby {
+            Platform::Ruby
+        } else {
+            Platform::Current
+        };
+        let version_platform = VersionPlatform {
+            version: representative.version().clone(),
+            platform,
+        };
+        Self {
+            key: version_platform,
+            releases: releases.to_vec(),
+        }
+    }
+
+    pub fn version(&self) -> &Version {
+        self.representative().version()
+    }
+
+    pub fn platform(&self) -> &Platform {
+        self.representative().platform()
+    }
+
+    pub fn deps(&self) -> BTreeSet<ProjectDependency> {
+        self.representative().deps.clone()
+    }
+
+    pub fn metadata(&self) -> &Metadata {
+        &self.representative().metadata
+    }
+
+    fn representative(&self) -> &GemRelease {
+        &self.releases[0]
+    }
+}
+impl Ord for GemReleaseGroup {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.key.cmp(&other.key)
+    }
+}
+
+impl PartialOrd for GemReleaseGroup {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 /// All the information about a release of a gem available on some Gemserver.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GemRelease {
     pub version_platform: VersionPlatform,
-    pub deps: Vec<ProjectDependency>,
+    pub deps: BTreeSet<ProjectDependency>,
     pub metadata: Metadata,
 }
 
@@ -279,7 +376,7 @@ impl GemRelease {
         let version = v;
         let (deps, metadata) = rest.split_once('|').ok_or(GemReleaseParse::MissingPipe)?;
 
-        let deps: Vec<_> = if deps.is_empty() {
+        let deps: BTreeSet<_> = if deps.is_empty() {
             Default::default()
         } else {
             deps.split(',')
@@ -296,7 +393,7 @@ impl GemRelease {
                         requirement: version_constraint.into(),
                     })
                 })
-                .collect::<ParseResult<Vec<_>>>()?
+                .collect::<ParseResult<BTreeSet<_>>>()?
         };
         let metadata = parse_metadata(metadata)?;
 
@@ -448,7 +545,7 @@ mod tests {
         let resp = "---
 2.2.2 actionmailer:= 2.2.2,actionpack:= 2.2.2,activerecord:= 2.2.2,activeresource:= 2.2.2,activesupport:= 2.2.2,rake:>= 0.8.3|checksum:84fd0ee92f92088cff81d1a4bcb61306bd4b7440b8634d7ac3d1396571a2133f
 2.3.2 actionmailer:= 2.3.2,actionpack:= 2.3.2,activerecord:= 2.3.2,activeresource:= 2.3.2,activesupport:= 2.3.2,rake:>= 0.8.3|checksum:ac61e0356987df34dbbafb803b98f153a663d3878a31f1db7333b7cd987fd044";
-        let actual_parsed_response = parse_release_from_body(resp).unwrap();
+        let actual_parsed_response = parse_release_from_body(resp, None, true).unwrap();
         assert_eq!(actual_parsed_response.len(), 2);
         insta::assert_debug_snapshot!(actual_parsed_response);
     }
@@ -469,7 +566,7 @@ mod tests {
 1.19.0-x86_64-linux-musl racc:~> 1.4|checksum:1c4ca6b381622420073ce6043443af1d321e8ed93cc18b08e2666e5bd02ffae4,ruby:< 4.1.dev&>= 3.2,rubygems:>= 3.3.22
 1.19.0 mini_portile2:~> 2.8.2,racc:~> 1.4|checksum:e304d21865f62518e04f2bf59f93bd3a97ca7b07e7f03952946d8e1c05f45695,ruby:>= 3.2";
 
-        let actual_parsed_response = parse_release_from_body(resp).unwrap();
+        let actual_parsed_response = parse_release_from_body(resp, None, true).unwrap();
         assert_eq!(actual_parsed_response.len(), 2);
 
         #[cfg(all(target_os = "macos", target_arch = "aarch64"))]

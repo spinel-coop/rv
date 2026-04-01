@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::Platform;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub struct VersionPlatform {
     pub version: Version,
     pub platform: Platform,
@@ -42,6 +42,12 @@ impl std::fmt::Display for VersionPlatform {
             Platform::Ruby => write!(f, "{}", self.version),
             _ => write!(f, "{}-{}", self.version, self.platform),
         }
+    }
+}
+
+impl std::fmt::Debug for VersionPlatform {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self}")
     }
 }
 
