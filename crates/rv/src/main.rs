@@ -19,6 +19,7 @@ pub mod progress;
 pub mod resolver;
 pub mod script_metadata;
 pub mod tar_utils;
+pub mod update;
 
 use crate::commands::cache::{CacheCommandArgs, cache};
 use crate::commands::clean_install::{CleanInstallArgs, ci};
@@ -42,6 +43,8 @@ struct GlobalArgs {
 
     /// Cache related parameters
     cache_args: CacheArgs,
+
+    offline: bool,
 }
 
 /// An extremely fast Ruby version manager.
@@ -83,6 +86,11 @@ struct Cli {
     #[arg(long, env = "RV_COLOR")]
     color: Option<ColorMode>,
 
+    /// Run rv in offline mode if possible
+    /// TODO: Hide until really apply offline mode in all parts of rv.
+    #[arg(long, hide = true, global = true)]
+    offline: bool,
+
     #[command(flatten)]
     cache_args: CacheArgs,
 
@@ -95,6 +103,7 @@ impl Cli {
         GlobalArgs {
             ruby_dir: self.ruby_dir.clone(),
             cache_args: self.cache_args.clone(),
+            offline: self.offline,
         }
     }
 }
@@ -285,6 +294,10 @@ async fn main_inner() -> Result<()> {
         .with(indicatif_layer);
 
     reg.init();
+
+    if update::allowed_to_autoupdate(&cli.command) {
+        update::update_if_needed(&cli.global_args()).await;
+    }
 
     run_cmd(&cli.global_args(), cli.command).await
 }

@@ -4,7 +4,7 @@ use std::io;
 
 use crate::Cache;
 
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Debug, Clone, Default)]
 #[command(next_help_heading = "Cache Options")]
 pub struct CacheArgs {
     /// Avoid reading from or writing to the cache, instead using a temporary directory for the

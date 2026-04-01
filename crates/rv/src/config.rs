@@ -149,7 +149,7 @@ impl Config<'_> {
         let home_dir = rv_dirs::home_dir();
 
         config.bundler_settings = BundlerSettings::new(&home_dir, &config.project_root);
-        config.rv_settings = RvSettings::new(&home_dir, &config.project_root)?;
+        config.rv_settings = RvSettings::new(global_args, &home_dir, &config.project_root)?;
 
         Ok(config)
     }

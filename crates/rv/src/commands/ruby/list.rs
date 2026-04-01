@@ -305,6 +305,7 @@ mod tests {
         let global_args = GlobalArgs {
             ruby_dir: [ruby_dir].to_vec(),
             cache_args,
+            offline: false,
         };
 
         Ok(global_args)
