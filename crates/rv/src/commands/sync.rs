@@ -233,10 +233,11 @@ impl LockfileBuilder {
     ) -> Self {
         versions_needed.sort_by_key(|k| k.0.clone());
         let gemserver_remote = url.to_string();
-        let dependencies: Vec<_> = dependencies
+        let mut dependencies: Vec<_> = dependencies
             .into_iter()
             .map(|d| (d.name.to_string(), d.requirement))
             .collect();
+        dependencies.sort();
         Self {
             gemserver_remote,
             versions_needed,
