@@ -58,7 +58,7 @@ saphyr-parser = "0.0.6"
 seahash = "4.1.0"
 serde = "1.0.219"
 serde_json = "1.0"
-serde_with = { version = "3.16.0", default-features = false, features = [
+serde_with = { version = "3.18.0", default-features = false, features = [
   "macros",
 ] }
 sevenz-rust2 = "0.20.1"
