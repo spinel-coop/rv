@@ -117,8 +117,7 @@ fn test_ruby_install_http_failure_no_empty_file() {
 
     let download_path = test.ruby_tarball_download_path("3.4.5");
     let ruby_mock = test
-        .server
-        .mock("GET", download_path.as_str())
+        .mock_request("GET", download_path.as_str())
         .with_status(404)
         .create();
 
@@ -155,8 +154,7 @@ fn test_ruby_install_interrupted_download_cleanup() {
 
     let download_path = test.ruby_tarball_download_path("3.4.5");
     let ruby_mock = test
-        .server
-        .mock("GET", download_path.as_str())
+        .mock_request("GET", download_path.as_str())
         .with_status(200)
         .with_header("content-type", "application/gzip")
         .with_body("partial")
@@ -295,8 +293,7 @@ fn test_ruby_install_temp_file_cleanup_on_extraction_failure() {
 
     let download_path = test.ruby_tarball_download_path("3.4.5");
     let ruby_mock = test
-        .server
-        .mock("GET", download_path.as_str())
+        .mock_request("GET", download_path.as_str())
         .with_status(200)
         .with_header("content-type", "application/gzip")
         .with_body("invalid-tarball-content")

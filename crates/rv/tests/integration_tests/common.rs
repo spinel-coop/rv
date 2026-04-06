@@ -19,9 +19,33 @@ pub struct RvTest {
     pub server: mockito::ServerGuard,
     /// The platform the subprocess sees via `RV_TEST_PLATFORM`.
     pub platform: HostPlatform,
+    /// Namespace in the server to pull gems from
+    pub namespace: Option<String>,
 }
 
 impl RvTest {
+    pub fn namespaced(name: String) -> Self {
+        let temp_dir = Utf8TempDir::new().expect("Failed to create temporary directory");
+
+        // Platform is fixed during our integration tests to macOS, so some code paths are not
+        // exercised on Windows, like the different ruby download URLs. Eventually we'll probably
+        // want to stop mocking this value if possible to get more coverage.
+        let platform = HostPlatform::MacosAarch64;
+
+        let mut test = Self {
+            cwd: temp_dir.path().into(),
+            temp_dir,
+            env: HashMap::new(),
+            server: mockito::Server::new(),
+            platform,
+            namespace: Some(name),
+        };
+
+        test.setup();
+
+        test
+    }
+
     pub fn new() -> Self {
         let temp_dir = Utf8TempDir::new().expect("Failed to create temporary directory");
 
@@ -36,56 +60,10 @@ impl RvTest {
             env: HashMap::new(),
             server: mockito::Server::new(),
             platform,
+            namespace: None,
         };
 
-        test.env
-            .insert("RV_ROOT_DIR".into(), test.temp_root().into());
-        // Set consistent arch/os for cross-platform testing
-        test.env
-            .insert("RV_TEST_PLATFORM".into(), platform.target_triple().into());
-
-        test.env.insert("RV_TEST_EXE".into(), "/tmp/bin/rv".into());
-        test.env.insert("HOME".into(), test.temp_home().into());
-        // On Windows, set APPDATA and USERPROFILE so that the Win32 SHGetKnownFolderPath API (used
-        // by the `etcetera` crate for data_dir) resolves to the test locations that we expect
-        // rather than to paths in the real user profile. This is the same approach used by uv
-        // (Astral's Python package manager).
-        test.env.insert("APPDATA".into(), test.data_dir().into());
-        test.env
-            .insert("USERPROFILE".into(), test.temp_home().into());
-
-        // Disable network requests by default
-        test.env.insert(
-            "RV_LIST_URL".into(),
-            format!(
-                "{}/{}",
-                test.server.url(),
-                "repos/spinel-coop/rv-ruby/releases/latest"
-            ),
-        );
-        test.env.insert(
-            "RV_INSTALL_URL".into(),
-            format!("{}/{}", test.server.url(), "latest/download"),
-        );
-        test.env.insert(
-            "RV_WINDOWS_LIST_URL".into(),
-            format!(
-                "{}/{}",
-                test.server.url(),
-                "repos/oneclick/rubyinstaller2/releases"
-            ),
-        );
-
-        // Override the rubies directory so rv looks in the test temp dir.
-        // On Windows, etcetera resolves data_dir via the Win32 SHGetKnownFolderPath
-        // API which returns the real %APPDATA% path, ignoring our test HOME env var.
-        // RUBIES_PATH forces rv to use our temp dir instead.
-        let rubies_dir = test.rubies_dir();
-        std::fs::create_dir_all(&rubies_dir).expect("Failed to create rubies directory");
-        test.env.insert("RUBIES_PATH".into(), rubies_dir.into());
-
-        // Disable caching for tests by default
-        test.env.insert("RV_NO_CACHE".into(), "true".into());
+        test.setup();
 
         test
     }
@@ -250,8 +228,7 @@ impl RvTest {
             }}"#
         );
 
-        self.server
-            .mock("GET", "/repos/spinel-coop/rv-ruby/releases/latest")
+        self.mock_request("GET", "repos/spinel-coop/rv-ruby/releases/latest")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(body)
@@ -295,8 +272,7 @@ impl RvTest {
             }}"#
         );
 
-        self.server
-            .mock("GET", "/repos/spinel-coop/rv-ruby/releases/latest")
+        self.mock_request("GET", "repos/spinel-coop/rv-ruby/releases/latest")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(body)
@@ -331,8 +307,7 @@ impl RvTest {
 
         let body = format!("[{}]", releases.join(",\n"));
 
-        self.server
-            .mock("GET", "/repos/oneclick/rubyinstaller2/releases")
+        self.mock_request("GET", "repos/oneclick/rubyinstaller2/releases")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(body)
@@ -370,28 +345,29 @@ impl RvTest {
 
     /// Mock a tarball download for testing
     pub fn mock_tarball_download(&mut self, path: &str, content: &[u8]) -> Mock {
-        self.server
-            .mock("GET", path)
+        self.mock_request("GET", path)
             .with_status(200)
             .with_header("content-type", "application/gzip")
             .with_body(content)
     }
 
     pub fn mock_dev_tarball_redirect(&mut self, path: &str, location: &str) -> Mock {
-        self.server
-            .mock("GET", path)
+        self.mock_request("GET", path)
             .with_status(302)
             .with_header("location", location)
     }
 
     pub fn mock_info_endpoint(&mut self, name: &str) -> Mock {
-        let path = format!("/info/{}", name);
+        let path = format!("{}info/{}", self.gemserver_path(), name);
         let content = fs_err::read(format!("tests/fixtures/info-{name}-gem")).unwrap();
-        self.server
-            .mock("GET", path.as_str())
+        self.mock_request("GET", path.as_str())
             .with_status(200)
             .with_header("content-type", "text/plain; charset=utf-8")
             .with_body(content)
+    }
+
+    pub fn mock_request(&mut self, verb: &str, path: &str) -> Mock {
+        self.server.mock(verb, format!("/{}", path).as_str())
     }
 
     /// Mock a tarball on disk for testing
@@ -461,7 +437,7 @@ impl RvTest {
 
     pub fn ruby_tarball_url(&self, version: &str) -> String {
         format!(
-            "{}{}",
+            "{}/{}",
             self.server_url(),
             self.ruby_tarball_download_path(version)
         )
@@ -469,7 +445,7 @@ impl RvTest {
 
     pub fn ruby_dev_tarball_redirect_url(&self) -> String {
         format!(
-            "{}{}",
+            "{}/{}",
             self.server_url(),
             self.ruby_dev_tarball_redirect_path()
         )
@@ -477,25 +453,41 @@ impl RvTest {
 
     pub fn ruby_tarball_download_path(&self, version: &str) -> String {
         let filename = self.make_tarball_file_name(version);
-        format!("/latest/download/{filename}")
+        format!("latest/download/{filename}")
     }
 
     pub fn ruby_dev_tarball_download_path(&self) -> String {
         let filename = self.make_dev_tarball_file_name();
-        format!("/latest/download/{filename}")
+        format!("latest/download/{filename}")
     }
     pub fn ruby_dev_tarball_redirect_path(&self) -> String {
         let filename = self.make_dev_tarball_file_name();
-        format!("/download/20260305/{filename}")
+        format!("download/20260305/{filename}")
     }
 
     pub fn gem_package_download_path(&self, package: &str) -> String {
-        format!("/gems/{}", package)
+        format!("{}gems/{}", self.gemserver_path(), package)
     }
 
     /// Get the server URL for constructing download URLs
     pub fn server_url(&self) -> String {
         self.server.url()
+    }
+
+    /// Get the server URL for fetching dependencies
+    pub fn gemserver_url(&self) -> String {
+        match &self.namespace {
+            None => self.server_url(),
+            Some(namespace) => format!("{}/{}", self.server_url(), namespace),
+        }
+    }
+
+    /// Get the server URL for fetching dependencies
+    fn gemserver_path(&self) -> String {
+        match &self.namespace {
+            None => String::new(),
+            Some(namespace) => format!("{}/", namespace),
+        }
     }
 
     pub fn create_ruby_dir(&self, name: &str) -> Utf8PathBuf {
@@ -542,6 +534,59 @@ impl RvTest {
         }
 
         ruby_dir
+    }
+
+    fn setup(&mut self) {
+        self.env
+            .insert("RV_ROOT_DIR".into(), self.temp_root().into());
+        // Set consistent arch/os for cross-platform testing
+        self.env.insert(
+            "RV_TEST_PLATFORM".into(),
+            self.platform.target_triple().into(),
+        );
+
+        self.env.insert("RV_TEST_EXE".into(), "/tmp/bin/rv".into());
+        self.env.insert("HOME".into(), self.temp_home().into());
+        // On Windows, set APPDATA and USERPROFILE so that the Win32 SHGetKnownFolderPath API (used
+        // by the `etcetera` crate for data_dir) resolves to the test locations that we expect
+        // rather than to paths in the real user profile. This is the same approach used by uv
+        // (Astral's Python package manager).
+        self.env.insert("APPDATA".into(), self.data_dir().into());
+        self.env
+            .insert("USERPROFILE".into(), self.temp_home().into());
+
+        // Disable network requests by default
+        self.env.insert(
+            "RV_LIST_URL".into(),
+            format!(
+                "{}/{}",
+                self.server_url(),
+                "repos/spinel-coop/rv-ruby/releases/latest"
+            ),
+        );
+        self.env.insert(
+            "RV_INSTALL_URL".into(),
+            format!("{}/{}", self.server_url(), "latest/download"),
+        );
+        self.env.insert(
+            "RV_WINDOWS_LIST_URL".into(),
+            format!(
+                "{}/{}",
+                self.server_url(),
+                "repos/oneclick/rubyinstaller2/releases"
+            ),
+        );
+
+        // Override the rubies directory so rv looks in the test temp dir.
+        // On Windows, etcetera resolves data_dir via the Win32 SHGetKnownFolderPath
+        // API which returns the real %APPDATA% path, ignoring our test HOME env var.
+        // RUBIES_PATH forces rv to use our temp dir instead.
+        let rubies_dir = self.rubies_dir();
+        std::fs::create_dir_all(&rubies_dir).expect("Failed to create rubies directory");
+        self.env.insert("RUBIES_PATH".into(), rubies_dir.into());
+
+        // Disable caching for tests by default
+        self.env.insert("RV_NO_CACHE".into(), "true".into());
     }
 
     #[cfg(unix)]
