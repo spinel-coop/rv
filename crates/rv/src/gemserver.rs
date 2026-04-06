@@ -49,7 +49,7 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 impl Gemserver {
-    pub fn new(config: &Config, url: Url) -> Result<Self> {
+    pub fn new(config: &Config, mut url: Url) -> Result<Self> {
         let cache_dir = config
             .cache
             .shard(rv_cache::CacheBucket::GemDeps, "compact_index")
@@ -60,6 +60,13 @@ impl Gemserver {
         let client = HttpFetcher::new("install")?;
         let storage = FilesystemStorage::new(cache_dir.into());
         let updater = Updater::new(client);
+
+        // Add a trailing slash to the url if not already there. Otherwise, if the gemserver is
+        // namespaced, the namespace is ignored because joining url's requires the base url with
+        // have a trailing slash, and we join url's to construct compact index endpoints
+        url.path_segments_mut()
+            .expect("this url cannot be a base")
+            .push("");
 
         Ok(Self {
             url,
