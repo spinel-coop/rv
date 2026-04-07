@@ -106,7 +106,7 @@ impl Fetcher for HttpFetcher {
             request = request.header(&key, value);
         }
 
-        let response = request.send().await?;
+        let response = request.send().await?.error_for_status()?;
         let status_code = response.status().as_u16();
 
         // Convert response headers to HashMap
