@@ -1465,8 +1465,12 @@ struct CompileStats {
     is_cached: bool,
 }
 
-/// rv writes a file here when it finishes compiling a native gem.
-/// You can check if this path exists to see if it's previously been compiled.
+/// Write a file to signal there's no need to compile the gem again
+fn mark_as_built(ext_dest: &Utf8Path) -> Result<()> {
+    Ok(fs_err::write(cached_compile_path(ext_dest), "")?)
+}
+
+/// Path to mark whether a gem has previously been compiled.
 fn cached_compile_path(ext_dest: &Utf8Path) -> Utf8PathBuf {
     ext_dest.join("gem.build_complete")
 }
@@ -1607,7 +1611,7 @@ fn build_rakefile(
     copy_dir(&tmp_dir, ext_dest)?;
 
     // 4. Mark the gem as built
-    fs_err::write(cached_compile_path(ext_dest), "")?;
+    mark_as_built(ext_dest)?;
 
     Ok(outputs)
 }
@@ -1639,6 +1643,13 @@ fn build_extconf(
     let mkmf_log = ext_dir.join("mkmf.log");
     if mkmf_log.exists() {
         fs_err::rename(mkmf_log, ext_dest.join("mkmf.log"))?;
+    }
+
+    let makefile = ext_dir.join("Makefile");
+    if !makefile.exists() {
+        debug!("Skipping running make because extension's extconf.rb did not generate a Makefile");
+        mark_as_built(ext_dest)?;
+        return Ok(outputs);
     }
 
     // 3. Run make clean / make / make install / make clean
@@ -1696,7 +1707,7 @@ fn build_extconf(
     copy_dir(&tmp_dir, ext_dest)?;
 
     // 5. Mark the gem as built
-    fs_err::write(cached_compile_path(ext_dest), "")?;
+    mark_as_built(ext_dest)?;
 
     Ok(outputs)
 }
