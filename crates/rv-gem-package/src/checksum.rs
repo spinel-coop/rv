@@ -1,5 +1,5 @@
-use sha1::{Digest as Sha1Digest, Sha1};
-use sha2::{Sha256, Sha512};
+use sha1::{Digest as _, Sha1};
+use sha2::{Digest as _, Sha256, Sha512};
 use std::collections::HashMap;
 
 use crate::error::ChecksumErrorKind;
@@ -128,17 +128,17 @@ impl ChecksumAlgorithm {
             ChecksumAlgorithm::Sha1 => {
                 let mut hasher = Sha1::new();
                 hasher.update(data);
-                format!("{:x}", hasher.finalize())
+                base16ct::lower::encode_string(&hasher.finalize())
             }
             ChecksumAlgorithm::Sha256 => {
                 let mut hasher = Sha256::new();
                 hasher.update(data);
-                format!("{:x}", hasher.finalize())
+                base16ct::lower::encode_string(&hasher.finalize())
             }
             ChecksumAlgorithm::Sha512 => {
                 let mut hasher = Sha512::new();
                 hasher.update(data);
-                format!("{:x}", hasher.finalize())
+                base16ct::lower::encode_string(&hasher.finalize())
             }
         }
     }
@@ -189,18 +189,21 @@ impl ChecksumCalculator {
         let mut results = HashMap::new();
 
         if let Some(hasher) = self.sha1 {
-            results.insert(ChecksumAlgorithm::Sha1, format!("{:x}", hasher.finalize()));
+            results.insert(
+                ChecksumAlgorithm::Sha1,
+                base16ct::lower::encode_string(&hasher.finalize()),
+            );
         }
         if let Some(hasher) = self.sha256 {
             results.insert(
                 ChecksumAlgorithm::Sha256,
-                format!("{:x}", hasher.finalize()),
+                base16ct::lower::encode_string(&hasher.finalize()),
             );
         }
         if let Some(hasher) = self.sha512 {
             results.insert(
                 ChecksumAlgorithm::Sha512,
-                format!("{:x}", hasher.finalize()),
+                base16ct::lower::encode_string(&hasher.finalize()),
             );
         }
 
