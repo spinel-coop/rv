@@ -360,6 +360,15 @@ fn parse_metadata(metadata: &str) -> ParseResult<Metadata> {
                     })?
                     .into();
             }
+            "executables" => {
+                //Unused for now
+            }
+            "licenses" => {
+                //Unused for now
+            }
+            "published_at" => {
+                //Unused for now
+            }
             _ => {
                 return Err(GemReleaseParse::UnknownMetadataKey {
                     key: k.to_owned(),
