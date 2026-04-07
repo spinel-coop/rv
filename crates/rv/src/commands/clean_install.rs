@@ -280,7 +280,7 @@ pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Resu
 }
 
 pub struct InstallStats {
-    pub executables_installed: usize,
+    pub executables_installed: Vec<String>,
 }
 
 pub(crate) async fn install_tool_lockfile(
@@ -357,7 +357,7 @@ async fn ci_inner_work(
 
         if filtered_count == 0 {
             return Ok(InstallStats {
-                executables_installed: 0,
+                executables_installed: vec![],
             });
         }
     }
@@ -390,7 +390,10 @@ async fn ci_inner_work(
     let install_start = Instant::now();
     let specs = install_gems(downloaded, args, progress)?;
     let gem_count = specs.len();
-    let executables_installed = specs.iter().map(|spec| spec.executables.len()).sum();
+    let executables_installed = specs
+        .iter()
+        .flat_map(|spec| spec.executables.clone())
+        .collect();
     let install_elapsed = install_start.elapsed();
 
     // Phase 3 (Compiles, 80-100%) - start_phase called inside compile_gems after filtering
