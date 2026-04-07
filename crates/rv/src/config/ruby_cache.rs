@@ -8,7 +8,7 @@ use rv_ruby::Ruby;
 
 use super::{Config, Error};
 
-impl Config<'_> {
+impl Config {
     /// Get cached Ruby information for a specific Ruby installation if valid
     fn get_cached_ruby(&self, ruby_path: &Utf8Path) -> Result<Ruby> {
         // Use path-based cache key for lookup (since we don't have Ruby info yet)
