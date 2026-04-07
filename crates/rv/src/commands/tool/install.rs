@@ -43,8 +43,10 @@ pub enum Error {
     InstallError(#[from] crate::commands::clean_install::Error),
     #[error("Could not pin Ruby version for this tool: {0}")]
     CouldNotPinRubyVersion(std::io::Error),
-    #[error("This gem doesn't have any executables to install")]
-    NoExecutables,
+    #[error(
+        "The gem {0} cannot be installed as a tool because it provides no executable named {0}"
+    )]
+    NoMatchingExecutable(String),
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -183,12 +185,13 @@ pub(crate) async fn install(
 
     match result {
         Ok(InstallStats {
-            executables_installed: 0,
+            executables_installed,
         }) => {
-            fs::remove_dir_all(install_path).unwrap();
-            return Err(Error::NoExecutables);
+            if !executables_installed.contains(&gem_name) {
+                fs::remove_dir_all(install_path).unwrap();
+                return Err(Error::NoMatchingExecutable(gem_name.clone()));
+            }
         }
-        Ok(_) => {}
         Err(error) => {
             fs::remove_dir_all(install_path).unwrap();
             return Err(Error::InstallError(error));

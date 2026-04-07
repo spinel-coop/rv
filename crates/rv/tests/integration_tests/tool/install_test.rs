@@ -206,7 +206,7 @@ fn test_tool_install_package_data_tar_gz_with_trailing_garbage() {
     // Unpacks fine, but fails to install because it has no executables
     assert_eq!(
         output.normalized_stderr(),
-        "Error: ToolError(ToolInstallError(NoExecutables))\n"
+        "Error: ToolError(ToolInstallError(NoMatchingExecutable(\"alba\")))\n"
     );
 
     releases_mock.assert();
