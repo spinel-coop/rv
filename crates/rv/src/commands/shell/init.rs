@@ -9,82 +9,69 @@ pub enum Error {
 type Result<T> = miette::Result<T, Error>;
 
 pub fn init(shell: Shell) -> Result<()> {
+    use indoc::printdoc;
+
     let current_exe = rv_dirs::current_exe()?;
 
     match shell {
         Shell::Zsh => {
-            print!(
-                concat!(
-                    "autoload -U add-zsh-hook\n",
-                    "_rv_autoload_hook () {{\n",
-                    "    eval \"$({} shell env zsh)\"\n",
-                    "}}\n",
-                    "add-zsh-hook preexec _rv_autoload_hook\n",
-                    "_rv_autoload_hook\n",
-                ),
-                current_exe
-            );
-            Ok(())
+            printdoc! {"
+                autoload -U add-zsh-hook
+                _rv_autoload_hook () {{
+                    eval \"$({current_exe} shell env zsh)\"
+                }}
+                add-zsh-hook preexec _rv_autoload_hook
+                _rv_autoload_hook
+            "};
         }
         Shell::Bash => {
-            print!(
-                concat!(
-                    "_rv_autoload_hook() {{\n",
-                    "    eval \"$({} shell env bash)\"\n",
-                    "}}\n",
-                    "trap '[[ \"$BASH_COMMAND\" != \"$PROMPT_COMMAND\" ]] && _rv_autoload_hook' DEBUG\n",
-                    "_rv_autoload_hook\n",
-                ),
-                current_exe
-            );
-            Ok(())
+            printdoc! {"
+                _rv_autoload_hook() {{
+                    eval \"$({current_exe} shell env bash)\"
+                }}
+                if [[ \";${{PROMPT_COMMAND:-}};\" != *\";_rv_autoload_hook;\"* ]]
+                then
+                    PROMPT_COMMAND=\"_rv_autoload_hook${{PROMPT_COMMAND:+;$PROMPT_COMMAND}}\"
+                fi
+                _rv_autoload_hook
+            "};
         }
         Shell::Fish => {
-            print!(
-                concat!(
-                    "function _rv_autoload_hook --on-event fish_preexec --description 'Change Ruby version before running every command'\n",
-                    "    {} shell env fish | source\n",
-                    "end\n",
-                    "_rv_autoload_hook\n"
-                ),
-                current_exe
-            );
-            Ok(())
+            printdoc! {"
+                function _rv_autoload_hook --on-event fish_preexec --description 'Change Ruby version before running every command'
+                    {current_exe} shell env fish | source
+                end
+                _rv_autoload_hook
+            "};
         }
         Shell::Nu => {
-            print!(
-                concat!(
-                    "$env.config = ($env.config | upsert hooks.pre_execution {{\n",
-                    "    [\n",
-                    "        {{||\n",
-                    "            {} shell env nu | from json | load-env\n",
-                    "        }}\n",
-                    "    ]\n",
-                    "}})\n",
-                ),
-                current_exe
-            );
-            Ok(())
+            printdoc! {"
+                $env.config = ($env.config | upsert hooks.pre_execution {{
+                    [
+                        {{||
+                            {current_exe} shell env nu | from json | load-env
+                        }}
+                    ]
+                }})
+            "};
         }
         Shell::PowerShell => {
             // PowerShell doesn't have a preexec hook, so we use the prompt function
             // which runs after each command (before displaying the next prompt).
             // This pattern matches Python's virtualenv activate.ps1.
-            print!(
-                concat!(
-                    "if (Test-Path Function:\\__rv_original_prompt) {{\n",
-                    "    Remove-Item Function:\\__rv_original_prompt\n",
-                    "}}\n",
-                    "Copy-Item Function:\\prompt Function:\\__rv_original_prompt\n",
-                    "function global:prompt {{\n",
-                    "    Invoke-Expression (& '{}' shell env powershell)\n",
-                    "    __rv_original_prompt\n",
-                    "}}\n",
-                    "Invoke-Expression (& '{}' shell env powershell)\n",
-                ),
-                current_exe, current_exe
-            );
-            Ok(())
+            printdoc! {"
+                if (Test-Path Function:\\__rv_original_prompt) {{
+                    Remove-Item Function:\\__rv_original_prompt
+                }}
+                Copy-Item Function:\\prompt Function:\\__rv_original_prompt
+                function global:prompt {{
+                    Invoke-Expression (& '{current_exe}' shell env powershell)
+                    __rv_original_prompt
+                }}
+                Invoke-Expression (& '{current_exe}' shell env powershell)
+            "};
         }
     }
+
+    Ok(())
 }
