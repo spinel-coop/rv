@@ -42,6 +42,7 @@ flate2 = { workspace = true }
 tar = { workspace = true }
 zip = { workspace = true }
 rv-cache = { workspace = true, features = ["clap"] }
+rv-client = { workspace = true }
 rv-version = { workspace = true }
 rv-gem-specification-yaml = { workspace = true }
 rv-gem-types = { workspace = true }
@@ -59,7 +60,7 @@ once_cell = { workspace = true }
 rayon-tracing = { workspace = true }
 clap_complete = "4.5.66"
 clap_complete_nushell = "4.5.10"
-url = "2.5.8"
+url = { workspace = true }
 bytes = "1.11.0"
 saphyr.workspace = true
 sevenz-rust2.workspace = true

@@ -2,6 +2,7 @@
 members = [
   "crates/rv",
   "crates/rv-cache",
+  "crates/rv-client",
   "crates/rv-dirs",
   "crates/rv-lockfile",
   "crates/rv-gem-package",
@@ -47,9 +48,8 @@ pubgrub = "0.3.0"
 rayon = "1.11.0"
 rayon-tracing = { git = "https://github.com/danylaporte/rayon-tracing", version = "0.1.1", rev = "v0.1.1" }
 regex = "1.12.3"
-reqwest = { version = "0.12.28", default-features = false, features = [
-  "rustls-tls",
-  "rustls-tls-native-roots",
+reqwest = { version = "0.13.0", default-features = false, features = [
+  "rustls",
   "json",
   "http2",
 ] }
@@ -76,6 +76,7 @@ tracing-oslog = "0.3.0"
 tracing-subscriber = "0.3.22"
 winnow = "0.7"
 rv-cache = { version = "0.1.0", path = "crates/rv-cache" }
+rv-client = { version = "0.1.0", path = "crates/rv-client" }
 rv-dirs = { version = "0.1.0", path = "crates/rv-dirs" }
 rv-lockfile = { version = "0.1.0", path = "crates/rv-lockfile" }
 rv-gem-specification-yaml = { version = "0.1.0", path = "crates/rv-gem-specification-yaml" }
@@ -84,6 +85,7 @@ rv-platform = { version = "0.1.0", path = "crates/rv-platform" }
 rv-ruby = { version = "0.1.0", path = "crates/rv-ruby" }
 rv-version = { version = "0.1.0", path = "crates/rv-version" }
 dep-graph = { version = "0.2.1", git = "https://github.com/spinel-coop/dep-graph" }
+url = { version = "2.5.8" }
 
 # The profile that 'dist' will build with
 [profile.dist]
