@@ -160,7 +160,7 @@ impl Config {
     }
 
     pub async fn self_update_if_needed(&self) {
-        update::update_if_needed(&self.rv_settings.update_mode).await;
+        update::check(&self.rv_settings.update_mode).await;
     }
 
     #[cfg(test)]
