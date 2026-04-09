@@ -106,7 +106,11 @@ impl Gemserver {
         Ok(index_body)
     }
 
-    async fn fetch(&self, req: String) -> Result<((String, Vec<GemRelease>), Vec<String>)> {
+    async fn fetch(
+        &self,
+        req: String,
+        ruby_to_use: &RubyVersion,
+    ) -> Result<((String, HashMap<VersionPlatform, GemRelease>), Vec<String>)> {
         debug!("Fetching {req}");
         let dep_info_resp = self.get_releases_for_gem(&req).await?;
         let dep_versions = parse_release_from_body(&dep_info_resp)?;
@@ -114,7 +118,23 @@ impl Gemserver {
             .iter()
             .flat_map(|d| d.clone().deps.into_iter().map(|d| d.name))
             .collect();
-        Ok(((req, dep_versions), transitive_deps))
+
+        // Skip possible versions that are incompatible with our
+        // chosen Ruby version.
+        // We should filter these out now, so that we minimize the number
+        // of deps that PubGrub has to consider.
+        let candidate_versions = dep_versions
+            .into_iter()
+            .filter(|release| {
+                release
+                    .metadata
+                    .ruby
+                    .satisfied_by(&rv_version::Version::from(ruby_to_use))
+            })
+            .map(|release| (release.version_platform.clone(), release))
+            .collect();
+
+        Ok(((req, candidate_versions), transitive_deps))
     }
 
     pub async fn query_all_gem_deps(
@@ -130,28 +150,14 @@ impl Gemserver {
         for d in &root.deps {
             let req = d.name.clone();
             debug!("Queuing {req}");
-            in_flight.push(self.fetch(req))
+            in_flight.push(self.fetch(req, ruby_to_use))
         }
 
         // Keep fetching new dependencies we discover.
         while let Some(res) = in_flight.next().await {
-            let ((dep_name, dep_info), new_deps) = res?;
+            let ((dep_name, candidate_versions), new_deps) = res?;
             {
                 let mut results = results.lock().expect("Lock poisoned");
-                // Skip possible versions that are incompatible with our
-                // chosen Ruby version.
-                // We should filter these out now, so that we minimize the number
-                // of deps that PubGrub has to consider.
-                let candidate_versions: HashMap<VersionPlatform, GemRelease> = dep_info
-                    .into_iter()
-                    .filter(|release| {
-                        release
-                            .metadata
-                            .ruby
-                            .satisfied_by(&rv_version::Version::from(ruby_to_use))
-                    })
-                    .map(|release| (release.version_platform.clone(), release))
-                    .collect();
                 results.insert(dep_name, candidate_versions);
             }
 
@@ -162,7 +168,7 @@ impl Gemserver {
                     .insert(req.clone())
                 {
                     debug!("Queuing {req}");
-                    in_flight.push(self.fetch(req));
+                    in_flight.push(self.fetch(req, ruby_to_use));
                 }
             }
         }
