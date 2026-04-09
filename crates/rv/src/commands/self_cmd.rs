@@ -1,4 +1,5 @@
 use clap::{Args, Subcommand};
+use tracing::error;
 
 use crate::update::{UpdateOutcome, run_update};
 use crate::{GlobalArgs, update};
@@ -38,10 +39,17 @@ pub(crate) async fn self_cmd(_global_args: &GlobalArgs, args: SelfArgs) -> Resul
 }
 
 pub(crate) async fn update() -> Result<()> {
-    let outcome: UpdateOutcome = run_update("install").await?;
-
-    if let UpdateOutcome::AlreadyUpToDate = outcome {
-        eprintln!("rv is already up to date!");
+    match run_update("install").await {
+        Ok(UpdateOutcome::Installed(v)) => {
+            eprintln!("✅ New version of `rv` {} installed!", v);
+        }
+        Ok(UpdateOutcome::UpdateAvailable(_latest)) => {}
+        Ok(UpdateOutcome::AlreadyUpToDate) => {
+            eprintln!("rv is already up to date!");
+        }
+        Err(e) => {
+            error!("Self-update failed: {}", e);
+        }
     }
 
     Ok(())

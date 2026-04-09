@@ -358,8 +358,12 @@ pub fn run_homebrew_upgrade() -> Result<()> {
 pub fn relaunch() -> Result<()> {
     thread::sleep(Duration::from_millis(400));
 
-    // TODO: this may not work on windows
-    let exe_path = which::which("rv")?;
+    #[cfg(target_os = "windows")]
+    let exe_name = "rvw";
+    #[cfg(not(target_os = "windows"))]
+    let exe_name = "rv";
+
+    let exe_path = which::which(exe_name)?;
 
     let args: Vec<String> = std::env::args().skip(1).collect();
 
@@ -370,7 +374,7 @@ pub fn relaunch() -> Result<()> {
         .stderr(Stdio::inherit());
 
     debug!(
-        "Relaunching rv after update. Path: {:?}. Args: {:?}",
+        "Relaunching after update. Path: {:?}. Args: {:?}",
         exe_path, args
     );
 
