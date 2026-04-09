@@ -1,3 +1,9 @@
+// https://github.com/zkat/miette/issues/458
+#![cfg_attr(
+    target_os = "linux",
+    expect(unused_assignments, reason = "miette macros trigger false positives")
+)]
+
 use miette::{Diagnostic, SourceSpan};
 
 #[derive(Debug, thiserror::Error, Diagnostic)]
