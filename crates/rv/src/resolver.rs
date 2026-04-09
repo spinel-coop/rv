@@ -9,10 +9,29 @@ use pubgrub::Ranges;
 pub type DepProvider = pubgrub::OfflineDependencyProvider<GemName, Ranges<VersionPlatform>>;
 pub type ResolutionError = pubgrub::PubGrubError<DepProvider>;
 
+#[derive(Default)]
+pub struct GemDepsMap {
+    deps: HashMap<GemName, HashMap<VersionPlatform, GemRelease>>,
+}
+
+impl GemDepsMap {
+    pub fn get(&self, name: &GemName, version_platform: &VersionPlatform) -> GemRelease {
+        self.deps[name][version_platform].clone()
+    }
+
+    pub fn insert(&mut self, name: GemName, deps: HashMap<VersionPlatform, GemRelease>) {
+        self.deps.insert(name, deps);
+    }
+
+    pub fn extend(&mut self, other: GemDepsMap) {
+        self.deps.extend(other.deps);
+    }
+}
+
 pub fn solve(
     gem: GemName,
     release: GemRelease,
-    gem_info: HashMap<GemName, HashMap<VersionPlatform, GemRelease>>,
+    gem_info: GemDepsMap,
 ) -> Result<Vec<(ReleaseTuple, GemRelease)>, ResolutionError> {
     let provider = all_dependencies(&gem_info);
     let solution = pubgrub::resolve(&provider, gem, release.version_platform)?;
@@ -20,7 +39,7 @@ pub fn solve(
     Ok(solution
         .into_iter()
         .map(|(p, vp)| {
-            let gem_release = gem_info[&p][&vp].clone();
+            let gem_release = gem_info.get(&p, &vp);
             let release_tuple = ReleaseTuple {
                 name: p,
                 version: vp.version,
@@ -36,12 +55,10 @@ pub fn solve(
 /// with all the information of a GemServer (which gems are available, what versions that gem has,
 /// and what dependencies that gem-version pair has).
 /// This is really just taking the `gem_info` hashmap and organizing it in a way that PubGrub can understand.
-fn all_dependencies(
-    gem_info: &HashMap<GemName, HashMap<VersionPlatform, GemRelease>>,
-) -> DepProvider {
+fn all_dependencies(gem_info: &GemDepsMap) -> DepProvider {
     let mut m = DepProvider::new();
 
-    for (package, gem_releases) in gem_info {
+    for (package, gem_releases) in &gem_info.deps {
         for (version_platform, gem_release) in gem_releases {
             m.add_dependencies(
                 package.clone(),

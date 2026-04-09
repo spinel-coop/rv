@@ -17,6 +17,7 @@ use crate::config::Config;
 use crate::gemserver::http_fetcher::HttpFetcher;
 use crate::gemserver::storage::{FilesystemStorage, Storage};
 use crate::gemserver::updater::Updater;
+use crate::resolver::GemDepsMap;
 
 pub mod http_fetcher;
 pub mod storage;
@@ -25,7 +26,7 @@ pub mod updater;
 pub struct Gemserver {
     pub url: Url,
     // Maps gem names to their dependency lists.
-    pub gems_to_deps: HashMap<String, HashMap<VersionPlatform, GemRelease>>,
+    pub gems_to_deps: GemDepsMap,
     updater: Arc<Updater>,
     storage: Arc<dyn Storage>,
 }
@@ -136,13 +137,10 @@ impl Gemserver {
     pub async fn query_all_gem_deps(
         &self,
         root: &GemRelease,
-        gems_to_deps: &mut HashMap<String, HashMap<VersionPlatform, GemRelease>>,
+        gems_to_deps: &mut GemDepsMap,
         ruby_to_use: &RubyVersion,
     ) -> Result<()> {
-        let results = Rc::new(Mutex::new(HashMap::<
-            String,
-            HashMap<VersionPlatform, GemRelease>,
-        >::new()));
+        let results = Rc::new(Mutex::new(GemDepsMap::default()));
         let mut in_flight = FuturesUnordered::new();
         let seen_requests = Rc::new(Mutex::new(HashSet::<String>::new()));
 
