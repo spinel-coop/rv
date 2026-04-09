@@ -1507,19 +1507,18 @@ fn compile_gem(
     for extstr in spec.extensions.clone() {
         let extension = extstr.as_ref();
         if EXTCONF_REGEX.is_match(extension) {
-            if let Ok(outputs) =
-                build_extconf(config, extension, gem_home, &gem_path, &ext_dest, &lib_dest)
-            {
-                compile_results.push(CompileNativeExtResult {
-                    extension: extension.to_string(),
-                    outputs,
-                });
-            }
+            let outputs =
+                build_extconf(config, extension, gem_home, &gem_path, &ext_dest, &lib_dest)?;
+
+            compile_results.push(CompileNativeExtResult {
+                extension: extension.to_string(),
+                outputs,
+            });
         } else if RAKE_REGEX.is_match(extension) {
-            if !ran_rake
-                && let Ok(outputs) =
-                    build_rakefile(config, extension, gem_home, &gem_path, &ext_dest, &lib_dest)
-            {
+            if !ran_rake {
+                let outputs =
+                    build_rakefile(config, extension, gem_home, &gem_path, &ext_dest, &lib_dest)?;
+
                 compile_results.push(CompileNativeExtResult {
                     extension: extension.to_string(),
                     outputs,

@@ -1,0 +1,16 @@
+GEM
+  remote: http://gems.example.com/
+  specs:
+    rake-ext-fails (0.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  rake-ext-test
+
+CHECKSUMS
+  rake-ext-fails (0.1)
+
+BUNDLED WITH
+  2.7.2
