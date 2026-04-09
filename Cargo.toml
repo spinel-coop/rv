@@ -63,7 +63,8 @@ serde_with = { version = "3.18.0", default-features = false, features = [
 ] }
 sevenz-rust2 = "0.20.2"
 sha1 = "0.10"
-sha2 = "0.10"
+sha2 = "0.11"
+base16ct =  { version = "1.0.0", features = ["alloc"] }
 shell-escape = "0.1.5"
 tar = "0.4.45"
 tempfile = "3.23"
