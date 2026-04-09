@@ -628,6 +628,7 @@ fn install_git_repo(
                 "clone",
                 "--quiet",
                 "--no-checkout",
+                "--",
                 repo_path,
                 dest_dir.as_ref(),
             ])
@@ -645,7 +646,14 @@ fn install_git_repo(
         tracing::event!(tracing::Level::DEBUG, %repo_path, %dest_dir, "Fetching from cached repo");
         let git_cloned = std::process::Command::new("git")
             .current_dir(&dest_dir)
-            .args(["fetch", "--quiet", "--force", "--tags", dest_dir.as_ref()])
+            .args([
+                "fetch",
+                "--quiet",
+                "--force",
+                "--tags",
+                "--",
+                dest_dir.as_ref(),
+            ])
             .spawn()?
             .wait()?;
         if !git_cloned.success() {
@@ -658,7 +666,7 @@ fn install_git_repo(
     tracing::event!(tracing::Level::DEBUG, %repo_path, %dest_dir, %repo_sha, "resetting to the locked sha");
     let git_cloned = std::process::Command::new("git")
         .current_dir(&dest_dir)
-        .args(["reset", "--quiet", "--hard", &repo_sha])
+        .args(["reset", "--quiet", "--hard", "--", &repo_sha])
         .spawn()?
         .wait()?;
     if !git_cloned.success() {
@@ -775,6 +783,7 @@ fn download_git_repo<'i>(
                 "--no-lazy-fetch",
                 "cat-file",
                 "-e",
+                "--",
                 &format!("{}^{{commit}}", git_source.revision),
             ])
             .spawn()?
@@ -788,6 +797,7 @@ fn download_git_repo<'i>(
                     "--quiet",
                     "--force",
                     "--tags",
+                    "--",
                     git_source.remote,
                     "refs/heads/*:refs/heads/*",
                 ])
@@ -809,6 +819,7 @@ fn download_git_repo<'i>(
                 "--quiet",
                 "--bare",
                 "--no-hardlinks",
+                "--",
                 git_source.remote,
                 cache_key.as_ref(),
             ])
