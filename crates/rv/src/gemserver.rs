@@ -25,8 +25,6 @@ pub mod updater;
 
 pub struct Gemserver {
     pub url: Url,
-    // Maps gem names to their dependency lists.
-    pub gems_to_deps: GemDepsMap,
     updater: Arc<Updater>,
     storage: Arc<dyn Storage>,
 }
@@ -73,22 +71,7 @@ impl Gemserver {
             url,
             storage: Arc::new(storage),
             updater: Arc::new(updater),
-            gems_to_deps: Default::default(),
         })
-    }
-
-    pub async fn add_transitive_deps(
-        &mut self,
-        root: &GemRelease,
-        ruby_to_use: &RubyVersion,
-    ) -> Result<()> {
-        debug!("Querying all transitive dependencies");
-        let mut transitive_deps = Default::default();
-        self.query_all_gem_deps(root, &mut transitive_deps, ruby_to_use)
-            .await?;
-        self.gems_to_deps.extend(transitive_deps);
-        debug!("Retrieved all transitive deps.");
-        Ok(())
     }
 
     /// Returns the response body from the server SERVER/info/GEM_NAME.
@@ -137,9 +120,8 @@ impl Gemserver {
     pub async fn query_all_gem_deps(
         &self,
         root: &GemRelease,
-        gems_to_deps: &mut GemDepsMap,
         ruby_to_use: &RubyVersion,
-    ) -> Result<()> {
+    ) -> Result<GemDepsMap> {
         let results = Rc::new(Mutex::new(GemDepsMap::default()));
         let mut in_flight = FuturesUnordered::new();
         let seen_requests = Rc::new(Mutex::new(HashSet::<String>::new()));
@@ -185,8 +167,7 @@ impl Gemserver {
             }
         }
 
-        *gems_to_deps = Rc::into_inner(results).unwrap().into_inner().unwrap();
-        Ok(())
+        Ok(Rc::into_inner(results).unwrap().into_inner().unwrap())
     }
 }
 

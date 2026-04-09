@@ -13,6 +13,7 @@ use crate::{
     commands::{clean_install::InstallStats, tool::Installed},
     config::Config,
     gemserver::{self, GemName, GemRelease, Gemserver},
+    resolver::GemDepsMap,
 };
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -78,7 +79,7 @@ pub(crate) async fn install(
 
     let gem_server: Url = gem_server.parse().map_err(|_| Error::BadUrl(gem_server))?;
 
-    let mut gemserver = Gemserver::new(config, gem_server)?;
+    let gemserver = Gemserver::new(config, gem_server)?;
 
     // Look up the gem to install.
     let releases_resp = gemserver
@@ -122,7 +123,9 @@ pub(crate) async fn install(
 
     let target_version = release_to_install.version_platform();
 
-    gemserver.gems_to_deps.insert(
+    let mut gems_to_deps = GemDepsMap::default();
+
+    gems_to_deps.insert(
         gem_name.clone(),
         [(target_version.clone(), release_to_install.clone())].into(),
     );
@@ -152,20 +155,21 @@ pub(crate) async fn install(
         .await?;
     debug!("Selected Ruby {ruby_to_use} for this gem");
 
-    gemserver
-        .add_transitive_deps(&release_to_install, &ruby_to_use)
-        .await?;
+    debug!("Querying all transitive dependencies");
+    gems_to_deps.extend(
+        gemserver
+            .query_all_gem_deps(&release_to_install, &ruby_to_use)
+            .await?,
+    );
+    debug!("Retrieved all transitive deps.");
 
     // OK, now we know all transitive dependencies, and have a dependency graph.
     // Now, translate the dependency constraint list into a PubGrub system, and resolve
     // (i.e. figure out which version of every gem will be used.)
     debug!("Resolving all dependencies via PubGrub");
-    let versions_needed = crate::resolver::solve(
-        gem_name.clone(),
-        release_to_install.clone(),
-        gemserver.gems_to_deps,
-    )
-    .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
+    let versions_needed =
+        crate::resolver::solve(gem_name.clone(), release_to_install.clone(), gems_to_deps)
+            .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
     debug!("All dependencies resolved");
 
     // Make a Gemfile.lock in-memory, install it via `rv ci`.

@@ -9,6 +9,7 @@ use pubgrub::Ranges;
 pub type DepProvider = pubgrub::OfflineDependencyProvider<GemName, Ranges<VersionPlatform>>;
 pub type ResolutionError = pubgrub::PubGrubError<DepProvider>;
 
+/// Maps gem names to their dependency lists.
 #[derive(Default)]
 pub struct GemDepsMap {
     deps: HashMap<GemName, HashMap<VersionPlatform, GemRelease>>,
