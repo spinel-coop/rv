@@ -21,7 +21,7 @@ use rv_ruby::{
 
 use rv_gem_types::Requirement;
 
-use crate::{GlobalArgs};
+use crate::GlobalArgs;
 use crate::update;
 
 pub mod bundler_settings;

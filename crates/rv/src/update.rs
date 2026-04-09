@@ -31,6 +31,9 @@ pub enum Error {
 
     #[error("update receipt invalid or not for this executable: {0}")]
     ReceiptInvalid(String),
+
+    #[error("relaunch failed: {0}")]
+    RelaunchFailed(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -315,21 +318,22 @@ pub fn is_newer_version(current: &str, latest: &str) -> bool {
 }
 
 pub fn run_homebrew_upgrade() -> Result<()> {
-    let brew_path = which::which("brew")?;
+    let brew_path = which::which("brew")
+        .map_err(|e| Error::BrewFailed(format!("Failed to locate 'brew' executable: {}", e)))?;
 
     let brew_update_output = Command::new(&brew_path)
         .arg("update")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .output()?;
+        .output()
+        .map_err(|e| Error::BrewFailed(format!("Failed to run 'brew update': {}", e)))?;
 
     if !brew_update_output.status.success() {
         let stderr = String::from_utf8_lossy(&brew_update_output.stderr);
-        error!("Brew update failed:\n{}", stderr);
 
         return Err(Error::BrewFailed(format!(
-            "brew update failed with status: {}",
-            brew_update_output.status
+            "brew update failed with status: {}. Error: {}",
+            brew_update_output.status, stderr
         )));
     }
 
@@ -338,15 +342,15 @@ pub fn run_homebrew_upgrade() -> Result<()> {
         .arg("rv")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .output()?;
+        .output()
+        .map_err(|e| Error::BrewFailed(format!("Failed to run 'brew upgrade rv': {}", e)))?;
 
     if !rv_update_output.status.success() {
         let stderr = String::from_utf8_lossy(&rv_update_output.stderr);
-        error!("Brew upgrade failed:\n{}", stderr);
 
         return Err(Error::BrewFailed(format!(
-            "brew upgrade failed with status: {}",
-            rv_update_output.status
+            "brew upgrade failed with status: {}. Error: {}",
+            rv_update_output.status, stderr
         )));
     } else {
         debug!("The update with brew was successful.")
@@ -363,7 +367,9 @@ pub fn relaunch() -> Result<()> {
     #[cfg(not(target_os = "windows"))]
     let exe_name = "rv";
 
-    let exe_path = which::which(exe_name)?;
+    let exe_path = which::which(exe_name).map_err(|e| {
+        Error::RelaunchFailed(format!("Failed to locate executable '{}': {}", exe_name, e))
+    })?;
 
     let args: Vec<String> = std::env::args().skip(1).collect();
 
@@ -378,8 +384,17 @@ pub fn relaunch() -> Result<()> {
         exe_path, args
     );
 
-    let mut child = cmd.spawn()?;
-    let status = child.wait()?;
+    let mut child = cmd.spawn().map_err(|e| {
+        Error::RelaunchFailed(format!("Failed to spawn '{}': {}", exe_path.display(), e))
+    })?;
+
+    let status = child.wait().map_err(|e| {
+        Error::RelaunchFailed(format!(
+            "Failed to wait for relaunched process '{}': {}",
+            exe_path.display(),
+            e
+        ))
+    })?;
 
     if let Some(code) = status.code() {
         std::process::exit(code);
