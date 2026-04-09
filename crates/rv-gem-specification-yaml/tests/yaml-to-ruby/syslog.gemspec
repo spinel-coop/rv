@@ -24,5 +24,5 @@ Gem::Specification.new do |s|
 
   s.specification_version = 4
 
-  s.add_runtime_dependency(%q<logger>.freeze, [">= 0".freeze])
+  s.add_runtime_dependency("logger".freeze, [">= 0".freeze])
 end

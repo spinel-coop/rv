@@ -26,6 +26,6 @@ Gem::Specification.new do |s|
 
   s.specification_version = 4
 
-  s.add_runtime_dependency(%q<stringio>.freeze, [">= 0".freeze])
-  s.add_runtime_dependency(%q<date>.freeze, [">= 0".freeze])
+  s.add_runtime_dependency("stringio".freeze, [">= 0".freeze])
+  s.add_runtime_dependency("date".freeze, [">= 0".freeze])
 end
