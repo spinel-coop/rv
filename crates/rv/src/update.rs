@@ -154,20 +154,14 @@ fn is_time_to_check() -> bool {
     };
 
     if update_timestamp_file.exists() {
-        let contents = match fs::read_to_string(update_timestamp_file.clone()) {
-            Ok(c) => c,
-            Err(e) => {
-                error!("Can't read update timestamp file: {}", e);
-                return false;
-            }
+        let Ok(contents) = fs::read_to_string(update_timestamp_file.clone()) else {
+            error!("Can't read update timestamp file.");
+            return false;
         };
 
-        let last_check = match contents.trim().parse::<u64>() {
-            Ok(v) => v,
-            Err(e) => {
-                error!("Failed to parse update timestamp: {}", e);
-                return false;
-            }
+        let Some(last_check) = contents.trim().parse::<u64>().ok() else {
+            error!("Failed to parse update timestamp");
+            return false;
         };
 
         if now_secs >= last_check && now_secs - last_check < CHECK_INTERVAL_SECS {
