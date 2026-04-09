@@ -138,4 +138,3 @@ expression: files_sorted
 ./app/ruby/4.0.0/gems/ffi-1.17.2-arm64-darwin/sig/ffi/struct_layout_builder.rbs
 ./app/ruby/4.0.0/gems/ffi-1.17.2-arm64-darwin/sig/ffi/type.rbs
 ./app/ruby/4.0.0/specifications/ffi-1.17.2-arm64-darwin.gemspec
-./home/.local/share/rv/rv_last_update_check

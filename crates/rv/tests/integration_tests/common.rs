@@ -587,6 +587,9 @@ impl RvTest {
 
         // Disable caching for tests by default
         self.env.insert("RV_NO_CACHE".into(), "true".into());
+
+        // Disable autoupdate for tests
+        self.env.insert("RV_UPDATE_MODE".into(), "none".into());
     }
 
     #[cfg(unix)]
