@@ -85,6 +85,12 @@ impl Updater {
         let etag = response.etag();
         let sha256 = response.digests().and_then(|d| d.get("sha-256").cloned());
 
+        if response.body.is_empty() {
+            return Err(Error::EmptyResponse {
+                url: remote_path.to_owned(),
+            });
+        }
+
         let new_blob = Blob::with_metadata(response.body, etag, sha256);
 
         // Verify digest if provided (propagate errors since no fallback available)

@@ -42,7 +42,7 @@ pub enum Error {
     #[error("Could not create the cache dir: {0}")]
     CouldNotCreateCacheDir(std::io::Error),
     #[error("The url {url} unexpectedly returned an empty response")]
-    EmptyResponse { url: Url },
+    EmptyResponse { url: String },
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -85,17 +85,10 @@ impl Gemserver {
         let info_url = self.url.join(&info_key).expect("valid info URL");
 
         let blob = if let Ok(blob) = self.storage.read_blob(&info_key).await {
-            self.updater.update(info_url.as_str(), blob).await
+            self.updater.update(info_url.as_str(), blob).await?
         } else {
-            self.updater.fetch(info_url.as_str()).await
-        }
-        .map_err(|err| {
-            if matches!(err, Error::StorageError(storage::Error::EmptyContent)) {
-                Error::EmptyResponse { url: info_url }
-            } else {
-                err
-            }
-        })?;
+            self.updater.fetch(info_url.as_str()).await?
+        };
 
         self.storage.write_blob(&info_key, &blob).await?;
 
