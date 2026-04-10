@@ -258,9 +258,6 @@ pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Resu
         force: args.force,
     };
 
-    // Terminal progress indicator (OSC 9;4) for supported terminals
-    let progress = WorkProgress::new();
-
     // Initial phase: parse lockfile, handle path gems and git repos
     let span = info_span!("Parsing lockfile");
     span.pb_set_style(&ProgressStyle::with_template("{spinner:.green} {span_name}").unwrap());
@@ -275,7 +272,7 @@ pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Resu
 
     drop(span);
 
-    ci_inner_work(config, &inner_args, &progress, lockfile)
+    ci_inner_work(config, &inner_args, lockfile)
         .await
         .map(|_| ())
 }
@@ -314,19 +311,18 @@ pub(crate) async fn install_tool_lockfile(
         force: true,
     };
 
-    // Terminal progress indicator (OSC 9;4) for supported terminals
-    let progress = WorkProgress::new();
-
     // Do the work.
-    ci_inner_work(config, &inner_args, &progress, lockfile).await
+    ci_inner_work(config, &inner_args, lockfile).await
 }
 
 async fn ci_inner_work(
     config: &Config,
     args: &CiInnerArgs,
-    progress: &WorkProgress,
     mut lockfile: GemfileDotLock<'_>,
 ) -> Result<InstallStats> {
+    // Terminal progress indicator (OSC 9;4) for supported terminals
+    let progress = WorkProgress::new();
+
     let install_layout = &args.install_layout;
     let install_path = &install_layout.install_path;
     tokio::fs::create_dir_all(install_path).await?;
@@ -379,7 +375,7 @@ async fn ci_inner_work(
 
     let gem_fetch_start = Instant::now();
     let stats = DownloadStats::default();
-    let downloaded = download_gems(config, &lockfile, args, progress, &stats).await?;
+    let downloaded = download_gems(config, &lockfile, args, &progress, &stats).await?;
     let downloaded_count = downloaded.len();
     let gem_fetch_elapsed = gem_fetch_start.elapsed();
 
@@ -389,7 +385,7 @@ async fn ci_inner_work(
     progress.start_phase(downloaded_count as u64, 40);
 
     let install_start = Instant::now();
-    let specs = install_gems(downloaded, args, progress)?;
+    let specs = install_gems(downloaded, args, &progress)?;
     let gem_count = specs.len();
     let executables_installed = specs
         .iter()
@@ -399,7 +395,7 @@ async fn ci_inner_work(
 
     // Phase 3 (Compiles, 80-100%) - start_phase called inside compile_gems after filtering
     let compile_start = Instant::now();
-    let gems_compiled = compile_gems(config, specs, args, progress)?;
+    let gems_compiled = compile_gems(config, specs, args, &progress)?;
     let compile_elapsed = compile_start.elapsed();
 
     let total_elapsed = fetch_elapsed + install_elapsed + compile_elapsed;
