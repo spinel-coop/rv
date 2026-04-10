@@ -845,7 +845,12 @@ fn cache_gemspec_path(
     path: PathBuf,
     cached_path: Utf8PathBuf,
 ) -> Result<GemSpecification> {
-    let gemspec_path = Utf8PathBuf::try_from(path).expect("gemspec path not valid UTF-8");
+    let gemspec_path = Utf8PathBuf::try_from(path)
+        .expect("gemspec path not valid UTF-8")
+        .as_str()
+        .replace('\\', "\\\\")
+        .replace('\'', "\\'");
+
     // shell out to ruby -e 'puts Gem::Specification.load("name.gemspec").to_yaml' to get the YAML-format gemspec as a string
     let result = crate::commands::run::capture_run_no_install(
         Invocation::ruby(vec![]),
@@ -853,7 +858,7 @@ fn cache_gemspec_path(
         vec![
             "-e".to_string(),
             format!(
-                "puts Gem::Specification.load(\"{}\").to_yaml",
+                "puts Gem::Specification.load('{}').to_yaml",
                 rv_dirs::canonicalize_utf8(&gemspec_path)?,
             ),
         ],
