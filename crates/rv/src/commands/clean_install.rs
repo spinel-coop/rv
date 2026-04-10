@@ -66,10 +66,6 @@ pub struct CleanInstallArgs {
     #[arg(long, hide = true, default_value = "20")]
     pub max_concurrent_installs: usize,
 
-    /// Validate the checksums from the gem server and gem itself.
-    #[arg(long, hide = true, default_value = "true")]
-    pub validate_checksums: bool,
-
     /// Force installation of gems, whatever is installed or not.
     #[arg(long, default_value = "false")]
     pub force: bool,
@@ -79,7 +75,6 @@ pub struct CleanInstallArgs {
 struct CiInnerArgs {
     pub max_concurrent_requests: usize,
     pub max_concurrent_installs: usize,
-    pub validate_checksums: bool,
     pub install_layout: InstallLayout,
     /// Full path to the Ruby executable, used for Windows .bat binstub wrappers
     pub ruby_executable_path: Utf8PathBuf,
@@ -249,7 +244,6 @@ pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Resu
     let inner_args = CiInnerArgs {
         max_concurrent_requests: args.max_concurrent_requests,
         max_concurrent_installs: args.max_concurrent_installs,
-        validate_checksums: args.validate_checksums,
         install_layout: InstallLayout {
             install_path,
             extensions_scope,
@@ -302,7 +296,6 @@ pub(crate) async fn install_tool_lockfile(
     let inner_args = CiInnerArgs {
         max_concurrent_requests: 10,
         max_concurrent_installs: 20,
-        validate_checksums: true,
         install_layout: InstallLayout {
             install_path: install_path.clone(),
             extensions_scope,
@@ -1182,9 +1175,7 @@ async fn download_gems<'i>(
     let _guard = span.enter();
 
     let all_sources = futures_util::stream::iter(&lockfile.gem);
-    let checksums = if args.validate_checksums
-        && let Some(checks) = &lockfile.checksums
-    {
+    let checksums = if let Some(checks) = &lockfile.checksums {
         let mut hm = HashMap::new();
         for checksum in checks {
             hm.insert(
@@ -1354,9 +1345,7 @@ impl<'i> DownloadedRubygems<'i> {
                 gem_name: full_name,
             });
         };
-        if args.validate_checksums
-            && let Some(ref checksums) = checksums
-        {
+        if let Some(ref checksums) = checksums {
             if let Some(hashed) = metadata_hashed {
                 checksums.validate_metadata(full_name.clone(), hashed)?
             }
