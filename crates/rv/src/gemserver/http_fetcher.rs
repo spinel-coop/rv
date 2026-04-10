@@ -1,5 +1,5 @@
-use crate::http_client::rv_http_client;
 use async_trait::async_trait;
+use rv_client::http_client::rv_http_client;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
