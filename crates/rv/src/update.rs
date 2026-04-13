@@ -1,5 +1,7 @@
 use axoupdater::AxoUpdater;
+use rv_client::http_client::rv_http_client;
 use rv_dirs::user_state_dir;
+use rv_version::Version;
 use serde::Deserialize;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -22,9 +24,6 @@ pub enum Error {
 
     #[error(transparent)]
     IoError(#[from] std::io::Error),
-
-    #[error(transparent)]
-    WhichError(#[from] which::Error),
 
     #[error("brew command failed: {0}")]
     BrewFailed(String),
@@ -87,10 +86,9 @@ pub(crate) async fn run_update(update_mode: &str) -> Result<UpdateOutcome> {
 
     if is_homebrew_install() {
         debug!("Detected Homebrew installation in update check.");
-        let latest_release = latest_homebrew_release("stable").await?;
-        let latest_version = latest_release.version;
+        let latest_version = latest_homebrew_release().await?;
 
-        if is_newer_version(&current_version, &latest_version) {
+        if Version::new(&current_version).unwrap() < Version::new(&latest_version).unwrap() {
             if update_mode == "warning" {
                 return Ok(UpdateOutcome::UpdateAvailable(latest_version));
             } else {
@@ -199,8 +197,7 @@ pub fn brew_prefix() -> Option<PathBuf> {
         return None;
     }
 
-    let brew_path = which::which("brew").ok()?;
-    let output = Command::new(brew_path).arg("--prefix").output().ok()?;
+    let output = Command::new("brew").arg("--prefix").output().ok()?;
 
     if !output.status.success() {
         return None;
@@ -260,9 +257,9 @@ struct BrewVersions {
     stable: String,
 }
 
-pub async fn latest_homebrew_release(_channel: &str) -> Result<Release> {
+pub async fn latest_homebrew_release() -> Result<String> {
     let url = "https://formulae.brew.sh/api/formula/rv.json";
-    let client = reqwest::Client::new();
+    let client = rv_http_client("rv_update")?;
     let resp = client
         .get(url)
         .header("Accept", "application/json")
@@ -272,66 +269,11 @@ pub async fn latest_homebrew_release(_channel: &str) -> Result<Release> {
     let brew_resp: BrewResponse = resp.json().await?;
     let raw = brew_resp.versions.stable.trim();
 
-    Ok(Release {
-        version: raw.to_string(),
-    })
-}
-
-fn normalize_version(s: &str) -> &str {
-    let s = s.trim();
-    let s = s.strip_prefix('v').unwrap_or(s);
-    s.split(&['-', '+'][..]).next().unwrap_or(s)
-}
-
-fn version_components(s: &str) -> Vec<u64> {
-    normalize_version(s)
-        .split('.')
-        .map(|part| part.parse::<u64>().unwrap_or(0u64))
-        .collect()
-}
-
-pub fn compare_versions(a: &str, b: &str) -> std::cmp::Ordering {
-    use std::cmp::Ordering;
-    let mut ac = version_components(a);
-    let mut bc = version_components(b);
-    let max_len = std::cmp::max(ac.len(), bc.len());
-    ac.resize(max_len, 0);
-    bc.resize(max_len, 0);
-    for i in 0..max_len {
-        match ac[i].cmp(&bc[i]) {
-            Ordering::Less => return Ordering::Less,
-            Ordering::Greater => return Ordering::Greater,
-            Ordering::Equal => continue,
-        }
-    }
-    Ordering::Equal
-}
-
-pub fn is_newer_version(current: &str, latest: &str) -> bool {
-    compare_versions(current, latest) == std::cmp::Ordering::Less
+    Ok(raw.to_string())
 }
 
 pub fn run_homebrew_upgrade() -> Result<()> {
-    let brew_path = which::which("brew")
-        .map_err(|e| Error::BrewFailed(format!("Failed to locate 'brew' executable: {}", e)))?;
-
-    let brew_update_output = Command::new(&brew_path)
-        .arg("update")
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .map_err(|e| Error::BrewFailed(format!("Failed to run 'brew update': {}", e)))?;
-
-    if !brew_update_output.status.success() {
-        let stderr = String::from_utf8_lossy(&brew_update_output.stderr);
-
-        return Err(Error::BrewFailed(format!(
-            "brew update failed with status: {}. Error: {}",
-            brew_update_output.status, stderr
-        )));
-    }
-
-    let rv_update_output = Command::new(&brew_path)
+    let rv_update_output = Command::new("brew")
         .arg("upgrade")
         .arg("rv")
         .stdout(Stdio::piped())
@@ -361,33 +303,23 @@ pub fn relaunch() -> Result<()> {
     #[cfg(not(target_os = "windows"))]
     let exe_name = "rv";
 
-    let exe_path = which::which(exe_name).map_err(|e| {
-        Error::RelaunchFailed(format!("Failed to locate executable '{}': {}", exe_name, e))
-    })?;
-
     let args: Vec<String> = std::env::args().skip(1).collect();
 
-    let mut cmd = Command::new(&exe_path);
+    let mut cmd = Command::new(exe_name);
+
     cmd.args(&args)
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit());
 
-    debug!(
-        "Relaunching after update. Path: {:?}. Args: {:?}",
-        exe_path, args
-    );
+    debug!("Relaunching after update. Args: {:?}", args);
 
-    let mut child = cmd.spawn().map_err(|e| {
-        Error::RelaunchFailed(format!("Failed to spawn '{}': {}", exe_path.display(), e))
-    })?;
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| Error::RelaunchFailed(format!("Failed to spawn rv: {}", e)))?;
 
     let status = child.wait().map_err(|e| {
-        Error::RelaunchFailed(format!(
-            "Failed to wait for relaunched process '{}': {}",
-            exe_path.display(),
-            e
-        ))
+        Error::RelaunchFailed(format!("Failed to wait for relaunched process: {}", e))
     })?;
 
     if let Some(code) = status.code() {
