@@ -1508,19 +1508,18 @@ fn compile_gem(
     for extstr in spec.extensions.clone() {
         let extension = extstr.as_ref();
         if EXTCONF_REGEX.is_match(extension) {
-            if let Ok(outputs) =
-                build_extconf(config, extension, gem_home, &gem_path, &ext_dest, &lib_dest)
-            {
-                compile_results.push(CompileNativeExtResult {
-                    extension: extension.to_string(),
-                    outputs,
-                });
-            }
+            let outputs =
+                build_extconf(config, extension, gem_home, &gem_path, &ext_dest, &lib_dest)?;
+
+            compile_results.push(CompileNativeExtResult {
+                extension: extension.to_string(),
+                outputs,
+            });
         } else if RAKE_REGEX.is_match(extension) {
-            if !ran_rake
-                && let Ok(outputs) =
-                    build_rakefile(config, extension, gem_home, &gem_path, &ext_dest, &lib_dest)
-            {
+            if !ran_rake {
+                let outputs =
+                    build_rakefile(config, extension, gem_home, &gem_path, &ext_dest, &lib_dest)?;
+
                 compile_results.push(CompileNativeExtResult {
                     extension: extension.to_string(),
                     outputs,
@@ -1568,6 +1567,11 @@ fn compile_gem(
     }
 
     let all_ok = compile_results.iter().all(|res| res.success());
+
+    if all_ok {
+        mark_as_built(&ext_dest)?;
+    }
+
     Ok(CompileStats {
         ok: all_ok,
         is_cached: false,
@@ -1614,9 +1618,6 @@ fn build_rakefile(
     copy_dir(&tmp_dir, lib_dest)?;
     copy_dir(&tmp_dir, ext_dest)?;
 
-    // 4. Mark the gem as built
-    mark_as_built(ext_dest)?;
-
     Ok(outputs)
 }
 
@@ -1652,7 +1653,6 @@ fn build_extconf(
     let makefile = ext_dir.join("Makefile");
     if !makefile.exists() {
         debug!("Skipping running make because extension's extconf.rb did not generate a Makefile");
-        mark_as_built(ext_dest)?;
         return Ok(outputs);
     }
 
@@ -1709,9 +1709,6 @@ fn build_extconf(
     // 4. Copy the resulting files to ext and lib dirs
     copy_dir(&tmp_dir, lib_dest)?;
     copy_dir(&tmp_dir, ext_dest)?;
-
-    // 5. Mark the gem as built
-    mark_as_built(ext_dest)?;
 
     Ok(outputs)
 }

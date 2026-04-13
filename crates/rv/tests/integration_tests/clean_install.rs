@@ -314,6 +314,22 @@ fn test_clean_install_gem_with_symlinks() {
     assert_eq!(dir_symlink_helper, "helper content\n");
 }
 
+#[test]
+fn test_clean_install_failed_rakefile_extension() {
+    let mut test = RvTest::new();
+    test.create_ruby_dir("ruby-4.0.1");
+
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.rake-ext-fails");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.rake-ext-fails.lock");
+    test.replace_source("http://gems.example.com", &test.server_url());
+
+    let mock = test.mock_gem_download("rake-ext-fails-0.1.gem").create();
+
+    let output = test.ci(&["--verbose"]);
+    output.assert_failure();
+    mock.assert();
+}
+
 /// Find the unpacked gem directory under BUNDLE_PATH.
 /// Gems are installed to `<cwd>/app/ruby/<version>/gems/<gem-full-name>/`.
 fn find_gem_dir(cwd: &std::path::Path, gem_full_name: &str) -> camino::Utf8PathBuf {
