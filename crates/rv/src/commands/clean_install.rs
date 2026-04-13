@@ -1849,7 +1849,7 @@ async fn download_gem<'i>(
         }
 
         client
-            .get(url.clone())
+            .get(url.as_str())
             .send()
             .await?
             .error_for_status()?

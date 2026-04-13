@@ -8,7 +8,6 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 use temp_env::async_with_vars;
 use tempfile::{NamedTempFile, TempDir};
-use url::Url;
 
 use crate::http_util::{
     SelfSigned, generate_self_signed_certs_with_ca, start_https_user_agent_server,
@@ -193,7 +192,7 @@ async fn send_request(addr: SocketAddr) -> Result<reqwest::Response, reqwest::Er
 /// Send a GET request to an arbitrary URL using a fresh registry client.
 async fn send_request_to(url: &str) -> Result<reqwest::Response, reqwest::Error> {
     let client = rv_client::http_client::rv_http_client("foo")?;
-    client.get(Url::parse(url).unwrap()).send().await
+    client.get(url).send().await
 }
 
 /// Assert that a request result is a TLS connection error.
