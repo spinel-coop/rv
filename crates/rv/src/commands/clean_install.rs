@@ -928,7 +928,7 @@ fn install_single_gem(
     download: DownloadedRubygems,
     args: &CiInnerArgs,
 ) -> Result<GemSpecification> {
-    let full_name = download.spec.release_tuple.full_name();
+    let full_name = download.release_tuple.full_name();
     // Actually unpack the tarball here.
     let dep_gemspec_res = download.unpack_tarball(args)?;
     debug!("Unpacked tarball {full_name}");
@@ -1219,7 +1219,7 @@ async fn download_gems<'i>(
 /// A gem downloaded from a RubyGems source.
 struct DownloadedRubygems<'i> {
     contents: Bytes,
-    spec: &'i Spec,
+    release_tuple: &'i ReleaseTuple,
 }
 
 /// A gem downloaded from a git source.
@@ -1266,7 +1266,7 @@ impl<'i> DownloadedRubygems<'i> {
         // Unpack the tarball into DIR/gems/
         // It should contain a metadata zip, and a data zip
         // (and optionally, a checksum zip).
-        let full_name = self.spec.release_tuple.full_name();
+        let full_name = self.release_tuple.full_name();
         debug!("Unpacking {full_name}");
 
         // First, create the data's destination.
@@ -1757,8 +1757,8 @@ where
     })
 }
 
-fn url_for_spec(remote: &str, spec: &Spec) -> Result<Url> {
-    let package_name = spec.release_tuple.package_name();
+fn url_for_spec(remote: &str, release_tuple: &ReleaseTuple) -> Result<Url> {
+    let package_name = release_tuple.package_name();
     let path = format!("gems/{package_name}");
     let url = url::Url::parse(remote)
         .map_err(|err| Error::BadRemote {
@@ -1791,9 +1791,18 @@ async fn download_gem_source<'i>(
     let downloaded_gems: Vec<_> = spec_stream
         .map(|spec| {
             let client = &client;
+            let release_tuple = &spec.release_tuple;
             async move {
-                let result =
-                    download_gem(config, remote, spec, client, checksums, stats, span).await;
+                let result = download_gem(
+                    config,
+                    remote,
+                    release_tuple,
+                    client,
+                    checksums,
+                    stats,
+                    span,
+                )
+                .await;
                 span.pb_inc(1);
                 progress.complete_one();
                 result
@@ -1810,13 +1819,13 @@ async fn download_gem_source<'i>(
 async fn download_gem<'i>(
     config: &Config,
     remote: &str,
-    spec: &'i Spec,
+    release_tuple: &'i ReleaseTuple,
     client: &Client,
     checksums: &HashMap<ReleaseTuple, HowToChecksum>,
     stats: &DownloadStats,
     span: &tracing::Span,
 ) -> Result<DownloadedRubygems<'i>> {
-    let mut url = url_for_spec(remote, spec)?;
+    let mut url = url_for_spec(remote, release_tuple)?;
     let cache_key = rv_cache::cache_digest(url.as_ref());
     let cache_path = config
         .cache
@@ -1852,7 +1861,6 @@ async fn download_gem<'i>(
     let (cached, downloaded) = stats.counts();
     span.pb_set_message(&format!("{cached} cached, {downloaded} downloaded"));
 
-    let release_tuple = &spec.release_tuple;
     let full_name = release_tuple.full_name();
 
     // Validate the checksums.
@@ -1880,7 +1888,10 @@ async fn download_gem<'i>(
         debug!("Cached {}", full_name);
     }
 
-    Ok(DownloadedRubygems { contents, spec })
+    Ok(DownloadedRubygems {
+        contents,
+        release_tuple,
+    })
 }
 
 /// Format a duration in a human-readable way (e.g., "16s" or "1m16s").
