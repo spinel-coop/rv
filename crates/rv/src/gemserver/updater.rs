@@ -30,12 +30,9 @@ impl Updater {
             return self.fetch(remote_path).await;
         }
 
-        let range_start = blob.size().saturating_sub(1) as usize;
-        let etag = blob.etag();
-
         let response = self
             .fetcher
-            .call(remote_path, Self::request_headers(etag, Some(range_start)))
+            .call(remote_path, Self::request_headers(&blob))
             .await?;
 
         // Not modified - nothing to do
@@ -99,14 +96,17 @@ impl Updater {
         Ok(new_blob)
     }
 
-    fn request_headers(etag: Option<&str>, range_start: Option<usize>) -> HashMap<String, String> {
-        [
-            range_start.map(|start| ("Range".to_string(), format!("bytes={}-", start))),
-            etag.map(|tag| ("If-None-Match".to_string(), format!("\"{}\"", tag))),
-        ]
-        .into_iter()
-        .flatten()
-        .collect()
+    fn request_headers(blob: &Blob) -> HashMap<String, String> {
+        let mut headers = HashMap::from([(
+            "Range".to_string(),
+            format!("bytes={}-", blob.size().saturating_sub(1) as usize),
+        )]);
+
+        if let Some(etag) = blob.etag() {
+            headers.insert("If-None-Match".to_string(), format!("\"{}\"", etag));
+        };
+
+        headers
     }
 }
 
