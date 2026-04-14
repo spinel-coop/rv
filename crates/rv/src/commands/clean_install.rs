@@ -1347,11 +1347,11 @@ impl<'i> DownloadedRubygems<'i> {
         };
         if let Some(ref checksums) = checksums {
             if let Some(hashed) = metadata_hashed {
-                checksums.validate_metadata(full_name.clone(), hashed)?
+                checksums.validate_metadata(&full_name, hashed)?
             }
 
             if let Err(validation_error) =
-                checksums.validate_data_tar(full_name, &data_tar_unpacked.hashed)
+                checksums.validate_data_tar(&full_name, &data_tar_unpacked.hashed)
             {
                 std::fs::remove_dir_all(data_dir).unwrap();
                 return Err(validation_error);

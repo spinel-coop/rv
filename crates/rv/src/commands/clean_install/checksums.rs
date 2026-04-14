@@ -117,7 +117,7 @@ impl ArchiveChecksums {
         Some(out)
     }
 
-    pub fn validate_data_tar(&self, gem_name: String, hashed: &Hashed) -> UnpackResult<()> {
+    pub fn validate_data_tar(&self, gem_name: &str, hashed: &Hashed) -> UnpackResult<()> {
         if self.sha256.is_none() && self.sha512.is_none() {
             eprintln!("Checksum file for {gem_name} was empty");
         }
@@ -126,7 +126,7 @@ impl ArchiveChecksums {
         {
             return Err(UnpackError::ArchiveChecksumFail {
                 filename: "data.tar.gz".to_owned(),
-                gem_name,
+                gem_name: gem_name.to_owned(),
                 algo: "sha256",
             });
         }
@@ -135,14 +135,14 @@ impl ArchiveChecksums {
         {
             return Err(UnpackError::ArchiveChecksumFail {
                 filename: "data.tar.gz".to_owned(),
-                gem_name,
+                gem_name: gem_name.to_owned(),
                 algo: "sha512",
             });
         }
         Ok(())
     }
 
-    pub fn validate_metadata(&self, gem_name: String, hashed: Hashed) -> UnpackResult<()> {
+    pub fn validate_metadata(&self, gem_name: &str, hashed: Hashed) -> UnpackResult<()> {
         if self.sha256.is_none() && self.sha512.is_none() {
             eprintln!("Checksum file for {gem_name} was empty");
         }
@@ -151,7 +151,7 @@ impl ArchiveChecksums {
             if hashed.digest_256 != expected {
                 return Err(UnpackError::ArchiveChecksumFail {
                     filename: "metadata.gz".to_owned(),
-                    gem_name,
+                    gem_name: gem_name.to_owned(),
                     algo: "sha256",
                 });
             }
@@ -161,7 +161,7 @@ impl ArchiveChecksums {
         {
             return Err(UnpackError::ArchiveChecksumFail {
                 filename: "metadata.gz".to_owned(),
-                gem_name,
+                gem_name: gem_name.to_owned(),
                 algo: "sha512",
             });
         }
