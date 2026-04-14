@@ -666,7 +666,9 @@ fn install_git_repo(
     tracing::event!(tracing::Level::DEBUG, %repo_path, %dest_dir, %repo_sha, "resetting to the locked sha");
     let git_cloned = std::process::Command::new("git")
         .current_dir(&dest_dir)
-        .args(["reset", "--quiet", "--hard", "--", &repo_sha])
+        // we don't use -- before the sha argument because git barfs. instead, we secure this
+        // external input by only allowing hex digits when we parse the lockfile.
+        .args(["reset", "--quiet", "--hard", &repo_sha])
         .spawn()?
         .wait()?;
     if !git_cloned.success() {
