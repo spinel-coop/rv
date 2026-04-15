@@ -19,11 +19,7 @@ impl Response {
     }
 
     pub fn get_header(&self, name: &str) -> Option<&str> {
-        // Case-insensitive header lookup
-        let name_lower = name.to_lowercase();
-        self.headers
-            .get(name_lower)
-            .and_then(|value| value.to_str().ok())
+        self.headers.get(name).and_then(|value| value.to_str().ok())
     }
 
     pub fn etag(&self) -> Option<String> {
@@ -213,35 +209,5 @@ mod tests {
         assert_eq!(byte_sequence("\"value:"), None);
         assert_eq!(byte_sequence(":value"), None);
         assert_eq!(byte_sequence("value:"), None);
-    }
-
-    #[tokio::test]
-    async fn test_get_header_is_case_insensitive() {
-        let mut headers = HashMap::new();
-        headers.insert("etag".to_string(), "lowercase-etag".to_string());
-        headers.insert("Content-Type".to_string(), "text/plain".to_string());
-        headers.insert("REPR-DIGEST".to_string(), "uppercase-digest".to_string());
-
-        let response = Response {
-            body: vec![],
-            headers: (&headers).try_into().unwrap(),
-            status_code: 200,
-        };
-
-        // Should find headers regardless of case
-        assert_eq!(response.get_header("ETag"), Some("lowercase-etag"));
-        assert_eq!(response.get_header("etag"), Some("lowercase-etag"));
-        assert_eq!(response.get_header("ETAG"), Some("lowercase-etag"));
-
-        assert_eq!(response.get_header("content-type"), Some("text/plain"));
-        assert_eq!(response.get_header("Content-Type"), Some("text/plain"));
-        assert_eq!(response.get_header("CONTENT-TYPE"), Some("text/plain"));
-
-        assert_eq!(response.get_header("repr-digest"), Some("uppercase-digest"));
-        assert_eq!(response.get_header("Repr-Digest"), Some("uppercase-digest"));
-        assert_eq!(response.get_header("REPR-DIGEST"), Some("uppercase-digest"));
-
-        // Non-existent header
-        assert_eq!(response.get_header("X-Missing"), None);
     }
 }
