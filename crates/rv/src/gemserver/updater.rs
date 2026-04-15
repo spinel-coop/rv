@@ -2,17 +2,17 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::gemserver::Error;
-use crate::gemserver::http_fetcher::Fetcher;
+use crate::gemserver::http_fetcher::HttpFetcher;
 use crate::gemserver::storage::Blob;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub struct Updater {
-    fetcher: Arc<dyn Fetcher>,
+    fetcher: Arc<HttpFetcher>,
 }
 
 impl Updater {
-    pub fn new(fetcher: impl Fetcher + 'static) -> Self {
+    pub fn new(fetcher: HttpFetcher) -> Self {
         Self {
             fetcher: Arc::new(fetcher),
         }
@@ -113,23 +113,20 @@ impl Updater {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gemserver::http_fetcher::MockFetcher;
-    use crate::gemserver::storage::{self, Blob};
+    use crate::gemserver::storage;
     use base64::Engine;
     use sha2::Digest;
 
     #[tokio::test]
     async fn test_when_local_path_does_not_exist_downloads_file_without_attempting_append() {
-        let fetcher = MockFetcher::default();
         let full_body = b"abc123";
 
         let mut headers = HashMap::new();
         headers.insert("ETag".to_string(), "\"thisisanetag\"".to_string());
 
-        fetcher.add_response(full_body.to_vec(), headers, 200);
+        let (remote_path, _server, _mock) = mock_info(full_body, headers, 200).await;
 
-        let updater = Updater::new(fetcher);
-        let blob = updater.fetch("remote_path").await.unwrap();
+        let blob = dummy_updater().fetch(&remote_path).await.unwrap();
 
         assert_eq!(blob.content, full_body);
         assert_eq!(blob.etag(), Some("thisisanetag"));
@@ -137,17 +134,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_when_local_path_does_not_exist_fails_immediately_on_bad_checksum() {
-        let fetcher = MockFetcher::default();
         let full_body = b"abc123";
 
         let mut headers = HashMap::new();
         headers.insert("Repr-Digest".to_string(), "sha-256=:baddigest:".to_string());
         headers.insert("ETag".to_string(), "\"thisisanetag\"".to_string());
 
-        fetcher.add_response(full_body.to_vec(), headers, 200);
+        let (remote_path, _server, _mock) = mock_info(full_body, headers, 200).await;
 
-        let updater = Updater::new(fetcher);
-        let result = updater.fetch("remote_path").await;
+        let result = dummy_updater().fetch(&remote_path).await;
 
         assert!(matches!(
             result,
@@ -159,17 +154,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_when_local_path_exists_with_etag_does_nothing_if_etags_match() {
-        let fetcher = MockFetcher::default();
         let local_body = b"abc";
 
         let mut headers = HashMap::new();
         headers.insert("ETag".to_string(), "\"LocalEtag\"".to_string());
 
-        fetcher.add_response(vec![], headers, 304); // Not Modified
+        let (remote_path, _server, _mock) = mock_info(local_body, headers, 304).await; // Not modified
 
-        let updater = Updater::new(fetcher);
         let blob = Blob::new(local_body.to_vec()).with_etag("LocalEtag".to_string());
-        let result_blob = updater.update("remote_path", blob).await.unwrap();
+        let result_blob = dummy_updater().update(&remote_path, blob).await.unwrap();
 
         assert_eq!(result_blob.content, local_body);
         assert_eq!(result_blob.etag(), Some("LocalEtag"));
@@ -177,7 +170,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_when_local_path_exists_with_etag_appends_file_if_etags_do_not_match() {
-        let fetcher = MockFetcher::default();
         let local_body = b"abc";
         let full_body = b"abc123";
         let hash = sha2::Sha256::digest(full_body);
@@ -187,15 +179,14 @@ mod tests {
         headers.insert("Repr-Digest".to_string(), format!("sha-256=:{}:", digest));
         headers.insert("ETag".to_string(), "\"NewEtag\"".to_string());
 
-        fetcher.add_response(
-            b"c123".to_vec(), // Partial content (skipping first 2 bytes)
-            headers,
-            206, // Partial Content
-        );
+        let (remote_path, _server, _mock) = mock_info(
+            b"c123", // Partial content (skipping first 2 bytes)
+            headers, 206, // Partial Content
+        )
+        .await;
 
-        let updater = Updater::new(fetcher);
         let blob = Blob::new(local_body.to_vec()).with_etag("LocalEtag".to_string());
-        let result_blob = updater.update("remote_path", blob).await.unwrap();
+        let result_blob = dummy_updater().update(&remote_path, blob).await.unwrap();
 
         assert_eq!(result_blob.content, full_body);
         assert_eq!(result_blob.etag(), Some("NewEtag"));
@@ -203,7 +194,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_when_local_path_exists_with_etag_replaces_file_if_response_ignores_range() {
-        let fetcher = MockFetcher::default();
         let local_body = b"abc";
         let full_body = b"abc123";
         let hash = sha2::Sha256::digest(full_body);
@@ -213,15 +203,13 @@ mod tests {
         headers.insert("Repr-Digest".to_string(), format!("sha-256=:{}:", digest));
         headers.insert("ETag".to_string(), "\"NewEtag\"".to_string());
 
-        fetcher.add_response(
-            full_body.to_vec(),
-            headers,
-            200, // Full response, not partial
-        );
+        let (remote_path, _server, _mock) = mock_info(
+            full_body, headers, 200, // Full response, not partial
+        )
+        .await;
 
-        let updater = Updater::new(fetcher);
         let blob = Blob::new(local_body.to_vec()).with_etag("LocalEtag".to_string());
-        let result_blob = updater.update("remote_path", blob).await.unwrap();
+        let result_blob = dummy_updater().update(&remote_path, blob).await.unwrap();
 
         assert_eq!(result_blob.content, full_body);
         assert_eq!(result_blob.etag(), Some("NewEtag"));
@@ -229,64 +217,65 @@ mod tests {
 
     #[tokio::test]
     async fn test_tries_request_again_if_partial_response_fails_digest_check() {
-        let fetcher = MockFetcher::default();
+        let mut server = mockito::Server::new_async().await;
         let local_body = b"abc";
         let full_body = b"abc123";
         let hash = sha2::Sha256::digest(full_body);
         let good_digest = base64::engine::general_purpose::STANDARD.encode(hash);
 
         // First response: partial content with bad digest
-        let mut headers1 = HashMap::new();
-        headers1.insert("Repr-Digest".to_string(), "sha-256=:baddigest:".to_string());
-        fetcher.add_response(b"the beginning of the file changed".to_vec(), headers1, 206);
+        let mock = server
+            .mock("GET", "/info/foo")
+            .with_body(b"the beginning of the file changed")
+            .with_header("Repr-Digest", "sha-256=:baddigest:")
+            .with_status(206)
+            .create();
 
         // Second response: full content with good digest
-        let mut headers2 = HashMap::new();
-        headers2.insert(
-            "Repr-Digest".to_string(),
-            format!("sha-256=:{}:", good_digest),
-        );
-        headers2.insert("ETag".to_string(), "\"NewEtag\"".to_string());
-        fetcher.add_response(full_body.to_vec(), headers2, 200);
+        let full_mock = server
+            .mock("GET", "/info/foo")
+            .with_body(full_body)
+            .with_header("Repr-Digest", &format!("sha-256=:{}:", good_digest))
+            .with_header("ETag", "\"NewEtag\"")
+            .with_status(200)
+            .create();
 
-        let updater = Updater::new(fetcher);
+        let remote_path = format!("{}/info/foo", server.url());
         let blob = Blob::new(local_body.to_vec()).with_etag("LocalEtag".to_string());
-        let result_blob = updater.update("remote_path", blob).await.unwrap();
+        let result_blob = dummy_updater().update(&remote_path, blob).await.unwrap();
 
         assert_eq!(result_blob.content, full_body);
         assert_eq!(result_blob.etag(), Some("NewEtag"));
+
+        mock.assert();
+        full_mock.assert();
     }
 
     #[tokio::test]
     async fn test_when_etag_header_is_missing_treats_response_as_update() {
-        let fetcher = MockFetcher::default();
         let full_body = b"abc123";
 
         let headers = HashMap::new(); // No ETag header
 
-        fetcher.add_response(full_body.to_vec(), headers, 200);
-
-        let updater = Updater::new(fetcher);
+        let (remote_path, _server, _mock) = mock_info(full_body, headers, 200).await;
 
         // Should not panic or error
-        let blob = updater.fetch("remote_path").await.unwrap();
+        let blob = dummy_updater().fetch(&remote_path).await.unwrap();
         assert_eq!(blob.content, full_body);
         assert_eq!(blob.etag, None);
     }
 
     #[tokio::test]
     async fn test_etag_parsing_with_lowercase_header() {
-        let fetcher = MockFetcher::default();
         let full_body = b"test content";
 
         // Simulate real-world server that sends lowercase "etag" header
         let mut headers = HashMap::new();
         headers.insert("etag".to_string(), "\"lowercase-header-etag\"".to_string());
 
-        fetcher.add_response(full_body.to_vec(), headers, 200);
+        let (remote_path, _server, _mock) = mock_info(full_body, headers, 200).await;
 
-        let updater = Updater::new(fetcher);
-        let blob = updater.fetch("remote_path").await.unwrap();
+        let blob = dummy_updater().fetch(&remote_path).await.unwrap();
 
         // ETag should be parsed even though header was lowercase
         assert_eq!(blob.etag(), Some("lowercase-header-etag"));
@@ -294,7 +283,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_fetch_returns_blob_with_metadata() {
-        let fetcher = MockFetcher::default();
         let body = b"test content";
 
         // Calculate correct SHA256 for "test content"
@@ -305,10 +293,9 @@ mod tests {
         headers.insert("ETag".to_string(), "\"etag-123\"".to_string());
         headers.insert("Repr-Digest".to_string(), format!("sha-256=:{}:", digest));
 
-        fetcher.add_response(body.to_vec(), headers, 200);
+        let (remote_path, _server, _mock) = mock_info(body, headers, 200).await;
 
-        let updater = Updater::new(fetcher);
-        let blob = updater.fetch("remote_path").await.unwrap();
+        let blob = dummy_updater().fetch(&remote_path).await.unwrap();
 
         assert_eq!(blob.content, body);
         assert_eq!(blob.etag(), Some("etag-123"));
@@ -317,22 +304,26 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_returns_original_blob_when_not_modified() {
-        let fetcher = MockFetcher::default();
+        let mut server = mockito::Server::new_async().await;
         let original_body = b"original content";
 
-        fetcher.add_response(vec![], HashMap::new(), 304);
+        let mock = server.mock("GET", "/info/foo").with_status(304).create();
 
-        let updater = Updater::new(fetcher);
+        let remote_path = format!("{}/info/foo", server.url());
         let original_blob = Blob::new(original_body.to_vec()).with_etag("etag-123".to_string());
-        let result_blob = updater.update("remote_path", original_blob).await.unwrap();
+        let result_blob = dummy_updater()
+            .update(&remote_path, original_blob)
+            .await
+            .unwrap();
 
         assert_eq!(result_blob.content, original_body);
         assert_eq!(result_blob.etag(), Some("etag-123"));
+
+        mock.assert();
     }
 
     #[tokio::test]
     async fn test_update_returns_appended_blob_on_partial_content() {
-        let fetcher = MockFetcher::default();
         let local_body = b"abc";
         let appended_data = b"c123"; // Note: first byte overlaps
         let full_body = b"abc123";
@@ -344,11 +335,10 @@ mod tests {
         headers.insert("ETag".to_string(), "\"new-etag\"".to_string());
         headers.insert("Repr-Digest".to_string(), format!("sha-256=:{}:", digest));
 
-        fetcher.add_response(appended_data.to_vec(), headers, 206);
+        let (remote_path, _server, _mock) = mock_info(appended_data, headers, 206).await;
 
-        let updater = Updater::new(fetcher);
         let blob = Blob::new(local_body.to_vec()).with_etag("old-etag".to_string());
-        let result_blob = updater.update("remote_path", blob).await.unwrap();
+        let result_blob = dummy_updater().update(&remote_path, blob).await.unwrap();
 
         assert_eq!(result_blob.content, full_body);
         assert_eq!(result_blob.etag(), Some("new-etag"));
@@ -356,7 +346,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_returns_full_blob_when_server_ignores_range() {
-        let fetcher = MockFetcher::default();
         let full_body = b"complete replacement";
 
         let hash = sha2::Sha256::digest(full_body);
@@ -366,17 +355,42 @@ mod tests {
         headers.insert("ETag".to_string(), "\"replacement-etag\"".to_string());
         headers.insert("Repr-Digest".to_string(), format!("sha-256=:{}:", digest));
 
-        fetcher.add_response(
-            full_body.to_vec(),
-            headers,
-            200, // Not 206
-        );
+        let (remote_path, _server, _mock) = mock_info(
+            full_body, headers, 200, // Not 206
+        )
+        .await;
 
-        let updater = Updater::new(fetcher);
         let blob = Blob::new(b"old content".to_vec());
-        let result_blob = updater.update("remote_path", blob).await.unwrap();
+        let result_blob = dummy_updater().update(&remote_path, blob).await.unwrap();
 
         assert_eq!(result_blob.content, full_body);
         assert_eq!(result_blob.etag(), Some("replacement-etag"));
+    }
+
+    fn dummy_updater() -> Updater {
+        let client = HttpFetcher::new("dummy").unwrap();
+        Updater::new(client)
+    }
+
+    async fn mock_info(
+        body: &[u8],
+        headers: HashMap<String, String>,
+        status: usize,
+    ) -> (String, mockito::Server, mockito::Mock) {
+        let opts = mockito::ServerOpts {
+            assert_on_drop: true,
+            ..Default::default()
+        };
+        let mut server = mockito::Server::new_with_opts_async(opts).await;
+
+        let mut mock = server.mock("GET", "/info/foo");
+
+        for (name, value) in headers {
+            mock = mock.with_header(name, &value);
+        }
+
+        mock = mock.with_status(status).with_body(body);
+
+        (format!("{}/info/foo", server.url()), server, mock.create())
     }
 }

@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use rv_client::http_client::rv_http_client;
 use std::collections::HashMap;
 
@@ -87,18 +86,13 @@ impl HttpFetcher {
             client: rv_http_client(command)?,
         })
     }
-}
 
-/// Trait for fetching remote resources
-#[async_trait]
-pub trait Fetcher: Send + Sync {
-    async fn call(&self, remote_path: &str, headers: HashMap<String, String>) -> Result<Response>;
-}
-
-#[async_trait]
-impl Fetcher for HttpFetcher {
     /// Make a single HTTP call without retry logic
-    async fn call(&self, remote_path: &str, headers: HashMap<String, String>) -> Result<Response> {
+    pub async fn call(
+        &self,
+        remote_path: &str,
+        headers: HashMap<String, String>,
+    ) -> Result<Response> {
         let mut request = self.client.get(remote_path);
 
         // Add all headers to the request
@@ -124,49 +118,6 @@ impl Fetcher for HttpFetcher {
             headers: response_headers,
             status_code,
         })
-    }
-}
-
-#[cfg(test)]
-// Mock fetcher for testing
-pub struct MockFetcher {
-    responses: std::sync::Mutex<Vec<Response>>,
-}
-
-#[cfg(test)]
-impl Default for MockFetcher {
-    fn default() -> Self {
-        Self {
-            responses: std::sync::Mutex::new(Vec::new()),
-        }
-    }
-}
-
-#[cfg(test)]
-impl MockFetcher {
-    pub fn add_response(&self, body: Vec<u8>, headers: HashMap<String, String>, status_code: u16) {
-        let response = Response {
-            body,
-            headers,
-            status_code,
-        };
-        self.responses.lock().unwrap().push(response);
-    }
-}
-
-#[cfg(test)]
-#[async_trait]
-impl Fetcher for MockFetcher {
-    async fn call(
-        &self,
-        _remote_path: &str,
-        _headers: HashMap<String, String>,
-    ) -> Result<Response> {
-        let mut responses = self.responses.lock().unwrap();
-        if responses.is_empty() {
-            panic!("No more mock responses available");
-        }
-        Ok(responses.remove(0))
     }
 }
 
