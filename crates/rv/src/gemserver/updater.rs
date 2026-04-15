@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use reqwest::header::{HeaderMap, IF_NONE_MATCH, RANGE};
 use std::sync::Arc;
 
 use crate::gemserver::Error;
@@ -76,7 +76,7 @@ impl Updater {
     /// Returns the fetched blob.
     pub async fn fetch(&self, remote_path: &str) -> Result<Blob> {
         // Fetch the file without any conditional headers
-        let response = self.fetcher.call(remote_path, HashMap::new()).await?;
+        let response = self.fetcher.call(remote_path, HeaderMap::new()).await?;
 
         // Build the new blob with metadata
         let etag = response.etag();
@@ -96,14 +96,17 @@ impl Updater {
         Ok(new_blob)
     }
 
-    fn request_headers(blob: &Blob) -> HashMap<String, String> {
-        let mut headers = HashMap::from([(
-            "Range".to_string(),
-            format!("bytes={}-", blob.size().saturating_sub(1) as usize),
-        )]);
+    fn request_headers(blob: &Blob) -> HeaderMap {
+        let mut headers = HeaderMap::with_capacity(2);
+
+        let range = format!("bytes={}-", blob.size().saturating_sub(1));
+        headers.insert(RANGE, range.parse().expect("should be valid"));
 
         if let Some(etag) = blob.etag() {
-            headers.insert("If-None-Match".to_string(), format!("\"{}\"", etag));
+            headers.insert(
+                IF_NONE_MATCH,
+                format!("\"{}\"", etag).parse().expect("should be valid"),
+            );
         };
 
         headers
@@ -116,6 +119,7 @@ mod tests {
     use crate::gemserver::storage;
     use base64::Engine;
     use sha2::Digest;
+    use std::collections::HashMap;
 
     #[tokio::test]
     async fn test_when_local_path_does_not_exist_downloads_file_without_attempting_append() {

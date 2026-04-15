@@ -1,10 +1,11 @@
+use reqwest::header::HeaderMap;
 use rv_client::http_client::rv_http_client;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Response {
     pub body: Vec<u8>,
-    pub headers: HashMap<String, String>,
+    pub headers: HeaderMap,
     pub status_code: u16,
 }
 
@@ -21,9 +22,8 @@ impl Response {
         // Case-insensitive header lookup
         let name_lower = name.to_lowercase();
         self.headers
-            .iter()
-            .find(|(k, _)| k.to_lowercase() == name_lower)
-            .map(|(_, v)| v.as_str())
+            .get(name_lower)
+            .and_then(|value| value.to_str().ok())
     }
 
     pub fn etag(&self) -> Option<String> {
@@ -88,34 +88,16 @@ impl HttpFetcher {
     }
 
     /// Make a single HTTP call without retry logic
-    pub async fn call(
-        &self,
-        remote_path: &str,
-        headers: HashMap<String, String>,
-    ) -> Result<Response> {
-        let mut request = self.client.get(remote_path);
-
-        // Add all headers to the request
-        for (key, value) in headers {
-            request = request.header(&key, value);
-        }
-
+    pub async fn call(&self, remote_path: &str, headers: HeaderMap) -> Result<Response> {
+        let request = self.client.get(remote_path).headers(headers);
         let response = request.send().await?.error_for_status()?;
         let status_code = response.status().as_u16();
-
-        // Convert response headers to HashMap
-        let mut response_headers = HashMap::new();
-        for (key, value) in response.headers() {
-            if let Ok(value_str) = value.to_str() {
-                response_headers.insert(key.to_string(), value_str.to_string());
-            }
-        }
-
+        let headers = response.headers().clone();
         let body = response.bytes().await?.to_vec();
 
         Ok(Response {
             body,
-            headers: response_headers,
+            headers,
             status_code,
         })
     }
@@ -131,7 +113,7 @@ mod tests {
         headers.insert("ETag".to_string(), "\"someetag\"".to_string());
         let response = Response {
             body: vec![],
-            headers,
+            headers: (&headers).try_into().unwrap(),
             status_code: 200,
         };
 
@@ -144,7 +126,7 @@ mod tests {
         headers.insert("ETag".to_string(), "W/\"someetag\"".to_string());
         let response = Response {
             body: vec![],
-            headers,
+            headers: (&headers).try_into().unwrap(),
             status_code: 200,
         };
 
@@ -157,7 +139,7 @@ mod tests {
         headers.insert("Repr-Digest".to_string(), "sha-256=:abcd1234:".to_string());
         let response = Response {
             body: vec![],
-            headers,
+            headers: (&headers).try_into().unwrap(),
             status_code: 200,
         };
 
@@ -171,7 +153,7 @@ mod tests {
         headers.insert("Digest".to_string(), "sha-256=:abcd1234:".to_string());
         let response = Response {
             body: vec![],
-            headers,
+            headers: (&headers).try_into().unwrap(),
             status_code: 200,
         };
 
@@ -186,7 +168,7 @@ mod tests {
         headers1.insert("repr-digest".to_string(), "sha-256=:abc123:".to_string());
         let response1 = Response {
             body: vec![],
-            headers: headers1,
+            headers: (&headers1).try_into().unwrap(),
             status_code: 200,
         };
         let digests1 = response1.digests().unwrap();
@@ -197,7 +179,7 @@ mod tests {
         headers2.insert("DIGEST".to_string(), "sha-256=:xyz789:".to_string());
         let response2 = Response {
             body: vec![],
-            headers: headers2,
+            headers: (&headers2).try_into().unwrap(),
             status_code: 200,
         };
         let digests2 = response2.digests().unwrap();
@@ -208,7 +190,7 @@ mod tests {
         headers3.insert("Repr-Digest".to_string(), "sha-256=:mixed456:".to_string());
         let response3 = Response {
             body: vec![],
-            headers: headers3,
+            headers: (&headers3).try_into().unwrap(),
             status_code: 200,
         };
         let digests3 = response3.digests().unwrap();
@@ -242,7 +224,7 @@ mod tests {
 
         let response = Response {
             body: vec![],
-            headers,
+            headers: (&headers).try_into().unwrap(),
             status_code: 200,
         };
 
