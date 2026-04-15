@@ -190,8 +190,6 @@ pub enum Error {
         remote: String,
         err: url::ParseError,
     },
-    #[error(transparent)]
-    UrlError(#[from] url::ParseError),
     #[error("File {filename} did not match {algo} locked checksum in gem {gem_name}")]
     LockfileChecksumFail {
         filename: String,
@@ -1765,7 +1763,8 @@ fn url_for_spec(remote: &str, release_tuple: &ReleaseTuple) -> Result<Url> {
             remote: remote.to_owned(),
             err,
         })?
-        .join(&path)?;
+        .join(&path)
+        .expect("guaranteed to succeed");
     Ok(url)
 }
 
