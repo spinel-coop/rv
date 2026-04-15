@@ -11,8 +11,7 @@ use once_cell::sync::Lazy;
 use owo_colors::OwoColorize;
 use rayon::ThreadPoolBuildError;
 use regex::Regex;
-use reqwest::Client;
-use rv_client::http_client::rv_http_client;
+use rv_client::registry_client::RegistryClient;
 use rv_gem_types::ReleaseTuple;
 use rv_gem_types::Specification as GemSpecification;
 use rv_lockfile::datatypes::ChecksumAlgorithm;
@@ -27,7 +26,6 @@ use tracing::debug;
 use tracing::info;
 use tracing::info_span;
 use tracing_indicatif::span_ext::IndicatifSpanExt;
-use url::Url;
 
 use crate::commands::clean_install::checksums::ArchiveChecksums;
 use crate::commands::clean_install::checksums::HashReader;
@@ -185,11 +183,8 @@ pub enum Error {
     Io(#[from] io::Error),
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),
-    #[error("Invalid remote URL")]
-    BadRemote {
-        remote: String,
-        err: url::ParseError,
-    },
+    #[error(transparent)]
+    RegistryClientError(#[from] rv_client::registry_client::Error),
     #[error("File {filename} did not match {algo} locked checksum in gem {gem_name}")]
     LockfileChecksumFail {
         filename: String,
@@ -1755,19 +1750,6 @@ where
     })
 }
 
-fn url_for_spec(remote: &str, release_tuple: &ReleaseTuple) -> Result<Url> {
-    let package_name = release_tuple.package_name();
-    let path = format!("gems/{package_name}");
-    let url = url::Url::parse(remote)
-        .map_err(|err| Error::BadRemote {
-            remote: remote.to_owned(),
-            err,
-        })?
-        .join(&path)
-        .expect("guaranteed to succeed");
-    Ok(url)
-}
-
 /// Downloads all gems from a particular gem source,
 /// e.g. from gems.coop or rubygems or something.
 async fn download_gem_source<'i>(
@@ -1779,11 +1761,12 @@ async fn download_gem_source<'i>(
     stats: &DownloadStats,
     span: &tracing::Span,
 ) -> Result<Vec<DownloadedRubygems<'i>>> {
-    let client = rv_http_client("ci")?;
     let Some(remote) = gem_source.remote else {
         debug!("Skipping download of gems attached to the global source, because it has no remote");
         return Ok(vec![]);
     };
+
+    let client = RegistryClient::new(remote, "ci")?;
 
     // Download them all, concurrently.
     let spec_stream = futures_util::stream::iter(&gem_source.specs);
@@ -1792,16 +1775,8 @@ async fn download_gem_source<'i>(
             let client = &client;
             let release_tuple = &spec.release_tuple;
             async move {
-                let result = download_gem(
-                    config,
-                    remote,
-                    release_tuple,
-                    client,
-                    checksums,
-                    stats,
-                    span,
-                )
-                .await;
+                let result =
+                    download_gem(config, release_tuple, client, checksums, stats, span).await;
                 span.pb_inc(1);
                 progress.complete_one();
                 result
@@ -1814,17 +1789,16 @@ async fn download_gem_source<'i>(
     Ok(downloaded_gems)
 }
 
-/// Download a single gem, from the given URL, using the given client.
+/// Download a single gem, using the given registry client.
 async fn download_gem<'i>(
     config: &Config,
-    remote: &str,
     release_tuple: &'i ReleaseTuple,
-    client: &Client,
+    client: &RegistryClient,
     checksums: &HashMap<ReleaseTuple, HowToChecksum>,
     stats: &DownloadStats,
     span: &tracing::Span,
 ) -> Result<DownloadedRubygems<'i>> {
-    let mut url = url_for_spec(remote, release_tuple)?;
+    let mut url = client.package_url(release_tuple.package_name().as_str());
     let cache_key = rv_cache::cache_digest(url.as_ref());
     let cache_path = config
         .cache
@@ -1847,13 +1821,7 @@ async fn download_gem<'i>(
             let _ = url.set_username(&token);
         }
 
-        client
-            .get(url.as_str())
-            .send()
-            .await?
-            .error_for_status()?
-            .bytes()
-            .await?
+        client.get(url.as_str()).await?.bytes().await?
     };
 
     // Update the progress bar message with current stats

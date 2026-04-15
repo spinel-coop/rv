@@ -12,6 +12,8 @@ fs-err = { workspace = true }
 tracing = { workspace = true }
 rustls-pki-types = { version = "1.12.0" }
 rustls-native-certs = { version = "0.8.3" }
+thiserror = { workspace = true }
+url = { workspace = true }
 webpki-root-certs = { version = "1" }
 
 [dev-dependencies]
@@ -26,7 +28,6 @@ futures = "0.3.32"
 tokio-rustls = "0.26.4"
 tempfile = { workspace = true }
 tokio = { workspace = true }
-url = { workspace = true }
 
 [lints]
 workspace = true
