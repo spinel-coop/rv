@@ -65,17 +65,12 @@ impl Gemserver {
         Ok(parse_release_from_body(&index_body)?)
     }
 
-    async fn fetch(
+    pub async fn get_releases_for_gem_matching_ruby(
         &self,
-        req: String,
+        gem: &str,
         ruby_to_use: &RubyVersion,
-    ) -> Result<((String, HashMap<VersionPlatform, GemRelease>), Vec<String>)> {
-        debug!("Fetching {req}");
-        let dep_versions = self.get_releases_for_gem(&req).await?;
-        let transitive_deps = dep_versions
-            .iter()
-            .flat_map(|d| d.clone().deps.into_iter().map(|d| d.name))
-            .collect();
+    ) -> Result<HashMap<VersionPlatform, GemRelease>> {
+        let dep_versions = self.get_releases_for_gem(gem).await?;
 
         // Skip possible versions that are incompatible with our
         // chosen Ruby version.
@@ -92,7 +87,25 @@ impl Gemserver {
             .map(|release| (release.version_platform.clone(), release))
             .collect();
 
-        Ok(((req, candidate_versions), transitive_deps))
+        Ok(candidate_versions)
+    }
+
+    async fn fetch(
+        &self,
+        req: String,
+        ruby_to_use: &RubyVersion,
+    ) -> Result<((String, HashMap<VersionPlatform, GemRelease>), Vec<String>)> {
+        debug!("Fetching {req}");
+        let dep_versions = self
+            .get_releases_for_gem_matching_ruby(&req, ruby_to_use)
+            .await?;
+
+        let transitive_deps = dep_versions
+            .values()
+            .flat_map(|r| r.clone().deps.into_iter().map(|d| d.name))
+            .collect();
+
+        Ok(((req, dep_versions), transitive_deps))
     }
 
     pub async fn query_all_gem_deps(
