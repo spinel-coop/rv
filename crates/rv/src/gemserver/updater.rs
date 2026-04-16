@@ -2,19 +2,49 @@ use reqwest::header::{HeaderMap, IF_NONE_MATCH, RANGE};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::gemserver::Error;
-use crate::gemserver::storage::Blob;
+use crate::gemserver::storage::{self, Blob, Storage};
 use rv_client::registry_client::RegistryClient;
-
-pub type Result<T> = std::result::Result<T, Error>;
 
 pub struct Updater {
     fetcher: Arc<RegistryClient>,
+    storage: Arc<dyn Storage>,
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error(transparent)]
+    StorageError(#[from] storage::Error),
+    #[error(transparent)]
+    RegistryClientError(#[from] rv_client::registry_client::Error),
+    #[error(transparent)]
+    ReqwestError(#[from] reqwest::Error),
+    #[error("The url {url} unexpectedly returned an empty response")]
+    EmptyResponse { url: String },
+}
+
+pub type Result<T> = std::result::Result<T, Error>;
+
 impl Updater {
-    pub fn new(fetcher: Arc<RegistryClient>) -> Self {
-        Self { fetcher }
+    pub fn new(fetcher: Arc<RegistryClient>, storage: impl Storage + 'static) -> Self {
+        Self {
+            fetcher,
+            storage: Arc::new(storage),
+        }
+    }
+
+    /// Retrieve dependency information for a given gem
+    ///
+    /// Uses an incremental cache based on range requests to the registry /info endpoint.
+    pub async fn info(&self, gem: &str) -> Result<Blob> {
+        let blob = if let Ok(blob) = self.storage.read_blob(gem).await {
+            self.update(gem, blob).await?
+        } else {
+            self.fetch(gem).await?
+        };
+
+        self.storage.write_blob(gem, &blob).await?;
+
+        Ok(blob)
     }
 
     /// Update a file using an existing blob for incremental optimization
@@ -23,7 +53,7 @@ impl Updater {
     /// Otherwise, tries append first (using blob's etag for conditional request),
     /// falls back to fetch on failure.
     /// Returns the updated blob.
-    pub async fn update(&self, gem: &str, blob: Blob) -> Result<Blob> {
+    async fn update(&self, gem: &str, blob: Blob) -> Result<Blob> {
         // Empty blob - go straight to fetch
         if blob.content.is_empty() {
             return self.fetch(gem).await;
@@ -70,7 +100,7 @@ impl Updater {
     /// Use this when you don't have a cached blob or want a fresh download.
     /// Does not use etag/conditional requests - always downloads complete file.
     /// Returns the fetched blob.
-    pub async fn fetch(&self, gem: &str) -> Result<Blob> {
+    async fn fetch(&self, gem: &str) -> Result<Blob> {
         // Fetch the file without any conditional headers
         let response = self.fetch_info(gem, HeaderMap::new()).await?;
 
@@ -187,10 +217,10 @@ fn strip_wrapper(s: &str, wrapper: char) -> Option<&str> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gemserver::storage;
+    use crate::gemserver::storage::{self, FilesystemStorage};
     use base64::Engine;
     use sha2::Digest;
-    use std::collections::HashMap;
+    use tempfile::TempDir;
 
     #[tokio::test]
     async fn test_when_local_path_does_not_exist_downloads_file_without_attempting_append() {
@@ -201,7 +231,8 @@ mod tests {
 
         let (server, _mock) = mock_info(full_body, headers, 200).await;
 
-        let blob = dummy_updater(&server).fetch("foo").await.unwrap();
+        let storage = dummy_storage();
+        let blob = dummy_updater(&server, storage).info("foo").await.unwrap();
 
         assert_eq!(blob.content, full_body);
         assert_eq!(blob.etag(), Some("thisisanetag"));
@@ -217,7 +248,8 @@ mod tests {
 
         let (server, _mock) = mock_info(full_body, headers, 200).await;
 
-        let result = dummy_updater(&server).fetch("foo").await;
+        let storage = dummy_storage();
+        let result = dummy_updater(&server, storage).info("foo").await;
 
         assert!(matches!(
             result,
@@ -236,8 +268,10 @@ mod tests {
 
         let (server, _mock) = mock_info(local_body, headers, 304).await; // Not modified
 
+        let storage = dummy_storage();
         let blob = Blob::new(local_body.to_vec()).with_etag("LocalEtag".to_string());
-        let result_blob = dummy_updater(&server).update("foo", blob).await.unwrap();
+        storage.write_blob("foo", &blob).await.unwrap();
+        let result_blob = dummy_updater(&server, storage).info("foo").await.unwrap();
 
         assert_eq!(result_blob.content, local_body);
         assert_eq!(result_blob.etag(), Some("LocalEtag"));
@@ -260,8 +294,10 @@ mod tests {
         )
         .await;
 
+        let storage = dummy_storage();
         let blob = Blob::new(local_body.to_vec()).with_etag("LocalEtag".to_string());
-        let result_blob = dummy_updater(&server).update("foo", blob).await.unwrap();
+        storage.write_blob("foo", &blob).await.unwrap();
+        let result_blob = dummy_updater(&server, storage).info("foo").await.unwrap();
 
         assert_eq!(result_blob.content, full_body);
         assert_eq!(result_blob.etag(), Some("NewEtag"));
@@ -283,8 +319,10 @@ mod tests {
         )
         .await;
 
+        let storage = dummy_storage();
         let blob = Blob::new(local_body.to_vec()).with_etag("LocalEtag".to_string());
-        let result_blob = dummy_updater(&server).update("foo", blob).await.unwrap();
+        storage.write_blob("foo", &blob).await.unwrap();
+        let result_blob = dummy_updater(&server, storage).info("foo").await.unwrap();
 
         assert_eq!(result_blob.content, full_body);
         assert_eq!(result_blob.etag(), Some("NewEtag"));
@@ -315,8 +353,11 @@ mod tests {
             .with_status(200)
             .create();
 
+        let storage = dummy_storage();
+
         let blob = Blob::new(local_body.to_vec()).with_etag("LocalEtag".to_string());
-        let result_blob = dummy_updater(&server).update("foo", blob).await.unwrap();
+        storage.write_blob("foo", &blob).await.unwrap();
+        let result_blob = dummy_updater(&server, storage).info("foo").await.unwrap();
 
         assert_eq!(result_blob.content, full_body);
         assert_eq!(result_blob.etag(), Some("NewEtag"));
@@ -333,8 +374,10 @@ mod tests {
 
         let (server, _mock) = mock_info(full_body, headers, 200).await;
 
+        let storage = dummy_storage();
+
         // Should not panic or error
-        let blob = dummy_updater(&server).fetch("foo").await.unwrap();
+        let blob = dummy_updater(&server, storage).info("foo").await.unwrap();
         assert_eq!(blob.content, full_body);
         assert_eq!(blob.etag, None);
     }
@@ -348,8 +391,8 @@ mod tests {
         headers.insert("etag".to_string(), "\"lowercase-header-etag\"".to_string());
 
         let (server, _mock) = mock_info(full_body, headers, 200).await;
-
-        let blob = dummy_updater(&server).fetch("foo").await.unwrap();
+        let storage = dummy_storage();
+        let blob = dummy_updater(&server, storage).info("foo").await.unwrap();
 
         // ETag should be parsed even though header was lowercase
         assert_eq!(blob.etag(), Some("lowercase-header-etag"));
@@ -369,7 +412,8 @@ mod tests {
 
         let (server, _mock) = mock_info(body, headers, 200).await;
 
-        let blob = dummy_updater(&server).fetch("foo").await.unwrap();
+        let storage = dummy_storage();
+        let blob = dummy_updater(&server, storage).info("foo").await.unwrap();
 
         assert_eq!(blob.content, body);
         assert_eq!(blob.etag(), Some("etag-123"));
@@ -386,11 +430,10 @@ mod tests {
             .with_status(304) // Not Modified
             .create();
 
+        let storage = dummy_storage();
         let original_blob = Blob::new(original_body.to_vec()).with_etag("etag-123".to_string());
-        let result_blob = dummy_updater(&server)
-            .update("foo", original_blob)
-            .await
-            .unwrap();
+        storage.write_blob("foo", &original_blob).await.unwrap();
+        let result_blob = dummy_updater(&server, storage).info("foo").await.unwrap();
 
         assert_eq!(result_blob.content, original_body);
         assert_eq!(result_blob.etag(), Some("etag-123"));
@@ -413,8 +456,10 @@ mod tests {
 
         let (server, _mock) = mock_info(appended_data, headers, 206).await;
 
+        let storage = dummy_storage();
         let blob = Blob::new(local_body.to_vec()).with_etag("old-etag".to_string());
-        let result_blob = dummy_updater(&server).update("foo", blob).await.unwrap();
+        storage.write_blob("foo", &blob).await.unwrap();
+        let result_blob = dummy_updater(&server, storage).info("foo").await.unwrap();
 
         assert_eq!(result_blob.content, full_body);
         assert_eq!(result_blob.etag(), Some("new-etag"));
@@ -436,16 +481,23 @@ mod tests {
         )
         .await;
 
+        let storage = dummy_storage();
         let blob = Blob::new(b"old content".to_vec());
-        let result_blob = dummy_updater(&server).update("foo", blob).await.unwrap();
+        storage.write_blob("info/foo", &blob).await.unwrap();
+        let result_blob = dummy_updater(&server, storage).info("foo").await.unwrap();
 
         assert_eq!(result_blob.content, full_body);
         assert_eq!(result_blob.etag(), Some("replacement-etag"));
     }
 
-    fn dummy_updater(server: &mockito::Server) -> Updater {
+    fn dummy_storage() -> FilesystemStorage {
+        let temp_dir = TempDir::new().unwrap();
+        FilesystemStorage::new(temp_dir.path().to_path_buf())
+    }
+
+    fn dummy_updater(server: &mockito::Server, storage: FilesystemStorage) -> Updater {
         let client = Arc::new(RegistryClient::new(server.url().as_str(), "dummy").unwrap());
-        Updater::new(client)
+        Updater::new(client, storage)
     }
 
     async fn mock_info(

@@ -14,7 +14,7 @@ use serde_with::serde_as;
 use tracing::debug;
 
 use crate::config::Config;
-use crate::gemserver::storage::{FilesystemStorage, Storage};
+use crate::gemserver::storage::FilesystemStorage;
 use crate::gemserver::updater::Updater;
 use crate::resolver::GemDepsMap;
 
@@ -23,23 +23,16 @@ pub mod updater;
 
 pub struct Gemserver {
     updater: Arc<Updater>,
-    storage: Arc<dyn Storage>,
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]
-    RegistryClientError(#[from] rv_client::registry_client::Error),
-    #[error(transparent)]
-    StorageError(#[from] storage::Error),
-    #[error(transparent)]
-    Reqwest(#[from] reqwest::Error),
+    UpdaterError(#[from] updater::Error),
     #[error("Could not parse a version from the server: {0}")]
     GemReleaseParse(#[from] GemReleaseParse),
     #[error("Could not create the cache dir: {0}")]
     CouldNotCreateCacheDir(std::io::Error),
-    #[error("The url {url} unexpectedly returned an empty response")]
-    EmptyResponse { url: String },
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -54,10 +47,9 @@ impl Gemserver {
         fs_err::create_dir_all(&cache_dir).map_err(Error::CouldNotCreateCacheDir)?;
 
         let storage = FilesystemStorage::new(cache_dir.into());
-        let updater = Updater::new(client);
+        let updater = Updater::new(client, storage);
 
         Ok(Self {
-            storage: Arc::new(storage),
             updater: Arc::new(updater),
         })
     }
@@ -66,13 +58,7 @@ impl Gemserver {
     /// Fetches the file using etag/range requests if it's already there.
     /// Otherwise fetches a fresh copy.
     pub async fn get_releases_for_gem(&self, gem: &str) -> Result<Vec<GemRelease>> {
-        let blob = if let Ok(blob) = self.storage.read_blob(gem).await {
-            self.updater.update(gem, blob).await?
-        } else {
-            self.updater.fetch(gem).await?
-        };
-
-        self.storage.write_blob(gem, &blob).await?;
+        let blob = self.updater.info(gem).await?;
 
         let index_body = String::from_utf8_lossy(&blob.content).to_string();
 
