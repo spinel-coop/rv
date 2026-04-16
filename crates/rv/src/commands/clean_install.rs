@@ -13,6 +13,7 @@ use rayon::ThreadPoolBuildError;
 use regex::Regex;
 use rv_client::registry_client::RegistryClient;
 use rv_gem_types::Specification as GemSpecification;
+use rv_gem_types::{Platform, ReleaseTuple};
 use rv_lockfile::datatypes::ChecksumAlgorithm;
 use rv_lockfile::datatypes::GemSection;
 use rv_lockfile::datatypes::GemfileDotLock;
@@ -31,6 +32,7 @@ use crate::commands::clean_install::checksums::HashReader;
 use crate::commands::clean_install::checksums::Hashed;
 use crate::commands::ruby::install::install as ruby_install;
 use crate::commands::run::Invocation;
+use crate::gemserver::Gemserver;
 use crate::progress::WorkProgress;
 use crate::{GlobalArgs, config::Config};
 use std::collections::HashMap;
@@ -40,6 +42,7 @@ use std::io::Write;
 use std::ops::Not;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use std::time::Instant;
@@ -74,9 +77,11 @@ struct CiInnerArgs {
     pub max_concurrent_installs: usize,
     pub install_layout: InstallLayout,
     /// Full path to the Ruby executable, used for Windows .bat binstub wrappers
-    pub ruby_executable_path: Utf8PathBuf,
+    pub ruby: rv_ruby::Ruby,
     /// Will install already installed gems
     pub force: bool,
+    /// Prefer precompiled releases even if not explicitly locked
+    pub always_prefer_precompiled: bool,
 }
 
 #[derive(Debug)]
@@ -184,6 +189,8 @@ pub enum Error {
     Reqwest(#[from] reqwest::Error),
     #[error(transparent)]
     RegistryClientError(#[from] rv_client::registry_client::Error),
+    #[error(transparent)]
+    GemserverError(#[from] crate::gemserver::Error),
     #[error("File {filename} did not match {algo} locked checksum in gem {gem_name}")]
     LockfileChecksumFail {
         filename: String,
@@ -233,16 +240,6 @@ pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Resu
     let extensions_scope = ruby.extensions_scope();
     let lockfile_path = find_lockfile_path(&args.gemfile)?;
     let install_path = config.gem_home(&ruby);
-    let inner_args = CiInnerArgs {
-        max_concurrent_requests: args.max_concurrent_requests,
-        max_concurrent_installs: args.max_concurrent_installs,
-        install_layout: InstallLayout {
-            install_path,
-            extensions_scope,
-        },
-        ruby_executable_path: ruby.executable_path(),
-        force: args.force,
-    };
 
     // Initial phase: parse lockfile, handle path gems and git repos
     let span = info_span!("Parsing lockfile");
@@ -257,6 +254,19 @@ pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Resu
     let lockfile = rv_lockfile::parse(&lockfile_contents)?;
 
     drop(span);
+
+    let inner_args = CiInnerArgs {
+        max_concurrent_requests: args.max_concurrent_requests,
+        max_concurrent_installs: args.max_concurrent_installs,
+        install_layout: InstallLayout {
+            install_path,
+            extensions_scope,
+        },
+        ruby,
+        force: args.force,
+        always_prefer_precompiled: lockfile.platforms == [Platform::Ruby]
+            && lockfile.checksums.is_none(),
+    };
 
     ci_inner_work(config, &inner_args, lockfile)
         .await
@@ -292,8 +302,9 @@ pub(crate) async fn install_tool_lockfile(
             install_path: install_path.clone(),
             extensions_scope,
         },
-        ruby_executable_path: ruby.executable_path(),
+        ruby,
         force: true,
+        always_prefer_precompiled: false,
     };
 
     // Do the work.
@@ -1101,7 +1112,7 @@ fn install_binstub(gemspec: &GemSpecification, args: &CiInnerArgs) -> Result<()>
     let binstub_dir = &args.install_layout.binstub_dir();
     fs_err::create_dir_all(binstub_dir)?;
 
-    let ruby_executable_path = &args.ruby_executable_path;
+    let ruby_executable_path = &args.ruby.executable_path();
 
     for exe_name in executables {
         debug!("Creating binstub {dep_name}-{exe_name}");
@@ -1765,15 +1776,17 @@ async fn download_gem_source<'i>(
         return Ok(vec![]);
     };
 
-    let client = RegistryClient::new(remote, "ci")?;
+    let client = Arc::new(RegistryClient::new(remote, "ci")?);
+    let gemserver = Gemserver::new(config, client.clone())?;
 
     // Download them all, concurrently.
     let spec_stream = futures_util::stream::iter(&gem_source.specs);
     let downloaded_gems: Vec<_> = spec_stream
         .map(|spec| {
-            let client = &client;
+            let gemserver = &gemserver;
+            let client = client.clone();
             async move {
-                let full_name = spec.release_tuple.full_name();
+                let full_name = choose_best_spec(&spec.release_tuple, args, gemserver).await?;
                 let result = download_gem(config, full_name, client, checksums, stats, span).await;
                 span.pb_inc(1);
                 progress.complete_one();
@@ -1787,11 +1800,53 @@ async fn download_gem_source<'i>(
     Ok(downloaded_gems)
 }
 
+async fn choose_best_spec(
+    release_tuple: &ReleaseTuple,
+    args: &CiInnerArgs,
+    gemserver: &Gemserver,
+) -> Result<String> {
+    let mut full_name = release_tuple.full_name();
+
+    if !args.always_prefer_precompiled || release_tuple.platform != Platform::Ruby {
+        return Ok(full_name);
+    }
+
+    let releases = gemserver
+        .get_releases_for_gem_matching_ruby(&release_tuple.name, &args.ruby.version)
+        .await?;
+
+    for release in releases.values() {
+        let version = release.version();
+        if *version != release_tuple.version {
+            continue;
+        }
+
+        let platform = release.platform();
+        if !platform.is_local() || *platform == Platform::Ruby {
+            continue;
+        }
+
+        if *platform > release_tuple.platform {
+            let name = release_tuple.name.clone();
+            let version = release_tuple.version.clone();
+            let platform = platform.clone();
+
+            full_name = ReleaseTuple {
+                name,
+                version,
+                platform,
+            }
+            .full_name();
+        }
+    }
+
+    Ok(full_name)
+}
 /// Download a single gem, using the given registry client.
 async fn download_gem(
     config: &Config,
     full_name: String,
-    client: &RegistryClient,
+    client: Arc<RegistryClient>,
     checksums: &HashMap<String, HowToChecksum>,
     stats: &DownloadStats,
     span: &tracing::Span,
@@ -1872,7 +1927,6 @@ fn format_duration(duration: Duration) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rv_gem_types::Platform;
 
     #[test]
     fn test_dep_graph() {

@@ -159,7 +159,7 @@ jobs:
           - diaspora
           - discourse
           - fastlane
-          # - gitlab  # Disabled until https://gitlab.com/gitlab-org/gitlab/-/issues/522903 is resolved
+          - gitlab
           - homebrew
           - huginn
           - llhttp-ffi
