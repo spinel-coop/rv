@@ -53,7 +53,7 @@ impl RegistryClient {
     }
 
     pub fn package_url(&self, gem: &str) -> Url {
-        self.base_url_with_path(format!("gems/{}", gem))
+        self.base_url_with_path(format!("gems/{}.gem", gem))
     }
 
     /// Make a single HTTP get request to the /info/<gem> endoint

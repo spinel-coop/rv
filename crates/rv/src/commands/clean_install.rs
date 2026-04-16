@@ -12,7 +12,6 @@ use owo_colors::OwoColorize;
 use rayon::ThreadPoolBuildError;
 use regex::Regex;
 use rv_client::registry_client::RegistryClient;
-use rv_gem_types::ReleaseTuple;
 use rv_gem_types::Specification as GemSpecification;
 use rv_lockfile::datatypes::ChecksumAlgorithm;
 use rv_lockfile::datatypes::GemSection;
@@ -921,7 +920,7 @@ fn install_single_gem(
     download: DownloadedRubygems,
     args: &CiInnerArgs,
 ) -> Result<GemSpecification> {
-    let full_name = download.release_tuple.full_name();
+    let full_name = download.full_name.clone();
     // Actually unpack the tarball here.
     let dep_gemspec_res = download.unpack_tarball(args)?;
     debug!("Unpacked tarball {full_name}");
@@ -1157,7 +1156,7 @@ async fn download_gems<'i>(
     args: &CiInnerArgs,
     progress: &WorkProgress,
     stats: &DownloadStats,
-) -> Result<Vec<DownloadedRubygems<'i>>> {
+) -> Result<Vec<DownloadedRubygems>> {
     debug!("Downloading gem packages");
     let span = info_span!("Downloading gem packages");
     span.pb_set_style(
@@ -1172,7 +1171,7 @@ async fn download_gems<'i>(
         let mut hm = HashMap::new();
         for checksum in checks {
             hm.insert(
-                checksum.release_tuple.clone(),
+                checksum.release_tuple.full_name(),
                 HowToChecksum {
                     algorithm: match checksum.algorithm {
                         ChecksumAlgorithm::None => continue,
@@ -1210,9 +1209,9 @@ async fn download_gems<'i>(
 }
 
 /// A gem downloaded from a RubyGems source.
-struct DownloadedRubygems<'i> {
+struct DownloadedRubygems {
     contents: Bytes,
-    release_tuple: &'i ReleaseTuple,
+    full_name: String,
 }
 
 /// A gem downloaded from a git source.
@@ -1240,7 +1239,7 @@ impl<'i> DownloadedGitRepo<'i> {
     }
 }
 
-impl<'i> DownloadedRubygems<'i> {
+impl DownloadedRubygems {
     fn unpack_tarball(self, args: &CiInnerArgs) -> Result<Option<GemSpecification>> {
         match self.unpack_tarball_inner(args) {
             Err(error) => {
@@ -1259,7 +1258,7 @@ impl<'i> DownloadedRubygems<'i> {
         // Unpack the tarball into DIR/gems/
         // It should contain a metadata zip, and a data zip
         // (and optionally, a checksum zip).
-        let full_name = self.release_tuple.full_name();
+        let full_name = self.full_name;
         debug!("Unpacking {full_name}");
 
         // First, create the data's destination.
@@ -1755,12 +1754,12 @@ where
 async fn download_gem_source<'i>(
     config: &Config,
     gem_source: &'i GemSection<'i>,
-    checksums: &HashMap<ReleaseTuple, HowToChecksum>,
+    checksums: &HashMap<String, HowToChecksum>,
     args: &CiInnerArgs,
     progress: &WorkProgress,
     stats: &DownloadStats,
     span: &tracing::Span,
-) -> Result<Vec<DownloadedRubygems<'i>>> {
+) -> Result<Vec<DownloadedRubygems>> {
     let Some(remote) = gem_source.remote else {
         debug!("Skipping download of gems attached to the global source, because it has no remote");
         return Ok(vec![]);
@@ -1773,10 +1772,9 @@ async fn download_gem_source<'i>(
     let downloaded_gems: Vec<_> = spec_stream
         .map(|spec| {
             let client = &client;
-            let release_tuple = &spec.release_tuple;
             async move {
-                let result =
-                    download_gem(config, release_tuple, client, checksums, stats, span).await;
+                let full_name = spec.release_tuple.full_name();
+                let result = download_gem(config, full_name, client, checksums, stats, span).await;
                 span.pb_inc(1);
                 progress.complete_one();
                 result
@@ -1790,15 +1788,15 @@ async fn download_gem_source<'i>(
 }
 
 /// Download a single gem, using the given registry client.
-async fn download_gem<'i>(
+async fn download_gem(
     config: &Config,
-    release_tuple: &'i ReleaseTuple,
+    full_name: String,
     client: &RegistryClient,
-    checksums: &HashMap<ReleaseTuple, HowToChecksum>,
+    checksums: &HashMap<String, HowToChecksum>,
     stats: &DownloadStats,
     span: &tracing::Span,
-) -> Result<DownloadedRubygems<'i>> {
-    let mut url = client.package_url(release_tuple.package_name().as_str());
+) -> Result<DownloadedRubygems> {
+    let mut url = client.package_url(&full_name);
     let cache_key = rv_cache::cache_digest(url.as_ref());
     let cache_path = config
         .cache
@@ -1828,17 +1826,15 @@ async fn download_gem<'i>(
     let (cached, downloaded) = stats.counts();
     span.pb_set_message(&format!("{cached} cached, {downloaded} downloaded"));
 
-    let full_name = release_tuple.full_name();
-
     // Validate the checksums.
-    if let Some(checksum) = checksums.get(release_tuple) {
+    if let Some(checksum) = checksums.get(&full_name) {
         match checksum.algorithm {
             KnownChecksumAlgos::Sha256 => {
                 let actual = sha2::Sha256::digest(&contents);
                 if actual[..] != checksum.value {
                     return Err(Error::LockfileChecksumFail {
                         filename: url.to_string(),
-                        gem_name: full_name,
+                        gem_name: full_name.to_string(),
                         algo: "sha256",
                     });
                 }
@@ -1857,7 +1853,7 @@ async fn download_gem<'i>(
 
     Ok(DownloadedRubygems {
         contents,
-        release_tuple,
+        full_name,
     })
 }
 

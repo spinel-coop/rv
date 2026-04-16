@@ -47,10 +47,6 @@ impl ReleaseTuple {
         format!("{}.gemspec", self.full_name())
     }
 
-    pub fn package_name(&self) -> String {
-        format!("{}.gem", self.full_name())
-    }
-
     pub fn to_array(&self) -> [String; 3] {
         [
             self.name.clone(),
@@ -159,19 +155,6 @@ mod tests {
             Some(Platform::new("linux").unwrap()),
         );
         assert_eq!(tuple.spec_name(), "test-1.0-linux.gemspec");
-    }
-
-    #[test]
-    fn test_package_name() {
-        let tuple = ReleaseTuple::new("test".to_string(), Version::new("1.0").unwrap(), None);
-        assert_eq!(tuple.spec_name(), "test-1.0.gemspec");
-
-        let tuple = ReleaseTuple::new(
-            "test".to_string(),
-            Version::new("1.0").unwrap(),
-            Some(Platform::new("linux").unwrap()),
-        );
-        assert_eq!(tuple.package_name(), "test-1.0-linux.gem");
     }
 
     #[test]
