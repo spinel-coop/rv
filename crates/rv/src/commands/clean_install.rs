@@ -1838,10 +1838,10 @@ async fn download_gem(
                         algo: "sha256",
                     });
                 }
+                debug!("Validated {}", full_name);
             }
         }
     }
-    debug!("Validated {}", full_name);
 
     if !cache_path.exists() {
         if let Some(parent) = cache_path.parent() {
