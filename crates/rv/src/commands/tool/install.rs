@@ -1,6 +1,8 @@
 use std::fs;
+use std::sync::Arc;
 
 use owo_colors::OwoColorize;
+use rv_client::registry_client::RegistryClient;
 use rv_gem_types::ReleaseTuple;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_version::Version;
@@ -73,7 +75,8 @@ pub(crate) async fn install(
         (gem, None)
     };
 
-    let gemserver = Gemserver::new(config, gem_server)?;
+    let registry_client = Arc::new(RegistryClient::new(&gem_server, "tool install")?);
+    let gemserver = Gemserver::new(config, registry_client.clone())?;
 
     // Look up the gem to install.
     let releases = gemserver.get_releases_for_gem(&gem_name).await?;
@@ -152,7 +155,7 @@ pub(crate) async fn install(
 
     // Make a Gemfile.lock in-memory, install it via `rv ci`.
     let lockfile_builder = LockfileBuilder {
-        gemserver_remote: gemserver.url(),
+        gemserver_remote: registry_client.url(),
         versions_needed,
     };
     let lockfile = lockfile_builder.lockfile();

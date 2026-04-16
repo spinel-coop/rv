@@ -13,14 +13,8 @@ pub struct Updater {
 }
 
 impl Updater {
-    pub fn new(fetcher: RegistryClient) -> Self {
-        Self {
-            fetcher: Arc::new(fetcher),
-        }
-    }
-
-    pub fn url(&self) -> String {
-        self.fetcher.url()
+    pub fn new(fetcher: Arc<RegistryClient>) -> Self {
+        Self { fetcher }
     }
 
     /// Update a file using an existing blob for incremental optimization
@@ -450,7 +444,7 @@ mod tests {
     }
 
     fn dummy_updater(server: &mockito::Server) -> Updater {
-        let client = RegistryClient::new(server.url().as_str(), "dummy").unwrap();
+        let client = Arc::new(RegistryClient::new(server.url().as_str(), "dummy").unwrap());
         Updater::new(client)
     }
 

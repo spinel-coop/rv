@@ -45,7 +45,7 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 impl Gemserver {
-    pub fn new(config: &Config, remote: String) -> Result<Self> {
+    pub fn new(config: &Config, client: Arc<RegistryClient>) -> Result<Self> {
         let cache_dir = config
             .cache
             .shard(rv_cache::CacheBucket::GemDeps, "compact_index")
@@ -53,7 +53,6 @@ impl Gemserver {
 
         fs_err::create_dir_all(&cache_dir).map_err(Error::CouldNotCreateCacheDir)?;
 
-        let client = RegistryClient::new(remote.as_str(), "install")?;
         let storage = FilesystemStorage::new(cache_dir.into());
         let updater = Updater::new(client);
 
@@ -61,10 +60,6 @@ impl Gemserver {
             storage: Arc::new(storage),
             updater: Arc::new(updater),
         })
-    }
-
-    pub fn url(&self) -> String {
-        self.updater.url()
     }
 
     /// Returns the response body from the server SERVER/info/GEM_NAME and parses the response.
