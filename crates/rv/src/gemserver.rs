@@ -91,9 +91,7 @@ impl Gemserver {
         }
         .map_err(|err| {
             if matches!(err, Error::StorageError(storage::Error::EmptyContent)) {
-                Error::EmptyResponse {
-                    url: self.url.to_owned(),
-                }
+                Error::EmptyResponse { url: info_url }
             } else {
                 err
             }
