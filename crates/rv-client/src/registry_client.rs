@@ -1,6 +1,6 @@
 use crate::http_client::rv_http_client;
 use reqwest::header::HeaderMap;
-use reqwest::{Client, RequestBuilder, Response};
+use reqwest::{Client, RequestBuilder, Response, StatusCode};
 use url::Url;
 
 pub struct RegistryClient {
@@ -17,6 +17,8 @@ pub enum Error {
     },
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),
+    #[error("{gem_name} doesn't exist on {server}")]
+    NotFound { gem_name: String, server: String },
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -56,12 +58,23 @@ impl RegistryClient {
 
     /// Make a single HTTP get request to the /info/<gem> endoint
     pub async fn get_info(&self, gem: &str, headers: HeaderMap) -> Result<Response> {
-        Ok(self
-            .build_request(self.info_url(gem).as_str())
+        self.build_request(self.info_url(gem).as_str())
             .headers(headers)
             .send()
             .await?
-            .error_for_status()?)
+            .error_for_status()
+            .map_err(|err| {
+                // If the HTTP error was 404, then return a nice error explaining that the gem
+                // wasn't found.
+                if err.status() == Some(StatusCode::NOT_FOUND) {
+                    Error::NotFound {
+                        gem_name: gem.to_owned(),
+                        server: self.url(),
+                    }
+                } else {
+                    Error::from(err) // Otherwise, keep the error as-is.
+                }
+            })
     }
 
     /// Make a single HTTP get request

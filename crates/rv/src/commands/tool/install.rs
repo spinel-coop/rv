@@ -1,7 +1,6 @@
 use std::fs;
 
 use owo_colors::OwoColorize;
-use reqwest::StatusCode;
 use rv_gem_types::ReleaseTuple;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_version::Version;
@@ -19,8 +18,8 @@ use crate::{
 pub enum Error {
     #[error(transparent)]
     ConfigError(#[from] crate::config::Error),
-    #[error("{gem_name} doesn't exist on {server}")]
-    NotFound { gem_name: String, server: String },
+    #[error(transparent)]
+    RegistryClientError(#[from] rv_client::registry_client::Error),
     #[error("No version {0} available")]
     NoVersionFound(Version),
     #[error("The gem does not actually have any releases published")]
@@ -77,22 +76,7 @@ pub(crate) async fn install(
     let gemserver = Gemserver::new(config, gem_server)?;
 
     // Look up the gem to install.
-    let releases_resp = gemserver
-        .get_releases_for_gem(&gem_name)
-        .await
-        .map_err(|e| match e {
-            // If the HTTP error was 404, then return a nice error explaining that the gem
-            // wasn't found.
-            gemserver::Error::Reqwest(e) if e.status() == Some(StatusCode::NOT_FOUND) => {
-                Error::NotFound {
-                    gem_name: gem_name.to_owned(),
-                    server: gemserver.url(),
-                }
-            }
-            // Otherwise, keep the error as-is.
-            other => Error::from(other),
-        })?;
-
+    let releases_resp = gemserver.get_releases_for_gem(&gem_name).await?;
     let releases = gemserver::parse_release_from_body(&releases_resp)?;
     debug!("Found {} releases for the gem {}", releases.len(), gem_name);
     if releases.is_empty() {
