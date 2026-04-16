@@ -84,13 +84,13 @@ impl Gemserver {
         let info_key = format!("info/{}", gem);
         let info_url = self.url.join(&info_key).expect("valid info URL");
 
-        let blob = if let Ok(blob) = self.storage.read_blob(&info_key).await {
+        let blob = if let Ok(blob) = self.storage.read_blob(gem).await {
             self.updater.update(info_url.as_str(), blob).await?
         } else {
             self.updater.fetch(info_url.as_str()).await?
         };
 
-        self.storage.write_blob(&info_key, &blob).await?;
+        self.storage.write_blob(gem, &blob).await?;
 
         let index_body = String::from_utf8_lossy(&blob.content).to_string();
 

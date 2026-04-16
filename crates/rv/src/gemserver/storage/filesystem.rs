@@ -50,8 +50,8 @@ impl FilesystemStorage {
         Self { base_path }
     }
 
-    fn resolve_path(&self, key: &str) -> PathBuf {
-        self.base_path.join(key)
+    fn info_path(&self, key: &str) -> PathBuf {
+        self.base_path.join("info").join(key)
     }
 
     fn metadata_path(&self, key: &str) -> PathBuf {
@@ -64,11 +64,11 @@ impl FilesystemStorage {
 impl FilesystemStorage {
     // Private helper methods for implementation
     async fn read(&self, key: &str) -> Result<Vec<u8>> {
-        Ok(tokio::fs::read(self.resolve_path(key)).await?)
+        Ok(tokio::fs::read(self.info_path(key)).await?)
     }
 
     async fn write(&self, key: &str, content: &[u8]) -> Result<()> {
-        let path = self.resolve_path(key);
+        let path = self.info_path(key);
 
         // Create parent directory if needed
         if let Some(parent) = path.parent() {
@@ -109,7 +109,7 @@ impl FilesystemStorage {
 #[async_trait]
 impl Storage for FilesystemStorage {
     async fn exists(&self, key: &str) -> bool {
-        tokio::fs::metadata(self.resolve_path(key)).await.is_ok()
+        tokio::fs::metadata(self.info_path(key)).await.is_ok()
     }
 
     async fn read_blob(&self, key: &str) -> Result<Blob> {
@@ -149,13 +149,15 @@ mod tests {
         let storage = FilesystemStorage::new(temp_dir.path().to_path_buf());
 
         // File doesn't exist yet
-        assert!(!storage.exists("testfile").await);
+        assert!(!storage.exists("foo").await);
 
         // Create file
-        fs::write(temp_dir.path().join("testfile"), b"content").unwrap();
+        let info_root = temp_dir.path().join("info");
+        tokio::fs::create_dir_all(&info_root).await.unwrap();
+        fs::write(info_root.join("foo"), b"content").unwrap();
 
         // Now it exists
-        assert!(storage.exists("testfile").await);
+        assert!(storage.exists("foo").await);
     }
 
     #[tokio::test]
@@ -164,9 +166,11 @@ mod tests {
         let storage = FilesystemStorage::new(temp_dir.path().to_path_buf());
 
         let content = b"test content";
-        fs::write(temp_dir.path().join("testfile"), content).unwrap();
+        let info_root = temp_dir.path().join("info");
+        tokio::fs::create_dir_all(&info_root).await.unwrap();
+        fs::write(info_root.join("foo"), content).unwrap();
 
-        let blob = storage.read_blob("testfile").await.unwrap();
+        let blob = storage.read_blob("foo").await.unwrap();
         assert_eq!(blob.content, content);
         assert_eq!(blob.etag(), None);
     }
@@ -186,9 +190,9 @@ mod tests {
         let storage = FilesystemStorage::new(temp_dir.path().to_path_buf());
 
         let blob = Blob::new(b"test content".to_vec());
-        storage.write_blob("testfile", &blob).await.unwrap();
+        storage.write_blob("foo", &blob).await.unwrap();
 
-        let read_content = fs::read(temp_dir.path().join("testfile")).unwrap();
+        let read_content = fs::read(temp_dir.path().join("info/foo")).unwrap();
         assert_eq!(read_content, b"test content");
     }
 
