@@ -3,20 +3,24 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::gemserver::Error;
-use crate::gemserver::http_fetcher::HttpFetcher;
 use crate::gemserver::storage::Blob;
+use rv_client::registry_client::RegistryClient;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub struct Updater {
-    fetcher: Arc<HttpFetcher>,
+    fetcher: Arc<RegistryClient>,
 }
 
 impl Updater {
-    pub fn new(fetcher: HttpFetcher) -> Self {
+    pub fn new(fetcher: RegistryClient) -> Self {
         Self {
             fetcher: Arc::new(fetcher),
         }
+    }
+
+    pub fn url(&self) -> String {
+        self.fetcher.url()
     }
 
     /// Update a file using an existing blob for incremental optimization
@@ -25,15 +29,13 @@ impl Updater {
     /// Otherwise, tries append first (using blob's etag for conditional request),
     /// falls back to fetch on failure.
     /// Returns the updated blob.
-    pub async fn update(&self, remote_path: &str, blob: Blob) -> Result<Blob> {
+    pub async fn update(&self, gem: &str, blob: Blob) -> Result<Blob> {
         // Empty blob - go straight to fetch
         if blob.content.is_empty() {
-            return self.fetch(remote_path).await;
+            return self.fetch(gem).await;
         }
 
-        let response = self
-            .fetch_path(remote_path, Self::request_headers(&blob))
-            .await?;
+        let response = self.fetch_info(gem, Self::request_headers(&blob)).await?;
 
         // Not modified - nothing to do
         if response.is_not_modified() {
@@ -42,7 +44,7 @@ impl Updater {
 
         // Empty or failed - fall back to fetch
         if response.body.is_empty() {
-            return self.fetch(remote_path).await;
+            return self.fetch(gem).await;
         }
 
         let new_etag = response.etag();
@@ -56,7 +58,7 @@ impl Updater {
             // Verify combined content with full SHA256
             if new_blob.verify().is_err() {
                 // Verification failed - fall back to fetch
-                return self.fetch(remote_path).await;
+                return self.fetch(gem).await;
             }
 
             Ok(new_blob)
@@ -74,9 +76,9 @@ impl Updater {
     /// Use this when you don't have a cached blob or want a fresh download.
     /// Does not use etag/conditional requests - always downloads complete file.
     /// Returns the fetched blob.
-    pub async fn fetch(&self, remote_path: &str) -> Result<Blob> {
+    pub async fn fetch(&self, gem: &str) -> Result<Blob> {
         // Fetch the file without any conditional headers
-        let response = self.fetch_path(remote_path, HeaderMap::new()).await?;
+        let response = self.fetch_info(gem, HeaderMap::new()).await?;
 
         // Build the new blob with metadata
         let etag = response.etag();
@@ -84,7 +86,7 @@ impl Updater {
 
         if response.body.is_empty() {
             return Err(Error::EmptyResponse {
-                url: remote_path.to_owned(),
+                url: self.fetcher.info_url(gem).to_string(),
             });
         }
 
@@ -112,8 +114,8 @@ impl Updater {
         headers
     }
 
-    async fn fetch_path(&self, remote_path: &str, headers: HeaderMap) -> Result<Response> {
-        let response = self.fetcher.call(remote_path, headers).await?;
+    async fn fetch_info(&self, gem: &str, headers: HeaderMap) -> Result<Response> {
+        let response = self.fetcher.get_info(gem, headers).await?;
 
         let status_code = response.status().as_u16();
         let headers = response.headers().clone();
@@ -203,9 +205,9 @@ mod tests {
         let mut headers = HashMap::new();
         headers.insert("ETag".to_string(), "\"thisisanetag\"".to_string());
 
-        let (remote_path, _server, _mock) = mock_info(full_body, headers, 200).await;
+        let (server, _mock) = mock_info(full_body, headers, 200).await;
 
-        let blob = dummy_updater().fetch(&remote_path).await.unwrap();
+        let blob = dummy_updater(&server).fetch("foo").await.unwrap();
 
         assert_eq!(blob.content, full_body);
         assert_eq!(blob.etag(), Some("thisisanetag"));
@@ -219,9 +221,9 @@ mod tests {
         headers.insert("Repr-Digest".to_string(), "sha-256=:baddigest:".to_string());
         headers.insert("ETag".to_string(), "\"thisisanetag\"".to_string());
 
-        let (remote_path, _server, _mock) = mock_info(full_body, headers, 200).await;
+        let (server, _mock) = mock_info(full_body, headers, 200).await;
 
-        let result = dummy_updater().fetch(&remote_path).await;
+        let result = dummy_updater(&server).fetch("foo").await;
 
         assert!(matches!(
             result,
@@ -238,10 +240,10 @@ mod tests {
         let mut headers = HashMap::new();
         headers.insert("ETag".to_string(), "\"LocalEtag\"".to_string());
 
-        let (remote_path, _server, _mock) = mock_info(local_body, headers, 304).await; // Not modified
+        let (server, _mock) = mock_info(local_body, headers, 304).await; // Not modified
 
         let blob = Blob::new(local_body.to_vec()).with_etag("LocalEtag".to_string());
-        let result_blob = dummy_updater().update(&remote_path, blob).await.unwrap();
+        let result_blob = dummy_updater(&server).update("foo", blob).await.unwrap();
 
         assert_eq!(result_blob.content, local_body);
         assert_eq!(result_blob.etag(), Some("LocalEtag"));
@@ -258,14 +260,14 @@ mod tests {
         headers.insert("Repr-Digest".to_string(), format!("sha-256=:{}:", digest));
         headers.insert("ETag".to_string(), "\"NewEtag\"".to_string());
 
-        let (remote_path, _server, _mock) = mock_info(
+        let (server, _mock) = mock_info(
             b"c123", // Partial content (skipping first 2 bytes)
             headers, 206, // Partial Content
         )
         .await;
 
         let blob = Blob::new(local_body.to_vec()).with_etag("LocalEtag".to_string());
-        let result_blob = dummy_updater().update(&remote_path, blob).await.unwrap();
+        let result_blob = dummy_updater(&server).update("foo", blob).await.unwrap();
 
         assert_eq!(result_blob.content, full_body);
         assert_eq!(result_blob.etag(), Some("NewEtag"));
@@ -282,13 +284,13 @@ mod tests {
         headers.insert("Repr-Digest".to_string(), format!("sha-256=:{}:", digest));
         headers.insert("ETag".to_string(), "\"NewEtag\"".to_string());
 
-        let (remote_path, _server, _mock) = mock_info(
+        let (server, _mock) = mock_info(
             full_body, headers, 200, // Full response, not partial
         )
         .await;
 
         let blob = Blob::new(local_body.to_vec()).with_etag("LocalEtag".to_string());
-        let result_blob = dummy_updater().update(&remote_path, blob).await.unwrap();
+        let result_blob = dummy_updater(&server).update("foo", blob).await.unwrap();
 
         assert_eq!(result_blob.content, full_body);
         assert_eq!(result_blob.etag(), Some("NewEtag"));
@@ -319,9 +321,8 @@ mod tests {
             .with_status(200)
             .create();
 
-        let remote_path = format!("{}/info/foo", server.url());
         let blob = Blob::new(local_body.to_vec()).with_etag("LocalEtag".to_string());
-        let result_blob = dummy_updater().update(&remote_path, blob).await.unwrap();
+        let result_blob = dummy_updater(&server).update("foo", blob).await.unwrap();
 
         assert_eq!(result_blob.content, full_body);
         assert_eq!(result_blob.etag(), Some("NewEtag"));
@@ -336,10 +337,10 @@ mod tests {
 
         let headers = HashMap::new(); // No ETag header
 
-        let (remote_path, _server, _mock) = mock_info(full_body, headers, 200).await;
+        let (server, _mock) = mock_info(full_body, headers, 200).await;
 
         // Should not panic or error
-        let blob = dummy_updater().fetch(&remote_path).await.unwrap();
+        let blob = dummy_updater(&server).fetch("foo").await.unwrap();
         assert_eq!(blob.content, full_body);
         assert_eq!(blob.etag, None);
     }
@@ -352,9 +353,9 @@ mod tests {
         let mut headers = HashMap::new();
         headers.insert("etag".to_string(), "\"lowercase-header-etag\"".to_string());
 
-        let (remote_path, _server, _mock) = mock_info(full_body, headers, 200).await;
+        let (server, _mock) = mock_info(full_body, headers, 200).await;
 
-        let blob = dummy_updater().fetch(&remote_path).await.unwrap();
+        let blob = dummy_updater(&server).fetch("foo").await.unwrap();
 
         // ETag should be parsed even though header was lowercase
         assert_eq!(blob.etag(), Some("lowercase-header-etag"));
@@ -372,9 +373,9 @@ mod tests {
         headers.insert("ETag".to_string(), "\"etag-123\"".to_string());
         headers.insert("Repr-Digest".to_string(), format!("sha-256=:{}:", digest));
 
-        let (remote_path, _server, _mock) = mock_info(body, headers, 200).await;
+        let (server, _mock) = mock_info(body, headers, 200).await;
 
-        let blob = dummy_updater().fetch(&remote_path).await.unwrap();
+        let blob = dummy_updater(&server).fetch("foo").await.unwrap();
 
         assert_eq!(blob.content, body);
         assert_eq!(blob.etag(), Some("etag-123"));
@@ -386,12 +387,14 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let original_body = b"original content";
 
-        let mock = server.mock("GET", "/info/foo").with_status(304).create();
+        let mock = server
+            .mock("GET", "/info/foo")
+            .with_status(304) // Not Modified
+            .create();
 
-        let remote_path = format!("{}/info/foo", server.url());
         let original_blob = Blob::new(original_body.to_vec()).with_etag("etag-123".to_string());
-        let result_blob = dummy_updater()
-            .update(&remote_path, original_blob)
+        let result_blob = dummy_updater(&server)
+            .update("foo", original_blob)
             .await
             .unwrap();
 
@@ -414,10 +417,10 @@ mod tests {
         headers.insert("ETag".to_string(), "\"new-etag\"".to_string());
         headers.insert("Repr-Digest".to_string(), format!("sha-256=:{}:", digest));
 
-        let (remote_path, _server, _mock) = mock_info(appended_data, headers, 206).await;
+        let (server, _mock) = mock_info(appended_data, headers, 206).await;
 
         let blob = Blob::new(local_body.to_vec()).with_etag("old-etag".to_string());
-        let result_blob = dummy_updater().update(&remote_path, blob).await.unwrap();
+        let result_blob = dummy_updater(&server).update("foo", blob).await.unwrap();
 
         assert_eq!(result_blob.content, full_body);
         assert_eq!(result_blob.etag(), Some("new-etag"));
@@ -434,20 +437,20 @@ mod tests {
         headers.insert("ETag".to_string(), "\"replacement-etag\"".to_string());
         headers.insert("Repr-Digest".to_string(), format!("sha-256=:{}:", digest));
 
-        let (remote_path, _server, _mock) = mock_info(
+        let (server, _mock) = mock_info(
             full_body, headers, 200, // Not 206
         )
         .await;
 
         let blob = Blob::new(b"old content".to_vec());
-        let result_blob = dummy_updater().update(&remote_path, blob).await.unwrap();
+        let result_blob = dummy_updater(&server).update("foo", blob).await.unwrap();
 
         assert_eq!(result_blob.content, full_body);
         assert_eq!(result_blob.etag(), Some("replacement-etag"));
     }
 
-    fn dummy_updater() -> Updater {
-        let client = HttpFetcher::new("dummy").unwrap();
+    fn dummy_updater(server: &mockito::Server) -> Updater {
+        let client = RegistryClient::new(server.url().as_str(), "dummy").unwrap();
         Updater::new(client)
     }
 
@@ -455,7 +458,7 @@ mod tests {
         body: &[u8],
         headers: HashMap<String, String>,
         status: usize,
-    ) -> (String, mockito::Server, mockito::Mock) {
+    ) -> (mockito::Server, mockito::Mock) {
         let opts = mockito::ServerOpts {
             assert_on_drop: true,
             ..Default::default()
@@ -470,7 +473,7 @@ mod tests {
 
         mock = mock.with_status(status).with_body(body);
 
-        (format!("{}/info/foo", server.url()), server, mock.create())
+        (server, mock.create())
     }
 
     #[tokio::test]

@@ -4,6 +4,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::{rc::Rc, sync::Mutex};
 
+use rv_client::registry_client::RegistryClient;
 use rv_gem_types::requirement::{Requirement, VersionConstraint};
 use rv_gem_types::{Platform, ProjectDependency, VersionPlatform};
 use rv_ruby::version::RubyVersion;
@@ -11,20 +12,16 @@ use rv_version::Version;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use tracing::debug;
-use url::Url;
 
 use crate::config::Config;
-use crate::gemserver::http_fetcher::HttpFetcher;
 use crate::gemserver::storage::{FilesystemStorage, Storage};
 use crate::gemserver::updater::Updater;
 use crate::resolver::GemDepsMap;
 
-pub mod http_fetcher;
 pub mod storage;
 pub mod updater;
 
 pub struct Gemserver {
-    pub url: Url,
     updater: Arc<Updater>,
     storage: Arc<dyn Storage>,
 }
@@ -32,7 +29,7 @@ pub struct Gemserver {
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]
-    HttpError(#[from] http_fetcher::Error),
+    RegistryClientError(#[from] rv_client::registry_client::Error),
     #[error(transparent)]
     StorageError(#[from] storage::Error),
     #[error(transparent)]
@@ -48,7 +45,7 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 impl Gemserver {
-    pub fn new(config: &Config, mut url: Url) -> Result<Self> {
+    pub fn new(config: &Config, remote: String) -> Result<Self> {
         let cache_dir = config
             .cache
             .shard(rv_cache::CacheBucket::GemDeps, "compact_index")
@@ -56,22 +53,18 @@ impl Gemserver {
 
         fs_err::create_dir_all(&cache_dir).map_err(Error::CouldNotCreateCacheDir)?;
 
-        let client = HttpFetcher::new("install")?;
+        let client = RegistryClient::new(remote.as_str(), "install")?;
         let storage = FilesystemStorage::new(cache_dir.into());
         let updater = Updater::new(client);
 
-        // Add a trailing slash to the url if not already there. Otherwise, if the gemserver is
-        // namespaced, the namespace is ignored because joining url's requires the base url with
-        // have a trailing slash, and we join url's to construct compact index endpoints
-        url.path_segments_mut()
-            .expect("this url cannot be a base")
-            .push("");
-
         Ok(Self {
-            url,
             storage: Arc::new(storage),
             updater: Arc::new(updater),
         })
+    }
+
+    pub fn url(&self) -> String {
+        self.updater.url()
     }
 
     /// Returns the response body from the server SERVER/info/GEM_NAME.
@@ -81,13 +74,10 @@ impl Gemserver {
     /// This function doesn't parse the response, so that the parser doesn't have to copy any strings.
     /// Whoever calls this should own the response, and then the parser will borrow &strs from the response.
     pub async fn get_releases_for_gem(&self, gem: &str) -> Result<String> {
-        let info_key = format!("info/{}", gem);
-        let info_url = self.url.join(&info_key).expect("valid info URL");
-
         let blob = if let Ok(blob) = self.storage.read_blob(gem).await {
-            self.updater.update(info_url.as_str(), blob).await?
+            self.updater.update(gem, blob).await?
         } else {
-            self.updater.fetch(info_url.as_str()).await?
+            self.updater.fetch(gem).await?
         };
 
         self.storage.write_blob(gem, &blob).await?;

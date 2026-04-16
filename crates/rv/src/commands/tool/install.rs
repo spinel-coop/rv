@@ -6,7 +6,6 @@ use rv_gem_types::ReleaseTuple;
 use rv_lockfile::datatypes::GemfileDotLock;
 use rv_version::Version;
 use tracing::debug;
-use url::Url;
 
 use crate::{
     GlobalArgs,
@@ -20,8 +19,6 @@ use crate::{
 pub enum Error {
     #[error(transparent)]
     ConfigError(#[from] crate::config::Error),
-    #[error("{0} is not a valid URL")]
-    BadUrl(String),
     #[error("{gem_name} doesn't exist on {server}")]
     NotFound { gem_name: String, server: String },
     #[error("No version {0} available")]
@@ -77,8 +74,6 @@ pub(crate) async fn install(
         (gem, None)
     };
 
-    let gem_server: Url = gem_server.parse().map_err(|_| Error::BadUrl(gem_server))?;
-
     let gemserver = Gemserver::new(config, gem_server)?;
 
     // Look up the gem to install.
@@ -91,7 +86,7 @@ pub(crate) async fn install(
             gemserver::Error::Reqwest(e) if e.status() == Some(StatusCode::NOT_FOUND) => {
                 Error::NotFound {
                     gem_name: gem_name.to_owned(),
-                    server: gemserver.url.to_string(),
+                    server: gemserver.url(),
                 }
             }
             // Otherwise, keep the error as-is.
@@ -174,7 +169,7 @@ pub(crate) async fn install(
 
     // Make a Gemfile.lock in-memory, install it via `rv ci`.
     let lockfile_builder = LockfileBuilder {
-        gemserver_remote: gemserver.url.to_string(),
+        gemserver_remote: gemserver.url(),
         versions_needed,
     };
     let lockfile = lockfile_builder.lockfile();
