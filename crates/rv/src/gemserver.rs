@@ -67,13 +67,10 @@ impl Gemserver {
         self.updater.url()
     }
 
-    /// Returns the response body from the server SERVER/info/GEM_NAME.
+    /// Returns the response body from the server SERVER/info/GEM_NAME and parses the response.
     /// Fetches the file using etag/range requests if it's already there.
     /// Otherwise fetches a fresh copy.
-    /// You probably want to call [`parse_release_from_body`] on the returned string.
-    /// This function doesn't parse the response, so that the parser doesn't have to copy any strings.
-    /// Whoever calls this should own the response, and then the parser will borrow &strs from the response.
-    pub async fn get_releases_for_gem(&self, gem: &str) -> Result<String> {
+    pub async fn get_releases_for_gem(&self, gem: &str) -> Result<Vec<GemRelease>> {
         let blob = if let Ok(blob) = self.storage.read_blob(gem).await {
             self.updater.update(gem, blob).await?
         } else {
@@ -84,7 +81,7 @@ impl Gemserver {
 
         let index_body = String::from_utf8_lossy(&blob.content).to_string();
 
-        Ok(index_body)
+        Ok(parse_release_from_body(&index_body)?)
     }
 
     async fn fetch(
@@ -93,8 +90,7 @@ impl Gemserver {
         ruby_to_use: &RubyVersion,
     ) -> Result<((String, HashMap<VersionPlatform, GemRelease>), Vec<String>)> {
         debug!("Fetching {req}");
-        let dep_info_resp = self.get_releases_for_gem(&req).await?;
-        let dep_versions = parse_release_from_body(&dep_info_resp)?;
+        let dep_versions = self.get_releases_for_gem(&req).await?;
         let transitive_deps = dep_versions
             .iter()
             .flat_map(|d| d.clone().deps.into_iter().map(|d| d.name))

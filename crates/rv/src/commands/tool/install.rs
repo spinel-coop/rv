@@ -76,8 +76,7 @@ pub(crate) async fn install(
     let gemserver = Gemserver::new(config, gem_server)?;
 
     // Look up the gem to install.
-    let releases_resp = gemserver.get_releases_for_gem(&gem_name).await?;
-    let releases = gemserver::parse_release_from_body(&releases_resp)?;
+    let releases = gemserver.get_releases_for_gem(&gem_name).await?;
     debug!("Found {} releases for the gem {}", releases.len(), gem_name);
     if releases.is_empty() {
         return Err(Error::NoReleasesPublished);
