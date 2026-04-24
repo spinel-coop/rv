@@ -23,6 +23,6 @@ Gem::Specification.new do |s|
 
   s.specification_version = 4
 
-  s.add_runtime_dependency(%q<prism>.freeze, [">= 1.4.0".freeze])
-  s.add_runtime_dependency(%q<rbs>.freeze, [">= 3.6.0".freeze])
+  s.add_runtime_dependency("prism".freeze, [">= 1.4.0".freeze])
+  s.add_runtime_dependency("rbs".freeze, [">= 3.6.0".freeze])
 end

@@ -1,3 +1,7 @@
+use shell_quote::{Bash, Fish, QuoteRefExt};
+
+use crate::commands::shell::powershell_escape;
+
 use super::Shell;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -15,6 +19,7 @@ pub fn init(shell: Shell) -> Result<()> {
 
     match shell {
         Shell::Zsh => {
+            let current_exe: String = current_exe.as_str().quoted(Bash);
             printdoc! {"
                 autoload -U add-zsh-hook
                 _rv_autoload_hook () {{
@@ -25,6 +30,7 @@ pub fn init(shell: Shell) -> Result<()> {
             "};
         }
         Shell::Bash => {
+            let current_exe: String = current_exe.as_str().quoted(Bash);
             printdoc! {"
                 _rv_autoload_hook() {{
                     eval \"$({current_exe} shell env bash)\"
@@ -37,6 +43,7 @@ pub fn init(shell: Shell) -> Result<()> {
             "};
         }
         Shell::Fish => {
+            let current_exe: String = current_exe.as_str().quoted(Fish);
             printdoc! {"
                 function _rv_autoload_hook --on-event fish_preexec --description 'Change Ruby version before running every command'
                     {current_exe} shell env fish | source
@@ -45,17 +52,22 @@ pub fn init(shell: Shell) -> Result<()> {
             "};
         }
         Shell::Nu => {
+            let current_exe = current_exe
+                .as_str()
+                .replace('\\', "\\\\")
+                .replace('\'', "\\'");
             printdoc! {"
                 $env.config = ($env.config | upsert hooks.pre_execution {{
                     [
                         {{||
-                            {current_exe} shell env nu | from json | load-env
+                            \"{current_exe}\" shell env nu | from json | load-env
                         }}
                     ]
                 }})
             "};
         }
         Shell::PowerShell => {
+            let current_exe = powershell_escape(current_exe.as_str());
             // PowerShell doesn't have a preexec hook, so we use the prompt function
             // which runs after each command (before displaying the next prompt).
             // This pattern matches Python's virtualenv activate.ps1.

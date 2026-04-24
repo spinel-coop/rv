@@ -55,7 +55,7 @@ futures-util = { workspace = true }
 current_platform = { workspace = true }
 fs-err = { workspace = true }
 bytesize = { workspace = true }
-shell-escape = { workspace = true }
+shell-escape.workspace = true
 once_cell = { workspace = true }
 rayon-tracing = { workspace = true }
 clap_complete = "4.5.66"
@@ -80,6 +80,7 @@ config = { version = "0.15.22", default-features = false, features = [
 ] }
 kdl = { git = "https://github.com/kdl-org/kdl-rs.git", version = "6.5.0" }
 which = "8.0.2"
+shell-quote = { version = "0.7.2", features = ["bash", "fish", "sh"], default-features = false }
 
 [dev-dependencies]
 insta = { workspace = true }

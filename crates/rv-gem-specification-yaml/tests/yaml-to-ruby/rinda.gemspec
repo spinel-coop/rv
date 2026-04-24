@@ -23,7 +23,7 @@ Gem::Specification.new do |s|
 
   s.specification_version = 4
 
-  s.add_runtime_dependency(%q<drb>.freeze, [">= 0".freeze])
-  s.add_runtime_dependency(%q<ipaddr>.freeze, [">= 0".freeze])
-  s.add_runtime_dependency(%q<forwardable>.freeze, [">= 0".freeze])
+  s.add_runtime_dependency("drb".freeze, [">= 0".freeze])
+  s.add_runtime_dependency("ipaddr".freeze, [">= 0".freeze])
+  s.add_runtime_dependency("forwardable".freeze, [">= 0".freeze])
 end

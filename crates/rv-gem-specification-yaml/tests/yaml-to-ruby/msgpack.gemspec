@@ -24,12 +24,12 @@ Gem::Specification.new do |s|
 
   s.specification_version = 4
 
-  s.add_development_dependency(%q<bundler>.freeze, [">= 0".freeze])
-  s.add_development_dependency(%q<rake>.freeze, [">= 0".freeze])
-  s.add_development_dependency(%q<rake-compiler>.freeze, [">= 1.1.9".freeze])
-  s.add_development_dependency(%q<rspec>.freeze, ["~> 3.3".freeze])
-  s.add_development_dependency(%q<ruby_memcheck>.freeze, [">= 0".freeze])
-  s.add_development_dependency(%q<yard>.freeze, [">= 0".freeze])
-  s.add_development_dependency(%q<json>.freeze, [">= 0".freeze])
-  s.add_development_dependency(%q<benchmark-ips>.freeze, ["~> 2.10.0".freeze])
+  s.add_development_dependency("bundler".freeze, [">= 0".freeze])
+  s.add_development_dependency("rake".freeze, [">= 0".freeze])
+  s.add_development_dependency("rake-compiler".freeze, [">= 1.1.9".freeze])
+  s.add_development_dependency("rspec".freeze, ["~> 3.3".freeze])
+  s.add_development_dependency("ruby_memcheck".freeze, [">= 0".freeze])
+  s.add_development_dependency("yard".freeze, [">= 0".freeze])
+  s.add_development_dependency("json".freeze, [">= 0".freeze])
+  s.add_development_dependency("benchmark-ips".freeze, ["~> 2.10.0".freeze])
 end

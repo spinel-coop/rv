@@ -418,6 +418,14 @@ fn extract_zip(zip_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> Res
     Ok(())
 }
 
+fn entry_extract_fn(
+    entry: &sevenz_rust2::ArchiveEntry,
+    reader: &mut dyn std::io::Read,
+    dest: &PathBuf,
+) -> std::result::Result<bool, sevenz_rust2::Error> {
+    sevenz_rust2::default_entry_extract_fn(entry, reader, dest)
+}
+
 fn extract_7z(
     archive_path: &Utf8Path,
     rubies_dir: &Utf8Path,
@@ -425,7 +433,11 @@ fn extract_7z(
     host: &HostPlatform,
 ) -> Result<()> {
     // Extract 7z archive to rubies_dir
-    sevenz_rust2::decompress_file(archive_path.as_std_path(), rubies_dir.as_std_path())?;
+    sevenz_rust2::decompress_file_with_extract_fn(
+        archive_path.as_std_path(),
+        rubies_dir.as_std_path(),
+        entry_extract_fn,
+    )?;
 
     // RubyInstaller2 extracts to: rubyinstaller-{request}-1-{arch}/
     // Dev builds extract to: rubyinstaller-head-{arch}/ (no revision number)

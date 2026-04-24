@@ -150,3 +150,18 @@ fn setup(shell: Shell) -> Result<()> {
         }
     }
 }
+
+// Credit to uv's crates/uv-shell/src/lib.rs (backtick_escape)
+// PowerShell uses backticks for escaping special characters
+pub(crate) fn powershell_escape(s: &str) -> String {
+    let mut escaped = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            // Escape double quotes, backticks, dollar signs, and unicode quotes
+            '"' | '`' | '$' | '\u{201C}' | '\u{201D}' | '\u{201E}' => escaped.push('`'),
+            _ => {}
+        }
+        escaped.push(c);
+    }
+    escaped
+}
