@@ -1,22 +1,145 @@
 use axoupdater::AxoUpdater;
+use rv_client::http_client::rv_http_client;
 use rv_dirs::user_state_dir;
+use rv_version::Version;
+use serde::Deserialize;
 use std::path::PathBuf;
-use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
-use std::{env, fs};
+use std::process::{Command, Stdio};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::{env, fs, thread};
 use tracing::{debug, error};
 
 const UPDATE_CHECK_FILENAME: &str = "rv_last_update_check";
-const CHECK_INTERVAL_SECS: u64 = 60 * 60; // 1 hour
+const CHECK_INTERVAL_SECS: u64 = 60 * 60;
 
-pub(crate) async fn update_if_needed(update_mode: &str) {
-    if update_mode == "none" || is_ci_env() {
+type Result<T> = miette::Result<T, Error>;
+
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum Error {
+    #[error(transparent)]
+    AxoupdateError(#[from] axoupdater::AxoupdateError),
+
+    #[error(transparent)]
+    ReqwestError(#[from] reqwest::Error),
+
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
+
+    #[error("brew command failed: {0}")]
+    BrewFailed(String),
+
+    #[error("update receipt invalid or not for this executable: {0}")]
+    ReceiptInvalid(String),
+
+    #[error("relaunch failed: {0}")]
+    RelaunchFailed(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UpdateOutcome {
+    Installed(String),
+    AlreadyUpToDate,
+    UpdateAvailable(String),
+}
+
+#[derive(Debug, Clone)]
+pub struct Release {
+    pub version: String,
+}
+
+pub(crate) async fn check(update_mode: &str) {
+    if update_mode == "none" || is_ci_env() || !is_time_to_check() {
         return;
     }
 
+    match run_update(update_mode).await {
+        Ok(UpdateOutcome::Installed(v)) => {
+            eprintln!("✅ New version of `rv` {} installed!", v);
+
+            if let Err(e) = relaunch() {
+                error!("Failed to relaunch updated rv: {}", e);
+            }
+        }
+        Ok(UpdateOutcome::UpdateAvailable(latest)) => {
+            if !latest.is_empty() {
+                eprintln!(
+                    "⚠️ There is a new version of `rv`: {}. Please update using `rv self update`.",
+                    latest
+                );
+            } else {
+                eprintln!(
+                    "⚠️ There is a new version of `rv`. Please update using `rv self update`."
+                );
+            }
+        }
+        Ok(UpdateOutcome::AlreadyUpToDate) => {
+            debug!("rv is already up to date.")
+        }
+        Err(e) => {
+            error!("Self-update failed: {}", e);
+        }
+    }
+}
+
+pub(crate) async fn run_update(update_mode: &str) -> Result<UpdateOutcome> {
+    let current_version = env!("CARGO_PKG_VERSION").to_string();
+
+    if is_homebrew_install() {
+        debug!("Detected Homebrew installation in update check.");
+        let latest_version = latest_homebrew_release().await?;
+
+        if Version::new(&current_version).unwrap() < Version::new(&latest_version).unwrap() {
+            if update_mode == "warning" {
+                return Ok(UpdateOutcome::UpdateAvailable(latest_version));
+            } else {
+                run_homebrew_upgrade()?;
+                return Ok(UpdateOutcome::Installed(latest_version));
+            }
+        } else {
+            return Ok(UpdateOutcome::AlreadyUpToDate);
+        }
+    }
+
+    let mut updater = AxoUpdater::new_for("rv");
+
+    updater.load_receipt().map_err(Error::AxoupdateError)?;
+
+    let is_for_executable = updater
+        .check_receipt_is_for_this_executable()
+        .map_err(Error::AxoupdateError)?;
+
+    if !is_for_executable {
+        return Err(Error::ReceiptInvalid(
+            "receipt not for this executable".to_string(),
+        ));
+    }
+
+    let needed = updater
+        .is_update_needed()
+        .await
+        .map_err(Error::AxoupdateError)?;
+
+    if needed {
+        if update_mode == "warning" {
+            return Ok(UpdateOutcome::UpdateAvailable(String::new()));
+        }
+
+        match updater.run().await.map_err(Error::AxoupdateError)? {
+            Some(result) => Ok(UpdateOutcome::Installed(result.new_version.to_string())),
+            None => Ok(UpdateOutcome::AlreadyUpToDate),
+        }
+    } else {
+        Ok(UpdateOutcome::AlreadyUpToDate)
+    }
+}
+
+fn is_time_to_check() -> bool {
     let state_dir = user_state_dir("/".into());
 
-    fs_err::create_dir_all(state_dir.clone()).unwrap();
+    if let Err(e) = fs_err::create_dir_all(state_dir.clone()) {
+        error!("Failed to create state directory for update checks: {}", e);
+        return false;
+    }
 
     let update_timestamp_file = state_dir.join(UPDATE_CHECK_FILENAME);
 
@@ -24,19 +147,19 @@ pub(crate) async fn update_if_needed(update_mode: &str) {
         Ok(dur) => dur.as_secs(),
         Err(e) => {
             error!("SystemTime before UNIX_EPOCH: {}", e);
-            return;
+            return false;
         }
     };
 
     if update_timestamp_file.exists() {
         let Ok(contents) = fs::read_to_string(update_timestamp_file.clone()) else {
             error!("Can't read update timestamp file.");
-            return;
+            return false;
         };
 
         let Some(last_check) = contents.trim().parse::<u64>().ok() else {
             error!("Failed to parse update timestamp");
-            return;
+            return false;
         };
 
         if now_secs >= last_check && now_secs - last_check < CHECK_INTERVAL_SECS {
@@ -45,49 +168,16 @@ pub(crate) async fn update_if_needed(update_mode: &str) {
                 "Skipping update check: last checked {} minute(s) ago.",
                 minutes
             );
-            return;
+            return false;
         }
-    }
-
-    // Check if installed via Homebrew
-    if is_homebrew_install() {
-        debug!("Detected Homebrew installation, skipping auto update.");
-        return;
     }
 
     if let Err(e) = fs::write(&update_timestamp_file, now_secs.to_string()) {
         error!("Failed to write update timestamp file: {}", e);
-        return;
+        return false;
     }
 
-    let mut updater = AxoUpdater::new_for("rv");
-
-    if updater.load_receipt().is_err() || !updater.check_receipt_is_for_this_executable().unwrap() {
-        debug!("Update receipt is invalid or not for this executable, skipping update.");
-        return;
-    }
-
-    if updater.is_update_needed().await.unwrap() {
-        debug!("Update needed.");
-        if update_mode == "warning" {
-            println!("⚠️ There is a new version of `rv`. Please update using `rv self update`.");
-        } else {
-            println!("⬆️ Installing new version of `rv`...");
-            match updater.run().await {
-                Ok(r) => {
-                    if let Some(result) = r {
-                        println!("✅ `rv` {} installed!", result.new_version);
-                    }
-                    debug!("Successfully updated");
-                }
-                Err(e) => {
-                    error!("Update failed: {:?}", e);
-                }
-            }
-        }
-    } else {
-        debug!("No update needed");
-    }
+    true
 }
 
 pub(crate) fn is_ci_env() -> bool {
@@ -107,8 +197,7 @@ pub fn brew_prefix() -> Option<PathBuf> {
         return None;
     }
 
-    let brew_path = which::which("brew").ok()?;
-    let output = Command::new(brew_path).arg("--prefix").output().ok()?;
+    let output = Command::new("brew").arg("--prefix").output().ok()?;
 
     if !output.status.success() {
         return None;
@@ -156,4 +245,86 @@ pub fn is_homebrew_install() -> bool {
     let ends_with_exe = matches!(rel_path.components().next_back(), Some(std::path::Component::Normal(n)) if n == exe_name);
 
     has_bin && ends_with_exe
+}
+
+#[derive(Debug, Deserialize)]
+struct BrewResponse {
+    versions: BrewVersions,
+}
+
+#[derive(Debug, Deserialize)]
+struct BrewVersions {
+    stable: String,
+}
+
+pub async fn latest_homebrew_release() -> Result<String> {
+    let url = "https://formulae.brew.sh/api/formula/rv.json";
+    let client = rv_http_client("rv_update")?;
+    let resp = client
+        .get(url)
+        .header("Accept", "application/json")
+        .send()
+        .await?
+        .error_for_status()?;
+    let brew_resp: BrewResponse = resp.json().await?;
+    let raw = brew_resp.versions.stable.trim();
+
+    Ok(raw.to_string())
+}
+
+pub fn run_homebrew_upgrade() -> Result<()> {
+    let rv_update_output = Command::new("brew")
+        .arg("upgrade")
+        .arg("rv")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|e| Error::BrewFailed(format!("Failed to run 'brew upgrade rv': {}", e)))?;
+
+    if !rv_update_output.status.success() {
+        let stderr = String::from_utf8_lossy(&rv_update_output.stderr);
+
+        return Err(Error::BrewFailed(format!(
+            "brew upgrade failed with status: {}. Error: {}",
+            rv_update_output.status, stderr
+        )));
+    } else {
+        debug!("The update with brew was successful.")
+    }
+
+    Ok(())
+}
+
+pub fn relaunch() -> Result<()> {
+    thread::sleep(Duration::from_millis(400));
+
+    #[cfg(target_os = "windows")]
+    let exe_name = "rvw";
+    #[cfg(not(target_os = "windows"))]
+    let exe_name = "rv";
+
+    let args: Vec<String> = std::env::args().skip(1).collect();
+
+    let mut cmd = Command::new(exe_name);
+
+    cmd.args(&args)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+
+    debug!("Relaunching after update. Args: {:?}", args);
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| Error::RelaunchFailed(format!("Failed to spawn rv: {}", e)))?;
+
+    let status = child.wait().map_err(|e| {
+        Error::RelaunchFailed(format!("Failed to wait for relaunched process: {}", e))
+    })?;
+
+    if let Some(code) = status.code() {
+        std::process::exit(code);
+    } else {
+        std::process::exit(1);
+    }
 }
