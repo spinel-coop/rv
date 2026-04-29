@@ -1,3 +1,4 @@
+use crate::ruby_eol::eol_warning;
 use anstream::println;
 use bytesize::ByteSize;
 use camino::{Utf8Path, Utf8PathBuf};
@@ -7,6 +8,7 @@ use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
 use reqwest::StatusCode;
 use std::path::PathBuf;
+use std::str::FromStr;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, info_span};
 use tracing_indicatif::span_ext::IndicatifSpanExt;
@@ -98,6 +100,12 @@ pub(crate) async fn install(
     };
 
     println!("Installed {installed_version} to {}", install_dir.cyan());
+
+    eol_warning(
+        &rv_ruby::version::RubyVersion::from_str(&version).unwrap(),
+        &config.cache,
+    )
+    .await;
 
     Ok(())
 }

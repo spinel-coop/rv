@@ -39,6 +39,7 @@ struct JsonRubyEntry {
     #[serde(flatten)]
     ruby: RubyEntry,
     active: bool,
+    eol_date: String,
     #[serde(skip)]
     color: bool,
 }
@@ -95,11 +96,12 @@ impl tabled::Tabled for JsonRubyEntry {
                 }
             }
         };
-        vec![name.into(), installed]
+
+        vec![name.into(), installed, self.eol_date.to_string().into()]
     }
 
     fn headers() -> Vec<Cow<'static, str>> {
-        vec!["Version".into(), "Installed".into()]
+        vec!["Version".into(), "Installed".into(), "EOL".into()]
     }
 }
 
@@ -140,11 +142,17 @@ pub(crate) async fn list(
     let mut rubies_map: BTreeMap<RubyVersion, Vec<JsonRubyEntry>> = BTreeMap::new();
 
     for ruby in installed_rubies.into_iter().rev() {
+        let eol_date = crate::ruby_eol::eol_information_for(&ruby.version, &config.cache)
+            .await
+            .unwrap()
+            .unwrap();
+
         rubies_map.entry(ruby.version.clone()).or_default().insert(
             0,
             JsonRubyEntry {
                 active: active(&mut active_ruby, &ruby.version, &requested),
                 ruby: RubyEntry::Installed(ruby),
+                eol_date: eol_date.eol_from,
                 color: true,
             },
         );
@@ -163,11 +171,17 @@ pub(crate) async fn list(
 
         // Add selected remote rubies that are not already installed to the list
         for ruby in selected_remote_rubies.into_iter().rev() {
+            let eol_date = crate::ruby_eol::eol_information_for(&ruby.version, &config.cache)
+                .await
+                .unwrap()
+                .unwrap();
+
             rubies_map
                 .entry(ruby.version.clone())
                 .or_insert(vec![JsonRubyEntry {
                     active: active(&mut active_ruby, &ruby.version, &requested),
                     ruby: RubyEntry::Remote(ruby),
+                    eol_date: eol_date.eol_from,
                     color: true,
                 }]);
         }
@@ -176,11 +190,17 @@ pub(crate) async fn list(
             let ruby = requested.find_match_in(&remote_rubies);
 
             if let Some(ref ruby) = ruby {
+                let eol_date = crate::ruby_eol::eol_information_for(&ruby.version, &config.cache)
+                    .await
+                    .unwrap()
+                    .unwrap();
+
                 rubies_map
                     .entry(ruby.version.clone())
                     .or_insert(vec![JsonRubyEntry {
                         ruby: RubyEntry::Remote(ruby.clone()),
                         active: true,
+                        eol_date: eol_date.eol_from,
                         color: true,
                     }]);
             };
