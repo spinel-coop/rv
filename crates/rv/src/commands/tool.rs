@@ -115,7 +115,7 @@ fn tool_dir_for(gem_name: &str, gem_release: &str) -> Utf8PathBuf {
 
 /// The directory where this tool can be found.
 fn tool_dir() -> Utf8PathBuf {
-    rv_dirs::user_state_dir("/".into()).join("tools")
+    rv_dirs::user_data_dir("/".into()).join("tools")
 }
 
 /// Describes a successful installation of a tool.
