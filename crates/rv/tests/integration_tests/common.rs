@@ -388,10 +388,13 @@ impl RvTest {
         {
             let mut builder = Builder::new(&mut archive_data);
 
-            let root = format!("ruby-{version}/");
+            let root = format!("rv-ruby@{version}/");
             Self::add_dir(&mut builder, &root);
 
-            let bin_dir = format!("{root}bin/");
+            let subroot = format!("{root}{version}/");
+            Self::add_dir(&mut builder, &subroot);
+
+            let bin_dir = format!("{subroot}bin/");
             Self::add_dir(&mut builder, &bin_dir);
 
             let ruby_bin = format!("{bin_dir}{}", self.ruby_executable_name());

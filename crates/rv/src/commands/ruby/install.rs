@@ -41,8 +41,6 @@ pub enum Error {
     },
     #[error("Could not get latest ruby-dev release")]
     GetLatestDevReleaseFailed,
-    #[error("Failed to unpack archive path {0}")]
-    InvalidTarballPath(PathBuf),
     #[error(transparent)]
     UnsupportedPlatform(#[from] rv_platform::UnsupportedPlatformError),
 }
@@ -362,25 +360,15 @@ fn extract_tarball(tarball_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str
         let mut entry = e?;
         let entry_path = entry.path()?;
 
-        let dst: PathBuf = if version == "dev" {
-            // Strip the first two path components
-            let mut path = entry_path.components();
-            path.next();
-            path.next();
+        // Strip the first two path components
+        let mut path = entry_path.components();
+        path.next();
+        path.next();
 
-            rubies_dir
-                .as_std_path()
-                .join(format!("ruby-{}", version))
-                .join(path.as_path())
-        } else {
-            let to_replace = format!("rv-ruby@{}/{}", version, version);
-            let path = entry_path
-                .to_str()
-                .ok_or_else(|| Error::InvalidTarballPath(entry_path.to_path_buf()))?
-                .replace(&to_replace, &format!("ruby-{}", version))
-                .replace('@', "-");
-            rubies_dir.join(path).into()
-        };
+        let dst: PathBuf = rubies_dir
+            .as_std_path()
+            .join(format!("ruby-{}", version))
+            .join(path.as_path());
 
         crate::tar_utils::unpack_entry(&mut entry, &dst)?;
     }
