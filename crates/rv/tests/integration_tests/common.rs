@@ -401,8 +401,9 @@ impl RvTest {
             dir_header.set_cksum();
             builder.append(&dir_header, std::io::empty()).unwrap();
 
+            let bin_dir = format!("{root}bin/");
             let mut bin_dir_header = tar::Header::new_gnu();
-            bin_dir_header.set_path(format!("{root}bin/")).unwrap();
+            bin_dir_header.set_path(&bin_dir).unwrap();
             bin_dir_header.set_size(0);
             bin_dir_header.set_mode(0o755);
             bin_dir_header.set_entry_type(tar::EntryType::Directory);
@@ -413,7 +414,7 @@ impl RvTest {
             let ruby_executable_name = self.ruby_executable_name();
             let ruby_content = &self.ruby_mock_script("ruby", version);
             ruby_header
-                .set_path(format!("{root}bin/{ruby_executable_name}"))
+                .set_path(format!("{bin_dir}{ruby_executable_name}"))
                 .unwrap();
             ruby_header.set_size(ruby_content.len() as u64);
             ruby_header.set_mode(0o755);
