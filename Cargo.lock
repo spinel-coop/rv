@@ -2542,9 +2542,9 @@ dependencies = [
 
 [[package]]
 name = "pubgrub"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f5df7e552bc7edd075f5783a87fbfc21d6a546e32c16985679c488c18192d83"
+checksum = "a1c3256d319f1ed35251223140ab8f29fd6b0528a1216344efd904c651fecd5e"
 dependencies = [
  "indexmap",
  "log",
