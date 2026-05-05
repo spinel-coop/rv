@@ -42,11 +42,6 @@ pub enum UpdateOutcome {
     UpdateAvailable(String),
 }
 
-#[derive(Debug, Clone)]
-pub struct Release {
-    pub version: String,
-}
-
 pub(crate) async fn check(update_mode: &str) {
     if update_mode == "none" || is_ci_env() || !is_time_to_check() {
         return;
@@ -307,10 +302,7 @@ pub fn relaunch() -> Result<()> {
 
     let mut cmd = Command::new(exe_name);
 
-    cmd.args(&args)
-        .stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit());
+    cmd.args(&args);
 
     debug!("Relaunching after update. Args: {:?}", args);
 
