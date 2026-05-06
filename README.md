@@ -80,7 +80,7 @@ For details, see [INSTALL_BENCHMARK.md](docs/INSTALL_BENCHMARK.md).
 
 ## Community
 
-Join us in [discussions on GitHub](https://github.com/spinel-coop/rv/discussions), or the `#rv` channel in the the [Bundler Slack](https://bundler.slack.com) and the [Spinel Discord](https://discord.gg/5EG2pCad).
+Join us in [discussions on GitHub](https://github.com/spinel-coop/rv/discussions), or the `#rv` channel in the the [Bundler Slack](https://join.slack.com/t/bundler/shared_invite/zt-3kza12u0j-Fw3rwvPi6zqe6EC3RCDGMA) and the [Spinel Discord](https://discord.gg/u34TcumAk8).
 
 ## Plans
 
