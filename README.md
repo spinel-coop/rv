@@ -61,41 +61,9 @@ For details, see [INSTALL_BENCHMARK.md](docs/INSTALL_BENCHMARK.md).
 
 ## Configuration
 
-`rv` supports configuration via a KDL file named `rv.kdl` located in one of several places. **Only one such file should exist at each level (project or global) for avoid conflicts**.
+`rv` supports configuration via a `rv.kdl` file at the project or user level, and via environment variables prefixed with `RV_`.
 
-- Project directories:
-  - `./rv.kdl`
-  - `./.config/rv.kdl`
-  - `./.config/rv/rv.kdl`
-- User global config directories:
-  - `~/.rv.kdl`
-  - `~/.config/rv.kdl`
-  - `~/.config/rv/rv.kdl`
-
-Configuration keys are declared under a root `rv` node.
-
-Example configuration file with allowed settings:
-
-```kdl
-rv {
-  install-path "/custom/install/path"
-  update-mode "install"
-}
-```
-
-### Settings
-
-| Setting        | Description                                             | Default                                    | Allowed values                     |
-| -------------- | ------------------------------------------------------- | ------------------------------------------ | ---------------------------------- |
-| `install-path` | Custom path where `rv` installs Ruby versions and gems. | Bundler configuration or Ruby install dir. | Any valid filesystem path          |
-| `update-mode`  | Controls how `rv` handles updates.                      | `"install"`                                | `"none"`, `"warning"`, `"install"` |
-
-### Environment variables
-
-You can also override settings by environment variables prefixed with `RV_`. For example:
-
-- `RV_INSTALL_PATH` sets the install path.
-- `RV_UPDATE_MODE` sets the update mode.
+See [SETTINGS.md](docs/SETTINGS.md) for all settings, allowed values, and configuration precedence.
 
 ## Testimonials
 
