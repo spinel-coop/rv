@@ -12,7 +12,7 @@ All-in-one tooling for Ruby developers.
 - Run any script, installing all needed gems, like `rv run script.rb`.
 - Install gem CLIs with any needed rubies with `rv tool install`.
 - Install precompiled Ruby versions in seconds with `rv ruby install`.
-- Manage project gems with `rv install`, `rv add`, and `rv remove`.
+- Manage project gems with `rv sync`, `rv add`, and `rv remove`.
 - Create gems with `rv gem`, and publish them with `rv publish`.
 
 ## similar tools
@@ -25,23 +25,24 @@ rv combines several functions that have previously been separate tools:
 - dependency installer (like `bundler`)
 - project runner (like `npm`, `make`, `rake`)
 - package dev & publishing (like `rubygems` & `bundler`)
-- running packages (like `gemx` or `npx`)
+- running packages (like `gem exec` or `npm exec`)
 - installing tools (like `uv tool`, ruby and node lack this today)
 
 ## command table of contents
 
 ### [Ruby version management](#ruby)
 
+- [x] `rv run CMD`
+- [x] [`rv ruby install`](#install)
 - [x] `rv ruby list`
 - [x] [`rv ruby pin`](#pin)
 - [x] `rv ruby dir`
-- [x] `rv ruby run`
-- [x] `rv ruby install`
 - [x] `rv ruby uninstall`
+- [ ] `rv ruby eol`
 
 ### Gem CLI tools
 
-- [x] `rvx` / `rv exec` / `rv tool run`
+- [x] `rvx` / `rv tool run`
 - [x] `rv tool install`
 - [x] `rv tool uninstall`
 
@@ -49,28 +50,28 @@ rv combines several functions that have previously been separate tools:
 
 - [x] `rv clean-install` / `rv ci`
 - [ ] [`rv init`](#init)
-- [ ] `rv install`
-- [ ] `rv run`
-- [ ] `rv list`
-- [ ] `rv upgrade`
-- [ ] `rv add`
-- [ ] `rv remove`
-- [ ] `rv tree`
+- [ ] `rv sync`
+- [ ] `rv run [TASK]`
+- [ ] `rv list [GEM]`
+- [ ] `rv upgrade [--all|GEM]`
+- [ ] `rv add GEM`
+- [ ] `rv remove GEM`
+- [ ] `rv tree [GEM]`
 - [ ] `rv eol`
-- [ ] `rv info`
-- [ ] `rv search`
-- [ ] `rv new`
+- [ ] `rv info GEM`
+- [ ] `rv search NAME`
+- [ ] `rv new DIR`
 
   #### Single-file projects (scripts)
 
-- [ ] `rv add --script`
-- [ ] `rv remove --script`
+- [ ] `rv add --script FILE GEM`
+- [ ] `rv remove --script FILE GEM`
 
 ### Gems
 
-- [ ] `rv gem`
+- [ ] `rv gem NAME`
 - [ ] `rv build`
-- [ ] `rv publish`
+- [ ] `rv publish [SERVER]`
 
 ### Shell integration
 
@@ -78,7 +79,7 @@ rv combines several functions that have previously been separate tools:
 - [x] `rv shell bash`
 - [x] `rv shell fish`
 - [x] `rv shell nushell`
-- [ ] `rv shell powershell`
+- [x] `rv shell powershell`
 
 #### Shell integration internal commands
 
@@ -88,18 +89,18 @@ rv combines several functions that have previously been separate tools:
 
 ## interpreter support
 
-- [ ] MRI HEAD
+- [x] MRI HEAD
 - [x] MRI 4.0
 - [x] MRI 3.4
 - [x] MRI 3.3
 - [x] MRI 3.2
 - [ ] JRuby 10
 - [ ] TruffleRuby 24
-- [ ] MRuby 3.3
-- [ ] Artichoke Ruby
 
 ### EOL interpreters (maybe)
 
+- [ ] MRI 3.1
+- [ ] MRI 3.0
 - [ ] MRI 2.7.8
 - [ ] MRI 2.5.9
 - [ ] MRI 2.3.8
@@ -113,7 +114,7 @@ rv combines several functions that have previously been separate tools:
 
 - [x] macOS 15+
 - [x] Linux (glibc 2.35+)
-- [ ] Alpine (musl 1.2.5+)
+- [x] Alpine (musl 1.2.5+)
 - [x] Windows 11+
 
 ## configuration
@@ -154,9 +155,9 @@ Applications typically have their own framework generators, so it's unlikely we 
 
 ## workspaces
 
-Workspaces are a group of projects that all have their own dependencies, but are resolved and locked together as a group to ensure that one set of gems will work across all of the packages.
+Workspaces are a group of projects that all have their own dependencies, but are resolved and locked together as a group to ensure that one set of gems will work across all of the packages. In Bundler, this is handled via `path` gems, so we could likely do something similar with a parent `gem.kdl` that points to child gem/library folders.
 
-Supporting workspaces means commands like `rv add` are scoped to a single project (and the closest `Gemfile`), while resolving dependencies for `rv install` or `rv lock` should be scoped to the parent workspace (if one exists), the parent Gemfile, and all projects inside the parent Gemfile.
+Supporting workspaces specifically means not just a parent project, but resolving dependencies for each child gem during `rv install` or `rv lock` scoped to the parent workspace, to guarantee every child project uses the same single set of versions resolved for the parent. The effect of commands like `rv add` will remain scoped to a single project (and the closest `gem.kdl`), but they will need to re-resolve the workspace parent `gem.kdl`.
 
 ## ruby version file
 
@@ -164,21 +165,21 @@ A ruby version file (named `.ruby-version`) indicates the desired/locked Ruby ve
 
 The ruby version can also be provided by a [`.tool-versions` file](https://asdf-vm.com/manage/configuration.html#tool-versions), shared by tools like asdf and mise.
 
-Finally, the ruby version can also be provided by `rbproject.kdl`, although tools other than `rv` may not be able to read that.
+Finally, the ruby version can also be provided by `gem.kdl`, although tools other than `rv` may not be able to read that.
 
 ## ruby locations
 
-By default, we look for rubies in `$XDG_DATA_HOME/rv/rubies`, `~/.local/share/rv/rubies`, `~/.data/rv/rubies`, `~/.rubies`, `/opt/rubies`, `/opt/homebrew/Cellar/ruby/`, `/usr/local/rubies`, and `/usr/local/Cellar/ruby`.
+The main location for Rubies is `$XDG_DATA_HOME/rv/rubies`. We also look for Rubies in locations like `~/.rubies`, `/opt/rubies`, `/opt/homebrew/Cellar/ruby/`, `/usr/local/rubies`, and `/usr/local/Cellar/ruby`.
 
-Since we respect `$XDG_DATA_HOME`, we install rubies into `~/.local/share/rv/rubies` by default.
+The default location for `$XDG_DATA_HOME` is `~/.local/share`, so we install rubies into `~/.local/share/rv/rubies` by default.
 
 ## `run` vs `exec`
 
-While Bundler invented the idea of `bundle exec` to run commands in the context of a bundle, both node and python have settled on different terminology: `run NAME` is for running commands inside a bundle, while `exec NAME` is for running a package that might not even be installed yet, whether inside an application or not, without adding the package to the current bundle.
+While Bundler invented the idea of `bundle exec` to run commands in the context of a bundle, both node and python have settled on different terminology: `run NAME` is for running commands inside a bundle, while `exec NAME` is for running a package that might not even be installed yet, without adding the package to the current bundle.
 
 ## shortcut binaries
 
-In `uv`, the `run` and `exec` subcommands are both so common that they have their own dedicated binaries: `uvr` and `uvx`. This mirrors the `npm` shortcut for `npm exec`, which is named `npx`. That implies we should provide shortcut binaries named `rvr` and `rvx`.
+In `uv`, `exec` is so common that it has a dedicated binary: `uvx`. This mirrors the `npm` shortcut for `npm exec`, which is named `npx`. That implies we should provide our own shortcut binary named `rvx`.
 
 ## what are "tools"?
 
