@@ -91,21 +91,41 @@ pub(crate) async fn tool(global_args: &GlobalArgs, tool_args: ToolArgs) -> Resul
             gem,
             gem_server,
             force,
-        } => install::install(global_args, gem, gem_server, force)
-            .await
-            .map(|_| ())?,
+        } => {
+            let (gem_server, gem) = parse_namespace(gem_server, gem);
+            install::install(global_args, gem, gem_server, force)
+                .await
+                .map(|_| ())?
+        }
         ToolCommand::List { format } => list::list(global_args, format)?,
         ToolCommand::Uninstall { gem } => uninstall::uninstall(global_args, gem)?,
         ToolCommand::Run {
             gem,
             gem_server,
             no_install,
-            args,
-        } => run::run(global_args, gem, gem_server, no_install, args).await?,
+            mut args,
+        } => {
+            let gem = gem
+                .or(args.first().cloned())
+                .expect("gem or first arg is required");
+            let (gem_server, gem) = parse_namespace(gem_server, gem);
+            args[0] = gem.clone();
+            run::run(global_args, Some(gem), gem_server, no_install, args).await?
+        }
         ToolCommand::Dir => dir::dir(global_args)?,
     };
 
     Ok(())
+}
+
+fn parse_namespace(gem_server: String, gem: String) -> (String, String) {
+    if gem.chars().nth(0) == Some('@') {
+        if let Some((namespace, inner_gem)) = gem.split_once('/') {
+            let gem_server = [gem_server, namespace.to_string()].join("/");
+            return (gem_server, inner_gem.to_string());
+        }
+    }
+    (gem_server, gem)
 }
 
 /// The directory where this tool can be found.
