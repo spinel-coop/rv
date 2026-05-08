@@ -1,4 +1,4 @@
-use crate::common::{RvOutput, RvTest};
+use crate::common_test::{RvOutput, RvTest};
 use insta::assert_snapshot;
 use rv_platform::HostPlatform;
 
