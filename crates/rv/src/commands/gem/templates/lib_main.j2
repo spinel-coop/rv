@@ -1,26 +1,8 @@
 # frozen_string_literal: true
-#
-# Main library file for the gem.
-#
-# Variables you can use from the template context:
-# - name: the gem name (e.g. "my-gem" or "foo/bar")
-# - version: the gem version (e.g. "0.1.0")
-# - module_decl: (optional) Ruby module name like "Foo::Bar"
-# - namespaced_path: (optional) path to require relative files (e.g. "foo/bar")
-#
-# If `module_decl` or `namespaced_path` are not provided by the caller,
-# you may need to manually adjust the module name and require path.
 
-require_relative "{{ namespaced_path | default(name) }}/version"
+require_relative "{{ namespaced_path }}/version"
 
-# Replace the module name below with the proper constant for your gem.
-# If the template consumer provides `module_decl`, it will be used; otherwise
-# the raw `name` value will be placed here and likely needs editing.
-module {{ module_decl | default(name) }}
-  # Your gem's public API goes here.
-  #
-  # Example:
-  # def self.hello
-  #   "Hello from {{ name }} v{{ version }}"
-  # end
+module {{ module_decl }}
+  class Error < StandardError; end
+  # Your code goes here...
 end

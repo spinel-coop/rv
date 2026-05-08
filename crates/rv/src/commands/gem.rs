@@ -22,14 +22,6 @@ pub struct GemArgs {
     #[arg(long)]
     pub test: Option<String>,
 
-    /// Create CI config: "github", "gitlab", "circle"
-    #[arg(long)]
-    pub ci: Option<String>,
-
-    /// Create an extension scaffold: "c", "rust", "go"
-    #[arg(long)]
-    pub ext: Option<String>,
-
     /// Make an executable in `exe/` with the gem name
     #[arg(long)]
     pub exe: bool,
@@ -61,6 +53,19 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
+fn report_create(display_path: &str) {
+    println!("      \x1b[32mcreate\x1b[0m  {}", display_path);
+}
+
+fn create_file(full_path: &Utf8PathBuf, display_path: &str, content: &[u8]) -> Result<()> {
+    if let Some(parent) = full_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(full_path, content)?;
+    report_create(display_path);
+    Ok(())
+}
+
 pub(crate) fn gem(_global_args: &GlobalArgs, args: GemArgs) -> Result<()> {
     let name = args.name;
     validate_name(&name)?;
@@ -68,49 +73,64 @@ pub(crate) fn gem(_global_args: &GlobalArgs, args: GemArgs) -> Result<()> {
     static GEMSPEC_J2: &str = include_str!("gem/templates/gemspec.j2");
     static LIB_MAIN_J2: &str = include_str!("gem/templates/lib_main.j2");
     static BIN_EXEC_J2: &str = include_str!("gem/templates/bin_exec.j2");
+    static BIN_CONSOLE_J2: &str = include_str!("gem/templates/bin_console.j2");
+    static GEMFILE_J2: &str = include_str!("gem/templates/gemfile.j2");
+    static README_J2: &str = include_str!("gem/templates/readme.j2");
 
     let mut env = Environment::new();
 
-    // loader returns std::result::Result<Option<String>, minijinja::Error>
     env.set_loader(
-        move |name| -> std::result::Result<Option<String>, minijinja::Error> {
-            match name {
+        move |tpl_name| -> std::result::Result<Option<String>, minijinja::Error> {
+            match tpl_name {
                 "gemspec.j2" => Ok(Some(GEMSPEC_J2.to_string())),
                 "lib_main.j2" => Ok(Some(LIB_MAIN_J2.to_string())),
                 "bin_exec.j2" => Ok(Some(BIN_EXEC_J2.to_string())),
+                "bin_console.j2" => Ok(Some(BIN_CONSOLE_J2.to_string())),
+                "gemfile.j2" => Ok(Some(GEMFILE_J2.to_string())),
+                "readme.j2" => Ok(Some(README_J2.to_string())),
                 _ => Ok(None),
             }
         },
     );
 
-    // Prepare context data for templates
+    // Derive naming helpers
+    let underscored = name.replace('-', "_");
+    let namespaced_path = name.replace('-', "/");
+    let module_declaration = constant_name_from(&name);
+
+    let title = {
+        let mut chars = name.chars();
+        match chars.next() {
+            Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
+            None => name.clone(),
+        }
+    };
+
+    // Prepare context data
     let version = "0.1.0".to_string();
-    let author = "Unknown".to_string();
-    let email = git_config_email().unwrap_or_else(|| "unknown@example.com".to_string());
-    let description = "A generated Ruby gem".to_string();
+    let author = git_config_name().unwrap_or_else(|| "TODO: Write your name".to_string());
+    let email = git_config_email().unwrap_or_else(|| "TODO: Write your email address".to_string());
     let homepage = args
         .github_username
         .clone()
         .map(|u| format!("https://github.com/{}/{}", u, name))
-        .unwrap_or_else(|| "https://example.com/".to_string());
-    let license = "MIT".to_string();
-    let ruby_version = ">= 3.0".to_string();
-    let dependencies: Vec<std::collections::HashMap<&str, String>> = vec![];
+        .unwrap_or_else(|| "TODO: Put your gem's website or public repo URL here.".to_string());
 
     let context = context! {
         name => name.clone(),
+        title => title.clone(),
         version => version.clone(),
         author => author.clone(),
         email => email.clone(),
-        description => description.clone(),
         homepage => homepage.clone(),
-        license => license.clone(),
-        ruby_version => ruby_version.clone(),
-        dependencies => dependencies.clone(),
+        namespaced_path => namespaced_path.clone(),
+        module_decl => module_declaration.clone(),
     };
 
     let mut target: Utf8PathBuf = std::env::current_dir()?.try_into().unwrap();
     target = target.join(name.clone());
+
+    println!("Creating gem '{}'...", name);
 
     if target.exists() {
         println!(
@@ -121,166 +141,12 @@ pub(crate) fn gem(_global_args: &GlobalArgs, args: GemArgs) -> Result<()> {
         fs::create_dir_all(&target)?;
     }
 
-    let underscored = name.replace('-', "_");
-    let namespaced_path = name.replace('-', "/");
-    let lib_file_path = format!("lib/{}.rb", namespaced_path);
-    let lib_folder_path = format!("lib/{}", namespaced_path);
-    let version_file_path = format!("lib/{}/version.rb", namespaced_path);
-    let gemspec_path = format!("{}.gemspec", name);
+    // Helper: build a display path like "my_gem/lib/my_gem.rb"
+    let dp = |rel: &str| format!("{}/{}", name, rel);
 
-    // Ensure lib directory exists
-    let lib_dir = target.join("lib").join(namespaced_path.clone());
-    fs::create_dir_all(&lib_dir)?;
-
-    // Write lib/<namespaced_path>.rb
-    let lib_rb = target.join(&lib_file_path);
-    let module_declaration = constant_name_from(&name);
-
-    // Try to render `lib_main.j2` template; fall back to a basic file if template not found.
-    let lib_rendered = match env.get_template("lib_main.j2") {
-        Ok(t) => {
-            let lib_ctx = context! {
-                name => name.clone(),
-                version => version.clone(),
-                module_decl => module_declaration.clone(),
-                namespaced_path => namespaced_path.clone(),
-            };
-            t.render(lib_ctx).map_err(|e| {
-                Error::IoError(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    e.to_string(),
-                ))
-            })?
-        }
-        Err(_) => format!(
-            "require_relative \"{}/version\"\n\nmodule {module_decl}\n  # Your code goes here...\nend\n",
-            namespaced_path,
-            module_decl = module_declaration
-        ),
-    };
-    fs::write(&lib_rb, lib_rendered.as_bytes())?;
-
-    // Write lib/<namespaced_path>/version.rb
-    let version_rb = target.join(&version_file_path);
-    // Ensure directory for version.rb exists
-    if let Some(version_dir) = version_rb.parent() {
-        fs::create_dir_all(version_dir)?;
-    }
-    let version_contents = format!(
-        "module {module_decl}\n  VERSION = \"{version}\"\nend\n",
-        module_decl = module_declaration,
-        version = version
-    );
-    fs::write(&version_rb, version_contents.as_bytes())?;
-
-    // Render gemspec using minijinja template and write to disk
-    let gemspec_file = target.join(&gemspec_path);
-    let rendered_gemspec = match env.get_template("gemspec.j2") {
-        Ok(t) => t.render(context.clone()).map_err(|e| {
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                e.to_string(),
-            ))
-        })?,
-        Err(e) => {
-            return Err(Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                format!("template load error: {}", e),
-            )));
-        }
-    };
-    fs::write(&gemspec_file, rendered_gemspec.as_bytes())?;
-
-    // Write README.md
-    let readme = target.join("README.md");
-    let readme_contents = format!("# {name}\n\nTODO: Describe the gem.\n", name = name);
-    fs::write(&readme, readme_contents.as_bytes())?;
-
-    // Optionally create exe
-    if args.exe {
-        let exe_dir = target.join("exe");
-        fs::create_dir_all(&exe_dir)?;
-        let exe_path = exe_dir.join(&name);
-
-        // Try to render `bin_exec.j2` template; fall back to a basic executable if template not found.
-        let exe_rendered = match env.get_template("bin_exec.j2") {
-            Ok(t) => {
-                let bin_ctx = context! {
-                    name => name.clone(),
-                    namespaced_path => namespaced_path.clone(),
-                    module_decl => module_declaration.clone(),
-                };
-                t.render(bin_ctx).map_err(|e| {
-                    Error::IoError(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        e.to_string(),
-                    ))
-                })?
-            }
-            Err(_) => format!(
-                "#!/usr/bin/env ruby\nputs \"This is the {name} executable.\"",
-                name = name
-            ),
-        };
-        fs::write(&exe_path, exe_rendered.as_bytes())?;
-        // try to make executable; ignore errors on non-unix
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = std::fs::metadata(&exe_path).unwrap().permissions();
-            perms.set_mode(0o755);
-            std::fs::set_permissions(&exe_path, perms).unwrap();
-        }
-    }
-
-    // Optionally add basic test scaffolding
-    if let Some(test) = args.test {
-        match test.as_str() {
-            "rspec" => {
-                let spec_dir = target.join("spec");
-                fs::create_dir_all(&spec_dir)?;
-                let spec_helper_path = spec_dir.join("spec_helper.rb");
-                fs::write(&spec_helper_path, b"RSpec.configure do |c|\nend\n")?;
-                let spec_path =
-                    spec_dir.join(format!("{}_spec.rb", namespaced_path.replace('/', "_")));
-                fs::write(
-                    &spec_path,
-                    format!(
-                        "require_relative '../lib/{}'\n\nRSpec.describe {} do\nend\n",
-                        namespaced_path, module_declaration
-                    )
-                    .as_bytes(),
-                )?;
-            }
-            "minitest" => {
-                let test_dir = target.join("test");
-                fs::create_dir_all(&test_dir)?;
-                let helper = test_dir.join("test_helper.rb");
-                fs::write(&helper, b"require 'minitest/autorun'\n")?;
-                let test_path = test_dir.join(format!("test_{}.rb", underscored.replace('/', "_")));
-                fs::write(
-                    &test_path,
-                    format!(
-                        "require_relative '../lib/{}'\n\nclass Test{} < Minitest::Test\nend\n",
-                        namespaced_path,
-                        sanitize_const_last(&module_declaration)
-                    )
-                    .as_bytes(),
-                )?;
-            }
-            other => {
-                println!(
-                    "Unknown test framework '{}', skipping test scaffolding.",
-                    other
-                );
-            }
-        }
-    }
-
-    // Optionally initialize git
+    // --- git init ---
     if args.git {
         println!("Initializing git repo in {}", target.as_str());
-        // Try to run `git init <target>`
         match Command::new("git")
             .arg("init")
             .arg(target.as_str())
@@ -294,9 +160,183 @@ pub(crate) fn gem(_global_args: &GlobalArgs, args: GemArgs) -> Result<()> {
                 debug!("Failed to run git init: {}", e);
             }
         }
+
+        // --- .gitignore ---
+        let gitignore =
+            "/.bundle/\n/.yardoc\n/_yardoc/\n/coverage/\n/doc/\n/pkg/\n/spec/reports/\n/tmp/\n";
+        create_file(
+            &target.join(".gitignore"),
+            &dp(".gitignore"),
+            gitignore.as_bytes(),
+        )?;
     }
 
-    // Optionally run bundle install
+    // --- Gemfile ---
+    let rendered_gemfile = render_template(&env, "gemfile.j2", context.clone())?;
+    create_file(
+        &target.join("Gemfile"),
+        &dp("Gemfile"),
+        rendered_gemfile.as_bytes(),
+    )?;
+
+    // --- lib/<namespaced_path>.rb ---
+    let lib_rendered = render_template(
+        &env,
+        "lib_main.j2",
+        context! {
+            name => name.clone(),
+            version => version.clone(),
+            module_decl => module_declaration.clone(),
+            namespaced_path => namespaced_path.clone(),
+        },
+    )?;
+    let lib_rb_path = format!("lib/{}.rb", namespaced_path);
+    create_file(
+        &target.join(&lib_rb_path),
+        &dp(&lib_rb_path),
+        lib_rendered.as_bytes(),
+    )?;
+
+    // --- lib/<namespaced_path>/version.rb ---
+    let version_file_path = format!("lib/{}/version.rb", namespaced_path);
+    let version_contents = format!(
+        "# frozen_string_literal: true\n\nmodule {module_decl}\n  VERSION = \"{version}\"\nend\n",
+        module_decl = module_declaration,
+        version = version
+    );
+    create_file(
+        &target.join(&version_file_path),
+        &dp(&version_file_path),
+        version_contents.as_bytes(),
+    )?;
+
+    // --- <name>.gemspec ---
+    let rendered_gemspec = render_template(&env, "gemspec.j2", context.clone())?;
+    let gemspec_rel = format!("{}.gemspec", name);
+    create_file(
+        &target.join(&gemspec_rel),
+        &dp(&gemspec_rel),
+        rendered_gemspec.as_bytes(),
+    )?;
+
+    // --- Rakefile ---
+    let rakefile = "# frozen_string_literal: true\n\nrequire \"bundler/gem_tasks\"\nrequire \"rake/testtask\"\n\nRake::TestTask.new(:test) do |t|\n  t.libs << \"test\"\n  t.libs << \"lib\"\n  t.test_files = FileList[\"test/**/test_*.rb\"]\nend\n\ntask default: :test\n";
+    create_file(
+        &target.join("Rakefile"),
+        &dp("Rakefile"),
+        rakefile.as_bytes(),
+    )?;
+
+    // --- README.md ---
+    let rendered_readme = render_template(&env, "readme.j2", context.clone())?;
+    create_file(
+        &target.join("README.md"),
+        &dp("README.md"),
+        rendered_readme.as_bytes(),
+    )?;
+
+    // --- bin/console ---
+    let console_rendered = render_template(
+        &env,
+        "bin_console.j2",
+        context! {
+            namespaced_path => namespaced_path.clone(),
+        },
+    )?;
+    let bin_console_path = target.join("bin").join("console");
+    create_file(
+        &bin_console_path,
+        &dp("bin/console"),
+        console_rendered.as_bytes(),
+    )?;
+    make_executable(&bin_console_path);
+
+    // --- bin/setup ---
+    let bin_setup_content = "#!/usr/bin/env bash\nset -euo pipefail\nIFS=$'\\n\\t'\nset -vx\n\nbundle install\n\n# Do any other automated setup that you need to do here\n";
+    let bin_setup_path = target.join("bin").join("setup");
+    create_file(
+        &bin_setup_path,
+        &dp("bin/setup"),
+        bin_setup_content.as_bytes(),
+    )?;
+    make_executable(&bin_setup_path);
+
+    // --- Optional: exe/<name> ---
+    if args.exe {
+        let exe_rendered = render_template(
+            &env,
+            "bin_exec.j2",
+            context! {
+                name => name.clone(),
+                namespaced_path => namespaced_path.clone(),
+                module_decl => module_declaration.clone(),
+            },
+        )?;
+        let exe_rel = format!("exe/{}", name);
+        let exe_path = target.join(&exe_rel);
+        create_file(&exe_path, &dp(&exe_rel), exe_rendered.as_bytes())?;
+        make_executable(&exe_path);
+    }
+
+    // --- Optional: test scaffold ---
+    if let Some(ref test) = args.test {
+        match test.as_str() {
+            "rspec" => {
+                let spec_dir = target.join("spec");
+                fs::create_dir_all(&spec_dir)?;
+
+                let spec_helper =
+                    "# frozen_string_literal: true\n\nRSpec.configure do |config|\nend\n";
+                create_file(
+                    &spec_dir.join("spec_helper.rb"),
+                    &dp("spec/spec_helper.rb"),
+                    spec_helper.as_bytes(),
+                )?;
+
+                let spec_rel = format!("spec/{}_spec.rb", underscored.replace('/', "_"));
+                let spec_content = format!(
+                    "# frozen_string_literal: true\n\nrequire \"spec_helper\"\n\nRSpec.describe {} do\nend\n",
+                    module_declaration
+                );
+                create_file(
+                    &target.join(&spec_rel),
+                    &dp(&spec_rel),
+                    spec_content.as_bytes(),
+                )?;
+            }
+            "minitest" => {
+                let test_dir = target.join("test");
+                fs::create_dir_all(&test_dir)?;
+
+                let helper = "# frozen_string_literal: true\n\n$LOAD_PATH.unshift File.expand_path(\"../lib\", __dir__)\n\nrequire \"minitest/autorun\"\n";
+                create_file(
+                    &test_dir.join("test_helper.rb"),
+                    &dp("test/test_helper.rb"),
+                    helper.as_bytes(),
+                )?;
+
+                let test_rel = format!("test/test_{}.rb", underscored.replace('/', "_"));
+                let test_content = format!(
+                    "# frozen_string_literal: true\n\nrequire \"test_helper\"\n\nclass Test{} < Minitest::Test\n  def test_that_it_has_a_version_number\n    refute_nil ::{}::VERSION\n  end\nend\n",
+                    sanitize_const_last(&module_declaration),
+                    module_declaration
+                );
+                create_file(
+                    &target.join(&test_rel),
+                    &dp(&test_rel),
+                    test_content.as_bytes(),
+                )?;
+            }
+            other => {
+                println!(
+                    "Unknown test framework '{}', skipping test scaffolding.",
+                    other
+                );
+            }
+        }
+    }
+
+    // --- Optional: bundle install ---
     if args.bundle {
         println!("Running `bundle install` in the new gem directory.");
         if let Ok(mut cmd) = Command::new("bundle")
@@ -310,15 +350,45 @@ pub(crate) fn gem(_global_args: &GlobalArgs, args: GemArgs) -> Result<()> {
         }
     }
 
-    // Optionally open editor
+    // --- Optional: open editor ---
     if let Some(editor) = args.edit {
         let gemspec_file = target.join(format!("{}.gemspec", name));
         let _ = Command::new(editor).arg(gemspec_file.as_str()).spawn();
     }
 
-    println!("\nGem '{}' was created at {}\n", name, target.as_str());
+    println!(
+        "\nGem '{}' was successfully created. For more information on making a RubyGem visit https://bundler.io/guides/creating_gem.html\n",
+        name
+    );
 
     Ok(())
+}
+
+fn render_template(
+    env: &Environment,
+    template_name: &str,
+    ctx: minijinja::Value,
+) -> Result<String> {
+    env.get_template(template_name)
+        .and_then(|t| t.render(ctx))
+        .map_err(|e| {
+            Error::IoError(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("template '{}' error: {}", template_name, e),
+            ))
+        })
+}
+
+fn make_executable(path: &Utf8PathBuf) {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if let Ok(meta) = std::fs::metadata(path.as_std_path()) {
+            let mut perms = meta.permissions();
+            perms.set_mode(0o755);
+            let _ = std::fs::set_permissions(path.as_std_path(), perms);
+        }
+    }
 }
 
 fn validate_name(name: &str) -> Result<()> {
@@ -331,9 +401,8 @@ fn validate_name(name: &str) -> Result<()> {
     Ok(())
 }
 
-/// Convert "foo-bar/baz" or "foo-bar" into a Ruby constant like "Foo::Bar" or "Foo::Bar::Baz"
+/// Convert "foo-bar" or "foo-bar-baz" into a Ruby constant like "Foo::Bar" or "Foo::Bar::Baz".
 fn constant_name_from(name: &str) -> String {
-    // First convert to parts by '/' and '-'
     let parts: Vec<String> = name
         .split('/')
         .flat_map(|s| s.split('-'))
@@ -350,12 +419,23 @@ fn constant_name_from(name: &str) -> String {
 }
 
 fn sanitize_const_last(module_decl: &str) -> String {
-    // Return last constant for use in class name: Foo::Bar => Bar
     module_decl.split("::").last().unwrap_or("Test").to_string()
 }
 
 fn git_config_email() -> Option<String> {
     if let Ok(out) = Command::new("git").args(&["config", "user.email"]).output() {
+        if out.status.success() {
+            let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            if !s.is_empty() {
+                return Some(s);
+            }
+        }
+    }
+    None
+}
+
+fn git_config_name() -> Option<String> {
+    if let Ok(out) = Command::new("git").args(&["config", "user.name"]).output() {
         if out.status.success() {
             let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
             if !s.is_empty() {
