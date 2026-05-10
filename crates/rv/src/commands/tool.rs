@@ -146,3 +146,23 @@ pub struct Installed {
     /// The dir where the tool/gem was installed.
     pub dir: Utf8PathBuf,
 }
+
+#[test]
+fn test_parse_namespace() {
+    assert_eq!(
+        ("https://gem.coop".to_string(), "indirect".to_string()),
+        parse_namespace("https://gem.coop".to_string(), "indirect".to_string())
+    );
+    assert_eq!(
+        ("gem.coop/@namespace".to_string(), "gemname".to_string()),
+        parse_namespace("gem.coop".to_string(), "@namespace/gemname".to_string())
+    );
+    assert_eq!(
+        ("gem.coop".to_string(), "gemname@latest".to_string()),
+        parse_namespace("gem.coop".to_string(), "gemname@latest".to_string())
+    );
+    assert_eq!(
+        ("gem.coop".to_string(), "gem/name".to_string()),
+        parse_namespace("gem.coop".to_string(), "gem/name".to_string())
+    );
+}
