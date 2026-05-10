@@ -119,11 +119,11 @@ pub(crate) async fn tool(global_args: &GlobalArgs, tool_args: ToolArgs) -> Resul
 }
 
 fn parse_namespace(gem_server: String, gem: String) -> (String, String) {
-    if gem.chars().nth(0) == Some('@') {
-        if let Some((namespace, inner_gem)) = gem.split_once('/') {
-            let gem_server = [gem_server, namespace.to_string()].join("/");
-            return (gem_server, inner_gem.to_string());
-        }
+    if gem.starts_with('@')
+        && let Some((namespace, inner_gem)) = gem.split_once('/')
+    {
+        let gem_server = [gem_server, namespace.to_string()].join("/");
+        return (gem_server, inner_gem.to_string());
     }
     (gem_server, gem)
 }
