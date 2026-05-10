@@ -15,22 +15,26 @@ pub struct ToolArgs {
     pub command: ToolCommand,
 }
 
+#[derive(Args)]
+pub struct InstallArgs {
+    /// What to install. This can either be gem@version, e.g.
+    /// `mygem@2.18.0`, or a gem name like `mygem`, which is equivalent
+    /// to doing `mygem@latest`.
+    #[arg()]
+    gem: String,
+    /// What gem server to use.
+    #[arg(long, default_value = "https://gem.coop/")]
+    gem_server: String,
+    /// If true, and the tool is already installed, reinstall it.
+    /// Otherwise, skip installing if the tool was already installed.
+    #[arg(long, short)]
+    force: bool,
+}
+
 #[derive(Subcommand)]
 pub enum ToolCommand {
     #[command(about = "Install a gem as a CLI tool, with its own dedicated environment")]
-    Install {
-        /// What to install. This can either be gem@version, e.g.
-        /// `mygem@2.18.0`, or a gem name like `mygem`, which is equivalent
-        /// to doing `mygem@latest`.
-        gem: String,
-        /// What gem server to use.
-        #[arg(long, default_value = "https://gem.coop/")]
-        gem_server: String,
-        /// If true, and the tool is already installed, reinstall it.
-        /// Otherwise, skip installing if the tool was already installed.
-        #[arg(long, short)]
-        force: bool,
-    },
+    Install(InstallArgs),
     #[command(about = "List installed tools")]
     List {
         /// Output format for the list
@@ -87,13 +91,9 @@ type Result<T> = miette::Result<T, Error>;
 
 pub(crate) async fn tool(global_args: &GlobalArgs, tool_args: ToolArgs) -> Result<()> {
     match tool_args.command {
-        ToolCommand::Install {
-            gem,
-            gem_server,
-            force,
-        } => {
-            let (gem_server, gem) = parse_namespace(gem_server, gem);
-            install::install(global_args, gem, gem_server, force)
+        ToolCommand::Install(args) => {
+            let (gem_server, gem) = parse_namespace(args.gem_server, args.gem);
+            install::install(global_args, gem, gem_server, args.force)
                 .await
                 .map(|_| ())?
         }
