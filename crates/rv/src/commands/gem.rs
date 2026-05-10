@@ -22,18 +22,6 @@ pub struct GemArgs {
     #[arg(long)]
     pub test: Option<String>,
 
-    /// Make an executable in `exe/` with the gem name
-    #[arg(long)]
-    pub exe: bool,
-
-    /// Run `bundle install` in the new gem directory (if bundler is available)
-    #[arg(long)]
-    pub bundle: bool,
-
-    /// Open the generated gemspec with this editor (editor command)
-    #[arg(long)]
-    pub edit: Option<String>,
-
     /// GitHub username to use for generated URLs (optional)
     #[arg(long)]
     pub github_username: Option<String>,
@@ -72,7 +60,6 @@ pub(crate) fn gem(_global_args: &GlobalArgs, args: GemArgs) -> Result<()> {
 
     static GEMSPEC_J2: &str = include_str!("gem/templates/gemspec.j2");
     static LIB_MAIN_J2: &str = include_str!("gem/templates/lib_main.j2");
-    static BIN_EXEC_J2: &str = include_str!("gem/templates/bin_exec.j2");
     static BIN_CONSOLE_J2: &str = include_str!("gem/templates/bin_console.j2");
     static GEMFILE_J2: &str = include_str!("gem/templates/gemfile.j2");
     static README_J2: &str = include_str!("gem/templates/readme.j2");
@@ -84,7 +71,6 @@ pub(crate) fn gem(_global_args: &GlobalArgs, args: GemArgs) -> Result<()> {
             match tpl_name {
                 "gemspec.j2" => Ok(Some(GEMSPEC_J2.to_string())),
                 "lib_main.j2" => Ok(Some(LIB_MAIN_J2.to_string())),
-                "bin_exec.j2" => Ok(Some(BIN_EXEC_J2.to_string())),
                 "bin_console.j2" => Ok(Some(BIN_CONSOLE_J2.to_string())),
                 "gemfile.j2" => Ok(Some(GEMFILE_J2.to_string())),
                 "readme.j2" => Ok(Some(README_J2.to_string())),
@@ -117,14 +103,14 @@ pub(crate) fn gem(_global_args: &GlobalArgs, args: GemArgs) -> Result<()> {
         .unwrap_or_else(|| "TODO: Put your gem's website or public repo URL here.".to_string());
 
     let context = context! {
-        name => name.clone(),
-        title => title.clone(),
-        version => version.clone(),
-        author => author.clone(),
-        email => email.clone(),
-        homepage => homepage.clone(),
-        namespaced_path => namespaced_path.clone(),
-        module_decl => module_declaration.clone(),
+        name => name,
+        title => title,
+        version => version,
+        author => author,
+        email => email,
+        homepage => homepage,
+        namespaced_path => namespaced_path,
+        module_decl => module_declaration,
     };
 
     let mut target: Utf8PathBuf = std::env::current_dir()?.try_into().unwrap();
@@ -185,9 +171,9 @@ pub(crate) fn gem(_global_args: &GlobalArgs, args: GemArgs) -> Result<()> {
         "lib_main.j2",
         context! {
             name => name.clone(),
-            version => version.clone(),
-            module_decl => module_declaration.clone(),
-            namespaced_path => namespaced_path.clone(),
+            version => version,
+            module_decl => module_declaration,
+            namespaced_path => namespaced_path,
         },
     )?;
     let lib_rb_path = format!("lib/{}.rb", namespaced_path);
@@ -228,7 +214,7 @@ pub(crate) fn gem(_global_args: &GlobalArgs, args: GemArgs) -> Result<()> {
     )?;
 
     // --- README.md ---
-    let rendered_readme = render_template(&env, "readme.j2", context.clone())?;
+    let rendered_readme = render_template(&env, "readme.j2", context)?;
     create_file(
         &target.join("README.md"),
         &dp("README.md"),
@@ -240,7 +226,7 @@ pub(crate) fn gem(_global_args: &GlobalArgs, args: GemArgs) -> Result<()> {
         &env,
         "bin_console.j2",
         context! {
-            namespaced_path => namespaced_path.clone(),
+            namespaced_path => namespaced_path,
         },
     )?;
     let bin_console_path = target.join("bin").join("console");
@@ -260,23 +246,6 @@ pub(crate) fn gem(_global_args: &GlobalArgs, args: GemArgs) -> Result<()> {
         bin_setup_content.as_bytes(),
     )?;
     make_executable(&bin_setup_path);
-
-    // --- Optional: exe/<name> ---
-    if args.exe {
-        let exe_rendered = render_template(
-            &env,
-            "bin_exec.j2",
-            context! {
-                name => name.clone(),
-                namespaced_path => namespaced_path.clone(),
-                module_decl => module_declaration.clone(),
-            },
-        )?;
-        let exe_rel = format!("exe/{}", name);
-        let exe_path = target.join(&exe_rel);
-        create_file(&exe_path, &dp(&exe_rel), exe_rendered.as_bytes())?;
-        make_executable(&exe_path);
-    }
 
     // --- Optional: test scaffold ---
     if let Some(ref test) = args.test {
@@ -336,26 +305,6 @@ pub(crate) fn gem(_global_args: &GlobalArgs, args: GemArgs) -> Result<()> {
         }
     }
 
-    // --- Optional: bundle install ---
-    if args.bundle {
-        println!("Running `bundle install` in the new gem directory.");
-        if let Ok(mut cmd) = Command::new("bundle")
-            .arg("install")
-            .current_dir(target.as_std_path())
-            .spawn()
-        {
-            let _ = cmd.wait();
-        } else {
-            println!("Could not run `bundle install` - is Bundler installed?");
-        }
-    }
-
-    // --- Optional: open editor ---
-    if let Some(editor) = args.edit {
-        let gemspec_file = target.join(format!("{}.gemspec", name));
-        let _ = Command::new(editor).arg(gemspec_file.as_str()).spawn();
-    }
-
     println!(
         "\nGem '{}' was successfully created. For more information on making a RubyGem visit https://bundler.io/guides/creating_gem.html\n",
         name
@@ -372,10 +321,10 @@ fn render_template(
     env.get_template(template_name)
         .and_then(|t| t.render(ctx))
         .map_err(|e| {
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("template '{}' error: {}", template_name, e),
-            ))
+            Error::IoError(std::io::Error::other(format!(
+                "template '{}' error: {}",
+                template_name, e
+            )))
         })
 }
 
@@ -423,25 +372,24 @@ fn sanitize_const_last(module_decl: &str) -> String {
 }
 
 fn git_config_email() -> Option<String> {
-    if let Ok(out) = Command::new("git").args(&["config", "user.email"]).output() {
-        if out.status.success() {
-            let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
-            if !s.is_empty() {
-                return Some(s);
-            }
-        }
+    if let Ok(out) = Command::new("git").args(["config", "user.email"]).output()
+        && out.status.success()
+        && let s = String::from_utf8_lossy(&out.stdout).trim().to_string()
+        && !s.is_empty()
+    {
+        return Some(s);
     }
+
     None
 }
 
 fn git_config_name() -> Option<String> {
-    if let Ok(out) = Command::new("git").args(&["config", "user.name"]).output() {
-        if out.status.success() {
-            let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
-            if !s.is_empty() {
-                return Some(s);
-            }
-        }
+    if let Ok(out) = Command::new("git").args(["config", "user.name"]).output()
+        && out.status.success()
+        && let s = String::from_utf8_lossy(&out.stdout).trim().to_string()
+        && !s.is_empty()
+    {
+        return Some(s);
     }
     None
 }
