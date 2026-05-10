@@ -63,6 +63,10 @@ pub(crate) fn gem(_global_args: &GlobalArgs, args: GemArgs) -> Result<()> {
     static BIN_CONSOLE_J2: &str = include_str!("gem/templates/bin_console.j2");
     static GEMFILE_J2: &str = include_str!("gem/templates/gemfile.j2");
     static README_J2: &str = include_str!("gem/templates/readme.j2");
+    static MINITEST_TEST_HELPER_J2: &str = include_str!("gem/templates/minitest_test_helper.j2");
+    static MINITEST_TEST_J2: &str = include_str!("gem/templates/minitest_test.j2");
+    static RSPEC_SPEC_HELPER_J2: &str = include_str!("gem/templates/rspec_spec_helper.j2");
+    static RSPEC_SPEC_J2: &str = include_str!("gem/templates/rspec_spec.j2");
 
     let mut env = Environment::new();
 
@@ -74,6 +78,10 @@ pub(crate) fn gem(_global_args: &GlobalArgs, args: GemArgs) -> Result<()> {
                 "bin_console.j2" => Ok(Some(BIN_CONSOLE_J2.to_string())),
                 "gemfile.j2" => Ok(Some(GEMFILE_J2.to_string())),
                 "readme.j2" => Ok(Some(README_J2.to_string())),
+                "minitest_test_helper.j2" => Ok(Some(MINITEST_TEST_HELPER_J2.to_string())),
+                "minitest_test.j2" => Ok(Some(MINITEST_TEST_J2.to_string())),
+                "rspec_spec_helper.j2" => Ok(Some(RSPEC_SPEC_HELPER_J2.to_string())),
+                "rspec_spec.j2" => Ok(Some(RSPEC_SPEC_J2.to_string())),
                 _ => Ok(None),
             }
         },
@@ -251,49 +259,55 @@ pub(crate) fn gem(_global_args: &GlobalArgs, args: GemArgs) -> Result<()> {
     if let Some(ref test) = args.test {
         match test.as_str() {
             "rspec" => {
-                let spec_dir = target.join("spec");
-                fs::create_dir_all(&spec_dir)?;
-
-                let spec_helper =
-                    "# frozen_string_literal: true\n\nRSpec.configure do |config|\nend\n";
+                // .rspec config file
                 create_file(
-                    &spec_dir.join("spec_helper.rb"),
+                    &target.join(".rspec"),
+                    &dp(".rspec"),
+                    b"--require spec_helper\n",
+                )?;
+
+                let test_ctx = context! {
+                    namespaced_path => namespaced_path,
+                    module_decl => module_declaration,
+                };
+
+                let spec_helper_rendered =
+                    render_template(&env, "rspec_spec_helper.j2", test_ctx.clone())?;
+                create_file(
+                    &target.join("spec").join("spec_helper.rb"),
                     &dp("spec/spec_helper.rb"),
-                    spec_helper.as_bytes(),
+                    spec_helper_rendered.as_bytes(),
                 )?;
 
                 let spec_rel = format!("spec/{}_spec.rb", underscored.replace('/', "_"));
-                let spec_content = format!(
-                    "# frozen_string_literal: true\n\nrequire \"spec_helper\"\n\nRSpec.describe {} do\nend\n",
-                    module_declaration
-                );
+                let spec_rendered = render_template(&env, "rspec_spec.j2", test_ctx)?;
                 create_file(
                     &target.join(&spec_rel),
                     &dp(&spec_rel),
-                    spec_content.as_bytes(),
+                    spec_rendered.as_bytes(),
                 )?;
             }
             "minitest" => {
-                let test_dir = target.join("test");
-                fs::create_dir_all(&test_dir)?;
+                let test_ctx = context! {
+                    namespaced_path => namespaced_path,
+                    module_decl => module_declaration,
+                    last_const => sanitize_const_last(&module_declaration),
+                };
 
-                let helper = "# frozen_string_literal: true\n\n$LOAD_PATH.unshift File.expand_path(\"../lib\", __dir__)\n\nrequire \"minitest/autorun\"\n";
+                let helper_rendered =
+                    render_template(&env, "minitest_test_helper.j2", test_ctx.clone())?;
                 create_file(
-                    &test_dir.join("test_helper.rb"),
+                    &target.join("test").join("test_helper.rb"),
                     &dp("test/test_helper.rb"),
-                    helper.as_bytes(),
+                    helper_rendered.as_bytes(),
                 )?;
 
                 let test_rel = format!("test/test_{}.rb", underscored.replace('/', "_"));
-                let test_content = format!(
-                    "# frozen_string_literal: true\n\nrequire \"test_helper\"\n\nclass Test{} < Minitest::Test\n  def test_that_it_has_a_version_number\n    refute_nil ::{}::VERSION\n  end\nend\n",
-                    sanitize_const_last(&module_declaration),
-                    module_declaration
-                );
+                let test_rendered = render_template(&env, "minitest_test.j2", test_ctx)?;
                 create_file(
                     &target.join(&test_rel),
                     &dp(&test_rel),
-                    test_content.as_bytes(),
+                    test_rendered.as_bytes(),
                 )?;
             }
             other => {
