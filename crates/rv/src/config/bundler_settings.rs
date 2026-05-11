@@ -104,10 +104,19 @@ impl BundlerSettings {
         None
     }
 
-    pub fn token_for(&self, host: &str) -> Option<String> {
+    /// HTTP URL userinfo (username and optional password) from Bundler `BUNDLE_<HOST>` keys
+    /// (same as `bundle config`).
+    ///
+    /// Returns `(username, password)`. For a bare token, the whole config value is the username
+    /// and password is `None`. If the value contains `:`, splits on the first `:` only (password
+    /// may contain more colons), matching Bundler.
+    pub fn userinfo_for_host(&self, host: &str) -> Option<(String, Option<String>)> {
         let key = format!("BUNDLE_{}", host.to_uppercase().replace('.', "__"));
-
-        self.get_string(&key)
+        let raw = self.get_string(&key)?;
+        Some(match raw.split_once(':') {
+            None => (raw, None),
+            Some((user, password)) => (user.to_string(), Some(password.to_string())),
+        })
     }
 }
 
@@ -283,12 +292,12 @@ BUNDLE_DEPLOYMENT: true
     }
 
     #[test]
-    fn test_token_for_from_config_file_only() {
+    fn test_userinfo_for_host_from_config_file_only() {
         let temp_dir = Utf8TempDir::new().expect("Failed to create temporary directory");
         let home_dir = temp_dir.path().join("home");
         let project_dir = temp_dir.path().join("project");
 
-        // write a local config with the token
+        // write a local config with host userinfo (bare token)
         let config_dir = project_dir.join(".bundle");
         std::fs::create_dir_all(&config_dir).unwrap();
         let config_file = config_dir.join("config");
@@ -301,10 +310,38 @@ BUNDLE_GITHUB__COM: config-token
 
         let settings = BundlerSettings::new(&home_dir, &project_dir).unwrap();
         assert_eq!(
-            Some("config-token".to_string()),
-            settings.token_for("github.com")
+            Some(("config-token".to_string(), None)),
+            settings.userinfo_for_host("github.com")
         );
 
-        assert_eq!(None, settings.token_for("rubygems.com"));
+        assert_eq!(None, settings.userinfo_for_host("rubygems.com"));
+    }
+
+    #[test]
+    fn test_userinfo_for_host_user_password_from_config() {
+        let temp_dir = Utf8TempDir::new().expect("Failed to create temporary directory");
+        let home_dir = temp_dir.path().join("home");
+        let project_dir = temp_dir.path().join("project");
+
+        let config_dir = project_dir.join(".bundle");
+        std::fs::create_dir_all(&config_dir).unwrap();
+        let config_file = config_dir.join("config");
+
+        let config_content = r#"---
+
+BUNDLE_GITHUB__COM: "user:secret:with:colons"
+BUNDLE_GITLAB__COM: "__token__:ghp_abc"
+"#;
+        std::fs::write(&config_file, config_content).expect("Failed to write config");
+
+        let settings = BundlerSettings::new(&home_dir, &project_dir).unwrap();
+        assert_eq!(
+            Some(("user".to_string(), Some("secret:with:colons".to_string()))),
+            settings.userinfo_for_host("github.com")
+        );
+        assert_eq!(
+            Some(("__token__".to_string(), Some("ghp_abc".to_string()))),
+            settings.userinfo_for_host("gitlab.com")
+        );
     }
 }
