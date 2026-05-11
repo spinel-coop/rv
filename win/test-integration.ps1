@@ -3,7 +3,7 @@ $RUBY_VERSION = "3.4.7"
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
 
-cargo build --bin rvw
+cargo build --bin rvw --bin rvx
 $RV = (Resolve-Path ".\target\debug\rvw.exe").Path
 
 Write-Host "=== rv run --ruby $RUBY_VERSION ruby (install + execute) ==="
