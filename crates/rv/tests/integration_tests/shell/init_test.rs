@@ -1,6 +1,6 @@
-use crate::common::RvTest;
+use crate::common_test::RvTest;
 #[cfg(unix)]
-use crate::common::Shell;
+use crate::common_test::Shell;
 use insta::assert_snapshot;
 
 #[cfg(unix)]
@@ -58,7 +58,7 @@ fn test_switch_rubies_fish() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn test_switch_rubies_zsh() -> Result<(), Box<dyn std::error::Error>> {
     assert!(
-        crate::common::is_shell_installed("zsh"),
+        crate::common_test::is_shell_installed("zsh"),
         "Test requires 'zsh' shell to be installed"
     );
 

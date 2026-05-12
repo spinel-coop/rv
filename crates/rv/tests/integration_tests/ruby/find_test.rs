@@ -1,4 +1,4 @@
-use crate::common::{RvOutput, RvTest};
+use crate::common_test::{RvOutput, RvTest};
 
 impl RvTest {
     pub fn ruby_find(&self, args: &[&str]) -> RvOutput {

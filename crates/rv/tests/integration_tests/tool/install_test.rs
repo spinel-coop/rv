@@ -1,6 +1,6 @@
 use fs_err as fs;
 
-use crate::common::{RvOutput, RvTest};
+use crate::common_test::{RvOutput, RvTest};
 use owo_colors::OwoColorize;
 use rv_cache::rm_rf;
 
