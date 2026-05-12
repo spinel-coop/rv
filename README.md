@@ -59,6 +59,12 @@ See [SHELL INTEGRATION](docs/SHELL_INTEGRATION.md) for more about `.ruby-version
 
 For details, see [INSTALL_BENCHMARK.md](docs/INSTALL_BENCHMARK.md).
 
+## Configuration
+
+`rv` supports configuration via a `rv.kdl` file at the project or user level, and via environment variables prefixed with `RV_`.
+
+See [SETTINGS.md](docs/SETTINGS.md) for all settings, allowed values, and configuration precedence.
+
 ## Testimonials
 
 "what the heckie that just installed a ruby version for me in .22 seconds???"
