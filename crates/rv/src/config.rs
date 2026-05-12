@@ -21,7 +21,8 @@ use rv_ruby::{
 
 use rv_gem_types::Requirement;
 
-use crate::{GlobalArgs, update};
+use crate::GlobalArgs;
+use crate::update;
 
 pub mod bundler_settings;
 pub mod github;
@@ -160,7 +161,7 @@ impl Config {
     }
 
     pub async fn self_update_if_needed(&self) {
-        update::update_if_needed(&self.rv_settings.update_mode).await;
+        update::check(&self.rv_settings.update_mode).await;
     }
 
     #[cfg(test)]

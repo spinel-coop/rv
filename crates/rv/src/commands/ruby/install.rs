@@ -56,7 +56,7 @@ pub(crate) async fn install(
     tarball_path: Option<Utf8PathBuf>,
     force: bool,
 ) -> Result<()> {
-    let config = &Config::new(global_args, request)?;
+    let config = &Config::with_settings(global_args, request)?;
 
     config.self_update_if_needed().await;
 

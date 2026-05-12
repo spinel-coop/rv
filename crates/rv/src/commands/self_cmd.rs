@@ -1,14 +1,16 @@
-use axoupdater::AxoUpdater;
 use clap::{Args, Subcommand};
+use tracing::error;
 
-use crate::{GlobalArgs, update::is_homebrew_install};
+use crate::update::{UpdateOutcome, run_update};
+use crate::{GlobalArgs, update};
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error(transparent)]
-    IoError(#[from] std::io::Error),
+    UpdateError(#[from] update::Error),
+
     #[error(transparent)]
-    AxoupdateError(#[from] axoupdater::AxoupdateError),
+    IoError(#[from] std::io::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -37,26 +39,17 @@ pub(crate) async fn self_cmd(_global_args: &GlobalArgs, args: SelfArgs) -> Resul
 }
 
 pub(crate) async fn update() -> Result<()> {
-    if is_homebrew_install() {
-        println!(
-            "Your copy of `rv` was installed via Homebrew. Run `brew upgrade rv` to update it."
-        );
-        return Ok(());
-    }
-
-    let mut updater = AxoUpdater::new_for("rv");
-
-    if updater.load_receipt().is_err() || !updater.check_receipt_is_for_this_executable()? {
-        println!(
-            "Your copy of `rv` was not installed via a method that `rv self update` supports. Please update manually."
-        );
-        return Ok(());
-    }
-
-    if let Some(result) = updater.run().await? {
-        println!("rv {} installed!", result.new_version);
-    } else {
-        println!("rv is already up to date!");
+    match run_update("install").await {
+        Ok(UpdateOutcome::Installed(v)) => {
+            eprintln!("✅ New version of `rv` {} installed!", v);
+        }
+        Ok(UpdateOutcome::UpdateAvailable(_latest)) => {}
+        Ok(UpdateOutcome::AlreadyUpToDate) => {
+            eprintln!("rv is already up to date!");
+        }
+        Err(e) => {
+            error!("Self-update failed: {}", e);
+        }
     }
 
     Ok(())
