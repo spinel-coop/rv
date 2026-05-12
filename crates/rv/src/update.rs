@@ -5,9 +5,14 @@ use rv_version::Version;
 use serde::Deserialize;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use std::{env, fs, thread};
+use std::time::{SystemTime, UNIX_EPOCH};
+use std::{env, fs};
 use tracing::{debug, error};
+
+#[cfg(target_os = "windows")]
+use std::thread;
+#[cfg(target_os = "windows")]
+use std::time::Duration;
 
 const UPDATE_CHECK_FILENAME: &str = "rv_last_update_check";
 const CHECK_INTERVAL_SECS: u64 = 60 * 60;
@@ -291,6 +296,10 @@ pub fn run_homebrew_upgrade() -> Result<()> {
 }
 
 pub fn relaunch() -> Result<()> {
+    // This was taked from https://github.com/superfly/flyctl/blob/eb666e8fc2d597720405dcc7ee87cddbc6329c1e/internal/update/update.go#L398
+    // Wait a bit for the update to take effect.
+    // Windows seemed to need this for whatever reason.
+    #[cfg(target_os = "windows")]
     thread::sleep(Duration::from_millis(400));
 
     #[cfg(target_os = "windows")]
