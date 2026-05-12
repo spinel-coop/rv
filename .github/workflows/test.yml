@@ -121,7 +121,7 @@ jobs:
         run: rustup show
 
       - name: Install nextest
-        uses: taiki-e/install-action@a1df9120380005ebdc788c62449b841b205541dd # v2.71.0
+        uses: taiki-e/install-action@787505cde8a44ea468a00478fe52baf23b15bccd # v2.75.21
         with:
           tool: cargo-nextest
 
