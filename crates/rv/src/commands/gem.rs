@@ -342,14 +342,14 @@ fn render_template(
         })
 }
 
-fn make_executable(path: &Utf8PathBuf) {
+fn make_executable(_path: &Utf8PathBuf) {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        if let Ok(meta) = std::fs::metadata(path.as_std_path()) {
+        if let Ok(meta) = std::fs::metadata(_path.as_std_path()) {
             let mut perms = meta.permissions();
             perms.set_mode(0o755);
-            let _ = std::fs::set_permissions(path.as_std_path(), perms);
+            let _ = std::fs::set_permissions(_path.as_std_path(), perms);
         }
     }
 }
