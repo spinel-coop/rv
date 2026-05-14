@@ -3139,7 +3139,7 @@ dependencies = [
  "saphyr",
  "saphyr-parser",
  "thiserror 2.0.18",
- "winnow 0.7.15",
+ "winnow 1.0.1",
 ]
 
 [[package]]
@@ -3173,7 +3173,7 @@ dependencies = [
  "rv-version",
  "tempfile",
  "thiserror 2.0.18",
- "winnow 0.7.15",
+ "winnow 1.0.1",
 ]
 
 [[package]]
