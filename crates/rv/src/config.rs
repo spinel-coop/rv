@@ -52,6 +52,10 @@ pub enum Error {
         "No available Ruby matched the Ruby requirements. The requirements were {requirement:?}"
     )]
     NoRubyMatchingRequirement { requirement: Requirement },
+    #[error(
+        "Cannot fetch the list of available Ruby versions in offline mode and no cached release list is available. Try again without --offline so rv can populate its cache."
+    )]
+    OfflineRemoteRubyListUnavailable,
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -208,6 +212,9 @@ impl Config {
             Ok(version)
         } else {
             debug!("Fetching available rubies, because user gave an underspecified Ruby range");
+            if self.offline && !self.has_cached_remote_ruby_list() {
+                return Err(Error::OfflineRemoteRubyListUnavailable);
+            }
             let remote_rubies = self.remote_rubies().await;
 
             let matched_ruby = requested_range
@@ -232,6 +239,9 @@ impl Config {
         match requirement.find_match_in(&installed_rubies, false) {
             Some(local_ruby) => Ok(local_ruby.version),
             None => {
+                if self.offline && !self.has_cached_remote_ruby_list() {
+                    return Err(Error::OfflineRemoteRubyListUnavailable);
+                }
                 let remote_rubies = &self.remote_rubies().await;
 
                 match requirement

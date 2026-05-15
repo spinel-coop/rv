@@ -52,13 +52,40 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
+/// Returns (cache filename, release-list URL) for the given host.
+fn cache_target_for(host: &HostPlatform) -> (&'static str, String) {
+    if host.is_windows() {
+        (
+            "rubyinstaller2.json",
+            url_for(
+                "RV_WINDOWS_LIST_URL",
+                "https://api.github.com/repos/oneclick/rubyinstaller2/releases?per_page=100",
+            ),
+        )
+    } else {
+        (
+            "available_rubies.json",
+            url_for(
+                "RV_LIST_URL",
+                "https://api.github.com/repos/spinel-coop/rv-ruby/releases/latest",
+            ),
+        )
+    }
+}
+
+fn cache_key_for(url: &str, cache_file: &str) -> String {
+    rv_cache::cache_digest(format!("{}-{}", url, cache_file))
+}
+
 impl Config {
     /// Discover all remotely available Ruby versions with caching.
     ///
     /// On Windows, fetches from `oneclick/rubyinstaller2` (one release per Ruby version).
     /// On other platforms, fetches from `spinel-coop/rv-ruby` (all versions in one release).
+    ///
+    /// In offline mode, returns whatever is in the on-disk cache without making
+    /// any network requests; returns an empty list if nothing is cached.
     pub async fn discover_remote_rubies(&self) -> Vec<RemoteRuby> {
-        // Detect host first — this decides which release source to query.
         let host = match HostPlatform::current() {
             Ok(h) => h,
             Err(e) => {
@@ -67,23 +94,24 @@ impl Config {
             }
         };
 
-        let ((fetch_result, url), cache_file) = if host.is_windows() {
-            (
-                fetch_rubyinstaller2_rubies(&self.cache).await,
-                "rubyinstaller2.json",
-            )
-        } else {
-            (
-                fetch_available_rubies(&self.cache).await,
-                "available_rubies.json",
-            )
-        };
+        let (cache_file, url) = cache_target_for(&host);
 
-        let release = match fetch_result {
-            Ok(release) => release,
-            Err(e) => {
-                warn!("Could not fetch available Ruby versions: {}", e);
-                stale_cache_fallback(&self.cache, cache_file, &url)
+        let release = if self.offline {
+            debug!("Offline mode: reading available Ruby versions from cache only.");
+            stale_cache_fallback(&self.cache, cache_file, &url)
+        } else {
+            let fetch_result = if host.is_windows() {
+                fetch_rubyinstaller2_rubies(&self.cache).await.0
+            } else {
+                fetch_available_rubies(&self.cache).await.0
+            };
+
+            match fetch_result {
+                Ok(release) => release,
+                Err(e) => {
+                    warn!("Could not fetch available Ruby versions: {}", e);
+                    stale_cache_fallback(&self.cache, cache_file, &url)
+                }
             }
         };
 
@@ -107,10 +135,23 @@ impl Config {
 
         rubies
     }
-}
 
-fn cache_key_for(url: &str, cache_file: &str) -> String {
-    rv_cache::cache_digest(format!("{}-{}", url, cache_file))
+    /// Returns true if a cached list of remotely available Ruby versions exists
+    /// on disk for the current platform. Used to decide whether offline mode
+    /// can satisfy a request without falling back to network access.
+    pub fn has_cached_remote_ruby_list(&self) -> bool {
+        let host = match HostPlatform::current() {
+            Ok(h) => h,
+            Err(_) => return false,
+        };
+
+        let (cache_file, url) = cache_target_for(&host);
+        let cache_key = cache_key_for(&url, cache_file);
+        let cache_entry = self
+            .cache
+            .entry(rv_cache::CacheBucket::Ruby, "releases", cache_key);
+        cache_entry.path().is_file()
+    }
 }
 
 fn url_for(env_var: &str, default_url: &str) -> String {

@@ -153,6 +153,11 @@ pub(crate) async fn list(
     let active_installed = active_ruby;
 
     if !version_filter.installed_only {
+        if config.offline && !config.has_cached_remote_ruby_list() {
+            return Err(Error::ConfigError(
+                crate::config::Error::OfflineRemoteRubyListUnavailable,
+            ));
+        }
         let remote_rubies = config.remote_rubies().await;
 
         let selected_remote_rubies = if version_filter.all {
