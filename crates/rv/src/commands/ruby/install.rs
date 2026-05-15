@@ -45,6 +45,14 @@ pub enum Error {
     InvalidTarballPath(PathBuf),
     #[error(transparent)]
     UnsupportedPlatform(#[from] rv_platform::UnsupportedPlatformError),
+    #[error(
+        "Cannot download Ruby {version} in offline mode: the archive at {url} is not in the cache. Try again without --offline so rv can download it."
+    )]
+    OfflineArchiveMissing { version: String, url: String },
+    #[error(
+        "Cannot resolve the latest ruby-dev release in offline mode. Try again without --offline."
+    )]
+    OfflineDevReleaseLookup,
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -63,6 +71,18 @@ pub(crate) async fn install(
     let progress = WorkProgress::new();
 
     let request = config.ruby_request();
+
+    if config.offline
+        && !force
+        && let Some(installed) = config.current_ruby()
+    {
+        println!(
+            "Ruby {} already installed at {}.",
+            installed.version.to_string().cyan(),
+            installed.path.cyan(),
+        );
+        return Ok(());
+    }
 
     let version = match request {
         RubyRequest::Dev => "dev".to_string(),
@@ -112,6 +132,9 @@ async fn download_tarball(
     let mut url = ruby_url(version, &host);
 
     if version == "dev" && !host.is_windows() {
+        if config.offline {
+            return Err(Error::OfflineDevReleaseLookup);
+        }
         url = find_latest_ruby_dev_url(&url).await?;
     }
     let archive_path = archive_cache_path(config, &url, &host);
@@ -126,6 +149,11 @@ async fn download_tarball(
             "Archive {} already exists, skipping download.",
             archive_path.cyan()
         );
+    } else if config.offline {
+        return Err(Error::OfflineArchiveMissing {
+            version: version.to_string(),
+            url,
+        });
     } else {
         download_ruby_archive(config, &url, &archive_path, version, progress, &host).await?;
     }
