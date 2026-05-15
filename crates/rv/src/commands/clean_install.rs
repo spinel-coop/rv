@@ -222,6 +222,10 @@ pub enum Error {
         "Native gem extensions require a C compiler to build.\nInstall them by running:\n\n  xcode-select --install"
     ))]
     MissingMacosDevTools,
+    #[error(
+        "Cannot download gem {gem_name} from {url} in offline mode: not in the cache. Try again without --offline so rv can fetch the gem."
+    )]
+    OfflineGemMissing { gem_name: String, url: String },
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -1844,6 +1848,11 @@ async fn download_gem<'i>(
         stats.cached_one();
         let data = tokio::fs::read(&cache_path).await?;
         Bytes::from(data)
+    } else if config.offline {
+        return Err(Error::OfflineGemMissing {
+            gem_name: spec.release_tuple.full_name(),
+            url: url.to_string(),
+        });
     } else {
         debug!("Downloading gem from {url}");
         stats.downloaded_one();

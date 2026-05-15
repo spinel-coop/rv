@@ -190,6 +190,77 @@ fn test_tool_install_writes_ruby_version_file() {
 }
 
 #[test]
+fn test_tool_install_offline_with_no_cache_fails() {
+    let test = RvTest::new();
+
+    test.create_ruby_dir("ruby-4.0.0");
+
+    let output = test.rv(&[
+        "--offline",
+        "tool",
+        "install",
+        "--gem-server",
+        &test.gemserver_url(),
+        "indirect",
+    ]);
+
+    output.assert_failure();
+    output.assert_stderr_contains("OfflineGemInfoMissing");
+}
+
+#[test]
+fn test_tool_install_offline_uses_cached_metadata_and_gem() {
+    let mut test = RvTest::new();
+
+    test.create_ruby_dir("ruby-4.0.0");
+
+    // Pre-populate the compact-index blob for `indirect` and the gem archive
+    // download cache, so offline tool-install can satisfy itself from disk.
+    let cache_dir = test.enable_cache();
+
+    let info_content = fs::read("tests/fixtures/info-indirect-gem").unwrap();
+    let compact_index_dir = cache_dir
+        .join("gemdeps-v0")
+        .join("compact_index")
+        .join("info");
+    fs_err::create_dir_all(&compact_index_dir).unwrap();
+    fs_err::write(compact_index_dir.join("indirect"), &info_content).unwrap();
+
+    let gem_path = test.gem_package_download_path("indirect-1.2.0.gem");
+    let gem_url = format!("{}/{}", test.server_url(), gem_path);
+    let gem_content = fs_err::read("../rv-gem-package/tests/fixtures/indirect-1.2.0.gem").unwrap();
+    let cache_key = rv_cache::cache_digest(gem_url.as_str());
+    let gems_dir = cache_dir.join("gem-v0").join("gems");
+    fs_err::create_dir_all(&gems_dir).unwrap();
+    fs_err::write(gems_dir.join(format!("{}.gem", cache_key)), &gem_content).unwrap();
+
+    // Trip-wires: any HTTP fetch would match one of these and fail expect(0).
+    let no_info_fetch = test
+        .mock_request("GET", "/info/indirect")
+        .with_status(200)
+        .expect(0)
+        .create();
+    let no_gem_fetch = test
+        .mock_request("GET", gem_path.as_str())
+        .with_status(200)
+        .expect(0)
+        .create();
+
+    let output = test.rv(&[
+        "--offline",
+        "tool",
+        "install",
+        "--gem-server",
+        &test.gemserver_url(),
+        "indirect",
+    ]);
+
+    output.assert_success();
+    no_info_fetch.assert();
+    no_gem_fetch.assert();
+}
+
+#[test]
 fn test_tool_install_package_data_tar_gz_with_trailing_garbage() {
     let mut test = RvTest::new();
 

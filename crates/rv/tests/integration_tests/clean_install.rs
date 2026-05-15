@@ -27,6 +27,55 @@ fn test_clean_install_download_test_gem() {
 }
 
 #[test]
+fn test_clean_install_offline_missing_gem_fails() {
+    let mut test = RvTest::new();
+
+    test.create_ruby_dir("ruby-4.0.1");
+
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testsource");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testsource.lock");
+    test.replace_source("http://gems.example.com", &test.server_url());
+
+    let output = test.ci(&["--offline"]);
+
+    output.assert_failure();
+    output.assert_stderr_contains("OfflineGemMissing");
+}
+
+#[test]
+fn test_clean_install_offline_uses_cached_gem() {
+    let mut test = RvTest::new();
+
+    test.create_ruby_dir("ruby-4.0.1");
+
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testsource");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testsource.lock");
+    test.replace_source("http://gems.example.com", &test.server_url());
+
+    // Pre-populate the gem-archive cache that download_gem() reads, so the
+    // offline ci can satisfy itself from disk without HTTP.
+    let cache_dir = test.enable_cache();
+    let gem_path = test.gem_package_download_path("test-gem-1.0.0.gem");
+    let gem_url = format!("{}/{}", test.server_url(), gem_path);
+    let gem_content = fs_err::read("../rv-gem-package/tests/fixtures/test-gem-1.0.0.gem").unwrap();
+    let cache_key = rv_cache::cache_digest(gem_url.as_str());
+    let gems_dir = cache_dir.join("gem-v0").join("gems");
+    fs_err::create_dir_all(&gems_dir).unwrap();
+    fs_err::write(gems_dir.join(format!("{}.gem", cache_key)), &gem_content).unwrap();
+
+    let no_fetch_guard = test
+        .mock_request("GET", gem_path.as_str())
+        .with_status(200)
+        .expect(0)
+        .create();
+
+    let output = test.ci(&["--offline"]);
+
+    output.assert_success();
+    no_fetch_guard.assert();
+}
+
+#[test]
 fn test_clean_install_input_validation() {
     let mut test = RvTest::new();
 
