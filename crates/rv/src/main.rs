@@ -85,9 +85,14 @@ struct Cli {
     #[arg(long, env = "RV_COLOR")]
     color: Option<ColorMode>,
 
-    /// Run rv in offline mode if possible
-    /// TODO: Hide until really apply offline mode in all parts of rv.
-    #[arg(long, hide = true, global = true)]
+    /// Run without network access.
+    ///
+    /// rv will skip checking for available Ruby versions, downloading Ruby
+    /// installations, and looking up or downloading gems. Operations that can
+    /// be satisfied from cached or already-installed artifacts continue to
+    /// work; operations that strictly require the network fail with an error
+    /// suggesting to retry without --offline.
+    #[arg(long, global = true)]
     offline: bool,
 
     #[command(flatten)]

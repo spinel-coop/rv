@@ -64,6 +64,7 @@ pub struct Config {
     pub requested_ruby: RequestedRuby,
     pub bundler_settings: BundlerSettings,
     pub rv_settings: RvSettings,
+    pub offline: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -142,6 +143,7 @@ impl Config {
             requested_ruby,
             bundler_settings,
             rv_settings,
+            offline: global_args.offline,
         })
     }
 
@@ -183,6 +185,7 @@ impl Config {
             requested_ruby: RequestedRuby::Global,
             bundler_settings: BundlerSettings::default(),
             rv_settings: RvSettings::default(),
+            offline: false,
         }
     }
 
