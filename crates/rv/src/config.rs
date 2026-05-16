@@ -167,6 +167,9 @@ impl Config {
     }
 
     pub async fn self_update_if_needed(&self) {
+        if self.offline {
+            return;
+        }
         update::check(&self.rv_settings.update_mode).await;
     }
 
