@@ -98,7 +98,8 @@ fn test_ruby_install_successful_download() {
 fn test_ruby_install_from_tarball() {
     let mut test = RvTest::new();
 
-    let tarball_file = test.mock_tarball_on_disk("3.4.5");
+    let tarball_content = test.create_mock_tarball("3.4.5");
+    let tarball_file = test.mock_tarball_on_disk("3.4.5", tarball_content);
 
     let tarball_path = tarball_file.as_str();
     let output = test.rv(&["ruby", "install", "--tarball-path", tarball_path, "3.4.5"]);
@@ -108,6 +109,35 @@ fn test_ruby_install_from_tarball() {
     // Check mocked ruby from the tarball was actually installed by running it
     let output = test.rv(&["run", "ruby"]);
     output.assert_stdout_contains("ruby\n3.4.5");
+}
+
+#[test]
+fn test_ruby_install_from_tarball_with_files_falling_outside_root() {
+    let test = RvTest::new();
+
+    let tarball_path = test.temp_root().join("evil.tar.gz");
+    let tarball_content = fs_err::read("tests/fixtures/evil.tar.gz").unwrap();
+    fs_err::write(&tarball_path, &tarball_content).unwrap();
+
+    let ruby_dir = test.rubies_dir().join("ruby-3.4.5");
+    std::fs::create_dir_all(&ruby_dir).expect("Failed to create ruby directory");
+
+    let output = test.rv(&[
+        "ruby",
+        "install",
+        "--tarball-path",
+        tarball_path.as_str(),
+        "3.4.5",
+    ]);
+
+    output.assert_failure();
+    output.assert_stderr_contains("DirectoryTraversalError");
+
+    let owned_path = test.rubies_dir().join("owned");
+    assert!(
+        !owned_path.exists(),
+        "No malicious file should be created, but found {owned_path}",
+    );
 }
 
 #[test]

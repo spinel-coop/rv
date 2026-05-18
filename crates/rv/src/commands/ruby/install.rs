@@ -6,7 +6,7 @@ use futures_util::StreamExt;
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
 use reqwest::StatusCode;
-use std::path::PathBuf;
+use std::path::{Component, PathBuf};
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, info_span};
 use tracing_indicatif::span_ext::IndicatifSpanExt;
@@ -41,6 +41,8 @@ pub enum Error {
     },
     #[error("Could not get latest ruby-dev release")]
     GetLatestDevReleaseFailed,
+    #[error("Paths including .. are not allowed inside archives, but found {0}")]
+    DirectoryTraversalError(String),
     #[error(transparent)]
     UnsupportedPlatform(#[from] rv_platform::UnsupportedPlatformError),
 }
@@ -356,21 +358,44 @@ fn extract_ruby_archive(
 fn extract_tarball(tarball_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> Result<()> {
     let tarball = fs_err::File::open(tarball_path)?;
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
+    let dst_dir: PathBuf = rubies_dir.as_std_path().join(format!("ruby-{}", version));
     for e in archive.entries()? {
         let mut entry = e?;
         let entry_path = entry.path()?;
+
+        let mut dst_file = dst_dir.to_path_buf();
 
         // Strip the first two path components
         let mut path = entry_path.components();
         path.next();
         path.next();
 
-        let dst: PathBuf = rubies_dir
-            .as_std_path()
-            .join(format!("ruby-{}", version))
-            .join(path.as_path());
+        // Copied from
+        // https://github.com/composefs/tar-rs/blob/fc459c149f83bf4daceaa52e17d351989002e1a9/src/entry.rs#L404-L419,
+        // xcept we raise an error if we find a path with ".." inside the archive, rather than
+        // skipping extraction of that particular file.
+        for part in path {
+            match part {
+                // Leading '/' characters, root paths, and '.'
+                // components are just ignored and treated as "empty
+                // components"
+                Component::Prefix(..) | Component::RootDir | Component::CurDir => continue,
 
-        crate::tar_utils::unpack_entry(&mut entry, &dst)?;
+                // If any part of the filename is '..', then skip over
+                // unpacking the file to prevent directory traversal
+                // security issues.  See, e.g.: CVE-2001-1267,
+                // CVE-2002-0399, CVE-2005-1918, CVE-2007-4131
+                Component::ParentDir => {
+                    return Err(Error::DirectoryTraversalError(
+                        entry_path.display().to_string(),
+                    ));
+                }
+
+                Component::Normal(part) => dst_file.push(part),
+            }
+        }
+
+        crate::tar_utils::unpack_entry(&mut entry, &dst_file)?;
     }
     Ok(())
 }

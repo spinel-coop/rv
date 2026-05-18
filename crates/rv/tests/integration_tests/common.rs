@@ -372,8 +372,7 @@ impl RvTest {
     }
 
     /// Mock a tarball on disk for testing
-    pub fn mock_tarball_on_disk(&mut self, version: &str) -> Utf8PathBuf {
-        let content = &self.create_mock_tarball(version);
+    pub fn mock_tarball_on_disk(&mut self, version: &str, content: Vec<u8>) -> Utf8PathBuf {
         let filename = &self.make_tarball_file_name(version);
         let temp_dir = self.temp_root().join("tmp");
         std::fs::create_dir_all(&temp_dir).expect("Failed to create TMP directory");
