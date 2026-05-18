@@ -43,6 +43,37 @@ fn test_clean_install_offline_missing_gem_fails() {
 }
 
 #[test]
+fn test_clean_install_consumes_vendor_cache() {
+    let mut test = RvTest::new();
+    test.create_ruby_dir("ruby-4.0.1");
+
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testsource");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testsource.lock");
+    test.replace_source("http://gems.example.com", &test.server_url());
+
+    // Pre-populate vendor/cache with the Bundler-compatible filename. With this
+    // present, `rv ci` must skip both the user-cache and network paths.
+    let vendor_dir = test.current_dir().join("vendor/cache");
+    fs_err::create_dir_all(&vendor_dir).unwrap();
+    let gem_content =
+        fs_err::read("../rv-gem-package/tests/fixtures/test-gem-1.0.0.gem").unwrap();
+    fs_err::write(vendor_dir.join("test-gem-1.0.0.gem"), &gem_content).unwrap();
+
+    let no_fetch_guard = test
+        .mock_request(
+            "GET",
+            test.gem_package_download_path("test-gem-1.0.0.gem").as_str(),
+        )
+        .with_status(200)
+        .expect(0)
+        .create();
+
+    let output = test.ci(&[]);
+    output.assert_success();
+    no_fetch_guard.assert();
+}
+
+#[test]
 fn test_clean_install_offline_uses_cached_gem() {
     let mut test = RvTest::new();
 

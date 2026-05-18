@@ -1842,8 +1842,18 @@ async fn download_gem<'i>(
         .shard(rv_cache::CacheBucket::Gem, "gems")
         .into_path_buf()
         .join(format!("{cache_key}.gem"));
+    let vendor_path = config
+        .bundler_settings
+        .cache_path()
+        .map(|dir| dir.join(format!("{}.gem", spec.release_tuple.full_name())));
 
-    let contents = if cache_path.exists() {
+    let contents = if let Some(vp) = vendor_path.as_ref()
+        && vp.exists()
+    {
+        debug!("Reusing gem from vendor/cache: {}", vp);
+        stats.cached_one();
+        Bytes::from(tokio::fs::read(vp).await?)
+    } else if cache_path.exists() {
         debug!("Reusing gem from {url} in cache");
         stats.cached_one();
         let data = tokio::fs::read(&cache_path).await?;
