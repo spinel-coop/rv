@@ -870,7 +870,7 @@ fn cache_gemspec_path(
     Ok(dep_gemspec)
 }
 
-fn find_lockfile_path(gemfile: &Option<Utf8PathBuf>) -> Result<Utf8PathBuf> {
+pub(crate) fn find_lockfile_path(gemfile: &Option<Utf8PathBuf>) -> Result<Utf8PathBuf> {
     let Some(gemfile) = gemfile else {
         let lockfile_path = rv_dirs::canonicalize_utf8(Utf8Path::new("Gemfile.lock"))
             .map_err(|_| Error::MissingImplicitLockfile)?;
@@ -1776,7 +1776,7 @@ where
     })
 }
 
-fn url_for_spec(remote: &str, spec: &Spec) -> Result<Url> {
+pub(crate) fn url_for_spec(remote: &str, spec: &Spec) -> Result<Url> {
     let package_name = spec.release_tuple.package_name();
     let path = format!("gems/{package_name}");
     let url = url::Url::parse(remote)
