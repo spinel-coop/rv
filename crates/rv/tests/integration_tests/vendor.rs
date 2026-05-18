@@ -39,7 +39,10 @@ fn test_vendor_is_idempotent() {
     test.replace_source("http://gems.example.com", &test.server_url());
 
     // First run downloads exactly once.
-    let mock = test.mock_gem_download("test-gem-1.0.0.gem").expect(1).create();
+    let mock = test
+        .mock_gem_download("test-gem-1.0.0.gem")
+        .expect(1)
+        .create();
 
     test.vendor(&[]).assert_success();
 
