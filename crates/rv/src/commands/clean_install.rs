@@ -1914,6 +1914,17 @@ async fn download_gem<'i>(
         debug!("Cached {}", full_name);
     }
 
+    if config.bundler_settings.cache_all()
+        && let Some(vp) = vendor_path.as_ref()
+        && !vp.exists()
+    {
+        if let Some(parent) = vp.parent() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
+        tokio::fs::write(vp, &contents).await?;
+        debug!("Vendored {} to {}", full_name, vp);
+    }
+
     Ok(DownloadedRubygems { contents, spec })
 }
 

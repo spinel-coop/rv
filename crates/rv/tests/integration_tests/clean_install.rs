@@ -74,6 +74,35 @@ fn test_clean_install_consumes_vendor_cache() {
 }
 
 #[test]
+fn test_clean_install_cache_all_populates_vendor_cache() {
+    let mut test = RvTest::new();
+    test.create_ruby_dir("ruby-4.0.1");
+
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testsource");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testsource.lock");
+    test.replace_source("http://gems.example.com", &test.server_url());
+
+    let bundle_dir = test.current_dir().join(".bundle");
+    fs_err::create_dir_all(&bundle_dir).unwrap();
+    fs_err::write(
+        bundle_dir.join("config"),
+        "---\nBUNDLE_CACHE_ALL: true\n",
+    )
+    .unwrap();
+
+    let mock = test.mock_gem_download("test-gem-1.0.0.gem").create();
+    test.ci(&[]).assert_success();
+    mock.assert();
+
+    let vendored = test.current_dir().join("vendor/cache/test-gem-1.0.0.gem");
+    assert!(
+        vendored.exists(),
+        "Expected {} after ci with cache_all=true",
+        vendored,
+    );
+}
+
+#[test]
 fn test_clean_install_offline_uses_cached_gem() {
     let mut test = RvTest::new();
 
