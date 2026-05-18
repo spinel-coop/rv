@@ -55,14 +55,14 @@ fn test_clean_install_consumes_vendor_cache() {
     // present, `rv ci` must skip both the user-cache and network paths.
     let vendor_dir = test.current_dir().join("vendor/cache");
     fs_err::create_dir_all(&vendor_dir).unwrap();
-    let gem_content =
-        fs_err::read("../rv-gem-package/tests/fixtures/test-gem-1.0.0.gem").unwrap();
+    let gem_content = fs_err::read("../rv-gem-package/tests/fixtures/test-gem-1.0.0.gem").unwrap();
     fs_err::write(vendor_dir.join("test-gem-1.0.0.gem"), &gem_content).unwrap();
 
     let no_fetch_guard = test
         .mock_request(
             "GET",
-            test.gem_package_download_path("test-gem-1.0.0.gem").as_str(),
+            test.gem_package_download_path("test-gem-1.0.0.gem")
+                .as_str(),
         )
         .with_status(200)
         .expect(0)
@@ -84,11 +84,7 @@ fn test_clean_install_cache_all_populates_vendor_cache() {
 
     let bundle_dir = test.current_dir().join(".bundle");
     fs_err::create_dir_all(&bundle_dir).unwrap();
-    fs_err::write(
-        bundle_dir.join("config"),
-        "---\nBUNDLE_CACHE_ALL: true\n",
-    )
-    .unwrap();
+    fs_err::write(bundle_dir.join("config"), "---\nBUNDLE_CACHE_ALL: true\n").unwrap();
 
     let mock = test.mock_gem_download("test-gem-1.0.0.gem").create();
     test.ci(&[]).assert_success();
