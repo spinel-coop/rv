@@ -416,6 +416,10 @@ fn extract_zip(zip_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str) -> Res
             )
             .replace('\\', "/"); // Normalize Windows path separators
 
+        if path.contains("..") {
+            return Err(Error::DirectoryTraversalError(path));
+        }
+
         let dst = rubies_dir.join(&path);
 
         if entry.is_dir() {

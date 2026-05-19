@@ -141,6 +141,35 @@ fn test_ruby_install_from_tarball_with_files_falling_outside_root() {
 }
 
 #[test]
+fn test_ruby_install_from_zip_with_files_falling_outside_root() {
+    let test = RvTest::new();
+
+    let tarball_path = test.temp_root().join("evil.zip");
+    let tarball_content = fs_err::read("tests/fixtures/evil.zip").unwrap();
+    fs_err::write(&tarball_path, &tarball_content).unwrap();
+
+    let ruby_dir = test.rubies_dir().join("ruby-3.4.5");
+    std::fs::create_dir_all(&ruby_dir).expect("Failed to create ruby directory");
+
+    let output = test.rv(&[
+        "ruby",
+        "install",
+        "--tarball-path",
+        tarball_path.as_str(),
+        "3.4.5",
+    ]);
+
+    output.assert_failure();
+    output.assert_stderr_contains("DirectoryTraversalError");
+
+    let owned_path = test.rubies_dir().join("owned");
+    assert!(
+        !owned_path.exists(),
+        "No malicious file should be created, but found {owned_path}",
+    );
+}
+
+#[test]
 fn test_ruby_install_http_failure_no_empty_file() {
     let mut test = RvTest::new();
 
