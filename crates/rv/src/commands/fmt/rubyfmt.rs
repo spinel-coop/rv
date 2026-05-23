@@ -25,7 +25,7 @@ enum ErrorExit {
 
 /// Error enum representing errors in the cli.
 #[derive(Debug)]
-enum ExecutionError {
+pub(crate) enum ExecutionError {
     // Errors seen when rubyfmt is executing
     RubyfmtError(rubyfmt::RichFormatError, String),
     // Errors seen when performing IO s
@@ -36,8 +36,8 @@ enum ExecutionError {
 
 /// Rubyfmt CLI
 #[derive(Debug, Parser)]
-#[clap(name = "rubyfmt", bin_name = "rubyfmt", author, version, about, long_about = None)]
-struct CommandlineOpts {
+#[clap(long_about = None)]
+pub(crate) struct CommandlineOpts {
     /// Turn on check mode. This outputs diffs of inputs to STDOUT. Will exit non-zero when differences are detected.
     #[clap(short, long)]
     check: bool,
@@ -131,7 +131,7 @@ fn print_error(msg: &str, file_path: Option<&str>) {
     eprintln!("{}\n{}", first_line, msg);
 }
 
-fn handle_execution_error(opts: &CommandlineOpts, err: ExecutionError) {
+pub(crate) fn handle_execution_error(opts: &CommandlineOpts, err: ExecutionError) {
     let mut exit_type = ErrorExit::NoExit;
     // If include_paths are empty, this is operating on STDIN which should always exit
     if opts.fail_fast || opts.include_paths.is_empty() {
@@ -227,9 +227,7 @@ fn file_walker_builder(include_paths: Vec<&String>, include_gitignored: bool) ->
 }
 
 // Parse command line arguments. Expand any input files.
-fn get_command_line_options() -> CommandlineOpts {
-    let opts = CommandlineOpts::parse();
-
+fn get_command_line_options(opts: CommandlineOpts) -> CommandlineOpts {
     let mut expanded_paths: Vec<String> = Vec::new();
 
     for path in opts.include_paths {
@@ -342,7 +340,7 @@ fn iterate_input_files(opts: &CommandlineOpts, f: InputFunc) {
 type InputFunc<'a> = &'a dyn Fn((&Path, &[u8]));
 type FormattingFunc<'a> = &'a dyn Fn((&Path, &[u8], Option<Vec<u8>>));
 
-fn iterate_formatted(opts: &CommandlineOpts, f: FormattingFunc) {
+pub(crate) fn iterate_formatted(opts: &CommandlineOpts, f: FormattingFunc) {
     iterate_input_files(
         opts,
         &|(file_path, before)| match rubyfmt_string(opts, before) {
@@ -362,14 +360,14 @@ fn puts_stdout(input: &[u8]) {
     io::stdout().flush().expect("flush works");
 }
 
-fn main() {
+pub(crate) fn main(opts: CommandlineOpts) {
     ctrlc::set_handler(move || {
         eprintln!("`rubyfmt` process was terminated. Exiting...");
         exit(1);
     })
     .expect("Error setting Ctrl-C handler");
 
-    let opts = get_command_line_options();
+    let opts = get_command_line_options(opts);
     init_logger();
 
     match opts {
