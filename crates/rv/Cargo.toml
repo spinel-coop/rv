@@ -80,6 +80,10 @@ config = { version = "0.15.22", default-features = false, features = [
 ] }
 kdl = { git = "https://github.com/kdl-org/kdl-rs.git", version = "6.5.0" }
 which = "8.0.2"
+rubyfmt = { git = "https://github.com/fables-tales/rubyfmt.git", branch = "trunk" }
+ignore = "0.4.25"
+similar = { version = "3.1.0", features = ["bytes"] }
+ctrlc = { version = "3.5.2", features = ["termination"] }
 
 [dev-dependencies]
 insta = { workspace = true }
