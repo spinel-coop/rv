@@ -1,6 +1,7 @@
 use std::time::{Duration, SystemTime};
 
 use anstream::eprintln;
+use chrono::{Datelike, NaiveDate, Utc};
 use fs_err as fs;
 use owo_colors::OwoColorize;
 use rv_cache::{Cache, CacheBucket};
@@ -62,10 +63,9 @@ async fn fetch_end_of_life_information() -> Result<Vec<EndOfLifeRelease>> {
     Ok(eol_resp.result.releases)
 }
 
-async fn get_cached_or_fetch(cache: &Cache) -> Result<Vec<EndOfLifeRelease>> {
-    let cache_entry = cache.entry(CacheBucket::Ruby, "eol", EOL_CACHE_FILE);
+pub async fn get_cached_or_fetch(cache: &Cache) -> Result<Vec<EndOfLifeRelease>> {
+    let cache_entry = cache.entry(CacheBucket::General, "eol", EOL_CACHE_FILE);
 
-    // 1. Try the on-disk cache first.
     if let Ok(content) = fs::read_to_string(cache_entry.path()) {
         match serde_json::from_str::<CachedEolData>(&content) {
             Ok(cached) if SystemTime::now() < cached.expires_at => {
@@ -77,10 +77,8 @@ async fn get_cached_or_fetch(cache: &Cache) -> Result<Vec<EndOfLifeRelease>> {
         }
     }
 
-    // 2. Fetch fresh data from the API.
     let releases = fetch_end_of_life_information().await?;
 
-    // 3. Persist to the cache (best-effort; ignore write errors).
     let cached = CachedEolData {
         expires_at: SystemTime::now() + EOL_CACHE_TTL,
         releases,
@@ -126,4 +124,39 @@ pub async fn eol_warning(version: &RubyVersion, cache: &Cache) {
             debug!("Failed to fetch EOL information for Ruby {version}: {e}");
         }
     }
+}
+
+pub fn format_eol_status_opt(release_opt: Option<&EndOfLifeRelease>) -> String {
+    if let Some(release) = release_opt {
+        if release.is_eol {
+            return release.eol_from.clone();
+        }
+
+        if let Ok(eol_date) = NaiveDate::parse_from_str(&release.eol_from, "%Y-%m-%d") {
+            let now = Utc::now().date_naive();
+            let years = eol_date.year() - now.year();
+            let months = (years * 12) + (eol_date.month() as i32 - now.month() as i32);
+            if months <= 0 {
+                let days = (eol_date - now).num_days();
+                if days <= 1 {
+                    return "in 1 day".to_string();
+                }
+                return format!("in {} days", days);
+            }
+            if months < 12 {
+                if months == 1 {
+                    return "in 1 month".to_string();
+                }
+                return format!("in {} months", months);
+            }
+            let years = months / 12;
+            if years == 1 {
+                return "in 1 year".to_string();
+            }
+            return format!("in {} years", years);
+        }
+
+        return release.eol_from.clone();
+    }
+    String::new()
 }

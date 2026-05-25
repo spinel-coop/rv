@@ -39,7 +39,7 @@ struct JsonRubyEntry {
     #[serde(flatten)]
     ruby: RubyEntry,
     active: bool,
-    eol_date: String,
+    eol_data: Option<String>,
     #[serde(skip)]
     color: bool,
 }
@@ -97,7 +97,24 @@ impl tabled::Tabled for JsonRubyEntry {
             }
         };
 
-        vec![name.into(), installed, self.eol_date.to_string().into()]
+        let eol_cell: Cow<'_, str> = match &self.eol_data {
+            Some(s) => {
+                if self.color {
+                    if s.contains("year") {
+                        s.green().to_string().into()
+                    } else if s.contains("month") {
+                        s.yellow().to_string().into()
+                    } else {
+                        s.red().to_string().into()
+                    }
+                } else {
+                    s.clone().into()
+                }
+            }
+            None => "".into(),
+        };
+
+        vec![name.into(), installed, eol_cell]
     }
 
     fn headers() -> Vec<Cow<'static, str>> {
@@ -142,17 +159,12 @@ pub(crate) async fn list(
     let mut rubies_map: BTreeMap<RubyVersion, Vec<JsonRubyEntry>> = BTreeMap::new();
 
     for ruby in installed_rubies.into_iter().rev() {
-        let eol_date = crate::ruby_eol::eol_information_for(&ruby.version, &config.cache)
-            .await
-            .unwrap()
-            .unwrap();
-
         rubies_map.entry(ruby.version.clone()).or_default().insert(
             0,
             JsonRubyEntry {
                 active: active(&mut active_ruby, &ruby.version, &requested),
                 ruby: RubyEntry::Installed(ruby),
-                eol_date: eol_date.eol_from,
+                eol_data: None,
                 color: true,
             },
         );
@@ -171,17 +183,12 @@ pub(crate) async fn list(
 
         // Add selected remote rubies that are not already installed to the list
         for ruby in selected_remote_rubies.into_iter().rev() {
-            let eol_date = crate::ruby_eol::eol_information_for(&ruby.version, &config.cache)
-                .await
-                .unwrap()
-                .unwrap();
-
             rubies_map
                 .entry(ruby.version.clone())
                 .or_insert(vec![JsonRubyEntry {
                     active: active(&mut active_ruby, &ruby.version, &requested),
                     ruby: RubyEntry::Remote(ruby),
-                    eol_date: eol_date.eol_from,
+                    eol_data: None,
                     color: true,
                 }]);
         }
@@ -190,17 +197,12 @@ pub(crate) async fn list(
             let ruby = requested.find_match_in(&remote_rubies);
 
             if let Some(ref ruby) = ruby {
-                let eol_date = crate::ruby_eol::eol_information_for(&ruby.version, &config.cache)
-                    .await
-                    .unwrap()
-                    .unwrap();
-
                 rubies_map
                     .entry(ruby.version.clone())
                     .or_insert(vec![JsonRubyEntry {
                         ruby: RubyEntry::Remote(ruby.clone()),
                         active: true,
-                        eol_date: eol_date.eol_from,
+                        eol_data: None,
                         color: true,
                     }]);
             };
@@ -213,11 +215,36 @@ pub(crate) async fn list(
     }
 
     // Create entries for output
-    let entries: Vec<JsonRubyEntry> = rubies_map.into_values().flatten().collect();
+
+    let mut entries: Vec<JsonRubyEntry> = rubies_map.into_values().flatten().collect();
+
+    fill_eol_data(&mut entries, &config.cache).await;
 
     let explanation = config.requested_ruby.explain(active_installed);
 
     print_entries(entries, format, no_color, &explanation)
+}
+
+async fn fill_eol_data(entries: &mut [JsonRubyEntry], cache: &rv_cache::Cache) {
+    let releases = crate::ruby_eol::get_cached_or_fetch(cache).await.unwrap();
+
+    for entry in entries.iter_mut() {
+        let version: &RubyVersion = match &entry.ruby {
+            RubyEntry::Installed(r) => &r.version,
+            RubyEntry::Remote(rr) => &rr.version,
+        };
+
+        let minor_key = format!("{}.{}", version.major, version.minor);
+        let end_of_life_release = releases.iter().find(|r| r.name == minor_key);
+        if let Some(release) = end_of_life_release {
+            let s = crate::ruby_eol::format_eol_status_opt(Some(release));
+            if s.is_empty() {
+                entry.eol_data = None;
+            } else {
+                entry.eol_data = Some(s.clone());
+            }
+        }
+    }
 }
 
 fn active(active_set: &mut bool, version: &RubyVersion, requested: &RubyRequest) -> bool {
