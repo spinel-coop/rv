@@ -101,11 +101,13 @@ pub(crate) async fn install(
 
     println!("Installed {installed_version} to {}", install_dir.cyan());
 
-    eol_warning(
-        &rv_ruby::version::RubyVersion::from_str(&version).unwrap(),
-        &config.cache,
-    )
-    .await;
+    if version != "dev" {
+        eol_warning(
+            &rv_ruby::version::RubyVersion::from_str(&version).unwrap(),
+            &config.cache,
+        )
+        .await;
+    }
 
     Ok(())
 }

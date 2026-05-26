@@ -39,6 +39,7 @@ struct JsonRubyEntry {
     #[serde(flatten)]
     ruby: RubyEntry,
     active: bool,
+    #[serde(skip)]
     eol_data: Option<String>,
     #[serde(skip)]
     color: bool,
