@@ -235,10 +235,8 @@ fn test_ruby_install_skips_existing_version_and_suggests_force_flag() {
 fn test_ruby_install_invalid_url() {
     let mut test = RvTest::new();
 
-    test.env.insert(
-        "RV_INSTALL_URL".into(),
-        "http://invalid-url-that-does-not-exist.com".into(),
-    );
+    test.env
+        .insert("RV_INSTALL_URL".into(), "http://127.0.0.1:0".into());
 
     let cache_dir = test.enable_cache();
 
