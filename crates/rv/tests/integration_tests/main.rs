@@ -1,5 +1,5 @@
 mod clean_install_test;
-mod cli_test;
+mod main_test;
 mod ruby_test;
 mod run_test;
 mod shell_test;
