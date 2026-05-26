@@ -1,0 +1,34 @@
+---
+source: crates/rv/tests/integration_tests/ruby_test/list_test.rs
+expression: output.normalized_stdout()
+---
+[
+  {
+    "Installed": {
+      "key": "ruby-3.1.4-macos-aarch64",
+      "version": "ruby-3.1.4",
+      "path": "/tmp/home/.local/share/rv/rubies/ruby-3.1.4",
+      "managed": true,
+      "arch": "aarch64",
+      "os": "macos",
+      "gem_root": null,
+      "enable_shared": true,
+      "rubygems_platform": "aarch64-darwin23"
+    },
+    "active": false
+  },
+  {
+    "Installed": {
+      "key": "ruby-3.2.0-macos-aarch64",
+      "version": "ruby-3.2.0",
+      "path": "/tmp/home/.local/share/rv/rubies/ruby-3.2.0",
+      "managed": true,
+      "arch": "aarch64",
+      "os": "macos",
+      "gem_root": null,
+      "enable_shared": true,
+      "rubygems_platform": "aarch64-darwin23"
+    },
+    "active": true
+  }
+]

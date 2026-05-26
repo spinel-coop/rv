@@ -1,4 +1,4 @@
-use crate::common_test::{RvOutput, RvTest};
+use crate::{RvOutput, RvTest};
 use std::fs;
 
 impl RvTest {

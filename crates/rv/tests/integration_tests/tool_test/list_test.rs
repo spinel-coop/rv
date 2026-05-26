@@ -1,4 +1,4 @@
-use crate::common_test::{RvOutput, RvTest};
+use crate::{RvOutput, RvTest};
 
 use rv_cache::rm_rf;
 

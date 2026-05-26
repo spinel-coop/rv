@@ -1,0 +1,24 @@
+---
+source: crates/rv/tests/integration_tests/ruby_test/list_test.rs
+expression: output.normalized_stdout()
+---
+[
+  {
+    "Remote": {
+      "key": "ruby-3.0.0-macos-aarch64",
+      "version": "ruby-3.0.0",
+      "arch": "aarch64",
+      "os": "macos"
+    },
+    "active": false
+  },
+  {
+    "Remote": {
+      "key": "ruby-4.0.0-macos-aarch64",
+      "version": "ruby-4.0.0",
+      "arch": "aarch64",
+      "os": "macos"
+    },
+    "active": true
+  }
+]

@@ -1,4 +1,4 @@
-use crate::common_test::RvTest;
+use crate::RvTest;
 use std::fs;
 
 #[test]

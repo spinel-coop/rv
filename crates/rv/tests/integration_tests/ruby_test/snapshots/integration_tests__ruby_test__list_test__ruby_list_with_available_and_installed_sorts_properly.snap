@@ -1,0 +1,29 @@
+---
+source: crates/rv/tests/integration_tests/ruby_test/list_test.rs
+expression: output.normalized_stdout()
+---
+[
+  {
+    "Installed": {
+      "key": "ruby-3.4.1-macos-aarch64",
+      "version": "ruby-3.4.1",
+      "path": "/tmp/home/.local/share/rv/rubies/ruby-3.4.1",
+      "managed": true,
+      "arch": "aarch64",
+      "os": "macos",
+      "gem_root": null,
+      "enable_shared": true,
+      "rubygems_platform": "aarch64-darwin23"
+    },
+    "active": true
+  },
+  {
+    "Remote": {
+      "key": "ruby-3.4.10-macos-aarch64",
+      "version": "ruby-3.4.10",
+      "arch": "aarch64",
+      "os": "macos"
+    },
+    "active": false
+  }
+]

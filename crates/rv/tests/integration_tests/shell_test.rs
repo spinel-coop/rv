@@ -1,7 +1,7 @@
 mod env_test;
 mod init_test;
 
-use crate::common_test::RvTest;
+use crate::RvTest;
 use insta::assert_snapshot;
 
 #[test]

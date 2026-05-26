@@ -1,6 +1,6 @@
 use std::fs::create_dir_all;
 
-use crate::common_test::RvTest;
+use crate::RvTest;
 use insta::assert_snapshot;
 use rv_cache::rm_rf;
 

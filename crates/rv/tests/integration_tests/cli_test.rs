@@ -1,11 +1,4 @@
-mod clean_install_test;
-mod common_test;
-mod ruby;
-mod run;
-mod shell;
-mod tool;
-
-use crate::common_test::RvTest;
+use crate::RvTest;
 use regex::Regex;
 
 #[test]

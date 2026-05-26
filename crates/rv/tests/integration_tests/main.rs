@@ -1,3 +1,12 @@
+mod clean_install_test;
+mod cli_test;
+mod ruby_test;
+mod run_test;
+mod shell_test;
+mod tool_test;
+
+// Tests live in modules named *_test, helpers live here
+
 use camino::{Utf8Path, Utf8PathBuf};
 use camino_tempfile_ext::camino_tempfile::Utf8TempDir;
 use mockito::Mock;
