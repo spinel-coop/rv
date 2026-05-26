@@ -313,7 +313,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_list() {
-        let global_args = global_args().unwrap();
+        let mut global_args = global_args().unwrap();
+        global_args.offline = true;
         let version_filter = VersionFilter {
             all: false,
             installed_only: false,
