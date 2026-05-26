@@ -165,4 +165,31 @@ fn test_parse_namespace() {
         ("gem.coop".to_string(), "gem/name".to_string()),
         parse_namespace("gem.coop".to_string(), "gem/name".to_string())
     );
+
+    assert_eq!(
+        ("gem.coop".to_string(), "@gemname".to_string()),
+        parse_namespace("gem.coop".to_string(), "@gemname".to_string())
+    );
+    assert_eq!(
+        ("gem.coop/@".to_string(), "gemname".to_string()),
+        parse_namespace("gem.coop".to_string(), "@/gemname".to_string())
+    );
+    assert_eq!(
+        ("gem.coop/@namespace".to_string(), "gem/name".to_string()),
+        parse_namespace("gem.coop".to_string(), "@namespace/gem/name".to_string())
+    );
+    assert_eq!(
+        ("".to_string(), "".to_string()),
+        parse_namespace("".to_string(), "".to_string())
+    );
+    assert_eq!(
+        (
+            "gem.coop/@namespace".to_string(),
+            "gemname@1.2.3".to_string()
+        ),
+        parse_namespace(
+            "gem.coop".to_string(),
+            "@namespace/gemname@1.2.3".to_string()
+        )
+    );
 }
