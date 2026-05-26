@@ -3,6 +3,7 @@ use camino_tempfile_ext::camino_tempfile::Utf8TempDir;
 use mockito::Mock;
 use rv_platform::HostPlatform;
 use std::{collections::HashMap, process::Command};
+use tar::Builder;
 
 #[cfg(unix)]
 pub struct Shell {
@@ -371,8 +372,7 @@ impl RvTest {
     }
 
     /// Mock a tarball on disk for testing
-    pub fn mock_tarball_on_disk(&mut self, version: &str) -> Utf8PathBuf {
-        let content = &self.create_mock_tarball(version);
+    pub fn mock_tarball_on_disk(&mut self, version: &str, content: Vec<u8>) -> Utf8PathBuf {
         let filename = &self.make_tarball_file_name(version);
         let temp_dir = self.temp_root().join("tmp");
         std::fs::create_dir_all(&temp_dir).expect("Failed to create TMP directory");
@@ -383,56 +383,61 @@ impl RvTest {
     }
 
     pub fn create_mock_tarball(&self, version: &str) -> Vec<u8> {
-        use flate2::Compression;
-        use flate2::write::GzEncoder;
-        use std::io::Write;
-        use tar::Builder;
-
         let mut archive_data = Vec::new();
         {
             let mut builder = Builder::new(&mut archive_data);
 
-            let root = format!("ruby-{version}/");
-            let mut dir_header = tar::Header::new_gnu();
-            dir_header.set_path(&root).unwrap();
-            dir_header.set_size(0);
-            dir_header.set_mode(0o755);
-            dir_header.set_entry_type(tar::EntryType::Directory);
-            dir_header.set_cksum();
-            builder.append(&dir_header, std::io::empty()).unwrap();
+            let root = format!("rv-ruby@{version}/");
+            Self::add_dir(&mut builder, &root);
 
-            let mut bin_dir_header = tar::Header::new_gnu();
-            bin_dir_header.set_path(format!("{root}bin/")).unwrap();
-            bin_dir_header.set_size(0);
-            bin_dir_header.set_mode(0o755);
-            bin_dir_header.set_entry_type(tar::EntryType::Directory);
-            bin_dir_header.set_cksum();
-            builder.append(&bin_dir_header, std::io::empty()).unwrap();
+            let subroot = format!("{root}{version}/");
+            Self::add_dir(&mut builder, &subroot);
 
-            let mut ruby_header = tar::Header::new_gnu();
-            let ruby_executable_name = self.ruby_executable_name();
+            let bin_dir = format!("{subroot}bin/");
+            Self::add_dir(&mut builder, &bin_dir);
+
+            let ruby_bin = format!("{bin_dir}{}", self.ruby_executable_name());
             let ruby_content = &self.ruby_mock_script("ruby", version);
-            ruby_header
-                .set_path(format!("{root}bin/{ruby_executable_name}"))
-                .unwrap();
-            ruby_header.set_size(ruby_content.len() as u64);
-            ruby_header.set_mode(0o755);
-            ruby_header.set_cksum();
-            builder
-                .append(&ruby_header, ruby_content.as_bytes())
-                .unwrap();
+            Self::add_executable(&mut builder, &ruby_bin, ruby_content);
 
             builder.finish().unwrap();
         }
 
+        Self::gzip_tar(archive_data)
+    }
+
+    fn gzip_tar(tar_data: Vec<u8>) -> Vec<u8> {
+        use flate2::Compression;
+        use flate2::write::GzEncoder;
+        use std::io::Write;
+
         let mut gz_data = Vec::new();
         {
             let mut encoder = GzEncoder::new(&mut gz_data, Compression::default());
-            encoder.write_all(&archive_data).unwrap();
+            encoder.write_all(&tar_data).unwrap();
             encoder.finish().unwrap();
         }
 
         gz_data
+    }
+
+    fn add_dir(builder: &mut Builder<&mut Vec<u8>>, path: &str) {
+        let mut header = tar::Header::new_gnu();
+        header.set_path(path).unwrap();
+        header.set_size(0);
+        header.set_mode(0o755);
+        header.set_entry_type(tar::EntryType::Directory);
+        header.set_cksum();
+        builder.append(&header, std::io::empty()).unwrap();
+    }
+
+    fn add_executable(builder: &mut Builder<&mut Vec<u8>>, path: &str, content: &str) {
+        let mut header = tar::Header::new_gnu();
+        header.set_path(path).unwrap();
+        header.set_size(content.len() as u64);
+        header.set_mode(0o755);
+        header.set_cksum();
+        builder.append(&header, content.as_bytes()).unwrap();
     }
 
     pub fn ruby_tarball_url(&self, version: &str) -> String {
