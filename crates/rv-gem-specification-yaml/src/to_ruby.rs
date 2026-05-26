@@ -55,11 +55,21 @@ pub fn to_ruby(spec: Specification) -> String {
     ruby_src.push('\n');
 
     ruby_src.push_str("Gem::Specification.new do |s|\n");
-    writeln!(ruby_src, "  s.name = \"{}\".freeze", name).unwrap();
-    writeln!(ruby_src, "  s.version = \"{}\".freeze", version).unwrap();
+    writeln!(ruby_src, "  s.name = \"{}\".freeze", ruby_scalar(&name)).unwrap();
+    writeln!(
+        ruby_src,
+        "  s.version = \"{}\".freeze",
+        ruby_scalar(&version)
+    )
+    .unwrap();
 
     if !platform.is_ruby() {
-        writeln!(ruby_src, "  s.platform = \"{}\".freeze", platform).unwrap();
+        writeln!(
+            ruby_src,
+            "  s.platform = \"{}\".freeze",
+            ruby_scalar(&platform)
+        )
+        .unwrap();
     }
 
     ruby_src.push('\n');
@@ -75,7 +85,11 @@ pub fn to_ruby(spec: Specification) -> String {
         sorted_metadata.sort_by_key(|(key, _)| *key);
         let mut md_items = Vec::with_capacity(metadata.len());
         for (k, v) in &sorted_metadata {
-            md_items.push(format!("\"{}\" => \"{}\"", k, v));
+            md_items.push(format!(
+                "\"{}\" => \"{}\"",
+                ruby_scalar(&k),
+                ruby_scalar(&v)
+            ));
         }
         ruby_src.push_str(&md_items.join(", "));
         writeln!(ruby_src, " }} if s.respond_to? :metadata=").unwrap();
@@ -91,9 +105,10 @@ pub fn to_ruby(spec: Specification) -> String {
         writeln!(ruby_src, "  s.cert_chain = [{}]", ruby_list(&cert_chain)).unwrap();
     }
     if bindir != "bin" {
-        writeln!(ruby_src, "  s.bindir = \"{}\".freeze", bindir).unwrap();
+        writeln!(ruby_src, "  s.bindir = \"{}\".freeze", ruby_scalar(&bindir)).unwrap();
     }
-    writeln!(ruby_src, "  s.date = \"{}\"", &date[..10]).unwrap();
+    let date_slice = &date[..10];
+    writeln!(ruby_src, "  s.date = \"{}\"", ruby_scalar(&date_slice)).unwrap();
     if let Some(description) = description {
         writeln!(
             ruby_src,
@@ -120,7 +135,12 @@ pub fn to_ruby(spec: Specification) -> String {
         .unwrap();
     }
     if let Some(homepage) = homepage {
-        writeln!(ruby_src, "  s.homepage = \"{}\".freeze", homepage).unwrap();
+        writeln!(
+            ruby_src,
+            "  s.homepage = \"{}\".freeze",
+            ruby_scalar(&homepage)
+        )
+        .unwrap();
     }
     writeln!(ruby_src, "  s.licenses = [{}]", ruby_list(&licenses)).unwrap();
     if rdoc_options.is_empty().not() {
@@ -142,7 +162,7 @@ pub fn to_ruby(spec: Specification) -> String {
     writeln!(
         ruby_src,
         "  s.rubygems_version = \"{}\".freeze",
-        rubygems_version
+        ruby_scalar(&rubygems_version)
     )
     .unwrap();
     writeln!(
@@ -169,17 +189,17 @@ pub fn to_ruby(spec: Specification) -> String {
             } else {
                 "development"
             };
-            let dep_name = dep.name;
+            let dep_name = ruby_scalar(&dep.name);
             let dep_req: Vec<_> = dep
                 .requirement
                 .constraints
                 .into_iter()
-                .map(|constraint| format!("\"{}\".freeze", constraint))
+                .map(|constraint| format!("\"{}\".freeze", ruby_scalar(&constraint)))
                 .collect();
             let dep_req = dep_req.join(", ");
             writeln!(
                 ruby_src,
-                "  s.add_{}_dependency(%q<{}>.freeze, [{}])",
+                "  s.add_{}_dependency(\"{}\".freeze, [{}])",
                 dep_type, dep_name, dep_req,
             )
             .unwrap();

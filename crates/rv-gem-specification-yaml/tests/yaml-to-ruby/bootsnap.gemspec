@@ -26,5 +26,5 @@ Gem::Specification.new do |s|
 
   s.specification_version = 4
 
-  s.add_runtime_dependency(%q<msgpack>.freeze, ["~> 1.2".freeze])
+  s.add_runtime_dependency("msgpack".freeze, ["~> 1.2".freeze])
 end

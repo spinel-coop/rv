@@ -23,5 +23,5 @@ Gem::Specification.new do |s|
 
   s.specification_version = 4
 
-  s.add_runtime_dependency(%q<fileutils>.freeze, [">= 0".freeze])
+  s.add_runtime_dependency("fileutils".freeze, [">= 0".freeze])
 end

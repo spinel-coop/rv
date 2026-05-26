@@ -1,4 +1,5 @@
 use super::Shell;
+use super::powershell_escape;
 use crate::{GlobalArgs, config::Config};
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -101,21 +102,6 @@ fn fish_var_escape(s: String) -> String {
             _ => {}
         }
         escaped.push(c)
-    }
-    escaped
-}
-
-// Credit to uv's crates/uv-shell/src/lib.rs (backtick_escape)
-// PowerShell uses backticks for escaping special characters
-fn powershell_escape(s: &str) -> String {
-    let mut escaped = String::with_capacity(s.len());
-    for c in s.chars() {
-        match c {
-            // Escape double quotes, backticks, dollar signs, and unicode quotes
-            '"' | '`' | '$' | '\u{201C}' | '\u{201D}' | '\u{201E}' => escaped.push('`'),
-            _ => {}
-        }
-        escaped.push(c);
     }
     escaped
 }

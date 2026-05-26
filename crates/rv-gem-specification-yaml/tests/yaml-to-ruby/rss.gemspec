@@ -20,5 +20,5 @@ Gem::Specification.new do |s|
 
   s.specification_version = 4
 
-  s.add_runtime_dependency(%q<rexml>.freeze, [">= 0".freeze])
+  s.add_runtime_dependency("rexml".freeze, [">= 0".freeze])
 end

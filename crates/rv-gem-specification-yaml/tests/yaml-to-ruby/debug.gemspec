@@ -26,6 +26,6 @@ Gem::Specification.new do |s|
 
   s.specification_version = 4
 
-  s.add_runtime_dependency(%q<irb>.freeze, ["~> 1.10".freeze])
-  s.add_runtime_dependency(%q<reline>.freeze, [">= 0.3.8".freeze])
+  s.add_runtime_dependency("irb".freeze, ["~> 1.10".freeze])
+  s.add_runtime_dependency("reline".freeze, [">= 0.3.8".freeze])
 end
