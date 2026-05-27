@@ -227,23 +227,28 @@ pub(crate) async fn list(
 }
 
 async fn fill_eol_data(entries: &mut [JsonRubyEntry], cache: &rv_cache::Cache) {
-    let releases = crate::ruby_eol::get_cached_or_fetch(cache).await.unwrap();
+    match crate::ruby_eol::get_cached_or_fetch(cache).await {
+        Ok(releases) => {
+            for entry in entries.iter_mut() {
+                let version: &RubyVersion = match &entry.ruby {
+                    RubyEntry::Installed(r) => &r.version,
+                    RubyEntry::Remote(rr) => &rr.version,
+                };
 
-    for entry in entries.iter_mut() {
-        let version: &RubyVersion = match &entry.ruby {
-            RubyEntry::Installed(r) => &r.version,
-            RubyEntry::Remote(rr) => &rr.version,
-        };
-
-        let minor_key = format!("{}.{}", version.major, version.minor);
-        let end_of_life_release = releases.iter().find(|r| r.name == minor_key);
-        if let Some(release) = end_of_life_release {
-            let s = crate::ruby_eol::format_eol_status_opt(Some(release));
-            if s.is_empty() {
-                entry.eol_data = None;
-            } else {
-                entry.eol_data = Some(s.clone());
+                let minor_key = format!("{}.{}", version.major, version.minor);
+                let end_of_life_release = releases.iter().find(|r| r.name == minor_key);
+                if let Some(release) = end_of_life_release {
+                    let s = crate::ruby_eol::format_eol_status_opt(Some(release));
+                    if s.is_empty() {
+                        entry.eol_data = None;
+                    } else {
+                        entry.eol_data = Some(s.clone());
+                    }
+                }
             }
+        }
+        Err(e) => {
+            warn!("Failed to fetch EOL information for Ruby versions: {e}");
         }
     }
 }
