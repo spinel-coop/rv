@@ -109,6 +109,25 @@ impl BundlerSettings {
 
         self.get_string(&key)
     }
+
+    /// Whether Bundler's `cache_all` setting is enabled. When true, `rv ci`
+    /// also writes downloaded gems to `vendor/cache/` as a side effect.
+    pub fn cache_all(&self) -> bool {
+        self.get_bool("BUNDLE_CACHE_ALL").unwrap_or(false)
+    }
+
+    /// Directory where vendored `.gem` files live. Defaults to `vendor/cache`
+    /// in the current working directory; can be overridden by
+    /// `BUNDLE_CACHE_PATH` in `.bundle/config`. Relative paths are resolved
+    /// against the cwd to match Bundler's behavior.
+    pub fn cache_path(&self) -> Option<Utf8PathBuf> {
+        let raw = self
+            .get_string("BUNDLE_CACHE_PATH")
+            .unwrap_or_else(|| "vendor/cache".to_string());
+        absolute(&raw)
+            .ok()
+            .and_then(|pb| Utf8PathBuf::from_path_buf(pb).ok())
+    }
 }
 
 #[cfg(test)]
@@ -280,6 +299,66 @@ BUNDLE_DEPLOYMENT: true
         let bundler_settings = BundlerSettings::new(&home_dir, &project_dir).unwrap();
 
         assert_eq!(None, bundler_settings.path())
+    }
+
+    #[test]
+    fn test_cache_all_defaults_to_false() {
+        let temp_dir = Utf8TempDir::new().unwrap();
+        let home_dir = temp_dir.path().join("home");
+        let project_dir = temp_dir.path().join("project");
+
+        let settings = BundlerSettings::new(&home_dir, &project_dir).unwrap();
+        assert!(!settings.cache_all());
+    }
+
+    #[test]
+    fn test_cache_all_from_config() {
+        let temp_dir = Utf8TempDir::new().unwrap();
+        let home_dir = temp_dir.path().join("home");
+        let project_dir = temp_dir.path().join("project");
+
+        let config_dir = project_dir.join(".bundle");
+        std::fs::create_dir_all(&config_dir).unwrap();
+        std::fs::write(config_dir.join("config"), "---\nBUNDLE_CACHE_ALL: true\n").unwrap();
+
+        let settings = BundlerSettings::new(&home_dir, &project_dir).unwrap();
+        assert!(settings.cache_all());
+    }
+
+    #[test]
+    fn test_cache_path_defaults_to_vendor_cache() {
+        let temp_dir = Utf8TempDir::new().unwrap();
+        let home_dir = temp_dir.path().join("home");
+        let project_dir = temp_dir.path().join("project");
+
+        let settings = BundlerSettings::new(&home_dir, &project_dir).unwrap();
+        let cwd = std::env::current_dir().unwrap();
+        assert_eq!(
+            cwd.join("vendor/cache"),
+            settings.cache_path().unwrap().to_string()
+        );
+    }
+
+    #[test]
+    fn test_cache_path_override_from_config() {
+        let temp_dir = Utf8TempDir::new().unwrap();
+        let home_dir = temp_dir.path().join("home");
+        let project_dir = temp_dir.path().join("project");
+
+        let config_dir = project_dir.join(".bundle");
+        std::fs::create_dir_all(&config_dir).unwrap();
+        std::fs::write(
+            config_dir.join("config"),
+            "---\nBUNDLE_CACHE_PATH: my/cache\n",
+        )
+        .unwrap();
+
+        let settings = BundlerSettings::new(&home_dir, &project_dir).unwrap();
+        let cwd = std::env::current_dir().unwrap();
+        assert_eq!(
+            cwd.join("my/cache"),
+            settings.cache_path().unwrap().to_string()
+        );
     }
 
     #[test]

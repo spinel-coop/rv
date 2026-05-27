@@ -5,3 +5,4 @@ pub mod run;
 pub mod self_cmd;
 pub mod shell;
 pub mod tool;
+pub mod vendor;

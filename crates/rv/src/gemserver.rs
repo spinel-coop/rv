@@ -28,9 +28,10 @@ pub struct Gemserver {
     pub gems_to_deps: HashMap<String, HashMap<VersionPlatform, GemRelease>>,
     updater: Arc<Updater>,
     storage: Arc<dyn Storage>,
+    offline: bool,
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error(transparent)]
     HttpError(#[from] http_fetcher::Error),
@@ -44,6 +45,10 @@ pub enum Error {
     CouldNotCreateCacheDir(std::io::Error),
     #[error("The url {url} unexpectedly returned an empty response")]
     EmptyResponse { url: Url },
+    #[error(
+        "Cannot fetch information for gem '{gem}' from {url} in offline mode: no cached data. Try again without --offline so rv can fetch the gem metadata."
+    )]
+    OfflineGemInfoMissing { gem: String, url: String },
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -73,6 +78,7 @@ impl Gemserver {
             storage: Arc::new(storage),
             updater: Arc::new(updater),
             gems_to_deps: Default::default(),
+            offline: config.offline,
         })
     }
 
@@ -96,9 +102,22 @@ impl Gemserver {
     /// You probably want to call [`parse_release_from_body`] on the returned string.
     /// This function doesn't parse the response, so that the parser doesn't have to copy any strings.
     /// Whoever calls this should own the response, and then the parser will borrow &strs from the response.
+    ///
+    /// In offline mode, the cached blob is returned unmodified; if there is no
+    /// cached entry for the gem, an [`Error::OfflineGemInfoMissing`] is returned.
     pub async fn get_releases_for_gem(&self, gem: &str) -> Result<String> {
         let info_key = format!("info/{}", gem);
         let info_url = self.url.join(&info_key).expect("valid info URL");
+
+        if self.offline {
+            let blob = self.storage.read_blob(&info_key).await.map_err(|_| {
+                Error::OfflineGemInfoMissing {
+                    gem: gem.to_owned(),
+                    url: info_url.to_string(),
+                }
+            })?;
+            return Ok(String::from_utf8_lossy(&blob.content).to_string());
+        }
 
         let blob = if let Ok(blob) = self.storage.read_blob(&info_key).await {
             self.updater.update(info_url.as_str(), blob).await

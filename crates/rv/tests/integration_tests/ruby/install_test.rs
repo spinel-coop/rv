@@ -421,3 +421,90 @@ fn test_ruby_install_with_dev() {
         .join(format!("{}.tar.gz", cache_key));
     assert!(tarball_path.exists(), "Tarball should be cached");
 }
+
+#[test]
+fn test_ruby_install_offline_with_no_cache_fails() {
+    let mut test = RvTest::new();
+
+    let _cache_dir = test.enable_cache();
+
+    let output = test.rv(&["--offline", "ruby", "install", "3.4.5"]);
+
+    output.assert_failure();
+    output.assert_stderr_contains("OfflineArchiveMissing");
+}
+
+#[test]
+fn test_ruby_install_offline_underspecified_version_fails_without_cache() {
+    let mut test = RvTest::new();
+
+    let _cache_dir = test.enable_cache();
+
+    let output = test.rv(&["--offline", "ruby", "install", "3.4"]);
+
+    output.assert_failure();
+    output.assert_stderr_contains("OfflineRemoteRubyListUnavailable");
+}
+
+#[test]
+fn test_ruby_install_offline_uses_cached_archive() {
+    let mut test = RvTest::new();
+
+    let cache_dir = test.enable_cache();
+    let tarball_content = test.create_mock_tarball("3.4.5");
+    let download_path = test.ruby_tarball_download_path("3.4.5");
+    let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("3.4.5"));
+    let tarballs_dir = cache_dir.join("ruby-v0").join("tarballs");
+    fs::create_dir_all(&tarballs_dir).unwrap();
+    let tarball_path = tarballs_dir.join(format!("{}.tar.gz", cache_key));
+    fs::write(&tarball_path, &tarball_content).unwrap();
+
+    let no_fetch_guard = test
+        .mock_request("GET", download_path.as_str())
+        .with_status(200)
+        .expect(0)
+        .create();
+
+    let output = test.rv(&["--offline", "ruby", "install", "3.4.5"]);
+
+    output.assert_success();
+    output
+        .assert_stdout_contains("Installed Ruby version 3.4.5 to /tmp/home/.local/share/rv/rubies");
+    no_fetch_guard.assert();
+}
+
+// The offline short-circuit must be exercised by a request that the
+// non-offline guards (line ~100 `is_requested_ruby_installed_in_dir`) do not
+// catch. We use a fuzzy request `3.4` while `ruby-3.4.5` is installed:
+//
+//   * with --offline: short-circuits on `current_ruby()` match, success.
+//   * without --offline: falls through to `find_matching_remote_ruby`, which
+//     attempts a release-list fetch, hits the mock server with no matching
+//     mock, and fails.
+//
+// If the offline short-circuit ever regresses to ignoring `config.offline`,
+// the without-offline case starts succeeding and the test catches it.
+#[test]
+fn test_ruby_install_offline_uses_already_installed_for_fuzzy_request() {
+    let mut test = RvTest::new();
+    let _cache_dir = test.enable_cache();
+    test.create_ruby_dir("ruby-3.4.5");
+
+    let output = test.rv(&["--offline", "ruby", "install", "3.4"]);
+    output.assert_success();
+    output.assert_stdout_contains("already installed");
+    output.assert_stdout_contains("ruby-3.4.5");
+}
+
+#[test]
+fn test_ruby_install_fuzzy_request_without_offline_does_not_short_circuit() {
+    let mut test = RvTest::new();
+    let _cache_dir = test.enable_cache();
+    test.create_ruby_dir("ruby-3.4.5");
+
+    // No --offline, no mocks: the fuzzy resolution must reach the network
+    // (and fail). If the offline short-circuit fires unconditionally, this
+    // would incorrectly succeed.
+    let output = test.rv(&["ruby", "install", "3.4"]);
+    output.assert_failure();
+}

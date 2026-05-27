@@ -27,6 +27,7 @@ use crate::commands::run::{RunArgs, run};
 use crate::commands::self_cmd::{SelfArgs, self_cmd};
 use crate::commands::shell::{ShellArgs, shell};
 use crate::commands::tool::{ToolArgs, tool};
+use crate::commands::vendor::{VendorArgs, vendor};
 
 const STYLES: Styles = Styles::styled()
     .header(AnsiColor::Green.on_default().bold())
@@ -85,9 +86,14 @@ struct Cli {
     #[arg(long, env = "RV_COLOR")]
     color: Option<ColorMode>,
 
-    /// Run rv in offline mode if possible
-    /// TODO: Hide until really apply offline mode in all parts of rv.
-    #[arg(long, hide = true, global = true)]
+    /// Run without network access.
+    ///
+    /// rv will skip checking for available Ruby versions, downloading Ruby
+    /// installations, and looking up or downloading gems. Operations that can
+    /// be satisfied from cached or already-installed artifacts continue to
+    /// work; operations that strictly require the network fail with an error
+    /// suggesting to retry without --offline.
+    #[arg(long, global = true)]
     offline: bool,
 
     #[command(flatten)]
@@ -132,6 +138,13 @@ enum Commands {
         dont_delimit_trailing_values = true
     )]
     Run(RunArgs),
+    #[command(
+        about = "Package gems referenced by Gemfile.lock into vendor/cache",
+        long_about = "Download every gem listed in Gemfile.lock to the vendor/cache directory \
+                      so that `rv ci` (and `bundle install`) can install them without network \
+                      access. The destination respects `BUNDLE_CACHE_PATH` from .bundle/config."
+    )]
+    Vendor(VendorArgs),
 }
 
 #[derive(Debug, Copy, Clone, clap::ValueEnum)]
@@ -198,6 +211,8 @@ pub enum Error {
     ShellError(#[from] commands::shell::Error),
     #[error(transparent)]
     ToolError(#[from] commands::tool::Error),
+    #[error(transparent)]
+    VendorError(#[from] commands::vendor::Error),
     #[error(transparent)]
     ConfigError(#[from] crate::config::Error),
 }
@@ -309,6 +324,7 @@ async fn run_cmd(global_args: &GlobalArgs, command: Commands) -> Result<()> {
         Commands::Shell(shell_args) => shell(global_args, &mut Cli::command(), shell_args)?,
         Commands::Tool(tool_args) => tool(global_args, tool_args).await?,
         Commands::Run(run_args) => run(global_args, run_args).await?,
+        Commands::Vendor(vendor_args) => vendor(global_args, vendor_args).await?,
     };
 
     Ok(())

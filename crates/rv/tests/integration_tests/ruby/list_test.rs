@@ -425,6 +425,38 @@ fn test_ruby_list_windows_platform_finds_rubies() {
     );
 }
 
+#[test]
+fn test_ruby_list_offline_with_no_cache_fails() {
+    let mut test = RvTest::new();
+
+    let _cache_dir = test.enable_cache();
+
+    // No mocks: any HTTP fetch would fail. Without a cached release list, the
+    // command must fail loudly rather than silently skip the remote section.
+    let output = test.ruby_list(&["--offline"]);
+
+    output.assert_failure();
+    output.assert_stderr_contains("OfflineRemoteRubyListUnavailable");
+}
+
+#[test]
+fn test_ruby_list_offline_installed_only_works_without_cache() {
+    let test = RvTest::new();
+
+    test.create_ruby_dir("ruby-3.4.1");
+
+    // `--installed-only` skips the remote release list entirely, so offline
+    // mode is fine even without a populated cache.
+    let output = test.ruby_list(&["--offline", "--installed-only", "--format", "json"]);
+
+    output.assert_success();
+    let stdout = output.normalized_stdout();
+    assert!(
+        stdout.contains("ruby-3.4.1"),
+        "Expected installed ruby in output, got: {stdout}",
+    );
+}
+
 /// Verifies that each non-Windows platform sees only its own rubies when
 /// the release contains assets for all platforms. Windows uses a different
 /// fetch path (RubyInstaller2) and is tested separately.

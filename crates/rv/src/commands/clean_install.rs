@@ -222,6 +222,10 @@ pub enum Error {
         "Native gem extensions require a C compiler to build.\nInstall them by running:\n\n  xcode-select --install"
     ))]
     MissingMacosDevTools,
+    #[error(
+        "Cannot download gem {gem_name} from {url} in offline mode: not in the cache. Try again without --offline so rv can fetch the gem."
+    )]
+    OfflineGemMissing { gem_name: String, url: String },
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -884,7 +888,7 @@ fn cache_gemspec_path(
     Ok(dep_gemspec)
 }
 
-fn find_lockfile_path(gemfile: &Option<Utf8PathBuf>) -> Result<Utf8PathBuf> {
+pub(crate) fn find_lockfile_path(gemfile: &Option<Utf8PathBuf>) -> Result<Utf8PathBuf> {
     let Some(gemfile) = gemfile else {
         let lockfile_path = rv_dirs::canonicalize_utf8(Utf8Path::new("Gemfile.lock"))
             .map_err(|_| Error::MissingImplicitLockfile)?;
@@ -1804,7 +1808,7 @@ where
     })
 }
 
-fn url_for_spec(remote: &str, spec: &Spec) -> Result<Url> {
+pub(crate) fn url_for_spec(remote: &str, spec: &Spec) -> Result<Url> {
     let package_name = spec.release_tuple.package_name();
     let path = format!("gems/{package_name}");
     let url = url::Url::parse(remote)
@@ -1870,12 +1874,27 @@ async fn download_gem<'i>(
         .shard(rv_cache::CacheBucket::Gem, "gems")
         .into_path_buf()
         .join(format!("{cache_key}.gem"));
+    let vendor_path = config
+        .bundler_settings
+        .cache_path()
+        .map(|dir| dir.join(format!("{}.gem", spec.release_tuple.full_name())));
 
-    let contents = if cache_path.exists() {
+    let contents = if let Some(vp) = vendor_path.as_ref()
+        && vp.exists()
+    {
+        debug!("Reusing gem from vendor/cache: {}", vp);
+        stats.cached_one();
+        Bytes::from(tokio::fs::read(vp).await?)
+    } else if cache_path.exists() {
         debug!("Reusing gem from {url} in cache");
         stats.cached_one();
         let data = tokio::fs::read(&cache_path).await?;
         Bytes::from(data)
+    } else if config.offline {
+        return Err(Error::OfflineGemMissing {
+            gem_name: spec.release_tuple.full_name(),
+            url: url.to_string(),
+        });
     } else {
         debug!("Downloading gem from {url}");
         stats.downloaded_one();
@@ -1925,6 +1944,17 @@ async fn download_gem<'i>(
         }
         tokio::fs::write(&cache_path, &contents).await?;
         debug!("Cached {}", full_name);
+    }
+
+    if config.bundler_settings.cache_all()
+        && let Some(vp) = vendor_path.as_ref()
+        && !vp.exists()
+    {
+        if let Some(parent) = vp.parent() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
+        tokio::fs::write(vp, &contents).await?;
+        debug!("Vendored {} to {}", full_name, vp);
     }
 
     Ok(DownloadedRubygems { contents, spec })
