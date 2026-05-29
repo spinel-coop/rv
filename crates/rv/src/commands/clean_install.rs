@@ -1881,9 +1881,10 @@ async fn download_gem<'i>(
         stats.downloaded_one();
 
         if let Some(host) = url.host_str()
-            && let Some(token) = config.bundler_settings.token_for(host)
+            && let Some((user, password)) = config.bundler_settings.userinfo_for_host(host)
         {
-            let _ = url.set_username(&token);
+            let _ = url.set_username(&user);
+            let _ = url.set_password(password.as_deref());
         }
 
         client
