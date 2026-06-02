@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-itertools = { version = "0.13" }
+itertools = { version = "0.14" }
 current_platform = { workspace = true }
 reqwest = { workspace = true }
 owo-colors = { workspace = true }
