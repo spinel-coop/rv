@@ -33,7 +33,7 @@ jobs:
           persist-credentials: false
 
       - name: Install cargo-deny
-        uses: EmbarkStudios/cargo-deny-action@91bf2b620e09e18d6eb78b92e7861937469acedb # v2.0.17
+        uses: EmbarkStudios/cargo-deny-action@a531616d8ce3b9177443e48a1159bc945a099823 # v2.0.19
         with:
           command: check ${{ matrix.checks }}
 
