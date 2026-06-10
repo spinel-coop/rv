@@ -519,6 +519,9 @@ mod tests {
     fn test_unknown_and_created_at_metadata() {
         let input = "1.0.0 |checksum:505c6770a5ec896244d31d7eac08663696d22140493ddb820f66d12670b669d2,created_at:2011-08-15T18:41:56Z,unknown_key_to_ignore:foo";
         let actual = GemRelease::parse(input).unwrap();
-        assert_eq!(actual.metadata.created_at, Some("2011-08-15T18:41:56Z".to_string()));
+        assert_eq!(
+          actual.metadata.created_at,
+          Some("2011-08-15T18:41:56Z".to_string())
+        );
     }
 }
