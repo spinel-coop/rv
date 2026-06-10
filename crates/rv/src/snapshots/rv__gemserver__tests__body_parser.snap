@@ -33,6 +33,7 @@ expression: actual_parsed_response
             checksum: "84fd0ee92f92088cff81d1a4bcb61306bd4b7440b8634d7ac3d1396571a2133f",
             ruby: [],
             rubygems: [],
+            created_at: None,
         },
     },
     GemRelease {
@@ -65,6 +66,7 @@ expression: actual_parsed_response
             checksum: "ac61e0356987df34dbbafb803b98f153a663d3878a31f1db7333b7cd987fd044",
             ruby: [],
             rubygems: [],
+            created_at: None,
         },
     },
 ]
