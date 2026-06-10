@@ -210,8 +210,6 @@ pub enum GemReleaseParse {
     InvalidRelease(String),
     #[error("Unknown semver constraint type {0}")]
     UnknownSemverType(String),
-    #[error("Unknown metadata key {key} in metadata field: {metadata}")]
-    UnknownMetadataKey { key: String, metadata: String },
     #[error("Invalid checksum in metadata field {metadata}")]
     InvalidChecksum {
         source: hex::FromHexError,
@@ -369,11 +367,11 @@ fn parse_metadata(metadata: &str) -> ParseResult<Metadata> {
             "published_at" => {
                 //Unused for now
             }
+            "created_at" => {
+                //Unused for now
+            }
             _ => {
-                return Err(GemReleaseParse::UnknownMetadataKey {
-                    key: k.to_owned(),
-                    metadata: md_str.to_owned(),
-                });
+                //Ignore unused keys
             }
         }
     }
@@ -452,6 +450,10 @@ mod tests {
             (
                 "0.5.1".parse().unwrap(),
                 "0.5.1 |checksum:f8eb8f78342e3366509d2acb6ee87afec77e49c1545c7e7a76bdaab0f820db46,ruby:>= 1.8.1,rubygems:",
+            ),
+            (
+                "0.2.0".parse().unwrap(),
+                "0.2.0 |checksum:f8eb8f78342e3366509d2acb6ee87afec77e49c1545c7e7a76bdaab0f820db46,2011-08-15T18:41:56Z,unknown_key_to_ignore:foo",
             ),
         ] {
             let actual = GemRelease::parse(input).unwrap();
