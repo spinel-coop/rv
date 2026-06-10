@@ -369,11 +369,11 @@ fn parse_metadata(metadata: &str) -> ParseResult<Metadata> {
             "published_at" => {
                 //Unused for now
             }
+            "created_at" => {
+                out.created_at = Some(v.to_owned());
+            }
             _ => {
-                return Err(GemReleaseParse::UnknownMetadataKey {
-                    key: k.to_owned(),
-                    metadata: md_str.to_owned(),
-                });
+                // Ignore other fields in the future
             }
         }
     }
@@ -404,6 +404,7 @@ pub struct Metadata {
     pub checksum: Vec<u8>,
     pub ruby: Requirement,
     pub rubygems: Requirement,
+    pub created_at: Option<String>,
 }
 
 impl Default for Metadata {
@@ -416,6 +417,7 @@ impl Default for Metadata {
             rubygems: Requirement {
                 constraints: vec![],
             },
+            created_at: None,
         }
     }
 }
@@ -426,6 +428,7 @@ impl std::fmt::Debug for Metadata {
             .field("checksum", &hex::encode(&self.checksum))
             .field("ruby", &self.ruby)
             .field("rubygems", &self.rubygems)
+            .field("created_at", &self.created_at)
             .finish()
     }
 }
@@ -510,5 +513,12 @@ mod tests {
                 .to_string(),
             expected_release
         );
+    }
+
+    #[test]
+    fn test_unknown_and_created_at_metadata() {
+        let input = "1.0.0 |checksum:505c6770a5ec896244d31d7eac08663696d22140493ddb820f66d12670b669d2,created_at:2011-08-15T18:41:56Z,unknown_key_to_ignore:foo";
+        let actual = GemRelease::parse(input).unwrap();
+        assert_eq!(actual.metadata.created_at, Some("2011-08-15T18:41:56Z".to_string()));
     }
 }
