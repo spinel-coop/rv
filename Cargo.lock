@@ -2231,9 +2231,9 @@ dependencies = [
 
 [[package]]
 name = "papergrid"
-version = "0.17.0"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6978128c8b51d8f4080631ceb2302ab51e32cc6e8615f735ee2f83fd269ae3f1"
+checksum = "d0984e668274d34691bc2b262ef0d115de5fa9973bcdee7ae32213f93099153e"
 dependencies = [
  "ansi-str",
  "ansitok",
@@ -3543,9 +3543,8 @@ dependencies = [
 
 [[package]]
 name = "tabled"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e39a2ee1fbcd360805a771e1b300f78cc88fec7b8d3e2f71cd37bbf23e725c7d"
+version = "0.21.0"
+source = "git+https://github.com/shrey4796/tabled.git?branch=drop-proc-macro-error2#70c814c43b196d6b0d565de944b1e556add57d3e"
 dependencies = [
  "ansi-str",
  "ansitok",
