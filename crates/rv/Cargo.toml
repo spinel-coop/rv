@@ -73,7 +73,7 @@ glob = "0.3.3"
 base64 = "0.22.1"
 dep-graph = { workspace = true }
 pubgrub = { workspace = true }
-tabled = { version = "0.21.0", features = ["ansi"], git = "https://github.com/shrey4796/tabled.git", branch = "drop-proc-macro-error2" }
+tabled = { version = "0.21.0", features = ["ansi"] }
 config = { version = "0.15.22", default-features = false, features = [
   "yaml",
   "convert-case",
