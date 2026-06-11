@@ -15,22 +15,26 @@ pub struct ToolArgs {
     pub command: ToolCommand,
 }
 
+#[derive(Args)]
+pub struct InstallArgs {
+    /// What to install. This can either be gem@version, e.g.
+    /// `mygem@2.18.0`, or a gem name like `mygem`, which is equivalent
+    /// to doing `mygem@latest`.
+    #[arg()]
+    gem: String,
+    /// What gem server to use.
+    #[arg(long, default_value = "https://gem.coop/")]
+    gem_server: String,
+    /// If true, and the tool is already installed, reinstall it.
+    /// Otherwise, skip installing if the tool was already installed.
+    #[arg(long, short)]
+    force: bool,
+}
+
 #[derive(Subcommand)]
 pub enum ToolCommand {
     #[command(about = "Install a gem as a CLI tool, with its own dedicated environment")]
-    Install {
-        /// What to install. This can either be gem@version, e.g.
-        /// `mygem@2.18.0`, or a gem name like `mygem`, which is equivalent
-        /// to doing `mygem@latest`.
-        gem: String,
-        /// What gem server to use.
-        #[arg(long, default_value = "https://gem.coop/")]
-        gem_server: String,
-        /// If true, and the tool is already installed, reinstall it.
-        /// Otherwise, skip installing if the tool was already installed.
-        #[arg(long, short)]
-        force: bool,
-    },
+    Install(InstallArgs),
     #[command(about = "List installed tools")]
     List {
         /// Output format for the list
@@ -87,25 +91,41 @@ type Result<T> = miette::Result<T, Error>;
 
 pub(crate) async fn tool(global_args: &GlobalArgs, tool_args: ToolArgs) -> Result<()> {
     match tool_args.command {
-        ToolCommand::Install {
-            gem,
-            gem_server,
-            force,
-        } => install::install(global_args, gem, gem_server, force)
-            .await
-            .map(|_| ())?,
+        ToolCommand::Install(args) => {
+            let (gem_server, gem) = parse_namespace(args.gem_server, args.gem);
+            install::install(global_args, gem, gem_server, args.force)
+                .await
+                .map(|_| ())?
+        }
         ToolCommand::List { format } => list::list(global_args, format)?,
         ToolCommand::Uninstall { gem } => uninstall::uninstall(global_args, gem)?,
         ToolCommand::Run {
             gem,
             gem_server,
             no_install,
-            args,
-        } => run::run(global_args, gem, gem_server, no_install, args).await?,
+            mut args,
+        } => {
+            let gem = gem
+                .or(args.first().cloned())
+                .expect("gem or first arg is required");
+            let (gem_server, gem) = parse_namespace(gem_server, gem);
+            args[0] = gem.clone();
+            run::run(global_args, Some(gem), gem_server, no_install, args).await?
+        }
         ToolCommand::Dir => dir::dir(global_args)?,
     };
 
     Ok(())
+}
+
+fn parse_namespace(gem_server: String, gem: String) -> (String, String) {
+    if gem.starts_with('@')
+        && let Some((namespace, inner_gem)) = gem.split_once('/')
+    {
+        let gem_server = [gem_server, namespace.to_string()].join("/");
+        return (gem_server, inner_gem.to_string());
+    }
+    (gem_server, gem)
 }
 
 /// The directory where this tool can be found.
@@ -125,4 +145,51 @@ pub struct Installed {
     pub version: rv_version::Version,
     /// The dir where the tool/gem was installed.
     pub dir: Utf8PathBuf,
+}
+
+#[test]
+fn test_parse_namespace() {
+    assert_eq!(
+        ("https://gem.coop".to_string(), "indirect".to_string()),
+        parse_namespace("https://gem.coop".to_string(), "indirect".to_string())
+    );
+    assert_eq!(
+        ("gem.coop/@namespace".to_string(), "gemname".to_string()),
+        parse_namespace("gem.coop".to_string(), "@namespace/gemname".to_string())
+    );
+    assert_eq!(
+        ("gem.coop".to_string(), "gemname@latest".to_string()),
+        parse_namespace("gem.coop".to_string(), "gemname@latest".to_string())
+    );
+    assert_eq!(
+        ("gem.coop".to_string(), "gem/name".to_string()),
+        parse_namespace("gem.coop".to_string(), "gem/name".to_string())
+    );
+
+    assert_eq!(
+        ("gem.coop".to_string(), "@gemname".to_string()),
+        parse_namespace("gem.coop".to_string(), "@gemname".to_string())
+    );
+    assert_eq!(
+        ("gem.coop/@".to_string(), "gemname".to_string()),
+        parse_namespace("gem.coop".to_string(), "@/gemname".to_string())
+    );
+    assert_eq!(
+        ("gem.coop/@namespace".to_string(), "gem/name".to_string()),
+        parse_namespace("gem.coop".to_string(), "@namespace/gem/name".to_string())
+    );
+    assert_eq!(
+        ("".to_string(), "".to_string()),
+        parse_namespace("".to_string(), "".to_string())
+    );
+    assert_eq!(
+        (
+            "gem.coop/@namespace".to_string(),
+            "gemname@1.2.3".to_string()
+        ),
+        parse_namespace(
+            "gem.coop".to_string(),
+            "@namespace/gemname@1.2.3".to_string()
+        )
+    );
 }

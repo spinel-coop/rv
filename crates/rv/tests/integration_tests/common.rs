@@ -836,6 +836,12 @@ impl RvOutput {
     }
 }
 
+impl Default for RvTest {
+    fn default() -> RvTest {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

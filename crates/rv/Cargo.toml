@@ -73,12 +73,12 @@ glob = "0.3.3"
 base64 = "0.22.1"
 dep-graph = { workspace = true }
 pubgrub = { workspace = true }
-tabled = { version = "0.21.0", features = ["ansi"], git = "https://github.com/shrey4796/tabled.git", branch = "drop-proc-macro-error2" }
+tabled = { version = "0.21.0", features = ["ansi"] }
 config = { version = "0.15.22", default-features = false, features = [
   "yaml",
   "convert-case",
 ] }
-kdl = { git = "https://github.com/kdl-org/kdl-rs.git", version = "6.5.0" }
+kdl = { version = "6.7.0" }
 which = "8.0.2"
 shell-quote = { version = "0.7.2", features = ["bash", "fish", "sh"], default-features = false }
 

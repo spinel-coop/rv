@@ -58,6 +58,11 @@ impl Config {
     /// On Windows, fetches from `oneclick/rubyinstaller2` (one release per Ruby version).
     /// On other platforms, fetches from `spinel-coop/rv-ruby` (all versions in one release).
     pub async fn discover_remote_rubies(&self) -> Vec<RemoteRuby> {
+        if self.offline {
+            debug!("OFFLINE: skipping remote ruby fetch");
+            return vec![];
+        }
+
         // Detect host first — this decides which release source to query.
         let host = match HostPlatform::current() {
             Ok(h) => h,

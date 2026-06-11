@@ -102,3 +102,6 @@ debug = true
 dbg_macro = "warn"
 redundant_clone = "warn"
 result_large_err = "allow"
+
+[patch.crates-io]
+tabled_derive = { git = "https://github.com/shrey4796/tabled.git", branch = "drop-proc-macro-error2" }
