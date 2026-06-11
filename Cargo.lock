@@ -1860,7 +1860,8 @@ dependencies = [
 [[package]]
 name = "kdl"
 version = "6.7.1"
-source = "git+https://github.com/kdl-org/kdl-rs.git#ce82d2ce3e827eddc6bbb4ec4c315aaf6f9adc08"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "082ddf81b2acd76fe04412655d17befedfff1837db772f8e74c38050d25ed670"
 dependencies = [
  "miette",
  "num-traits",
