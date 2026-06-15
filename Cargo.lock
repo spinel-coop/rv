@@ -2906,7 +2906,7 @@ dependencies = [
 
 [[package]]
 name = "rv"
-version = "0.5.3"
+version = "0.6.0"
 dependencies = [
  "anstream",
  "assert_fs",

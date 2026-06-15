@@ -1,5 +1,83 @@
 # `rv` changelog
 
+## rv 0.6.0 (15 June, 2026)
+
+The significant changes in 0.6.0 include:
+  - run `rv ruby install dev` to install Ruby compiled daily from git
+  - use `rvx @name/gem` to run gems from `gem.coop` namespaces
+  - use `rv self update` to update rv itself
+  - gem servers that require authentication are now supported (e.g. sidekiq pro)
+
+Thank you to new contributors @parkr, @alepore, @solojavier, @kbruccoleri, and @simi!
+
+### Added
+
+ - Support for private gems with `username:password` credentials (#694, @alepore)
+ - `rvx` namespace syntax (#692, @indirect)
+ - `rv self update` integrates with Homebrew installs (#667, @a-chacon)
+ - `rv tool install` supports namespaced gem sources (#658, @deivid-rodriguez)
+ - `rv tool install` validates package checksums against the gem API (#640, @deivid-rodriguez)
+ - `rv tool dir` shows the tools directory path (#621, @savechina)
+ - `bin/install` accepts additional parameters (#610, @a-chacon)
+ - Settings can be configured via a config file (#590, #642, #633, @a-chacon)
+ - `rv` can now update itself with `rv self update` (#562, #620, @a-chacon, @savechina)
+
+### Fixed
+
+- Path traversal vulnerabilities in zip and tar extraction (#702, @deivid-rodriguez)
+ - Don't confuse `XDG_DATA_HOME` with `XDG_STATE_HOME` (#676, @deivid-rodriguez)
+ - User and gemspec inputs are now properly escaped (#670, @indirect)
+ - Several bugs compiling native extensions (#666, @deivid-rodriguez)
+ - Don't run `make` when there is no Makefile (#662, @deivid-rodriguez)
+ - `rv tool install` now tolerates additional metadata fields in compact index info files (#661, #718, @deivid-rodriguez, @parkr)
+ - `rv tool install` prints better errors when the target gem does not exist (#660, @deivid-rodriguez)
+ - `rv tool install foo` now fails clearly if no executable named `foo` is provided (#659, @deivid-rodriguez)
+ - `rv tool install archive-tar-minitar` failing due to compact index parsing bug (#629, @deivid-rodriguez)
+ - `.0.0.pre` incorrectly being treated as a valid version (#628, @deivid-rodriguez)
+ - `rv tool install` failing on truncated `data.tar.gz` archives (#625, @deivid-rodriguez)
+ - `rv tool install` panic when checksum validation failed (#624, @deivid-rodriguez)
+ - Only `rv clean-install` and `rv run` read Bundler settings (#617, @deivid-rodriguez)
+ - Activating `ruby-dev` versions (#616, @deivid-rodriguez)
+ - Handle empty Bundler config gracefully (#614, @deivid-rodriguez)
+ - Don't download anything if the lockfile does not specify a remote source (#609, @deivid-rodriguez)
+ - `rv shell init` falls back to the highest installed ruby if the pinned ruby is missing (#600, @deivid-rodriguez)
+ - Multiple lockfile parsing fixes (#597, #613, #619, #636, @deivid-rodriguez)
+ - Lockfile parse errors no longer break ruby version discovery (#596, @deivid-rodriguez)
+ - More Windows fixes (#587, @case)
+ - `ruby-dev` reinstalls now work correctly (#584, @deivid-rodriguez)
+
+### Improved
+
+ - More performant bash shell integration (#647, @deivid-rodriguez)
+ - Configuration is now resolved just once per invocation (#646, @deivid-rodriguez)
+ - Avoid shelling out to Ruby to discover extensions scope (#639, @deivid-rodriguez)
+ - Refactored `rv ruby list` and ruby version matching (#637, @deivid-rodriguez)
+ - `rv tool install` caching (#626, @deivid-rodriguez)
+ - `rv ruby list` output is now slimmer (#615, @deivid-rodriguez)
+ - `rv` now knows how to write `Gemfile.lock` files (#612, @deivid-rodriguez)
+ - Examples added to `rv ruby install --help` (#583, @deivid-rodriguez)
+
+### Internal
+
+ - Build linux-gnu releases on ubuntu-22.04 for glibc 2.35 compatibility (#699, @kbruccoleri)
+ - Added `SECURITY.md` (#657, @indirect)
+ - Removed unused dependencies (#634, @deivid-rodriguez)
+ - Unified duplicated types (#627, @deivid-rodriguez)
+ - Removed serde derive macros from lockfile types (#618, @deivid-rodriguez)
+ - Fixed intermittent integration test failures (#608, @deivid-rodriguez)
+ - Dependabot cooldown for rust-toolchain updates (#599, @shaanmajid)
+ - Replaced `dtolnay/rust-toolchain` action with `rustup show` (#598, @shaanmajid)
+ - GitHub Actions are pinned to commit SHAs (#593, @shaanmajid)
+ - Added zizmor for GitHub Actions security scanning (#578, @shaanmajid)
+ - Many dependency bumps across cargo, GitHub Actions, and the Rust toolchain (@dependabot)
+
+### Documentation
+
+ - Added link to Ruby Users Forum in the README (#691, @solojavier)
+ - Updated README Slack link (#688, @simi)
+ - Added rv settings configuration to the README (#644, @a-chacon)
+
+
 ## rv 0.5.3 (6 March, 2026)
 
 ### Added
