@@ -44,6 +44,7 @@
 
  - Windows and standalone installer instructions now live right in our README (#526, @a-chacon)
 
+
 ## rv 0.5.2 (18 February, 2026)
 
 ### Added
@@ -54,6 +55,7 @@
 
  - rv ci: Gems weren't being compiled if extension deps already installed (#522, @deivid-rodriguez)
  - Tests fail faster when the required shell isn't installed (#521, @a-chacon)
+
 
 ## rv 0.5.1 (18 February, 2026)
 
@@ -72,6 +74,7 @@
  - Test improvements (#511, #510, @deivid-rodriguez)
  - rv ruby list sort order fixed (#513, @deivid-rodriguez)
 
+
 ## rv 0.5.0 (12 February, 2026)
 
 Thank you to new contributors @a-chacon and @phromo!
@@ -88,12 +91,10 @@ Thank you to new contributors @a-chacon and @phromo!
  - New rv ruby list flag to show all available versions #462 @a-chacon
  - New --force flag for reinstalling gems in rv clean-install #475 @a-chacon
 
-
 ### Changed
 
  - Better quickstart/readme #445 @indirect
  - rv clean-install shows how many native extension compilations were cached #473 @adamchalmers
-
 
 ### Fixed
 
@@ -110,18 +111,19 @@ Thank you to new contributors @a-chacon and @phromo!
  - rv ruby pin `<version>` now properly pins version in project directory, even if there's a globally pinned version in user's home #476 @deivid-rodriguez
  - rv now properly activates ruby version configured in ~/.ruby-version , even if run outside of user's home folder #476 @deivid-rodriguez
 
-
 ### Internal
 
  - Big improvements to smoke test suite for most of rv’s surface area #440 #453 @case
  - Centralized, cohesive platform handling via rv_platform #472 @case
  - Integration tests for Rake extensions #481 @case
 
+
 ## rv 0.4.3 (22 January, 2026)
 
 - `rv ci` did not respect custom gem lib directories (#402, @deivid-rodriguez)
 - `rv ci` install path was wrong if BUNDLE_PATH was set (#403, @deivid-rodriguez)
 - better summary statistics for `rv ci` (#401, @deivid-rodriguez)
+
 
 ## rv 0.4.2 (22 January, 2026)
 
@@ -152,6 +154,7 @@ Thank you to new contributors @a-chacon and @phromo!
 - Nicer `rv ruby pin` output (#354, @kaspth)
 - Only find rubies that could match the desired version (#356, @deivid-rodriguez)
 
+
 ## rv 0.4.1 (9 January, 2026)
 
 This is a small release to fix a few bugs in the 0.4.0 release.
@@ -161,6 +164,7 @@ This is a small release to fix a few bugs in the 0.4.0 release.
 - Improvements to how `rv ruby list` displays active ruby (#339, @deivid-rodriguez)
 - Clearer descriptions for `rv ruby` subcommands (#338, @sstephenson)
 - Tests: Add smoke tests for `rv ci` with popular projects (#331, @case)
+
 
 ## rv 0.4.0 (6 January, 2026)
 
@@ -180,6 +184,7 @@ Improves listing Ruby versions, hiding (uninstalled) pre-releases once a final i
 - Add `Version::from(segments)` (<https://github.com/spinel-coop/rv/pull/320>, @kaspth)
 - Separate `RubyVersion` from `RubyRequest` (<https://github.com/spinel-coop/rv/pull/322>, @adamchalmers)
 
+
 ## rv 0.3.1 (30 December, 2025)
 
 Ruby 4.0.0 is now available! (and has been since Christmas Day). This release is mainly a fix to make sure that previews are considered "before" final releases, so we will stop showing 4.0.0-preview3 as if you might want to install it after 4.0.0.
@@ -194,6 +199,7 @@ Ruby 4.0.0 is now available! (and has been since Christmas Day). This release is
 - Use the latest Ruby in `rv ruby run` by default (<https://github.com/spinel-coop/rv/pull/237>, @deivid-rodriguez)
 - Set GEM_HOME to `~/.local/share/rv/gems` if `~/.gems` doesn't exist (<https://github.com/spinel-coop/rv/pull/231>, @lgarron)
 - Ensure `rv ruby pin` prints versions consistently (<https://github.com/spinel-coop/rv/pull/229>, @deivid-rodriguez)
+
 
 ## rv 0.3.0 (8 December, 2025)
 
@@ -217,6 +223,7 @@ Special thanks to our new contributors @savechina, @Mado13, @case, and @deivid-r
 - Add `rv ruby uninstall` (<https://github.com/spinel-coop/rv/pull/153>, @savechina)
 - Add `rv ruby dir` (<https://github.com/spinel-coop/rv/pull/150>, @savechina)
 
+
 ## rv 0.2.0 (8 October, 2025)
 
 Adds x86 macOS as a supported platform, Ruby 3.3, and YJIT for all Rubies. Adds shells bash, fish, and nushell.
@@ -236,6 +243,7 @@ Adds x86 macOS as a supported platform, Ruby 3.3, and YJIT for all Rubies. Adds 
 - Support fish shell (<https://github.com/spinel-coop/rv/pull/67>, @renatolond)
 - Compact top-level help, even on `--help` (<https://github.com/spinel-coop/rv/pull/70>, @coezbek)
 
+
 ## rv 0.1.1 (28 August, 2025)
 
 - Dual license MIT / Apache-2
@@ -244,6 +252,7 @@ Adds x86 macOS as a supported platform, Ruby 3.3, and YJIT for all Rubies. Adds 
 - Fix `bin/setup` in non-root situations under Ubuntu
 - replace openssl with rustls
 - Added bash to supported shells
+
 
 ## rv 0.1.0 (25 August, 2025)
 
