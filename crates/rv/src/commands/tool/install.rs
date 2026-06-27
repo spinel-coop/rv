@@ -234,18 +234,19 @@ pub(crate) async fn install_extra_gems(
     let mut gems_to_solve: Vec<(GemName, GemRelease)> = Vec::new();
 
     for (gem_name, gem_version) in &with_gems {
-        let releases_resp = gemserver
-            .get_releases_for_gem(gem_name)
-            .await
-            .map_err(|e| match e {
-                gemserver::Error::Reqwest(e) if e.status() == Some(StatusCode::NOT_FOUND) => {
-                    Error::NotFound {
-                        gem_name: gem_name.to_owned(),
-                        server: gemserver.url.to_string(),
+        let releases_resp =
+            gemserver
+                .get_releases_for_gem(gem_name)
+                .await
+                .map_err(|e| match e {
+                    gemserver::Error::Reqwest(e) if e.status() == Some(StatusCode::NOT_FOUND) => {
+                        Error::NotFound {
+                            gem_name: gem_name.to_owned(),
+                            server: gemserver.url.to_string(),
+                        }
                     }
-                }
-                other => Error::from(other),
-            })?;
+                    other => Error::from(other),
+                })?;
 
         let releases = gemserver::parse_release_from_body(&releases_resp)?;
         if releases.is_empty() {
@@ -281,9 +282,8 @@ pub(crate) async fn install_extra_gems(
     }
 
     debug!("Resolving --with dependencies via PubGrub");
-    let versions_needed =
-        crate::resolver::solve_multiple(gems_to_solve, gemserver.gems_to_deps)
-            .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
+    let versions_needed = crate::resolver::solve_multiple(gems_to_solve, gemserver.gems_to_deps)
+        .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
     debug!("All --with dependencies resolved");
 
     let lockfile_builder = LockfileBuilder {
