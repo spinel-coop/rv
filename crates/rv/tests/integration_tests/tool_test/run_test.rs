@@ -207,7 +207,10 @@ mod test {
         // Now run again with --with. The primary gem should NOT be re-fetched,
         // but the --with gem should be fetched and installed.
         let indirect_info_mock_2 = test.mock_info_endpoint("indirect").expect(0).create();
-        let indirect_tarball_mock_2 = test.mock_gem_download("indirect-1.2.0.gem").expect(0).create();
+        let indirect_tarball_mock_2 = test
+            .mock_gem_download("indirect-1.2.0.gem")
+            .expect(0)
+            .create();
         let racc_info_mock = test.mock_info_endpoint("racc").create();
         let racc_tarball_mock = test.mock_gem_download("racc-1.8.1.gem").create();
 
