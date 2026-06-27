@@ -66,7 +66,7 @@ pub enum ToolCommand {
         #[arg(long)]
         no_install: bool,
         /// Additional gems to install alongside the primary tool.
-        #[arg(long, action = clap::ArgAction::Append)]
+        #[arg(short = 'w', long, action = clap::ArgAction::Append)]
         with: Vec<String>,
         /// Command to run, e.g. `rerun` or `rails@8.0.2 new .`
         #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true, value_names = ["COMMAND", "ARGS"])]
