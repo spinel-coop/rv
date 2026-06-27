@@ -94,7 +94,7 @@ mod test {
         let racc_info_mock = test.mock_info_endpoint("racc").create();
         let racc_tarball_mock = test.mock_gem_download("racc-1.8.1.gem").create();
 
-        let output = test.tool_run(&["--with", "racc", "indirect"]);
+        let output = test.tool_run(&["-w", "racc", "indirect"]);
 
         let tool_home = "/tmp/home/.local/share/rv/tools/indirect@1.2.0";
         let expected_info_message = format!(
