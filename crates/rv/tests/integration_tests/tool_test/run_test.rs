@@ -1,4 +1,4 @@
-use crate::{RvOutput, RvTest};
+use crate::common::{RvOutput, RvTest};
 
 impl RvTest {
     pub fn tool_run(&mut self, args: &[&str]) -> RvOutput {
@@ -221,6 +221,32 @@ mod test {
 
         // Manually remove tool
         rm_rf(test.data_dir().join("rv/tools/indirect@1.2.0")).unwrap();
+    }
+
+    #[test]
+    fn test_tool_run_with_nonexistent_gem() {
+        let mut test = RvTest::new();
+
+        let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
+        let ruby_mock = test.mock_ruby_download("4.0.0").create();
+        let indirect_info_mock = test.mock_info_endpoint("indirect").create();
+        let indirect_tarball_mock = test.mock_gem_download("indirect-1.2.0.gem").create();
+        let nonexistent_mock = test
+            .mock_request("GET", "info/nonexistent")
+            .with_status(404)
+            .create();
+
+        let output = test.tool_run(&["--with", "nonexistent", "indirect"]);
+        output.assert_failure();
+
+        releases_mock.assert();
+        ruby_mock.assert();
+        indirect_info_mock.assert();
+        indirect_tarball_mock.assert();
+        nonexistent_mock.assert();
+
+        // Manually remove tool
+        rv_cache::rm_rf(test.data_dir().join("rv/tools/indirect@1.2.0")).unwrap();
     }
 
     #[test]
