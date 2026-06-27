@@ -1,0 +1,27 @@
+#!/bin/bash
+set -euo pipefail
+
+# Smoke test for rvx --with (installing additional gems alongside a tool)
+#
+# Tests the real-world use case of running sequel with the pg gem available.
+# Verifies both the `rvx` and `rv tool run` invocation forms.
+
+source "$(dirname "$0")/shared.sh"
+
+macos_docker_reexec
+
+setup_packages libpq-dev
+
+setup_rv
+
+# bin/build only builds `rv`, but this test also needs `rvx`
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+cargo build --release --locked --all-features --bin rvx --manifest-path "$REPO_ROOT/Cargo.toml"
+
+# Test rvx form: install sequel, --with pg, verify pg is requireable
+rvx --with pg sequel -c "require 'pg'; puts PG::VERSION"
+
+# Test rv tool run form
+rv tool run --with pg sequel -c "require 'pg'; puts PG::VERSION"
+
+smoke_test_success "rvx --with"
