@@ -32,6 +32,48 @@ pub fn solve(
         .collect())
 }
 
+/// Solve for multiple root gems simultaneously, using a virtual root package.
+/// This is used by `--with` to resolve multiple additional gems together.
+pub fn solve_multiple(
+    gems: Vec<(GemName, GemRelease)>,
+    gem_info: HashMap<GemName, HashMap<VersionPlatform, GemRelease>>,
+) -> Result<Vec<(ReleaseTuple, GemRelease)>, ResolutionError> {
+    let virtual_root: GemName = "__rv_virtual_root__".to_string();
+    let virtual_version = VersionPlatform {
+        version: "0.0.0".parse().unwrap(),
+        platform: rv_gem_types::Platform::Ruby,
+    };
+
+    // Build the dependency provider from all gem info.
+    let mut provider = all_dependencies(&gem_info);
+
+    // Add the virtual root with dependencies on all the input gems.
+    let deps: Vec<(GemName, Ranges<VersionPlatform>)> = gems
+        .iter()
+        .map(|(name, release)| {
+            let range = Ranges::singleton(release.version_platform().clone());
+            (name.clone(), range)
+        })
+        .collect();
+    provider.add_dependencies(virtual_root.clone(), virtual_version.clone(), deps);
+
+    let solution = pubgrub::resolve(&provider, virtual_root.clone(), virtual_version)?;
+
+    Ok(solution
+        .into_iter()
+        .filter(|(p, _)| *p != virtual_root)
+        .map(|(p, vp)| {
+            let gem_release = gem_info[&p][&vp].clone();
+            let release_tuple = ReleaseTuple {
+                name: p,
+                version: vp.version,
+                platform: vp.platform,
+            };
+            (release_tuple, gem_release)
+        })
+        .collect())
+}
+
 /// Build a PubGrub "dependency provider", i.e. something that can be queried
 /// with all the information of a GemServer (which gems are available, what versions that gem has,
 /// and what dependencies that gem-version pair has).
