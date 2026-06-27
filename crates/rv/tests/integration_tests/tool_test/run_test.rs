@@ -126,10 +126,10 @@ mod test {
         let indirect_tarball_mock = test.mock_gem_download("indirect-1.2.0.gem").create();
         let racc_info_mock = test.mock_info_endpoint("racc").create();
         let racc_tarball_mock = test.mock_gem_download("racc-1.8.1.gem").create();
-        let test_gem_info_mock = test.mock_info_endpoint("test-gem").create();
-        let test_gem_tarball_mock = test.mock_gem_download("test-gem-1.0.0.gem").create();
+        let second_with_info_mock = test.mock_info_endpoint("second-with").create();
+        let second_with_tarball_mock = test.mock_gem_download("second-with-1.0.0.gem").create();
 
-        let output = test.tool_run(&["--with", "racc", "--with", "test-gem", "indirect"]);
+        let output = test.tool_run(&["--with", "racc", "--with", "second-with", "indirect"]);
 
         let tool_home = "/tmp/home/.local/share/rv/tools/indirect@1.2.0";
         let expected_info_message = format!(
@@ -146,8 +146,8 @@ mod test {
         indirect_tarball_mock.assert();
         racc_info_mock.assert();
         racc_tarball_mock.assert();
-        test_gem_info_mock.assert();
-        test_gem_tarball_mock.assert();
+        second_with_info_mock.assert();
+        second_with_tarball_mock.assert();
 
         // Manually remove tool
         rm_rf(test.data_dir().join("rv/tools/indirect@1.2.0")).unwrap();
