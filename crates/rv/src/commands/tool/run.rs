@@ -97,6 +97,7 @@ pub(crate) async fn run(
     gem: Option<String>,
     gem_server: String,
     no_install: bool,
+    with: Vec<String>,
     args: Vec<String>,
 ) -> Result<(), Error> {
     // Parse out the CLI args.
@@ -141,7 +142,7 @@ pub(crate) async fn run(
             tool_install::install(
                 global_args,
                 target_gem_version.suffix_of(target_gem_name),
-                gem_server,
+                gem_server.clone(),
                 false,
             )
             .await?
@@ -157,6 +158,33 @@ pub(crate) async fn run(
         .parse()
         .map_err(Error::InvalidRubyVersion)?;
     debug!("Tool requires Ruby {ruby_version}");
+
+    // Install any --with gems into the primary tool's directory.
+    if !with.is_empty() {
+        let with_gems: Vec<WithVersion<'_>> = with
+            .iter()
+            .map(|s| WithVersion::parse(s))
+            .collect::<Result<Vec<_>, _>>()?;
+        let with_specs: Vec<(String, Option<rv_version::Version>)> = with_gems
+            .into_iter()
+            .map(|w| {
+                let version = match w.version {
+                    UserVersion::Use(v) => Some(v),
+                    UserVersion::Latest => None,
+                };
+                (w.name.to_owned(), version)
+            })
+            .collect();
+        tool_install::install_extra_gems(
+            global_args,
+            with_specs,
+            gem_server.clone(),
+            installed_tool.dir.clone(),
+            ruby_version.clone(),
+        )
+        .await?;
+    }
+
     let tool_bin_dir = installed_tool.dir.join("bin");
     let file = tool_bin_dir.join(executable.name);
     if !file.exists() {
