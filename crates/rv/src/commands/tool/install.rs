@@ -1,9 +1,11 @@
 use std::fs;
 
+use camino::Utf8PathBuf;
 use owo_colors::OwoColorize;
 use reqwest::StatusCode;
 use rv_gem_types::ReleaseTuple;
 use rv_lockfile::datatypes::GemfileDotLock;
+use rv_ruby::request::RubyRequest;
 use rv_version::Version;
 use tracing::debug;
 use url::Url;
@@ -210,6 +212,95 @@ pub(crate) async fn install(
         version: release_to_install.version().to_owned(),
         dir: install_path,
     })
+}
+
+/// Install additional gems into an existing tool directory (for --with support).
+pub(crate) async fn install_extra_gems(
+    global_args: &GlobalArgs,
+    with_gems: Vec<(GemName, Option<Version>)>,
+    gem_server: String,
+    install_path: Utf8PathBuf,
+    ruby_to_use: RubyRequest,
+) -> Result<()> {
+    let config = &Config::with_settings(global_args, None)?;
+    let gem_server: Url = gem_server.parse().map_err(|_| Error::BadUrl(gem_server))?;
+    let mut gemserver = Gemserver::new(config, gem_server)?;
+
+    let ruby_version: rv_ruby::version::RubyVersion = ruby_to_use
+        .clone()
+        .try_into()
+        .map_err(|e| Error::CouldNotChooseVersion(format!("Invalid Ruby version: {e}")))?;
+
+    let mut gems_to_solve: Vec<(GemName, GemRelease)> = Vec::new();
+
+    for (gem_name, gem_version) in &with_gems {
+        let releases_resp =
+            gemserver
+                .get_releases_for_gem(gem_name)
+                .await
+                .map_err(|e| match e {
+                    gemserver::Error::Reqwest(e) if e.status() == Some(StatusCode::NOT_FOUND) => {
+                        Error::NotFound {
+                            gem_name: gem_name.to_owned(),
+                            server: gemserver.url.to_string(),
+                        }
+                    }
+                    other => Error::from(other),
+                })?;
+
+        let releases = gemserver::parse_release_from_body(&releases_resp)?;
+        if releases.is_empty() {
+            return Err(Error::NoReleasesPublished);
+        }
+
+        let release = match gem_version {
+            Some(user_choice) => releases
+                .iter()
+                .filter(|r| r.version() == user_choice)
+                .max_by(|x, y| x.version_platform().cmp(y.version_platform()))
+                .map_or_else(
+                    || Err(Error::NoVersionFound(user_choice.clone())),
+                    |v| Ok(v.to_owned()),
+                )?,
+            None => releases
+                .iter()
+                .max_by(|x, y| x.version_platform().cmp(y.version_platform()))
+                .map_or_else(|| Err(Error::NoReleasesPublished), |v| Ok(v.to_owned()))?,
+        };
+
+        let target_version = release.version_platform();
+        gemserver.gems_to_deps.insert(
+            gem_name.clone(),
+            [(target_version.clone(), release.clone())].into(),
+        );
+
+        gemserver
+            .add_transitive_deps(&release, &ruby_version)
+            .await?;
+
+        gems_to_solve.push((gem_name.clone(), release));
+    }
+
+    debug!("Resolving --with dependencies via PubGrub");
+    let versions_needed = crate::resolver::solve_multiple(gems_to_solve, gemserver.gems_to_deps)
+        .map_err(|e| Error::CouldNotChooseVersion(e.to_string()))?;
+    debug!("All --with dependencies resolved");
+
+    let lockfile_builder = LockfileBuilder {
+        gemserver_remote: gemserver.url.to_string(),
+        versions_needed,
+    };
+    let lockfile = lockfile_builder.lockfile();
+
+    crate::commands::clean_install::install_tool_lockfile(
+        global_args,
+        Some(ruby_to_use),
+        lockfile,
+        install_path,
+    )
+    .await?;
+
+    Ok(())
 }
 
 /// Owns the information needed to create a lockfile.

@@ -65,6 +65,9 @@ pub enum ToolCommand {
         /// If this flag is given, rv will exit with an error instead of installing.
         #[arg(long)]
         no_install: bool,
+        /// Additional gems to install alongside the primary tool.
+        #[arg(short = 'w', long, action = clap::ArgAction::Append)]
+        with: Vec<String>,
         /// Command to run, e.g. `rerun` or `rails@8.0.2 new .`
         #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true, value_names = ["COMMAND", "ARGS"])]
         args: Vec<String>,
@@ -103,6 +106,7 @@ pub(crate) async fn tool(global_args: &GlobalArgs, tool_args: ToolArgs) -> Resul
             gem,
             gem_server,
             no_install,
+            with,
             mut args,
         } => {
             let gem = gem
@@ -110,7 +114,7 @@ pub(crate) async fn tool(global_args: &GlobalArgs, tool_args: ToolArgs) -> Resul
                 .expect("gem or first arg is required");
             let (gem_server, gem) = parse_namespace(gem_server, gem);
             args[0] = gem.clone();
-            run::run(global_args, Some(gem), gem_server, no_install, args).await?
+            run::run(global_args, Some(gem), gem_server, no_install, with, args).await?
         }
         ToolCommand::Dir => dir::dir(global_args)?,
     };

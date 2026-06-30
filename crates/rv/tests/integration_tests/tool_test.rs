@@ -1,4 +1,1 @@
-mod install_test;
-mod list_test;
 mod run_test;
-mod uninstall_test;

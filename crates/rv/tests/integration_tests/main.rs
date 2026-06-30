@@ -4,6 +4,7 @@ mod ruby;
 mod run;
 mod shell;
 mod tool;
+mod tool_test;
 
 use crate::common::RvTest;
 use regex::Regex;
