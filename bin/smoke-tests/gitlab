@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Smoke test for GitLab - https://gitlab.com/gitlab-org/gitlab
+# Smoke test for GitLab - https://github.com/gitlabhq/gitlabhq
 
 source "$(dirname "$0")/shared.sh"
 
@@ -25,7 +25,7 @@ setup_packages \
 
 setup_rv
 
-[[ -d gitlab ]] || git clone --depth 1 https://gitlab.com/gitlab-org/gitlab.git
+[[ -d gitlab ]] || git clone --depth 1 https://github.com/gitlabhq/gitlabhq gitlab
 cd gitlab
 
 rv ci
