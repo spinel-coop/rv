@@ -40,6 +40,8 @@ struct JsonRubyEntry {
     ruby: RubyEntry,
     active: bool,
     #[serde(skip)]
+    eol_data: Option<String>,
+    #[serde(skip)]
     color: bool,
 }
 
@@ -95,11 +97,29 @@ impl tabled::Tabled for JsonRubyEntry {
                 }
             }
         };
-        vec![name.into(), installed]
+
+        let eol_cell: Cow<'_, str> = match &self.eol_data {
+            Some(s) => {
+                if self.color {
+                    if s.contains("year") {
+                        s.green().to_string().into()
+                    } else if s.contains("month") {
+                        s.yellow().to_string().into()
+                    } else {
+                        s.red().to_string().into()
+                    }
+                } else {
+                    s.clone().into()
+                }
+            }
+            None => "".into(),
+        };
+
+        vec![name.into(), installed, eol_cell]
     }
 
     fn headers() -> Vec<Cow<'static, str>> {
-        vec!["Version".into(), "Installed".into()]
+        vec!["Version".into(), "Installed".into(), "EOL".into()]
     }
 }
 
@@ -145,6 +165,7 @@ pub(crate) async fn list(
             JsonRubyEntry {
                 active: active(&mut active_ruby, &ruby.version, &requested),
                 ruby: RubyEntry::Installed(ruby),
+                eol_data: None,
                 color: true,
             },
         );
@@ -168,6 +189,7 @@ pub(crate) async fn list(
                 .or_insert(vec![JsonRubyEntry {
                     active: active(&mut active_ruby, &ruby.version, &requested),
                     ruby: RubyEntry::Remote(ruby),
+                    eol_data: None,
                     color: true,
                 }]);
         }
@@ -181,6 +203,7 @@ pub(crate) async fn list(
                     .or_insert(vec![JsonRubyEntry {
                         ruby: RubyEntry::Remote(ruby.clone()),
                         active: true,
+                        eol_data: None,
                         color: true,
                     }]);
             };
@@ -193,11 +216,41 @@ pub(crate) async fn list(
     }
 
     // Create entries for output
-    let entries: Vec<JsonRubyEntry> = rubies_map.into_values().flatten().collect();
+
+    let mut entries: Vec<JsonRubyEntry> = rubies_map.into_values().flatten().collect();
+
+    fill_eol_data(&mut entries, &config.cache).await;
 
     let explanation = config.requested_ruby.explain(active_installed);
 
     print_entries(entries, format, no_color, &explanation)
+}
+
+async fn fill_eol_data(entries: &mut [JsonRubyEntry], cache: &rv_cache::Cache) {
+    match crate::ruby_eol::get_cached_or_fetch(cache).await {
+        Ok(releases) => {
+            for entry in entries.iter_mut() {
+                let version: &RubyVersion = match &entry.ruby {
+                    RubyEntry::Installed(r) => &r.version,
+                    RubyEntry::Remote(rr) => &rr.version,
+                };
+
+                let minor_key = format!("{}.{}", version.major, version.minor);
+                let end_of_life_release = releases.iter().find(|r| r.name == minor_key);
+                if let Some(release) = end_of_life_release {
+                    let s = crate::ruby_eol::format_eol_status_opt(Some(release));
+                    if s.is_empty() {
+                        entry.eol_data = None;
+                    } else {
+                        entry.eol_data = Some(s.clone());
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            warn!("Failed to fetch EOL information for Ruby versions: {e}");
+        }
+    }
 }
 
 fn active(active_set: &mut bool, version: &RubyVersion, requested: &RubyRequest) -> bool {
