@@ -266,6 +266,8 @@ pub enum CacheBucket {
     Gemspec,
     /// Getting all transitive dependencies of a gem
     GemDeps,
+    /// General-purpose data (e.g. EOL info, other metadata)
+    General,
 }
 
 impl CacheBucket {
@@ -276,12 +278,13 @@ impl CacheBucket {
             Self::Git => "git-v0",
             Self::Gemspec => "gemspec-v0",
             Self::GemDeps => "gemdeps-v0",
+            Self::General => "general-v0",
         }
     }
 
     /// Return an iterator over all cache buckets.
     pub fn iter() -> impl Iterator<Item = Self> {
-        [Self::Ruby, Self::Gem].iter().copied()
+        [Self::Ruby, Self::Gem, Self::General].iter().copied()
     }
 }
 
@@ -336,8 +339,9 @@ mod tests {
     #[test]
     fn test_cache_bucket_iteration() {
         let buckets: Vec<_> = CacheBucket::iter().collect();
-        assert_eq!(buckets.len(), 2);
+        assert_eq!(buckets.len(), 3);
         assert!(buckets.contains(&CacheBucket::Ruby));
+        assert!(buckets.contains(&CacheBucket::General));
     }
 
     #[test]

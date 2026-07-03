@@ -81,6 +81,7 @@ config = { version = "0.15.22", default-features = false, features = [
 kdl = { version = "6.7.0" }
 which = "8.0.2"
 shell-quote = { version = "0.7.2", features = ["bash", "fish", "sh"], default-features = false }
+chrono = "0.4.44"
 
 [dev-dependencies]
 insta = { workspace = true }
