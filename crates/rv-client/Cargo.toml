@@ -15,7 +15,7 @@ rustls-native-certs = { version = "0.8.3" }
 webpki-root-certs = { version = "1" }
 
 [dev-dependencies]
-rcgen = "0.14.7"
+rcgen = "0.14.8"
 anyhow = "1"
 temp-env = { version = "0.3.6", features = ["async_closure"] }
 http-body-util = "0.1"
