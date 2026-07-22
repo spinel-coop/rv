@@ -87,6 +87,8 @@ See [SETTINGS.md](docs/SETTINGS.md) for all settings, allowed values, and config
 
 Join us in the `rv` category on the [Ruby Users Forum](https://www.rubyforum.org/tag/rv/71), the `#rv` channel in the the [Bundler Slack](https://join.slack.com/t/bundler/shared_invite/zt-3kza12u0j-Fw3rwvPi6zqe6EC3RCDGMA), and the [Spinel Discord](https://discord.gg/u34TcumAk8).
 
+Subscribe to [the Spinel Cooperative newsletter](https://buttondown.com/spinel) or [the Spinel blog](https://spinel.coop/blog) RSS feed to get updates about `rv` version releases.
+
 ## Plans
 
 All-in-one tooling for Ruby developers.
