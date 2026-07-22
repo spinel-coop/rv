@@ -87,16 +87,17 @@ See [SETTINGS.md](docs/SETTINGS.md) for all settings, allowed values, and config
 
 Join us in the `rv` category on the [Ruby Users Forum](https://www.rubyforum.org/tag/rv/71), the `#rv` channel in the the [Bundler Slack](https://join.slack.com/t/bundler/shared_invite/zt-3kza12u0j-Fw3rwvPi6zqe6EC3RCDGMA), and the [Spinel Discord](https://discord.gg/u34TcumAk8).
 
+Subscribe to [the Spinel Cooperative newsletter](https://buttondown.com/spinel) or [the Spinel blog](https://spinel.coop/blog) RSS feed to get updates about `rv` version releases.
+
 ## Plans
 
 All-in-one tooling for Ruby developers.
 
 - Install & manage all Ruby versions.
 - Manage gems, applications, CLI tools, and scripts, effortlessly.
-- Handle everything Ruby provided by `rvm`, `rbenv`, `chruby`, `asdf`, `mise`, `ruby-build`, `ruby-install`, `bundler`, and `rubygems`, all at once.
+- Handle everything Ruby, as provided by `rvm`, `rbenv`, `chruby`, `asdf`, `mise`, `ruby-build`, `ruby-install`, `bundler`, and `rubygems`, all at once.
 - Install Ruby and all your gems in seconds, without having to compile anything ever again.
-- Install `ruby-head` versions to ease working with Ruby development builds.
-- A `mise` plugin, so you can get fast no-fuss Ruby installs even without `rv`.
+- Install `ruby-dev` versions to ease working with Ruby development builds.
 
 ### Future features
 
