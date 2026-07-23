@@ -7,6 +7,7 @@ use rv_cache::CleanReporter;
 use crate::{GlobalArgs, config::Config};
 
 #[derive(Args)]
+#[command(disable_help_subcommand = true)]
 pub struct CacheCommandArgs {
     #[command(subcommand)]
     pub command: CacheCommand,
