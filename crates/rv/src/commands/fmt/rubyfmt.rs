@@ -59,22 +59,20 @@ pub(crate) struct CommandlineOpts {
     fail_fast: bool,
 
     /// Write files back in place, do not write output to STDOUT.
-    #[clap(short, long, name = "in-place")]
+    #[clap(short, long, name = "in-place", hide = true)]
     in_place: bool,
 
     /// When reading from stdin, treat the input as if it were at this path.
     /// This allows .rubyfmtignore and .gitignore patterns to be applied to stdin input.
-    #[clap(long, name = "stdin-filepath", conflicts_with_all = ["include-paths", "in-place"])]
+    #[clap(long, name = "stdin-filepath", conflicts_with_all = ["paths", "in-place"])]
     stdin_filepath: Option<String>,
 
-    /// Paths for rubyfmt to analyze. By default the output will be printed to STDOUT. See `--in-place` to write files back in-place.
+    /// Paths to format. To format the entire project, run `rv fmt .`{n}
     /// Acceptable paths are:{n}
     /// - File paths (i.e lib/foo/bar.rb){n}
     /// - Directories (i.e. lib/foo/){n}
     /// - Input files (i.e. @/tmp/files.txt). These files must contain one file path or directory per line
-    ///
-    /// rubyfmt will use these as input.{n}
-    #[clap(name = "include-paths")]
+    #[clap(name = "paths")]
     include_paths: Vec<String>,
 }
 
@@ -368,8 +366,13 @@ pub(crate) fn main(opts: CommandlineOpts) {
     })
     .expect("Error setting Ctrl-C handler");
 
-    let opts = get_command_line_options(opts);
+    let mut opts = get_command_line_options(opts);
     init_logger();
+
+    if opts.include_paths.is_empty() {
+        // turn on stdout output
+        opts.in_place = false;
+    }
 
     match opts {
         CommandlineOpts { check: true, .. } => {
