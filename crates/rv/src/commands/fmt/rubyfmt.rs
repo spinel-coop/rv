@@ -259,6 +259,7 @@ fn iterate_input_files(opts: &CommandlineOpts, f: InputFunc) {
         if io::stdin().is_terminal() {
             // Call executable with `--help` args to print help statement
             let mut command = Command::new(std::env::current_exe().unwrap());
+            command.arg("fmt");
             command.arg("--help");
             command.spawn().unwrap().wait().unwrap();
             return;
