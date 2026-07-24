@@ -363,12 +363,6 @@ fn puts_stdout(input: &[u8]) {
 }
 
 pub(crate) fn main(opts: CommandlineOpts) {
-    ctrlc::set_handler(move || {
-        eprintln!("`rubyfmt` process was terminated. Exiting...");
-        exit(1);
-    })
-    .expect("Error setting Ctrl-C handler");
-
     let mut opts = get_command_line_options(opts);
     init_logger();
 

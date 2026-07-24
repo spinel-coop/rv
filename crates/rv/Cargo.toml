@@ -84,7 +84,6 @@ shell-quote = { version = "0.7.2", features = ["bash", "fish", "sh"], default-fe
 rubyfmt = { git = "https://github.com/fables-tales/rubyfmt.git", branch = "trunk" }
 ignore = "0.4.25"
 similar = { version = "3.1.0", features = ["bytes"] }
-ctrlc = { version = "3.5.2", features = ["termination"] }
 
 [dev-dependencies]
 insta = { workspace = true }
