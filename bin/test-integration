@@ -2,8 +2,6 @@
 set -euo pipefail
 
 RUBY_VERSION="3.4.7"
-
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 RV="cargo run --"
 
 echo "=== rv run --ruby $RUBY_VERSION ruby (install + execute) ==="
