@@ -4,7 +4,6 @@ use clap::Parser;
 use ignore::WalkBuilder;
 use ignore::gitignore::GitignoreBuilder;
 use regex::Regex;
-use rubyfmt::init_logger;
 use similar::TextDiff;
 use std::ffi::OsStr;
 use std::fs::{File, OpenOptions, read};
@@ -364,7 +363,6 @@ fn puts_stdout(input: &[u8]) {
 
 pub(crate) fn main(opts: CommandlineOpts) {
     let mut opts = get_command_line_options(opts);
-    init_logger();
 
     if opts.include_paths.is_empty() {
         // turn on stdout output
