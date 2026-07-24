@@ -69,5 +69,29 @@ echo "=== rv run --ruby $RUBY_VERSION ruby (re-install after uninstall) ==="
 $RV run --ruby "$RUBY_VERSION" ruby -e 'puts "re-installed"' | grep -q "re-installed"
 echo "PASS: re-installs and runs after uninstall"
 
+echo ""
+echo "=== rv fmt (stdin formatting to stdout) ==="
+echo "class Hello; end" | $RV fmt > hello.rb
+result="$(cat hello.rb)"
+rm hello.rb
+if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
+  echo "FAIL: stdin formatted to $result"
+  exit 1
+fi
+echo "PASS: stdin formatted on stdout"
+
+echo ""
+echo "=== rv fmt (formatting a directory) ==="
+mkdir fmt-test
+echo "class Hello; end" > fmt-test/hello.rb
+$RV fmt fmt-test
+result="$(cat fmt-test/hello.rb)"
+rm -rf fmt-test
+if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
+  echo "FAIL: stdin formatted to $result"
+  exit 1
+fi
+echo "PASS: file formatted in place"
+
 # Clean up .ruby-version left by ruby-pin.sh
 rm -f .ruby-version
