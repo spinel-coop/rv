@@ -9,7 +9,7 @@ use std::ffi::OsStr;
 use std::fs::{File, OpenOptions, read};
 use std::io::{self, BufRead, BufReader, IsTerminal, Read, Write};
 use std::path::Path;
-use std::process::{Command, exit};
+use std::process::exit;
 use std::sync::{Arc, LazyLock, Mutex};
 
 static MAGIC_COMMENT_REGEX: LazyLock<Regex> =
@@ -249,17 +249,7 @@ fn get_command_line_options(opts: CommandlineOpts) -> CommandlineOpts {
 
 fn iterate_input_files(opts: &CommandlineOpts, f: InputFunc) {
     if opts.include_paths.is_empty() {
-        // If not include paths are present, assume user is passing via STDIN
         let mut buffer = Vec::new();
-
-        if io::stdin().is_terminal() {
-            // Call executable with `--help` args to print help statement
-            let mut command = Command::new(std::env::current_exe().unwrap());
-            command.arg("fmt");
-            command.arg("--help");
-            command.spawn().unwrap().wait().unwrap();
-            return;
-        }
 
         io::stdin()
             .read_to_end(&mut buffer)
@@ -362,12 +352,16 @@ fn puts_stdout(input: &[u8]) {
 }
 
 pub(crate) fn main(opts: CommandlineOpts) {
-    let mut opts = get_command_line_options(opts);
-
-    if opts.include_paths.is_empty() {
-        // turn on stdout output
-        opts.in_place = false;
-    }
+    // Default to formatting the current directory if stdin is a tty, implying no pipe
+    let opts = if opts.include_paths.is_empty() && io::stdin().is_terminal() {
+        get_command_line_options(CommandlineOpts {
+            include_paths: vec![".".into()],
+            in_place: true,
+            ..opts
+        })
+    } else {
+        get_command_line_options(opts)
+    };
 
     match opts {
         CommandlineOpts { check: true, .. } => {
