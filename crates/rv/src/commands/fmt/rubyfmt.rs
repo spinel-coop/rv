@@ -42,7 +42,7 @@ pub(crate) struct CommandlineOpts {
     #[clap(short, long)]
     check: bool,
 
-    /// Turn on to ignore gitignored files. Gitignored files are not considered by rubyfmt by default.
+    /// Turn on to format gitignored files. Gitignored files are ignored by default.
     #[clap(long, name = "include-gitignored")]
     include_gitignored: bool,
 
