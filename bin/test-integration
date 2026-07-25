@@ -4,6 +4,12 @@ set -euo pipefail
 RUBY_VERSION="3.4.7"
 RV="cargo run --"
 
+cleanup() {
+  rm -rf fmt-test
+  rm -f .ruby-version
+}
+trap cleanup EXIT
+
 echo "=== rv run --ruby $RUBY_VERSION ruby (install + execute) ==="
 output=$($RV run --ruby "$RUBY_VERSION" ruby -e 'puts RUBY_DESCRIPTION')
 echo "  $output"
@@ -93,6 +99,3 @@ if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
   exit 1
 fi
 echo "PASS: file formatted in place"
-
-# Clean up .ruby-version left by ruby-pin.sh
-rm -f .ruby-version
