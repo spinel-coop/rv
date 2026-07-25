@@ -99,3 +99,19 @@ if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
   exit 1
 fi
 echo "PASS: file formatted in place"
+
+echo ""
+echo "=== rv fmt (ignoring stdin while formatting a directory) ==="
+mkdir fmt-test
+echo "class Hello; end" > fmt-test/hello.rb
+(
+  cd fmt-test
+  echo "class Bad" | $RV fmt .
+)
+result="$(cat fmt-test/hello.rb)"
+rm -rf fmt-test
+if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
+  echo "FAIL: stdin formatted to $result"
+  exit 1
+fi
+echo "PASS: file formatted in place"
