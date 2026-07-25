@@ -82,7 +82,10 @@ echo ""
 echo "=== rv fmt (formatting a directory) ==="
 mkdir fmt-test
 echo "class Hello; end" > fmt-test/hello.rb
-$RV fmt fmt-test
+(
+  cd fmt-test
+  $RV fmt
+)
 result="$(cat fmt-test/hello.rb)"
 rm -rf fmt-test
 if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
