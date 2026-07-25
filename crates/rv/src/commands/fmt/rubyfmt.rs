@@ -1,5 +1,3 @@
-#![deny(warnings, missing_copy_implementations)]
-
 use clap::Parser;
 use ignore::WalkBuilder;
 use ignore::gitignore::GitignoreBuilder;
@@ -34,7 +32,7 @@ pub(crate) enum ExecutionError {
 }
 
 /// Rubyfmt CLI
-#[derive(Debug, Parser)]
+#[derive(Debug, Parser, Clone)]
 #[clap(long_about = None)]
 pub(crate) struct CommandlineOpts {
     /// Turn on check mode. This outputs diffs of inputs to STDOUT. Will exit non-zero when differences are detected.
@@ -57,13 +55,13 @@ pub(crate) struct CommandlineOpts {
     #[clap(long, name = "fail-fast")]
     fail_fast: bool,
 
-    /// Write files back in place, do not write output to STDOUT.
-    #[clap(short, long, name = "in-place", hide = true)]
-    in_place: bool,
+    /// Write formatted files to STDOUT, instead of formatting in place.
+    #[clap(short, long)]
+    stdout: bool,
 
     /// When reading from stdin, treat the input as if it were at this path.
     /// This allows .rubyfmtignore and .gitignore patterns to be applied to stdin input.
-    #[clap(long, name = "stdin-filepath", conflicts_with_all = ["paths", "in-place"])]
+    #[clap(long, name = "stdin-filepath", conflicts_with_all = ["paths"])]
     stdin_filepath: Option<String>,
 
     /// Paths to format. To format the entire project, run `rv fmt .`{n}
@@ -224,6 +222,15 @@ fn file_walker_builder(include_paths: Vec<&String>, include_gitignored: bool) ->
 
 // Parse command line arguments. Expand any input files.
 fn get_command_line_options(opts: CommandlineOpts) -> CommandlineOpts {
+    let mut opts = opts;
+
+    // Default to formatting the current directory if stdin is a tty, implying no pipe
+    if io::stdin().is_terminal() && opts.include_paths.is_empty() {
+        opts.include_paths.push(".".into());
+    } else {
+        opts.stdout = true;
+    }
+
     let mut expanded_paths: Vec<String> = Vec::new();
 
     for path in opts.include_paths {
@@ -352,16 +359,7 @@ fn puts_stdout(input: &[u8]) {
 }
 
 pub(crate) fn main(opts: CommandlineOpts) {
-    // Default to formatting the current directory if stdin is a tty, implying no pipe
-    let opts = if opts.include_paths.is_empty() && io::stdin().is_terminal() {
-        get_command_line_options(CommandlineOpts {
-            include_paths: vec![".".into()],
-            in_place: true,
-            ..opts
-        })
-    } else {
-        get_command_line_options(opts)
-    };
+    let opts = get_command_line_options(opts);
 
     match opts {
         CommandlineOpts { check: true, .. } => {
@@ -411,30 +409,30 @@ pub(crate) fn main(opts: CommandlineOpts) {
             }
         }
 
-        CommandlineOpts { in_place: true, .. } => {
-            iterate_formatted(&opts, &|(file_path, before, after)| match after {
-                Some(fmtted) if fmtted.ne(before) => {
-                    let file_write = OpenOptions::new()
-                        .write(true)
-                        .truncate(true)
-                        .open(file_path)
-                        .and_then(|mut file| file.write_all(&fmtted));
-
-                    match file_write {
-                        Ok(_) => {}
-                        Err(e) => handle_execution_error(
-                            &opts,
-                            ExecutionError::IOError(e, file_path.display().to_string()),
-                        ),
-                    }
-                }
-                _ => {}
+        CommandlineOpts { stdout: true, .. } => {
+            iterate_formatted(&opts, &|(_, before, after)| match after {
+                Some(fmtted) => puts_stdout(&fmtted),
+                None => puts_stdout(before),
             })
         }
 
-        _ => iterate_formatted(&opts, &|(_, before, after)| match after {
-            Some(fmtted) => puts_stdout(&fmtted),
-            None => puts_stdout(before),
+        _ => iterate_formatted(&opts, &|(file_path, before, after)| match after {
+            Some(fmtted) if fmtted.ne(before) => {
+                let file_write = OpenOptions::new()
+                    .write(true)
+                    .truncate(true)
+                    .open(file_path)
+                    .and_then(|mut file| file.write_all(&fmtted));
+
+                match file_write {
+                    Ok(_) => {}
+                    Err(e) => handle_execution_error(
+                        &opts,
+                        ExecutionError::IOError(e, file_path.display().to_string()),
+                    ),
+                }
+            }
+            _ => {}
         }),
     }
 }
@@ -456,7 +454,7 @@ mod tests {
             header_opt_in: false,
             header_opt_out: false,
             fail_fast: false,
-            in_place: true,
+            stdout: false,
             stdin_filepath: None,
             include_paths: vec![],
         }
@@ -636,7 +634,7 @@ mod tests {
         assert!(!opts.header_opt_in);
         assert!(!opts.header_opt_out);
         assert!(!opts.fail_fast);
-        assert!(!opts.in_place);
+        assert!(!opts.stdout);
         assert!(opts.stdin_filepath.is_none());
         assert!(opts.include_paths.is_empty());
     }
@@ -747,7 +745,7 @@ mod tests {
             o.include_gitignored = true;
             o.header_opt_in = true;
             o.fail_fast = true;
-            o.in_place = false;
+            o.stdout = false;
             o.stdin_filepath = Some("test.rb".to_string());
             o.include_paths = vec![format!("@{path}")];
         });
@@ -838,7 +836,7 @@ mod tests {
         std::fs::write(root.join(".rubyfmtignore"), "skip.rb\n").unwrap();
 
         let opts = opts_with(|o| {
-            o.in_place = false;
+            o.stdout = false;
             o.include_paths = vec![root.to_str().unwrap().to_string()];
         });
 
@@ -1034,7 +1032,7 @@ mod tests {
         std::fs::write(&file_path, b"x = 1\n").unwrap();
 
         let opts = opts_with(|o| {
-            o.in_place = false;
+            o.stdout = false;
             o.include_paths = vec![file_path.to_str().unwrap().to_string()];
         });
 
@@ -1057,7 +1055,7 @@ mod tests {
         std::fs::write(dir.join("readme.txt"), "").unwrap();
 
         let opts = opts_with(|o| {
-            o.in_place = false;
+            o.stdout = false;
             o.include_paths = vec![dir.to_str().unwrap().to_string()];
         });
 
@@ -1083,7 +1081,7 @@ mod tests {
         std::fs::write(dir.join(".rubyfmtignore"), "skip.rb\n").unwrap();
 
         let opts = opts_with(|o| {
-            o.in_place = false;
+            o.stdout = false;
             o.include_paths = vec![dir.to_str().unwrap().to_string()];
         });
 
@@ -1109,7 +1107,7 @@ mod tests {
         std::fs::write(&file, b"x = 1\n").unwrap();
 
         let opts = opts_with(|o| {
-            o.in_place = false;
+            o.stdout = false;
             o.include_paths = vec![file.to_str().unwrap().to_string()];
         });
 
@@ -1141,7 +1139,7 @@ mod tests {
         std::fs::write(&file, b"# rubyfmt: false\nx = 1\n").unwrap();
 
         let opts = opts_with(|o| {
-            o.in_place = false;
+            o.stdout = false;
             o.header_opt_in = true;
             o.include_paths = vec![file.to_str().unwrap().to_string()];
         });
