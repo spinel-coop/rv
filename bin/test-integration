@@ -2,7 +2,9 @@
 set -euo pipefail
 
 RUBY_VERSION="3.4.7"
-RV="cargo run --"
+cargo build --release --bin rv
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+RV="$DIR/target/release/rv"
 
 cleanup() {
   rm -rf fmt-test
