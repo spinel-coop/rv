@@ -71,6 +71,10 @@ pub(crate) struct CommandlineOpts {
     /// - Input files (i.e. @/tmp/files.txt). These files must contain one file path or directory per line
     #[clap(name = "paths")]
     include_paths: Vec<String>,
+
+    /// If stdin is attached to a terminal.
+    #[clap(long, name = "is-tty", hide = true, default_value_t = io::stdin().is_terminal())]
+    is_tty: bool,
 }
 
 /******************************************************/
@@ -221,14 +225,20 @@ fn file_walker_builder(include_paths: Vec<&String>, include_gitignored: bool) ->
 }
 
 // Parse command line arguments. Expand any input files.
+//
+// When `include_paths` is empty:
+//   - tty → format the current directory in place (include_paths = ["."])
+//   - piped → format stdin to stdout
+// When paths are given, the `--stdout` flag is respected, and stdin is ignored.
 fn get_command_line_options(opts: CommandlineOpts) -> CommandlineOpts {
     let mut opts = opts;
 
-    // Default to formatting the current directory if stdin is a tty, implying no pipe
-    if io::stdin().is_terminal() && opts.include_paths.is_empty() {
-        opts.include_paths.push(".".into());
-    } else {
-        opts.stdout = true;
+    if opts.include_paths.is_empty() {
+        if opts.is_tty {
+            opts.include_paths.push(".".into());
+        } else {
+            opts.stdout = true;
+        }
     }
 
     let mut expanded_paths: Vec<String> = Vec::new();
@@ -457,6 +467,7 @@ mod tests {
             stdout: false,
             stdin_filepath: None,
             include_paths: vec![],
+            is_tty: false,
         }
     }
 
@@ -795,6 +806,94 @@ mod tests {
         let opts = make_opts();
         let expanded = get_command_line_options(opts);
         assert!(expanded.include_paths.is_empty());
+    }
+
+    // ==========================================================================
+    //     rv fmt .              → format current directory in place
+    //     rv fmt                → act like `rv fmt .`
+    //     rv fmt . --stdout     → format current directory to stdout
+    //     rv fmt                → piped: format stdin to stdout
+    //     rv fmt --stdout       → piped: format stdin to stdout
+    //     rv fmt .              → piped: format dir in place, ignore stdin
+    //     rv fmt . --stdout     → piped: format dir to stdout, ignore stdin
+    // ==========================================================================
+
+    /// `rv fmt .` — format the current directory in place.
+    #[test]
+    fn fmt_dot_formats_current_dir_in_place() {
+        let opts = opts_with(|o| {
+            o.include_paths = vec![".".to_string()];
+            o.is_tty = true;
+        });
+        let expanded = get_command_line_options(opts);
+        assert_eq!(expanded.include_paths, vec!["."]);
+        assert!(!expanded.stdout);
+        assert!(!expanded.check);
+        assert!(!expanded.fail_fast);
+    }
+
+    /// `rv fmt` with an interactive tty should default to formatting the
+    /// current directory in place.
+    #[test]
+    fn fmt_without_paths_defaults_to_current_dir_on_tty() {
+        let opts = opts_with(|o| o.is_tty = true);
+        let expanded = get_command_line_options(opts);
+        assert_eq!(expanded.include_paths, vec!["."]);
+        assert!(!expanded.stdout);
+    }
+
+    /// `rv fmt . --stdout` — format the current directory and write to stdout.
+    #[test]
+    fn fmt_dot_with_stdout_flag_writes_to_stdout() {
+        let opts = opts_with(|o| {
+            o.stdout = true;
+            o.is_tty = true;
+            o.include_paths = vec![".".to_string()];
+        });
+        let expanded = get_command_line_options(opts);
+        assert_eq!(expanded.include_paths, vec!["."]);
+        assert!(expanded.stdout);
+    }
+
+    /// `echo "..." | rv fmt` — piped stdin is formatted and printed to stdout.
+    #[test]
+    fn fmt_with_piped_stdin_formats_stdin_to_stdout() {
+        let opts = make_opts();
+        let expanded = get_command_line_options(opts);
+        assert!(expanded.include_paths.is_empty());
+        assert!(expanded.stdout);
+    }
+
+    /// `echo "..." | rv fmt --stdout` — same as above, --stdout is explicit.
+    #[test]
+    fn fmt_with_piped_stdin_and_stdout_flag_formats_stdin_to_stdout() {
+        let opts = opts_with(|o| o.stdout = true);
+        let expanded = get_command_line_options(opts);
+        assert!(expanded.include_paths.is_empty());
+        assert!(expanded.stdout);
+    }
+
+    /// `echo "..." | rv fmt .` — piped stdin is ignored; the directory is
+    /// formatted in place.
+    #[test]
+    fn fmt_dot_with_piped_stdin_ignores_stdin_and_formats_in_place() {
+        let opts = opts_with(|o| o.include_paths = vec![".".to_string()]);
+        let expanded = get_command_line_options(opts);
+        assert_eq!(expanded.include_paths, vec!["."]);
+        assert!(!expanded.stdout);
+    }
+
+    /// `echo "..." | rv fmt . --stdout` — piped stdin is ignored; the
+    /// directory is formatted and the result is written to stdout.
+    #[test]
+    fn fmt_dot_with_piped_stdin_and_stdout_flag_ignores_stdin() {
+        let opts = opts_with(|o| {
+            o.stdout = true;
+            o.include_paths = vec![".".to_string()];
+        });
+        let expanded = get_command_line_options(opts);
+        assert_eq!(expanded.include_paths, vec!["."]);
+        assert!(expanded.stdout);
     }
 
     // ==========================================================================
