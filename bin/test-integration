@@ -2,9 +2,9 @@
 set -euo pipefail
 
 RUBY_VERSION="3.4.7"
-cargo build --release --bin rv
+cargo build --bin rv
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-RV="$DIR/target/release/rv"
+RV="$DIR/target/debug/rv"
 
 cleanup() {
   rm -rf fmt-test
@@ -113,7 +113,7 @@ echo "class Hello; end" > fmt-test/hello.rb
 result="$(cat fmt-test/hello.rb)"
 rm -rf fmt-test
 if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
-  echo "FAIL: stdin formatted to $result"
+  echo "FAIL: fmt-test/hello.rb didn't format; was '$result'"
   exit 1
 fi
 echo "PASS: file formatted in place"
@@ -129,7 +129,7 @@ echo "class Hello; end" > fmt-test/hello.rb
 result="$(cat fmt-test/hello.rb)"
 rm -rf fmt-test
 if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
-  echo "FAIL: stdin formatted to $result"
+  echo "FAIL: fmt-test/hello.rb didn't format; was '$result'"
   exit 1
 fi
 echo "PASS: file formatted in place"
