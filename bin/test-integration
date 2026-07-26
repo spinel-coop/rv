@@ -85,7 +85,23 @@ fi
 echo "PASS: stdin formatted on stdout"
 
 echo ""
-echo "=== rv fmt (formatting a directory) ==="
+echo "=== rv fmt . (formatting a directory in place) ==="
+mkdir fmt-test
+echo "class Hello; end" > fmt-test/hello.rb
+(
+  cd fmt-test
+  $RV fmt .
+)
+result="$(cat fmt-test/hello.rb)"
+rm -rf fmt-test
+if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
+  echo "FAIL: stdin formatted to $result"
+  exit 1
+fi
+echo "PASS: file formatted in place"
+
+echo ""
+echo "=== rv fmt (formatting PWD by default) ==="
 mkdir fmt-test
 echo "class Hello; end" > fmt-test/hello.rb
 (
