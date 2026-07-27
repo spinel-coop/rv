@@ -5,7 +5,7 @@ expression: output.normalized_stdout()
 $env.config = ($env.config | upsert hooks.pre_execution {
     [
         {||
-            /tmp/bin/rv shell env nu | from json | load-env
+            "/tmp/bin/rv" shell env nu | from json | load-env
         }
     ]
 })

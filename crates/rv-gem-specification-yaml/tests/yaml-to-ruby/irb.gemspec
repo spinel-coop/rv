@@ -24,7 +24,7 @@ Gem::Specification.new do |s|
 
   s.specification_version = 4
 
-  s.add_runtime_dependency(%q<reline>.freeze, [">= 0.4.2".freeze])
-  s.add_runtime_dependency(%q<rdoc>.freeze, [">= 4.0.0".freeze])
-  s.add_runtime_dependency(%q<pp>.freeze, [">= 0.6.0".freeze])
+  s.add_runtime_dependency("reline".freeze, [">= 0.4.2".freeze])
+  s.add_runtime_dependency("rdoc".freeze, [">= 4.0.0".freeze])
+  s.add_runtime_dependency("pp".freeze, [">= 0.6.0".freeze])
 end

@@ -22,6 +22,6 @@ Gem::Specification.new do |s|
 
   s.specification_version = 4
 
-  s.add_runtime_dependency(%q<singleton>.freeze, [">= 0".freeze])
-  s.add_runtime_dependency(%q<forwardable>.freeze, [">= 0".freeze])
+  s.add_runtime_dependency("singleton".freeze, [">= 0".freeze])
+  s.add_runtime_dependency("forwardable".freeze, [">= 0".freeze])
 end

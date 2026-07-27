@@ -75,7 +75,7 @@ pub fn default_ruby_dirs(root: &Utf8Path) -> Vec<Utf8PathBuf> {
 }
 
 fn xdg_data_path() -> Utf8PathBuf {
-    user_state_dir("/".into()).join("rubies")
+    user_data_dir("/".into()).join("rubies")
 }
 
 fn legacy_default_data_path() -> Utf8PathBuf {
@@ -156,14 +156,26 @@ pub fn user_cache_dir(root: &Utf8Path) -> Utf8PathBuf {
     root.join(cache_path.to_string_lossy().as_ref())
 }
 
-/// Returns an appropriate user-level directory for storing application state.
+/// Returns an appropriate user-level directory for storing application data.
 ///
 /// Corresponds to `$XDG_DATA_HOME/rv` on Unix.
-pub fn user_state_dir(root: &Utf8Path) -> Utf8PathBuf {
+pub fn user_data_dir(root: &Utf8Path) -> Utf8PathBuf {
     let data_path = etcetera::base_strategy::choose_base_strategy()
         .ok()
         .map(|dirs| dirs.data_dir().join("rv"))
         .unwrap_or_else(|| env::temp_dir().join(".local/share/rv"));
+
+    root.join(data_path.to_string_lossy().as_ref())
+}
+
+/// Returns an appropriate user-level directory for storing application state.
+///
+/// Corresponds to `$XDG_STATE_HOME/rv` on Unix.
+pub fn user_state_dir(root: &Utf8Path) -> Utf8PathBuf {
+    let data_path = etcetera::base_strategy::choose_base_strategy()
+        .ok()
+        .map(|dirs| dirs.state_dir().unwrap_or(dirs.data_dir()).join("rv"))
+        .unwrap_or_else(|| env::temp_dir().join(".local/state/rv"));
 
     root.join(data_path.to_string_lossy().as_ref())
 }

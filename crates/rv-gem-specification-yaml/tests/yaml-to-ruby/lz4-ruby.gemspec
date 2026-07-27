@@ -23,9 +23,9 @@ Gem::Specification.new do |s|
 
   s.specification_version = 4
 
-  s.add_development_dependency(%q<rspec>.freeze, [">= 0".freeze])
-  s.add_development_dependency(%q<rdoc>.freeze, ["~> 3.12".freeze])
-  s.add_development_dependency(%q<bundler>.freeze, [">= 0".freeze])
-  s.add_development_dependency(%q<jeweler>.freeze, ["~> 1.8.3".freeze])
-  s.add_development_dependency(%q<rake-compiler>.freeze, [">= 0".freeze])
+  s.add_development_dependency("rspec".freeze, [">= 0".freeze])
+  s.add_development_dependency("rdoc".freeze, ["~> 3.12".freeze])
+  s.add_development_dependency("bundler".freeze, [">= 0".freeze])
+  s.add_development_dependency("jeweler".freeze, ["~> 1.8.3".freeze])
+  s.add_development_dependency("rake-compiler".freeze, [">= 0".freeze])
 end

@@ -26,7 +26,7 @@ Gem::Specification.new do |s|
 
   s.specification_version = 4
 
-  s.add_runtime_dependency(%q<psych>.freeze, [">= 4.0.0".freeze])
-  s.add_runtime_dependency(%q<erb>.freeze, [">= 0".freeze])
-  s.add_runtime_dependency(%q<tsort>.freeze, [">= 0".freeze])
+  s.add_runtime_dependency("psych".freeze, [">= 4.0.0".freeze])
+  s.add_runtime_dependency("erb".freeze, [">= 0".freeze])
+  s.add_runtime_dependency("tsort".freeze, [">= 0".freeze])
 end

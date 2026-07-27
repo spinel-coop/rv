@@ -17,7 +17,7 @@ setup_rv
 [[ -d brew ]] || git clone --depth 1 https://github.com/Homebrew/brew.git
 cd brew/Library/Homebrew
 
-rv ci
+rv ci -v
 
 check_rv_ci_noop
 

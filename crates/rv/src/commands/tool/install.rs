@@ -57,7 +57,7 @@ pub(crate) async fn install(
     gem_server: String,
     force: bool,
 ) -> Result<Installed> {
-    let config = &Config::new(global_args, None)?;
+    let config = &Config::with_settings(global_args, None)?;
 
     config.self_update_if_needed().await;
 

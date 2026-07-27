@@ -33,7 +33,7 @@ jobs:
           persist-credentials: false
 
       - name: Install cargo-deny
-        uses: EmbarkStudios/cargo-deny-action@3fd3802e88374d3fe9159b834c7714ec57d6c979 # v2.0.15
+        uses: EmbarkStudios/cargo-deny-action@91bf2b620e09e18d6eb78b92e7861937469acedb # v2.0.17
         with:
           command: check ${{ matrix.checks }}
 
@@ -51,12 +51,15 @@ jobs:
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          # Workaround for https://github.com/Swatinem/rust-cache/issues/341
+          cache-bin: "false"
 
       - name: Build rv
         run: bin/build
 
       - name: Upload rv binary
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: rv-binary
           path: target/release/rv
@@ -83,6 +86,9 @@ jobs:
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          # Workaround for https://github.com/Swatinem/rust-cache/issues/341
+          cache-bin: "false"
 
       - name: Run linters (Unix)
         if: matrix.os == 'linux'
@@ -121,12 +127,15 @@ jobs:
         run: rustup show
 
       - name: Install nextest
-        uses: taiki-e/install-action@a1df9120380005ebdc788c62449b841b205541dd # v2.71.0
+        uses: taiki-e/install-action@8f531eaecd1898bc3da7d104ad91bee98d1b97bd # v2.79.9
         with:
           tool: cargo-nextest
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          # Workaround for https://github.com/Swatinem/rust-cache/issues/341
+          cache-bin: "false"
 
       - name: Build tests
         shell: bash
@@ -159,7 +168,7 @@ jobs:
           - diaspora
           - discourse
           - fastlane
-          # - gitlab  # Disabled until https://gitlab.com/gitlab-org/gitlab/-/issues/522903 is resolved
+          - gitlab
           - homebrew
           - huginn
           - llhttp-ffi

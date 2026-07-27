@@ -2,12 +2,13 @@
 
 [![Ruby Users Forum](https://img.shields.io/discourse/topics?server=https%3A%2F%2Fwww.rubyforum.org&style=flat&logo=discourse&label=Ruby%20Users%20Forum)](https://www.rubyforum.org/tag/rv)
 
-Manage your projects, including all their Ruby versions and gems, with `rv`.
+Auto-installed and managed Ruby versions and gems.
 
-- Run any command or script that needs ruby with `rv run`.
-- Install gem CLIs in isolated environments with `rv tool install`.
+
+- Run any command or script that needs ruby with `rv run NAME`.
 - Run any gem command immediately, like `rvx rails new myapp`.
 - Install project gems with `rv clean-install`.
+- Install gem CLIs in isolated environments with `rv tool install NAME`.
 
 ## Install
 
@@ -33,15 +34,14 @@ powershell -ExecutionPolicy Bypass -c "irm https://rv.dev/install.ps1 | iex"
 
 For other installation options or to download specific versions manually, visit the [releases page](https://github.com/spinel-coop/rv/releases).
 
-## Quickstart
+## Usage
 
 ```bash
 rv run [ruby|irb|myscript.rb] # run any command or script with Ruby available
-rv tool install rerun # install CLI tools into dedicated environments
 rvx rails new . # run any gem CLI directly
+rv tool install rerun # install CLI tools into dedicated environments
 rv clean-install # install project Ruby and gems from Gemfile.lock
 rv ruby pin 4.0.0 # set a project Ruby version
-rv ruby install 4.0.0 # install a Ruby version
 rv shell [zsh|bash|fish|nu|powershell] # set up automatic version switching
 ```
 
@@ -60,6 +60,12 @@ See [SHELL INTEGRATION](docs/SHELL_INTEGRATION.md) for more about `.ruby-version
 ![rv installs ruby 3.4.7 in 1.8 seconds](docs/img/rv-ruby-install.svg)
 
 For details, see [INSTALL_BENCHMARK.md](docs/INSTALL_BENCHMARK.md).
+
+## Configuration
+
+`rv` supports configuration via a `rv.kdl` file at the project or user level, and via environment variables prefixed with `RV_`.
+
+See [SETTINGS.md](docs/SETTINGS.md) for all settings, allowed values, and configuration precedence.
 
 ## Testimonials
 
@@ -82,7 +88,9 @@ For details, see [INSTALL_BENCHMARK.md](docs/INSTALL_BENCHMARK.md).
 
 ## Community
 
-Join us in the `rv` tag on the [Ruby Users Forum](https://www.rubyforum.org/tag/rv), the `#rv` channel in the [Bundler Slack](https://join.slack.com/t/bundler/shared_invite/zt-3kza12u0j-Fw3rwvPi6zqe6EC3RCDGMA) or the [Spinel Discord](https://discord.gg/u34TcumAk8).
+Join us in the `rv` tag on the [Ruby Users Forum](https://www.rubyforum.org/tag/rv/71), the `#rv` channel in the the [Bundler Slack](https://join.slack.com/t/bundler/shared_invite/zt-3kza12u0j-Fw3rwvPi6zqe6EC3RCDGMA), and the [Spinel Discord](https://discord.gg/u34TcumAk8).
+
+Subscribe to [the Spinel Cooperative newsletter](https://buttondown.com/spinel) or [the Spinel blog](https://spinel.coop/blog) RSS feed to get updates about `rv` version releases.
 
 ## Plans
 
@@ -90,16 +98,15 @@ All-in-one tooling for Ruby developers.
 
 - Install & manage all Ruby versions.
 - Manage gems, applications, CLI tools, and scripts, effortlessly.
-- Handle everything Ruby provided by `rvm`, `rbenv`, `chruby`, `asdf`, `mise`, `ruby-build`, `ruby-install`, `bundler`, and `rubygems`, all at once.
+- Handle everything Ruby, as provided by `rvm`, `rbenv`, `chruby`, `asdf`, `mise`, `ruby-build`, `ruby-install`, `bundler`, and `rubygems`, all at once.
 - Install Ruby and all your gems in seconds, without having to compile anything ever again.
-- Install `ruby-head` versions for easier development for Ruby core contributors.
-- `mise` plugin, so you get fast no-fuss Ruby installs too.
+- Install `ruby-dev` versions to ease working with Ruby development builds.
 
 ### Future features
 
 - Run any script, installing all needed gems, like `rv run script.rb`.
-- Manage project gems with `rv install`, `rv add`, and `rv remove`.
-- Create gems with `rv gem`, and publish them with `rv publish`.
+- Manage project gems with `rv sync`, `rv add`, and `rv remove`.
+- Create gems with `rv gem new`, and publish them with `rv gem publish`.
 
 See [PLANS.md](docs/PLANS.md) for more on our future plans.
 
@@ -135,7 +142,6 @@ We'd also like to thank everyone who has ever worked on a package manager in the
 
 ## Similar Projects
 
-- [Bundler](https://bundler.io) manages project gems.
 - [Ruby Butler](https://github.com/RubyElders/ruby-butler) manages project tasks, Rubies, and gems.
 
 ## License

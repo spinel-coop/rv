@@ -21,7 +21,8 @@ use rv_ruby::{
 
 use rv_gem_types::Requirement;
 
-use crate::{GlobalArgs, update};
+use crate::GlobalArgs;
+use crate::update;
 
 pub mod bundler_settings;
 pub mod github;
@@ -63,6 +64,7 @@ pub struct Config {
     pub requested_ruby: RequestedRuby,
     pub bundler_settings: BundlerSettings,
     pub rv_settings: RvSettings,
+    pub offline: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -133,6 +135,7 @@ impl Config {
         let requested_ruby = RequestedRuby::new(request, &home_dir, &project_root)?;
         let bundler_settings = BundlerSettings::default();
         let rv_settings = RvSettings::default();
+        let offline = global_args.offline;
 
         Ok(Self {
             ruby_dirs,
@@ -141,6 +144,7 @@ impl Config {
             requested_ruby,
             bundler_settings,
             rv_settings,
+            offline,
         })
     }
 
@@ -160,7 +164,7 @@ impl Config {
     }
 
     pub async fn self_update_if_needed(&self) {
-        update::update_if_needed(&self.rv_settings.update_mode).await;
+        update::check(&self.rv_settings.update_mode).await;
     }
 
     #[cfg(test)]
@@ -182,6 +186,7 @@ impl Config {
             requested_ruby: RequestedRuby::Global,
             bundler_settings: BundlerSettings::default(),
             rv_settings: RvSettings::default(),
+            offline: false,
         }
     }
 
