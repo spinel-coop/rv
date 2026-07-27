@@ -7,7 +7,7 @@ if (Test-Path Function:\__rv_original_prompt) {
 }
 Copy-Item Function:\prompt Function:\__rv_original_prompt
 function global:prompt {
-    Invoke-Expression (& '/tmp/bin/rv' shell env powershell)
+    & '/tmp/bin/rv' shell env powershell | Out-String | Invoke-Expression
     __rv_original_prompt
 }
-Invoke-Expression (& '/tmp/bin/rv' shell env powershell)
+& '/tmp/bin/rv' shell env powershell | Out-String | Invoke-Expression
