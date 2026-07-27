@@ -77,10 +77,10 @@ pub fn init(shell: Shell) -> Result<()> {
                 }}
                 Copy-Item Function:\\prompt Function:\\__rv_original_prompt
                 function global:prompt {{
-                    Invoke-Expression (& '{current_exe}' shell env powershell)
+                    & '{current_exe}' shell env powershell | Out-String | Invoke-Expression
                     __rv_original_prompt
                 }}
-                Invoke-Expression (& '{current_exe}' shell env powershell)
+                & '{current_exe}' shell env powershell | Out-String | Invoke-Expression
             "};
         }
     }
