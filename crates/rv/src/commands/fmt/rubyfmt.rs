@@ -942,7 +942,7 @@ mod tests {
         let paths = collect_paths(&opts);
         let names: Vec<&str> = paths
             .iter()
-            .map(|p| p.rsplit_once('/').map(|(_, n)| n).unwrap_or(p.as_str()))
+            .filter_map(|p| Path::new(p).file_name().and_then(|n| n.to_str()))
             .collect();
         assert!(
             names.contains(&"keep.rb"),
@@ -1184,14 +1184,18 @@ mod tests {
             o.include_paths = vec![dir.to_str().unwrap().to_string()];
         });
 
-        let names: Vec<String> = collect_paths(&opts)
-            .into_iter()
-            .map(|p| p.rsplit_once('/').map(|(_, n)| n.to_string()).unwrap_or(p))
+        let paths = collect_paths(&opts);
+        let names: Vec<&str> = paths
+            .iter()
+            .filter_map(|p| Path::new(p).file_name().and_then(|n| n.to_str()))
             .collect();
-        assert!(names.contains(&"keep.rb".to_string()));
         assert!(
-            !names.contains(&"skip.rb".to_string()),
-            "skip.rb must be excluded by .rubyfmtignore, got {names:?}"
+            names.contains(&"keep.rb"),
+            "keep.rb should be walked, got names = {names:?}"
+        );
+        assert!(
+            !names.contains(&"skip.rb"),
+            "skip.rb should be excluded by .rubyfmtignore, got names = {names:?}"
         );
     }
 
