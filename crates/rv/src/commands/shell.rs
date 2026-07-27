@@ -142,8 +142,8 @@ fn setup(shell: Shell) -> Result<()> {
                 Use \"rvw\" or \"rv.exe\" to invoke rv from the command line.
                 On PowerShell, \"rv\" conflicts with the built-in Remove-Variable alias.
 
-                Add-Content -Path $PROFILE -Value 'Invoke-Expression (& \"{rv}\" shell init powershell)'
-                Add-Content -Path $PROFILE -Value 'Invoke-Expression (& \"{rv}\" shell completions powershell)'
+                Add-Content -Path $PROFILE -Value '& \"{rv}\" shell init powershell | Out-String | Invoke-Expression'
+                Add-Content -Path $PROFILE -Value '& \"{rv}\" shell completions powershell | Out-String | Invoke-Expression'
             "};
 
             Ok(())
