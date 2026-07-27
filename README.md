@@ -4,7 +4,6 @@
 
 Auto-installed and managed Ruby versions and gems.
 
-
 - Run any command or script that needs ruby with `rv run NAME`.
 - Run any gem command immediately, like `rvx rails new myapp`.
 - Install project gems with `rv clean-install`.
