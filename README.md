@@ -1,5 +1,7 @@
 # `rv`, a very fast Ruby gem and project manager
 
+[![Ruby Users Forum](https://img.shields.io/discourse/topics?server=https%3A%2F%2Fwww.rubyforum.org&style=flat&logo=discourse&label=Ruby%20Users%20Forum)](https://www.rubyforum.org/tag/rv)
+
 Manage your projects, including all their Ruby versions and gems, with `rv`.
 
 - Run any command or script that needs ruby with `rv run`.
@@ -80,7 +82,7 @@ For details, see [INSTALL_BENCHMARK.md](docs/INSTALL_BENCHMARK.md).
 
 ## Community
 
-Join us in [discussions on GitHub](https://github.com/spinel-coop/rv/discussions), or the `#rv` channel in the the [Bundler Slack](https://join.slack.com/t/bundler/shared_invite/zt-3kza12u0j-Fw3rwvPi6zqe6EC3RCDGMA) and the [Spinel Discord](https://discord.gg/u34TcumAk8).
+Join us in the `rv` tag on the [Ruby Users Forum](https://www.rubyforum.org/tag/rv), the `#rv` channel in the [Bundler Slack](https://join.slack.com/t/bundler/shared_invite/zt-3kza12u0j-Fw3rwvPi6zqe6EC3RCDGMA) or the [Spinel Discord](https://discord.gg/u34TcumAk8).
 
 ## Plans
 
