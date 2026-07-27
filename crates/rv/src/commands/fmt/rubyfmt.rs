@@ -1161,7 +1161,7 @@ mod tests {
         let paths = collect_paths(&opts);
         let names: Vec<&str> = paths
             .iter()
-            .map(|p| p.rsplit_once('/').map(|(_, n)| n).unwrap_or(p.as_str()))
+            .filter_map(|p| Path::new(p).file_name().and_then(|n| n.to_str()))
             .collect();
         assert!(names.contains(&"a.rb"), "expected a.rb, got {names:?}");
         assert!(names.contains(&"b.rb"), "expected b.rb, got {names:?}");
