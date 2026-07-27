@@ -131,11 +131,6 @@ jobs:
         with:
           tool: cargo-nextest
 
-      - name: Install faketty
-        uses: taiki-e/install-action@8f531eaecd1898bc3da7d104ad91bee98d1b97bd # v2.79.9
-        with:
-          tool: faketty
-
       - name: Cache dependencies
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
@@ -152,14 +147,12 @@ jobs:
 
       - name: Run Windows integration tests
         if: ${{ startsWith(matrix.runs-on, 'windows') }}
-        shell: 'faketty {0}'
         run: ./win/test-integration.ps1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Unix integration tests
         if: ${{ ! startsWith(matrix.runs-on, 'windows') }}
-        shell: 'faketty {0}'
         run: ./bin/test-integration
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

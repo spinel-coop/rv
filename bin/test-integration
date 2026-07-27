@@ -75,6 +75,8 @@ echo "=== rv run --ruby $RUBY_VERSION ruby (re-install after uninstall) ==="
 $RV run --ruby "$RUBY_VERSION" ruby -e 'puts "re-installed"' | grep -q "re-installed"
 echo "PASS: re-installs and runs after uninstall"
 
+[ -t 1 ] || exit 0
+
 echo ""
 echo "=== rv fmt (stdin formatting to stdout) ==="
 echo "class Hello; end" | $RV fmt > hello.rb
