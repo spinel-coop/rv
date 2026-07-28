@@ -2,7 +2,7 @@
 set -euo pipefail
 
 RUBY_VERSION="3.4.7"
-cargo build --bin rv
+cargo build --bin rv --bin rvx
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RV="$DIR/target/debug/rv"
 
@@ -24,7 +24,6 @@ echo "$list"
 echo "$list" | grep -q "$RUBY_VERSION"
 echo "PASS: rv ruby list shows installed $RUBY_VERSION"
 
-echo ""
 echo "=== rv ruby list --installed-only --format json ==="
 json=$($RV ruby list --installed-only --format json)
 echo "$json"
@@ -61,7 +60,6 @@ echo "=== rv ruby uninstall $RUBY_VERSION ==="
 $RV ruby uninstall "$RUBY_VERSION"
 echo "PASS: rv ruby uninstall exits without error"
 
-echo ""
 echo "=== Verify $RUBY_VERSION is no longer listed ==="
 list_after=$($RV ruby list --installed-only 2>/dev/null || true)
 if echo "$list_after" | grep -q "$RUBY_VERSION.*installed"; then
@@ -70,14 +68,12 @@ if echo "$list_after" | grep -q "$RUBY_VERSION.*installed"; then
 fi
 echo "PASS: $RUBY_VERSION no longer listed after uninstall"
 
-echo ""
 echo "=== rv run --ruby $RUBY_VERSION ruby (re-install after uninstall) ==="
 $RV run --ruby "$RUBY_VERSION" ruby -e 'puts "re-installed"' | grep -q "re-installed"
 echo "PASS: re-installs and runs after uninstall"
 
 [ -t 1 ] || exit 0
 
-echo ""
 echo "=== rv fmt (stdin formatting to stdout) ==="
 echo "class Hello; end" | $RV fmt > hello.rb
 result="$(cat hello.rb)"
@@ -88,7 +84,6 @@ if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
 fi
 echo "PASS: stdin formatted on stdout"
 
-echo ""
 echo "=== rv fmt . (formatting a directory in place) ==="
 mkdir fmt-test
 echo "class Hello; end" > fmt-test/hello.rb
@@ -104,7 +99,6 @@ if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
 fi
 echo "PASS: file formatted in place"
 
-echo ""
 echo "=== rv fmt (formatting PWD by default) ==="
 mkdir fmt-test
 echo "class Hello; end" > fmt-test/hello.rb
@@ -120,7 +114,6 @@ if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
 fi
 echo "PASS: file formatted in place"
 
-echo ""
 echo "=== rv fmt (ignoring stdin while formatting a directory) ==="
 mkdir fmt-test
 echo "class Hello; end" > fmt-test/hello.rb
@@ -135,3 +128,11 @@ if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
   exit 1
 fi
 echo "PASS: file formatted in place"
+
+echo "=== rvx --with ==="
+rvx --with pg sequel -c "require 'pg'; puts PG::VERSION"
+echo "PASS: installs the named gem and the with gem"
+
+echo "=== rv tool run --with ==="
+rv tool run --with pg sequel -c "require 'pg'; puts PG::VERSION"
+echo "PASS: installs the named gem and the with gem"
