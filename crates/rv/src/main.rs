@@ -22,6 +22,7 @@ pub mod update;
 
 use crate::commands::cache::{CacheCommandArgs, cache};
 use crate::commands::clean_install::{CleanInstallArgs, ci};
+use crate::commands::gem::{GemArgs, gem};
 use crate::commands::ruby::{RubyArgs, ruby};
 use crate::commands::run::{RunArgs, run};
 use crate::commands::self_cmd::{SelfArgs, self_cmd};
@@ -126,6 +127,8 @@ enum Commands {
     SelfCmd(SelfArgs),
     #[command(about = "Manage Ruby tools")]
     Tool(ToolArgs),
+    #[command(about = "Create a new gem scaffold")]
+    Gem(GemArgs),
     #[command(
         about = "Run a command or script with Ruby",
         visible_alias = "r",
@@ -200,6 +203,8 @@ pub enum Error {
     ToolError(#[from] commands::tool::Error),
     #[error(transparent)]
     ConfigError(#[from] crate::config::Error),
+    #[error(transparent)]
+    GemError(#[from] commands::gem::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -308,6 +313,7 @@ async fn run_cmd(global_args: &GlobalArgs, command: Commands) -> Result<()> {
         Commands::SelfCmd(self_args) => self_cmd(global_args, self_args).await?,
         Commands::Shell(shell_args) => shell(global_args, &mut Cli::command(), shell_args)?,
         Commands::Tool(tool_args) => tool(global_args, tool_args).await?,
+        Commands::Gem(gem_args) => gem(global_args, gem_args)?,
         Commands::Run(run_args) => run(global_args, run_args).await?,
     };
 
