@@ -22,6 +22,7 @@ pub mod update;
 
 use crate::commands::cache::{CacheCommandArgs, cache};
 use crate::commands::clean_install::{CleanInstallArgs, ci};
+use crate::commands::fmt::{FmtArgs, fmt};
 use crate::commands::ruby::{RubyArgs, ruby};
 use crate::commands::run::{RunArgs, run};
 use crate::commands::self_cmd::{SelfArgs, self_cmd};
@@ -132,6 +133,8 @@ enum Commands {
         dont_delimit_trailing_values = true
     )]
     Run(RunArgs),
+    #[command(about = "Format Ruby files consistently")]
+    Fmt(FmtArgs),
 }
 
 #[derive(Debug, Copy, Clone, clap::ValueEnum)]
@@ -309,6 +312,7 @@ async fn run_cmd(global_args: &GlobalArgs, command: Commands) -> Result<()> {
         Commands::Shell(shell_args) => shell(global_args, &mut Cli::command(), shell_args)?,
         Commands::Tool(tool_args) => tool(global_args, tool_args).await?,
         Commands::Run(run_args) => run(global_args, run_args).await?,
+        Commands::Fmt(fmt_args) => fmt(global_args, fmt_args).await?,
     };
 
     Ok(())

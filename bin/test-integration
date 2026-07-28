@@ -2,9 +2,15 @@
 set -euo pipefail
 
 RUBY_VERSION="3.4.7"
+cargo build --bin rv
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+RV="$DIR/target/debug/rv"
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-RV="cargo run --"
+cleanup() {
+  rm -rf fmt-test
+  rm -f .ruby-version
+}
+trap cleanup EXIT
 
 echo "=== rv run --ruby $RUBY_VERSION ruby (install + execute) ==="
 output=$($RV run --ruby "$RUBY_VERSION" ruby -e 'puts RUBY_DESCRIPTION')
@@ -69,5 +75,63 @@ echo "=== rv run --ruby $RUBY_VERSION ruby (re-install after uninstall) ==="
 $RV run --ruby "$RUBY_VERSION" ruby -e 'puts "re-installed"' | grep -q "re-installed"
 echo "PASS: re-installs and runs after uninstall"
 
-# Clean up .ruby-version left by ruby-pin.sh
-rm -f .ruby-version
+[ -t 1 ] || exit 0
+
+echo ""
+echo "=== rv fmt (stdin formatting to stdout) ==="
+echo "class Hello; end" | $RV fmt > hello.rb
+result="$(cat hello.rb)"
+rm hello.rb
+if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
+  echo "FAIL: stdin formatted to $result"
+  exit 1
+fi
+echo "PASS: stdin formatted on stdout"
+
+echo ""
+echo "=== rv fmt . (formatting a directory in place) ==="
+mkdir fmt-test
+echo "class Hello; end" > fmt-test/hello.rb
+(
+  cd fmt-test
+  $RV fmt .
+)
+result="$(cat fmt-test/hello.rb)"
+rm -rf fmt-test
+if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
+  echo "FAIL: stdin formatted to $result"
+  exit 1
+fi
+echo "PASS: file formatted in place"
+
+echo ""
+echo "=== rv fmt (formatting PWD by default) ==="
+mkdir fmt-test
+echo "class Hello; end" > fmt-test/hello.rb
+(
+  cd fmt-test
+  $RV fmt
+)
+result="$(cat fmt-test/hello.rb)"
+rm -rf fmt-test
+if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
+  echo "FAIL: fmt-test/hello.rb didn't format; was '$result'"
+  exit 1
+fi
+echo "PASS: file formatted in place"
+
+echo ""
+echo "=== rv fmt (ignoring stdin while formatting a directory) ==="
+mkdir fmt-test
+echo "class Hello; end" > fmt-test/hello.rb
+(
+  cd fmt-test
+  echo "class Bad" | $RV fmt .
+)
+result="$(cat fmt-test/hello.rb)"
+rm -rf fmt-test
+if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
+  echo "FAIL: fmt-test/hello.rb didn't format; was '$result'"
+  exit 1
+fi
+echo "PASS: file formatted in place"
