@@ -16,6 +16,7 @@ pub mod gemserver;
 pub mod output_format;
 pub mod progress;
 pub mod resolver;
+pub mod ruby_eol;
 pub mod script_metadata;
 pub mod tar_utils;
 pub mod update;
