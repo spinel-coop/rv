@@ -489,8 +489,17 @@ impl RvTest {
     /// Append a file whose path exceeds tar's 100-byte name field, using a GNU
     /// long-name record with POSIX ustar magic, as JRuby's tarballs do.
     fn add_long_name_file(builder: &mut Builder<&mut Vec<u8>>, path: &str, content: &str) {
+        // Write the 100-byte name field directly rather than via `set_path`, which
+        // normalizes paths per-platform. This test is about exact tar bytes.
+        fn set_raw_name(header: &mut tar::Header, name: &str) {
+            let field = &mut header.as_old_mut().name;
+            let bytes = name.as_bytes();
+            let len = bytes.len().min(field.len());
+            field[..len].copy_from_slice(&bytes[..len]);
+        }
+
         let mut name_header = tar::Header::new_ustar();
-        name_header.set_path("././@LongLink").unwrap();
+        set_raw_name(&mut name_header, "././@LongLink");
         name_header.set_size(path.len() as u64 + 1);
         name_header.set_mode(0o644);
         name_header.set_entry_type(tar::EntryType::GNULongName);
@@ -500,9 +509,8 @@ impl RvTest {
         builder.append(&name_header, &name_data[..]).unwrap();
 
         // The real entry carries the name truncated to the 100-byte field.
-        let truncated: String = path.chars().take(100).collect();
         let mut header = tar::Header::new_ustar();
-        header.set_path(&truncated).unwrap();
+        set_raw_name(&mut header, path);
         header.set_size(content.len() as u64);
         header.set_mode(0o644);
         header.set_cksum();
@@ -715,12 +723,12 @@ impl RvTest {
     }
 
     #[cfg(unix)]
-    fn ruby_executable_name(&self) -> &str {
+    pub fn ruby_executable_name(&self) -> &str {
         "ruby"
     }
 
     #[cfg(windows)]
-    fn ruby_executable_name(&self) -> &str {
+    pub fn ruby_executable_name(&self) -> &str {
         "ruby.cmd"
     }
 

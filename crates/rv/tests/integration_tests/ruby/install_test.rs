@@ -438,14 +438,17 @@ fn test_jruby_install() {
 
     // The directory has to be engine-qualified, or rv won't find it again.
     let install_dir = test.rubies_dir().join("jruby-10.1.1.0");
-    assert!(
-        install_dir.join("bin").join("ruby").exists(),
-        "jruby-10.1.1.0/bin/ruby should exist"
-    );
+    let ruby_bin = install_dir.join("bin").join(test.ruby_executable_name());
+    assert!(ruby_bin.exists(), "{ruby_bin} should exist");
 
     // Needs the long-name record applied, or it lands truncated to 100 bytes.
     let long_path = install_dir
-        .join("lib/ruby/stdlib/did_you_mean/spell_checkers/name_error_checkers")
+        .join("lib")
+        .join("ruby")
+        .join("stdlib")
+        .join("did_you_mean")
+        .join("spell_checkers")
+        .join("name_error_checkers")
         .join("variable_name_checker.rb");
     assert!(
         long_path.exists(),
@@ -488,7 +491,7 @@ fn test_jruby_install_resolves_incomplete_request() {
         test.rubies_dir()
             .join("jruby-9.4.15.0")
             .join("bin")
-            .join("ruby")
+            .join(test.ruby_executable_name())
             .exists()
     );
 }
