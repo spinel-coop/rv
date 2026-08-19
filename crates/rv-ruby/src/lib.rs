@@ -18,14 +18,24 @@ use tracing::instrument;
 use crate::version::RubyVersion;
 
 /// Returns the possible Ruby executable names for the current platform, in priority order.
-/// On Windows, checks `ruby.exe` (standard RubyInstaller2) then `ruby.cmd` (batch wrapper).
+/// On Windows, checks `ruby.exe` (standard RubyInstaller2), then `ruby.cmd` (batch wrapper),
+/// then `ruby.bat` (JRuby, which ships no `ruby.exe`).
 /// On Unix systems (macOS, Linux), it's just `ruby`.
 fn ruby_executable_names() -> &'static [&'static str] {
     if cfg!(windows) {
-        &["ruby.exe", "ruby.cmd"]
+        &["ruby.exe", "ruby.cmd", "ruby.bat"]
     } else {
         &["ruby"]
     }
+}
+
+/// Windows script wrappers that can't take arguments containing `(`, `)`, or `?`
+/// directly, due to Rust's CVE-2024-24576 mitigation (1.77.2+).
+fn is_windows_script_wrapper(ruby_bin: &Utf8Path) -> bool {
+    cfg!(windows)
+        && ruby_bin
+            .extension()
+            .is_some_and(|ext| ext == "cmd" || ext == "bat")
 }
 
 /// Find the Ruby executable in a directory's `bin/` subdirectory.
@@ -305,10 +315,11 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
         puts(Object.const_defined?(:RUBY_DESCRIPTION) ? RUBY_DESCRIPTION : '')
     "#;
 
-    // On Windows, .cmd wrappers can't receive arguments containing special characters like (, ), ?
-    // due to Rust's CVE-2024-24576 mitigation (1.77.2+). Following uv's pattern: write the probe
-    // script to a temp file, then invoke through cmd.exe /c to bypass the restriction entirely.
-    let output = if cfg!(windows) && ruby_bin.extension().is_some_and(|ext| ext == "cmd") {
+    // On Windows, .cmd and .bat wrappers can't receive arguments containing special characters
+    // like (, ), ? due to Rust's CVE-2024-24576 mitigation (1.77.2+). Following uv's pattern:
+    // write the probe script to a temp file, then invoke through cmd.exe /c to bypass the
+    // restriction entirely.
+    let output = if is_windows_script_wrapper(ruby_bin) {
         let probe_script = ruby_bin.with_file_name("_rv_probe.rb");
         std::fs::write(&probe_script, full_script).map_err(|_| RubyError::InvalidRubyExecutable)?;
         let result = Command::new("cmd")

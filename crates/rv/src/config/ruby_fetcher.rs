@@ -28,6 +28,12 @@ static PARSE_MAX_AGE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"max-age=(\d+
 static RUBYINSTALLER_REGEX: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^rubyinstaller-(.+)-(\d+)-(x64|x86|arm)\.7z$").unwrap());
 
+/// Parses JRuby asset filenames: `jruby-bin-10.1.1.0.tar.gz` → version=`10.1.1.0`.
+static JRUBY_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^jruby-bin-(?P<version>[\d\.]+)\.tar\.gz$").unwrap());
+
+const JRUBY_CACHE_FILE: &str = "jruby.json";
+
 // Updated struct to hold ETag and calculated expiry time
 #[derive(Serialize, Deserialize, Debug)]
 struct CachedRelease {
@@ -72,25 +78,42 @@ impl Config {
             }
         };
 
-        let ((fetch_result, url), cache_file) = if host.is_windows() {
-            (
-                fetch_rubyinstaller2_rubies(&self.cache).await,
-                "rubyinstaller2.json",
-            )
-        } else {
-            (
-                fetch_available_rubies(&self.cache).await,
-                "available_rubies.json",
-            )
-        };
+        // Different repos, so fetch concurrently. Each is ETag-cached separately.
+        let cruby = async {
+            let ((fetch_result, url), cache_file) = if host.is_windows() {
+                (
+                    fetch_rubyinstaller2_rubies(&self.cache).await,
+                    "rubyinstaller2.json",
+                )
+            } else {
+                (
+                    fetch_available_rubies(&self.cache).await,
+                    "available_rubies.json",
+                )
+            };
 
-        let release = match fetch_result {
-            Ok(release) => release,
-            Err(e) => {
-                warn!("Could not fetch available Ruby versions: {}", e);
-                stale_cache_fallback(&self.cache, cache_file, &url)
+            match fetch_result {
+                Ok(release) => release,
+                Err(e) => {
+                    warn!("Could not fetch available Ruby versions: {}", e);
+                    stale_cache_fallback(&self.cache, cache_file, &url)
+                }
             }
         };
+
+        let jruby = async {
+            let (fetch_result, url) = fetch_jruby_rubies(&self.cache).await;
+
+            match fetch_result {
+                Ok(release) => release,
+                Err(e) => {
+                    warn!("Could not fetch available JRuby versions: {}", e);
+                    stale_cache_fallback(&self.cache, JRUBY_CACHE_FILE, &url)
+                }
+            }
+        };
+
+        let (release, jruby_release) = tokio::join!(cruby, jruby);
 
         let desired_os = host.os();
         let desired_arch = host.arch();
@@ -101,6 +124,15 @@ impl Config {
             .filter_map(|asset| ruby_from_asset(asset).ok())
             .filter(|ruby| ruby.os == desired_os && ruby.arch == desired_arch)
             .collect();
+
+        // JRuby's archives are universal, so there is no platform to filter on.
+        rubies.extend(
+            jruby_release
+                .assets
+                .iter()
+                .filter_map(|asset| jruby_from_asset(asset, &host).ok()),
+        );
+
         rubies.sort();
 
         debug!(
@@ -256,6 +288,64 @@ async fn fetch_rubyinstaller2_rubies(cache: &rv_cache::Cache) -> (Result<Release
     (release, url)
 }
 
+/// Fetches available JRuby versions from JRuby's own GitHub releases.
+async fn fetch_jruby_rubies(cache: &rv_cache::Cache) -> (Result<Release>, String) {
+    let env_var = "RV_JRUBY_LIST_URL";
+    let default_url = "https://api.github.com/repos/jruby/jruby/releases?per_page=100";
+    let url = url_for(env_var, default_url);
+    let release = fetch_cached_github_release(cache, JRUBY_CACHE_FILE, env_var, &url, |body| {
+        let releases: Vec<Release> = serde_json::from_slice(&body)?;
+        Ok(combine_jruby_releases(releases))
+    })
+    .await;
+    (release, url)
+}
+
+/// Normalizes JRuby's one-release-per-version format into a single synthetic Release,
+/// keeping only the binary tarballs and deduplicating by version.
+fn combine_jruby_releases(releases: Vec<Release>) -> Release {
+    use std::collections::HashMap;
+
+    let mut best: HashMap<String, Asset> = HashMap::new();
+
+    for release in &releases {
+        for asset in &release.assets {
+            if let Some(caps) = JRUBY_REGEX.captures(&asset.name) {
+                best.entry(caps["version"].to_string())
+                    .or_insert_with(|| asset.clone());
+            }
+        }
+    }
+
+    let mut assets: Vec<Asset> = best.into_values().collect();
+    assets.sort_by(|a, b| a.name.cmp(&b.name));
+
+    Release {
+        name: "jruby-combined".to_string(),
+        assets,
+    }
+}
+
+/// Creates a Rubies info struct from a JRuby release asset. Archives are universal,
+/// so the entry takes the host's os/arch rather than anything from the filename.
+fn jruby_from_asset(asset: &Asset, host: &HostPlatform) -> Result<RemoteRuby> {
+    let caps = JRUBY_REGEX
+        .captures(&asset.name)
+        .ok_or_else(|| io::Error::other(format!("not a jruby asset: {}", asset.name)))?;
+
+    let version: rv_ruby::version::RubyVersion = format!("jruby-{}", &caps["version"]).parse()?;
+
+    let os = host.os();
+    let arch = host.arch();
+
+    Ok(RemoteRuby {
+        key: format!("{version}-{os}-{arch}"),
+        version,
+        arch: arch.to_string(),
+        os: os.to_string(),
+    })
+}
+
 /// Falls back to a stale cache file when a fresh fetch fails.
 fn stale_cache_fallback(cache: &rv_cache::Cache, cache_file: &str, url: &str) -> Release {
     let cache_key = cache_key_for(url, cache_file);
@@ -380,6 +470,7 @@ fn ruby_from_asset(asset: &Asset) -> Result<RemoteRuby> {
 mod tests {
     use super::*;
     use rv_ruby::version::RubyVersion;
+    use std::str::FromStr;
 
     #[test]
     fn test_parse_cache_header() {
@@ -580,6 +671,100 @@ mod tests {
         assert_eq!(ruby.version.patch, 8);
         assert_eq!(ruby.os, "windows");
         assert_eq!(ruby.arch, "aarch64");
+    }
+
+    #[test]
+    fn test_combine_jruby_releases_keeps_only_binary_tarballs() {
+        let releases = vec![make_release(
+            "JRuby 10.1.1.0",
+            &[
+                "jruby-bin-10.1.1.0.tar.gz", // the only one we want
+                "jruby-bin-10.1.1.0.zip",
+                "jruby-src-10.1.1.0.tar.gz",
+                "jruby-complete-10.1.1.0.jar",
+                "jruby-jars-10.1.1.0.gem",
+                "jruby_windows_x64_10_1_1_0.exe",
+            ],
+        )];
+
+        let result = combine_jruby_releases(releases);
+        let names: Vec<&str> = result.assets.iter().map(|a| a.name.as_str()).collect();
+        assert_eq!(names, ["jruby-bin-10.1.1.0.tar.gz"]);
+    }
+
+    #[test]
+    fn test_combine_jruby_releases_across_versions() {
+        let releases = vec![
+            make_release("JRuby 10.1.1.0", &["jruby-bin-10.1.1.0.tar.gz"]),
+            make_release("JRuby 9.4.15.0", &["jruby-bin-9.4.15.0.tar.gz"]),
+            make_release("JRuby 9.4.12.1", &["jruby-bin-9.4.12.1.tar.gz"]),
+        ];
+
+        let result = combine_jruby_releases(releases);
+        assert_eq!(result.assets.len(), 3);
+        assert_eq!(result.name, "jruby-combined");
+    }
+
+    #[test]
+    fn test_combine_jruby_releases_empty() {
+        let result = combine_jruby_releases(vec![]);
+        assert_eq!(result.assets.len(), 0);
+    }
+
+    #[test]
+    fn test_jruby_from_asset_is_universal() {
+        let asset = make_asset("jruby-bin-10.1.1.0.tar.gz");
+
+        let cases = [
+            ("aarch64-apple-darwin", "macos", "aarch64"),
+            ("x86_64-unknown-linux-gnu", "linux", "x86_64"),
+            ("x86_64-pc-windows-msvc", "windows", "x86_64"),
+        ];
+
+        for (triple, expected_os, expected_arch) in cases {
+            let host = HostPlatform::from_target_triple(triple).unwrap();
+            let ruby = jruby_from_asset(&asset, &host).unwrap();
+
+            assert_eq!(
+                ruby.version,
+                RubyVersion::from_str("jruby-10.1.1.0").unwrap()
+            );
+            assert_eq!(ruby.os, expected_os, "wrong os for {triple}");
+            assert_eq!(ruby.arch, expected_arch, "wrong arch for {triple}");
+            assert_eq!(
+                ruby.key,
+                format!("jruby-10.1.1.0-{expected_os}-{expected_arch}")
+            );
+        }
+    }
+
+    #[test]
+    fn test_jruby_from_asset_parses_four_segment_versions() {
+        let host = HostPlatform::from_target_triple("aarch64-apple-darwin").unwrap();
+        let asset = make_asset("jruby-bin-9.4.12.1.tar.gz");
+
+        let ruby = jruby_from_asset(&asset, &host).unwrap();
+        assert_eq!(ruby.version.engine, rv_ruby::engine::RubyEngine::JRuby);
+        assert_eq!(ruby.version.major, 9);
+        assert_eq!(ruby.version.minor, 4);
+        assert_eq!(ruby.version.patch, 12);
+        assert_eq!(ruby.version.tiny, Some(1));
+    }
+
+    #[test]
+    fn test_jruby_from_asset_rejects_non_jruby_assets() {
+        let host = HostPlatform::from_target_triple("aarch64-apple-darwin").unwrap();
+
+        for name in [
+            "ruby-3.4.1.arm64_sonoma.tar.gz",
+            "jruby-src-10.1.1.0.tar.gz",
+            "jruby-complete-10.1.1.0.jar",
+        ] {
+            assert!(
+                jruby_from_asset(&make_asset(name), &host).is_err(),
+                "{name} should not parse as a JRuby install archive"
+            );
+        }
     }
 
     #[test]
