@@ -472,6 +472,47 @@ fn test_jruby_install() {
 }
 
 #[test]
+fn test_jruby_install_warns_when_no_jvm_is_present() {
+    let mut test = RvTest::new();
+
+    // The test environment is cleared, so there is no JAVA_HOME and no PATH
+    // to find `java` on.
+    let jruby_mock = test.mock_jruby_download("10.1.1.0").create();
+    let mock = test.mock_jruby_releases(["10.1.1.0"].to_vec());
+
+    let output = test.rv(&["ruby", "install", "jruby-10.1.1.0"]);
+
+    jruby_mock.assert();
+    output.assert_success();
+    output.assert_stderr_contains("No JVM detected");
+
+    drop(mock);
+}
+
+#[test]
+fn test_jruby_install_does_not_warn_when_java_home_is_set() {
+    let mut test = RvTest::new();
+
+    test.env
+        .insert("JAVA_HOME".into(), "/usr/lib/jvm/whatever".into());
+
+    let jruby_mock = test.mock_jruby_download("10.1.1.0").create();
+    let mock = test.mock_jruby_releases(["10.1.1.0"].to_vec());
+
+    let output = test.rv(&["ruby", "install", "jruby-10.1.1.0"]);
+
+    jruby_mock.assert();
+    output.assert_success();
+    assert!(
+        !output.stderr().contains("No JVM detected"),
+        "expected no JVM warning, got:\n{}",
+        output.stderr()
+    );
+
+    drop(mock);
+}
+
+#[test]
 fn test_jruby_install_resolves_incomplete_request() {
     let mut test = RvTest::new();
 

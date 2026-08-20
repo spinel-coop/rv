@@ -487,7 +487,9 @@ impl RvTest {
     }
 
     /// Append a file whose path exceeds tar's 100-byte name field, using a GNU
-    /// long-name record with POSIX ustar magic, as JRuby's tarballs do.
+    /// long-name record with `ustar` magic but a zeroed version field, as JRuby's
+    /// tarballs do. The tar crate treats those headers as neither ustar nor GNU, so
+    /// it leaves the record for us (see `extract_tarball`).
     fn add_long_name_file(builder: &mut Builder<&mut Vec<u8>>, path: &str, content: &str) {
         // Write the 100-byte name field directly rather than via `set_path`, which
         // normalizes paths per-platform. This test is about exact tar bytes.
@@ -503,6 +505,9 @@ impl RvTest {
         name_header.set_size(path.len() as u64 + 1);
         name_header.set_mode(0o644);
         name_header.set_entry_type(tar::EntryType::GNULongName);
+        // JRuby's headers carry `ustar` magic with a zeroed version, which the tar
+        // crate does not recognize as ustar, so it does not apply the long name.
+        name_header.as_ustar_mut().unwrap().version = *b"\0\0";
         name_header.set_cksum();
         let mut name_data = path.as_bytes().to_vec();
         name_data.push(0);
@@ -513,6 +518,7 @@ impl RvTest {
         set_raw_name(&mut header, path);
         header.set_size(content.len() as u64);
         header.set_mode(0o644);
+        header.as_ustar_mut().unwrap().version = *b"\0\0";
         header.set_cksum();
         builder.append(&header, content.as_bytes()).unwrap();
     }

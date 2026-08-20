@@ -10,7 +10,7 @@ use std::borrow::Cow;
 use std::io::Read as _;
 use std::path::{Component, PathBuf};
 use tokio::io::AsyncWriteExt;
-use tracing::{debug, info_span};
+use tracing::{debug, info_span, warn};
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 
 use rv_platform::HostPlatform;
@@ -75,6 +75,8 @@ pub(crate) async fn install(
         }
     };
 
+    warn_if_jvm_missing(&engine);
+
     let install_dir = match install_dir {
         Some(dir) => Utf8PathBuf::from(dir),
         None => match config.ruby_dirs.first() {
@@ -108,6 +110,21 @@ pub(crate) async fn install(
     println!("Installed {installed_version} to {}", install_dir.cyan());
 
     Ok(())
+}
+
+/// JRuby runs on the JVM, but rv doesn't install one. Without Java the install
+/// still succeeds while the ruby stays unusable, so say so before we spend the
+/// download rather than let `rv ruby find` come up empty later.
+fn warn_if_jvm_missing(engine: &RubyEngine) {
+    if engine != &RubyEngine::JRuby {
+        return;
+    }
+
+    if std::env::var_os("JAVA_HOME").is_some() || which::which("java").is_ok() {
+        return;
+    }
+
+    warn!("No JVM detected, but JRuby requires one. Install a JDK, or set JAVA_HOME.");
 }
 
 // downloads a remote ruby archive (tarball or zip)
@@ -418,9 +435,10 @@ fn extract_tarball(
         let mut entry = e?;
 
         // Paths over 100 bytes live in a preceding `././@LongLink` record. The tar
-        // crate only applies those under GNU magic, but JRuby's tarballs pair them
-        // with POSIX ustar magic, so the record surfaces here and the real entry
-        // arrives truncated. Apply the name ourselves.
+        // crate only applies those under GNU or ustar magic, but JRuby's tarballs
+        // write `ustar` magic with a zeroed version field, which is neither, so the
+        // record surfaces here and the real entry arrives with its name truncated to
+        // 100 bytes. Apply the name ourselves.
         match entry.header().entry_type() {
             tar::EntryType::GNULongName => {
                 let mut name = String::new();
