@@ -1,8 +1,14 @@
-# `rv`, a very fast Ruby gem and project manager
+# `rv`, a very fast Ruby and gem manager
 
-Auto-installed and managed Ruby versions and gems.
+![GitHub Release](https://img.shields.io/github/v/release/spinel-coop/rv?label=latest%20version)
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/spinel-coop/rv/total?label=total%20downloads)
+[![Ruby Users Forum](https://img.shields.io/discourse/topics?server=https%3A%2F%2Fwww.rubyforum.org&label=ruby%20forum)](https://www.rubyforum.org/tag/rv)
+[![Spinel Discord](https://img.shields.io/badge/Discord-%235865F2.svg?logo=discord&logoColor=white)](https://discord.gg/JVa6Ey5FmB)
+[![Bundler Slack](https://custom-icon-badges.demolab.com/badge/Slack-4A154B?logo=slack&logoColor=fff)](https://join.slack.com/t/bundler/shared_invite/zt-3kza12u0j-Fw3rwvPi6zqe6EC3RCDGMA)
 
-- Run any command or script that needs ruby with `rv run NAME`.
+**Automatic Rubies and gems.**
+
+- Run any command or script that needs Ruby with `rv run NAME`.
 - Run any gem command immediately, like `rvx rails new myapp`.
 - Install project gems with `rv clean-install`.
 - Install gem CLIs in isolated environments with `rv tool install NAME`.
@@ -85,7 +91,7 @@ See [SETTINGS.md](docs/SETTINGS.md) for all settings, allowed values, and config
 
 ## Community
 
-Join us in the `rv` category on the [Ruby Users Forum](https://www.rubyforum.org/tag/rv/71), the `#rv` channel in the the [Bundler Slack](https://join.slack.com/t/bundler/shared_invite/zt-3kza12u0j-Fw3rwvPi6zqe6EC3RCDGMA), and the [Spinel Discord](https://discord.gg/u34TcumAk8).
+Join us in the `rv` tag on the [Ruby Users Forum](https://www.rubyforum.org/tag/rv/71), the `#rv` channel in the the [Bundler Slack](https://join.slack.com/t/bundler/shared_invite/zt-3kza12u0j-Fw3rwvPi6zqe6EC3RCDGMA), and the [Spinel Discord](https://discord.gg/u34TcumAk8).
 
 Subscribe to [the Spinel Cooperative newsletter](https://buttondown.com/spinel) or [the Spinel blog](https://spinel.coop/blog) RSS feed to get updates about `rv` version releases.
 
