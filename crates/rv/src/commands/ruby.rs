@@ -17,6 +17,7 @@ pub mod run;
 pub mod uninstall;
 
 #[derive(Args)]
+#[command(disable_help_subcommand = true)]
 pub struct RubyArgs {
     #[command(subcommand)]
     pub command: RubyCommand,
