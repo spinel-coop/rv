@@ -372,7 +372,7 @@ fn extract_tarball(tarball_path: &Utf8Path, rubies_dir: &Utf8Path, version: &str
 
         // Copied from
         // https://github.com/composefs/tar-rs/blob/fc459c149f83bf4daceaa52e17d351989002e1a9/src/entry.rs#L404-L419,
-        // xcept we raise an error if we find a path with ".." inside the archive, rather than
+        // except we raise an error if we find a path with ".." inside the archive, rather than
         // skipping extraction of that particular file.
         for part in path {
             match part {
