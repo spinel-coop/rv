@@ -419,3 +419,138 @@ fn test_ruby_install_with_dev() {
         .join(format!("{}.tar.gz", cache_key));
     assert!(tarball_path.exists(), "Tarball should be cached");
 }
+
+#[test]
+fn test_jruby_install() {
+    let mut test = RvTest::new();
+
+    let jruby_mock = test.mock_jruby_download("10.1.1.0").create();
+    let cache_dir = test.enable_cache();
+    let mock = test.mock_jruby_releases(["10.1.1.0"].to_vec());
+
+    let output = test.rv(&["ruby", "install", "jruby-10.1.1.0"]);
+
+    jruby_mock.assert();
+    output.assert_success();
+    output.assert_stdout_contains(
+        "Installed jruby version 10.1.1.0 to /tmp/home/.local/share/rv/rubies",
+    );
+
+    // The directory has to be engine-qualified, or rv won't find it again.
+    let install_dir = test.rubies_dir().join("jruby-10.1.1.0");
+    let ruby_bin = install_dir.join("bin").join(test.ruby_executable_name());
+    assert!(ruby_bin.exists(), "{ruby_bin} should exist");
+
+    // Needs the long-name record applied, or it lands truncated to 100 bytes.
+    let long_path = install_dir
+        .join("lib")
+        .join("ruby")
+        .join("stdlib")
+        .join("did_you_mean")
+        .join("spell_checkers")
+        .join("name_error_checkers")
+        .join("variable_name_checker.rb");
+    assert!(
+        long_path.exists(),
+        "long path should be restored in full, got: {:?}",
+        fs::read_dir(
+            install_dir.join("lib/ruby/stdlib/did_you_mean/spell_checkers/name_error_checkers")
+        )
+        .map(|d| d
+            .filter_map(|e| e.ok().map(|e| e.file_name()))
+            .collect::<Vec<_>>())
+    );
+
+    let cache_key = rv_cache::cache_digest(test.jruby_tarball_url("10.1.1.0"));
+    let tarball_path = cache_dir
+        .join("ruby-v0")
+        .join("tarballs")
+        .join(format!("{}.tar.gz", cache_key));
+    assert!(tarball_path.exists(), "Tarball should be cached");
+
+    drop(mock);
+}
+
+#[test]
+fn test_jruby_install_warns_when_no_jvm_is_present() {
+    let mut test = RvTest::new();
+
+    // The test environment is cleared, so there is no JAVA_HOME and no PATH
+    // to find `java` on.
+    let jruby_mock = test.mock_jruby_download("10.1.1.0").create();
+    let mock = test.mock_jruby_releases(["10.1.1.0"].to_vec());
+
+    let output = test.rv(&["ruby", "install", "jruby-10.1.1.0"]);
+
+    jruby_mock.assert();
+    output.assert_success();
+    output.assert_stderr_contains("No JVM detected");
+
+    drop(mock);
+}
+
+#[test]
+fn test_jruby_install_does_not_warn_when_java_home_is_set() {
+    let mut test = RvTest::new();
+
+    test.env
+        .insert("JAVA_HOME".into(), "/usr/lib/jvm/whatever".into());
+
+    let jruby_mock = test.mock_jruby_download("10.1.1.0").create();
+    let mock = test.mock_jruby_releases(["10.1.1.0"].to_vec());
+
+    let output = test.rv(&["ruby", "install", "jruby-10.1.1.0"]);
+
+    jruby_mock.assert();
+    output.assert_success();
+    assert!(
+        !output.stderr().contains("No JVM detected"),
+        "expected no JVM warning, got:\n{}",
+        output.stderr()
+    );
+
+    drop(mock);
+}
+
+#[test]
+fn test_jruby_install_resolves_incomplete_request() {
+    let mut test = RvTest::new();
+
+    let jruby_mock = test.mock_jruby_download("9.4.15.0").create();
+    test.enable_cache();
+    let mock = test.mock_jruby_releases(["9.4.12.1", "9.4.15.0", "10.1.1.0"].to_vec());
+
+    // Must pick the newest 9.4.x, not the newest JRuby overall.
+    let output = test.rv(&["ruby", "install", "jruby-9.4"]);
+
+    jruby_mock.assert();
+    mock.assert();
+    output.assert_success();
+    output.assert_stdout_contains("Installed jruby version 9.4.15.0");
+
+    assert!(
+        test.rubies_dir()
+            .join("jruby-9.4.15.0")
+            .join("bin")
+            .join(test.ruby_executable_name())
+            .exists()
+    );
+}
+
+#[test]
+fn test_ruby_install_is_unaffected_by_jruby_support() {
+    let mut test = RvTest::new();
+
+    let ruby_mock = test.mock_ruby_download("3.4.5").create();
+    test.enable_cache();
+    // Fully specified: resolves without the releases list, so this mock isn't asserted.
+    let _mock = test.mock_releases(["3.4.5"].to_vec());
+
+    let output = test.rv(&["ruby", "install", "3.4.5"]);
+
+    ruby_mock.assert();
+    output.assert_success();
+    output.assert_stdout_contains("Installed Ruby version 3.4.5");
+
+    assert!(test.rubies_dir().join("ruby-3.4.5").exists());
+}

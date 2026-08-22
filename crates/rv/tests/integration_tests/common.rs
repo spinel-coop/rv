@@ -236,6 +236,47 @@ impl RvTest {
             .create()
     }
 
+    /// Mocks JRuby's /releases API endpoint. Takes no platform: archives are universal.
+    pub fn mock_jruby_releases(&mut self, versions: Vec<&str>) -> Mock {
+        use indoc::formatdoc;
+
+        let releases = versions
+            .into_iter()
+            .map(|v| {
+                formatdoc!(
+                    r#"
+            {{
+                "name": "JRuby {v}",
+                "assets": [
+                    {{
+                        "name": "jruby-bin-{v}.tar.gz",
+                        "browser_download_url": "http://..."
+                    }},
+                    {{
+                        "name": "jruby-src-{v}.tar.gz",
+                        "browser_download_url": "http://..."
+                    }}
+                ]
+            }}"#
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",\n    ");
+
+        let body = format!("[{releases}]");
+
+        self.env.insert(
+            "RV_JRUBY_LIST_URL".into(),
+            format!("{}/{}", self.server_url(), "repos/jruby/jruby/releases"),
+        );
+
+        self.mock_request("GET", "repos/jruby/jruby/releases")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(body)
+            .create()
+    }
+
     /// Mocks the rv-ruby /releases endpoint with assets for all NON-WINDOWS platforms.
     ///
     /// Windows uses a separate endpoint (RubyInstaller2), so Windows assets
@@ -319,6 +360,13 @@ impl RvTest {
     pub fn mock_ruby_download(&mut self, version: &str) -> Mock {
         let path = self.ruby_tarball_download_path(version);
         let content = self.create_mock_tarball(version);
+        self.mock_tarball_download(&path, &content)
+    }
+
+    /// Mock a JRuby tarball download for testing
+    pub fn mock_jruby_download(&mut self, version: &str) -> Mock {
+        let path = self.jruby_tarball_download_path(version);
+        let content = self.create_mock_jruby_tarball(version);
         self.mock_tarball_download(&path, &content)
     }
 
@@ -406,6 +454,75 @@ impl RvTest {
         Self::gzip_tar(archive_data)
     }
 
+    /// Build a mock JRuby archive: a single root, plus a long path stored the way
+    /// JRuby's real tarballs store them (see `extract_tarball`).
+    pub fn create_mock_jruby_tarball(&self, version: &str) -> Vec<u8> {
+        let mut archive_data = Vec::new();
+        {
+            let mut builder = Builder::new(&mut archive_data);
+
+            let root = format!("jruby-{version}/");
+            Self::add_dir(&mut builder, &root);
+
+            let bin_dir = format!("{root}bin/");
+            Self::add_dir(&mut builder, &bin_dir);
+
+            let ruby_bin = format!("{bin_dir}{}", self.ruby_executable_name());
+            let ruby_content = &self.ruby_mock_script("jruby", version);
+            Self::add_executable(&mut builder, &ruby_bin, ruby_content);
+
+            let long_path = format!(
+                "{root}lib/ruby/stdlib/did_you_mean/spell_checkers/name_error_checkers/variable_name_checker.rb"
+            );
+            assert!(
+                long_path.len() > 100,
+                "test path should need a long-name record"
+            );
+            Self::add_long_name_file(&mut builder, &long_path, "# long path\n");
+
+            builder.finish().unwrap();
+        }
+
+        Self::gzip_tar(archive_data)
+    }
+
+    /// Append a file whose path exceeds tar's 100-byte name field, using a GNU
+    /// long-name record with `ustar` magic but a zeroed version field, as JRuby's
+    /// tarballs do. The tar crate treats those headers as neither ustar nor GNU, so
+    /// it leaves the record for us (see `extract_tarball`).
+    fn add_long_name_file(builder: &mut Builder<&mut Vec<u8>>, path: &str, content: &str) {
+        // Write the 100-byte name field directly rather than via `set_path`, which
+        // normalizes paths per-platform. This test is about exact tar bytes.
+        fn set_raw_name(header: &mut tar::Header, name: &str) {
+            let field = &mut header.as_old_mut().name;
+            let bytes = name.as_bytes();
+            let len = bytes.len().min(field.len());
+            field[..len].copy_from_slice(&bytes[..len]);
+        }
+
+        let mut name_header = tar::Header::new_ustar();
+        set_raw_name(&mut name_header, "././@LongLink");
+        name_header.set_size(path.len() as u64 + 1);
+        name_header.set_mode(0o644);
+        name_header.set_entry_type(tar::EntryType::GNULongName);
+        // JRuby's headers carry `ustar` magic with a zeroed version, which the tar
+        // crate does not recognize as ustar, so it does not apply the long name.
+        name_header.as_ustar_mut().unwrap().version = *b"\0\0";
+        name_header.set_cksum();
+        let mut name_data = path.as_bytes().to_vec();
+        name_data.push(0);
+        builder.append(&name_header, &name_data[..]).unwrap();
+
+        // The real entry carries the name truncated to the 100-byte field.
+        let mut header = tar::Header::new_ustar();
+        set_raw_name(&mut header, path);
+        header.set_size(content.len() as u64);
+        header.set_mode(0o644);
+        header.as_ustar_mut().unwrap().version = *b"\0\0";
+        header.set_cksum();
+        builder.append(&header, content.as_bytes()).unwrap();
+    }
+
     fn gzip_tar(tar_data: Vec<u8>) -> Vec<u8> {
         use flate2::Compression;
         use flate2::write::GzEncoder;
@@ -438,6 +555,18 @@ impl RvTest {
         header.set_mode(0o755);
         header.set_cksum();
         builder.append(&header, content.as_bytes()).unwrap();
+    }
+
+    pub fn jruby_tarball_url(&self, version: &str) -> String {
+        format!(
+            "{}/{}",
+            self.server_url(),
+            self.jruby_tarball_download_path(version)
+        )
+    }
+
+    pub fn jruby_tarball_download_path(&self, version: &str) -> String {
+        format!("latest/download/{version}/jruby-bin-{version}.tar.gz")
     }
 
     pub fn ruby_tarball_url(&self, version: &str) -> String {
@@ -581,6 +710,8 @@ impl RvTest {
                 "repos/oneclick/rubyinstaller2/releases"
             ),
         );
+        // `-` means "make no request"; mock_jruby_releases opts a test back in.
+        self.env.insert("RV_JRUBY_LIST_URL".into(), "-".into());
 
         // Override the rubies directory so rv looks in the test temp dir.
         // On Windows, etcetera resolves data_dir via the Win32 SHGetKnownFolderPath
@@ -598,12 +729,12 @@ impl RvTest {
     }
 
     #[cfg(unix)]
-    fn ruby_executable_name(&self) -> &str {
+    pub fn ruby_executable_name(&self) -> &str {
         "ruby"
     }
 
     #[cfg(windows)]
-    fn ruby_executable_name(&self) -> &str {
+    pub fn ruby_executable_name(&self) -> &str {
         "ruby.cmd"
     }
 

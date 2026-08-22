@@ -94,7 +94,7 @@ rv combines several functions that have previously been separate tools:
 - [x] MRI 3.4
 - [x] MRI 3.3
 - [x] MRI 3.2
-- [ ] JRuby 10
+- [x] JRuby 10
 - [ ] TruffleRuby 24
 
 ### EOL interpreters (maybe)
