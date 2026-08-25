@@ -374,7 +374,14 @@ async fn fetch_url(url: &str, redirects: bool) -> Result<reqwest::Response> {
     Ok(request_builder.send().await?)
 }
 
-/// Must match what `Config::is_requested_ruby_installed_in_dir` looks for.
+/// Names the directory an install lands in, from the resolved version.
+///
+/// `Config::is_requested_ruby_installed_in_dir` builds its path from the *request*
+/// instead, so the two only line up when the request names a full version: `rv ruby
+/// install jruby-9.4` installs into `jruby-9.4.15.0` while the check looks for
+/// `jruby-9.4`. That mismatch is shared with CRuby, and its only effect is that the
+/// already-installed check in `install` misses and we re-extract over the same
+/// directory — never an install to the wrong place.
 fn install_dir_name(engine: &RubyEngine, version: &str) -> String {
     format!("{engine}-{version}")
 }
@@ -487,6 +494,13 @@ fn extract_tarball(
 
                 Component::Normal(part) => dst_file.push(part),
             }
+        }
+
+        // Nothing left after stripping the archive's root, so this entry *is* the
+        // install directory. Writing it would clobber the directory itself and make
+        // every later entry fail with a confusing IO error.
+        if dst_file == dst_dir {
+            continue;
         }
 
         // `Entry::unpack` won't create parents the way `Archive::unpack` does, and

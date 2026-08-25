@@ -486,6 +486,35 @@ impl RvTest {
         Self::gzip_tar(archive_data)
     }
 
+    /// Build a mock archive that leads with a file at the archive root, so stripping
+    /// the root components leaves nothing and the entry would otherwise be written
+    /// over the install directory itself (see `extract_tarball`).
+    pub fn create_mock_tarball_with_root_file(&self, version: &str) -> Vec<u8> {
+        let mut archive_data = Vec::new();
+        {
+            let mut builder = Builder::new(&mut archive_data);
+
+            Self::add_executable(&mut builder, "README", "# at the archive root\n");
+
+            let root = format!("rv-ruby@{version}/");
+            Self::add_dir(&mut builder, &root);
+
+            let subroot = format!("{root}{version}/");
+            Self::add_dir(&mut builder, &subroot);
+
+            let bin_dir = format!("{subroot}bin/");
+            Self::add_dir(&mut builder, &bin_dir);
+
+            let ruby_bin = format!("{bin_dir}{}", self.ruby_executable_name());
+            let ruby_content = &self.ruby_mock_script("ruby", version);
+            Self::add_executable(&mut builder, &ruby_bin, ruby_content);
+
+            builder.finish().unwrap();
+        }
+
+        Self::gzip_tar(archive_data)
+    }
+
     /// Append a file whose path exceeds tar's 100-byte name field, using a GNU
     /// long-name record with `ustar` magic but a zeroed version field, as JRuby's
     /// tarballs do. The tar crate treats those headers as neither ustar nor GNU, so

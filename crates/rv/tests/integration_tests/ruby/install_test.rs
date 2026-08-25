@@ -112,6 +112,29 @@ fn test_ruby_install_from_tarball() {
 }
 
 #[test]
+fn test_ruby_install_from_tarball_with_file_at_archive_root() {
+    let mut test = RvTest::new();
+
+    let tarball_content = test.create_mock_tarball_with_root_file("3.4.5");
+    let tarball_file = test.mock_tarball_on_disk("3.4.5", tarball_content);
+
+    let output = test.rv(&[
+        "ruby",
+        "install",
+        "--tarball-path",
+        tarball_file.as_str(),
+        "3.4.5",
+    ]);
+
+    output.assert_success();
+
+    // The root file is skipped rather than written over the install directory, so
+    // the entries after it still land where they belong.
+    let output = test.rv(&["run", "ruby"]);
+    output.assert_stdout_contains("ruby\n3.4.5");
+}
+
+#[test]
 fn test_ruby_install_from_tarball_with_files_falling_outside_root() {
     let test = RvTest::new();
 
