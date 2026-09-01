@@ -11,6 +11,11 @@ updates:
       day: "tuesday"
       time: "09:00"
       timezone: "America/Los_Angeles"
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
   - package-ecosystem: "cargo"
     cooldown:
       default-days: 7
@@ -20,6 +25,46 @@ updates:
       day: "tuesday"
       time: "09:00"
       timezone: "America/Los_Angeles"
+    groups:
+      # Families below must move in lockstep, so they group majors too.
+      clap:
+        patterns: ["clap", "clap_*"]
+      saphyr:
+        patterns: ["saphyr", "saphyr-parser"]
+      rustcrypto:
+        patterns: ["sha1", "sha2"]
+      tls:
+        patterns:
+          - "rustls"
+          - "rustls-*"
+          - "tokio-rustls"
+          - "webpki-*"
+          - "rcgen"
+      # Crates used only by tests, benches and fuzzing. Dependabot cannot derive
+      # this for cargo, so the list is maintained by hand.
+      dev:
+        patterns:
+          - "anyhow"
+          - "assert_fs"
+          - "camino-tempfile-ext"
+          - "criterion"
+          - "futures"
+          - "http-body-util"
+          - "hyper"
+          - "hyper-util"
+          - "insta"
+          - "libfuzzer-sys"
+          - "mockito"
+          - "pretty_assertions"
+          - "proptest"
+          - "proptest-derive"
+          - "rexpect"
+          - "temp-env"
+      # Everything else. Majors fall out as individual PRs for closer review.
+      cargo:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
   - package-ecosystem: "rust-toolchain"
     cooldown:
       default-days: 7
