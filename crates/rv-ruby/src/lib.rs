@@ -310,7 +310,7 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
         puts(Gem::Platform.local.to_s)
         puts(Object.const_defined?(:RbConfig) && RbConfig::CONFIG['host_cpu'] ? RbConfig::CONFIG['host_cpu'] : 'unknown')
         puts(Object.const_defined?(:RbConfig) && RbConfig::CONFIG['host_os'] ? RbConfig::CONFIG['host_os'] : 'unknown')
-        puts(Object.const_defined?(:RbConfig) && RbConfig::CONFIG['ENABLE_SHARED'] ? RbConfig::CONFIG['ENABLED_SHARED'] : 'no')
+        puts(Object.const_defined?(:RbConfig) && RbConfig::CONFIG['ENABLE_SHARED'] ? RbConfig::CONFIG['ENABLE_SHARED'] : 'no')
         puts(begin; Gem.default_dir; rescue ScriptError, NoMethodError; end)
         puts(Object.const_defined?(:RUBY_DESCRIPTION) ? RUBY_DESCRIPTION : '')
     "#;
@@ -383,7 +383,7 @@ fn extract_ruby_info(ruby_bin: &Utf8PathBuf) -> Result<Ruby, RubyError> {
         os,
         gem_root,
         managed: false,
-        enable_shared: enable_shared == "no",
+        enable_shared: enable_shared != "no",
         rubygems_platform: ruby_platform.to_string(),
         // path and symlink are replaced in the caller
         path: Default::default(),
