@@ -1,5 +1,16 @@
 # `rv` changelog
 
+## rv 0.7.0 (2 Sept, 2026)
+
+Big changes in 0.7 include:
+  - support for JRuby, try it with `rv ruby install jruby`
+  - quick formatting via `rubyfmt`, try it with `rv fmt`
+  - `rvx` with optional gems, like `rvx --with pg sequel`
+  - auto-switching for PowerShell
+
+Thank you to new contributors @afomera, @gilesbowkett, and @ziggythehamster!
+
+
 ## rv 0.6.0 (15 June, 2026)
 
 The significant changes in 0.6.0 include:
