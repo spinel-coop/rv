@@ -171,6 +171,32 @@ impl Ruby {
         Ok(ruby)
     }
 
+    /// Create a new Ruby instance from a Ruby executable path directly.
+    ///
+    /// Used for things like system Rubies (e.g. `/usr/bin/ruby`) where there is no `bin/`
+    /// layout under a parent directory. The Ruby is marked as not managed.
+    #[instrument(skip(executable_path), fields(executable = %executable_path.as_str()), level = "trace")
+]
+    pub fn from_executable_path(executable_path: Utf8PathBuf) -> Result<Self, RubyError> {
+        if let Ok(false) = executable_path.try_exists() {
+            return Err(RubyError::NoRubyExecutable);
+        }
+
+        let symlink_source = find_symlink_target(&executable_path);
+        let mut exec_ruby = extract_ruby_info(&executable_path)?;
+
+        exec_ruby.path = executable_path
+            .parent()
+            .and_then(|p| p.parent())
+            .unwrap_or_else(|| executable_path.parent().unwrap_or(&executable_path))
+            .to_path_buf();
+
+        exec_ruby.managed = false;
+        exec_ruby.symlink = symlink_source;
+
+        Ok(exec_ruby)
+    }
+
     /// Check if this Ruby installation is valid
     pub fn is_valid(&self) -> bool {
         find_ruby_executable(&self.path).is_some()
