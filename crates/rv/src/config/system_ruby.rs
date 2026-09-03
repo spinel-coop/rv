@@ -2,8 +2,8 @@ use camino::Utf8PathBuf;
 use std::env;
 use tracing::{debug, instrument};
 
-use rv_ruby::Ruby;
 use rv_ruby::canonical_name::CanonicalName;
+use rv_ruby::{EnvProvider, Ruby, SystemEnv};
 
 use super::Config;
 
@@ -23,10 +23,10 @@ impl Config {
     /// would leak the host's installed Ruby into containerized tests and
     /// CI environments that did not opt in.
     #[instrument(skip_all, level = "trace")]
-    pub fn discover_system_rubies(&self) -> Vec<Ruby> {
+    pub fn discover_system_rubies_with<E: EnvProvider>(&self, env: &E) -> Vec<Ruby> {
         let mut candidates: Vec<Utf8PathBuf> = Vec::new();
 
-        if let Ok(path_var) = env::var("PATH") {
+        if let Some(path_var) = env.get_var("PATH") {
             for dir in env::split_paths(&path_var) {
                 // Probe both `<dir>/ruby` (PATH entries like `/usr/bin`) and
                 // `<dir>/bin/ruby` (PATH entries like `/opt/rubies`). The
@@ -76,21 +76,38 @@ impl Config {
         rubies
     }
 
-    /// Like [`Self::discover_system_rubies`] but applies `predicate` to the
+    /// Production wrapper using the live process environment.
+    pub fn discover_system_rubies(&self) -> Vec<Ruby> {
+        self.discover_system_rubies_with(&SystemEnv)
+    }
+
+    /// Like [`Self::discover_system_rubies_with`] but applies `predicate` to the
     /// canonical version string of each candidate. Used by `uninstall` to
     /// detect the version-specific match.
     #[instrument(skip_all, level = "trace")]
-    pub fn discover_system_rubies_filtered<F>(&self, predicate: &F) -> Vec<Ruby>
+    pub fn discover_system_rubies_filtered_with<E: EnvProvider, F>(
+        &self,
+        env: &E,
+        predicate: &F,
+    ) -> Vec<Ruby>
     where
         F: Fn(&str) -> bool,
     {
-        self.discover_system_rubies()
+        self.discover_system_rubies_with(env)
             .into_iter()
             .filter(|r| {
                 let name = r.version.canonical_name();
                 predicate(&name) || predicate(r.path.as_str())
             })
             .collect()
+    }
+
+    /// Production wrapper for [`Self::discover_system_rubies_filtered_with`].
+    pub fn discover_system_rubies_filtered<F>(&self, predicate: &F) -> Vec<Ruby>
+    where
+        F: Fn(&str) -> bool,
+    {
+        self.discover_system_rubies_filtered_with(&SystemEnv, predicate)
     }
 }
 
@@ -107,9 +124,64 @@ fn probe_path_entry(dir: &std::path::Path, name: &str) -> Option<Utf8PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::collections::HashMap;
     use std::fs;
     use tempfile::TempDir;
+
+    use rv_ruby::EnvProvider;
+
+    use super::super::Config;
+    use super::*;
+
+    #[derive(Default)]
+    struct FakeEnv {
+        vars: HashMap<String, String>,
+    }
+
+    impl FakeEnv {
+        fn new() -> Self {
+            Self::default()
+        }
+
+        fn with(mut self, key: &str, value: &str) -> Self {
+            self.vars.insert(key.to_string(), value.to_string());
+            self
+        }
+    }
+
+    impl EnvProvider for FakeEnv {
+        fn get_var(&self, key: &str) -> Option<String> {
+            self.vars.get(key).cloned()
+        }
+    }
+
+    /// Writes a mock ruby executable at `<dir>/bin/ruby` that produces the
+    /// metadata stream expected by `extract_ruby_info`. Placing it under
+    /// `bin/` ensures `Ruby::from_executable_path` derives `path=<dir>` so
+    /// `is_valid()` (which checks `<path>/bin/<exec>`) passes.
+    fn make_mock_ruby_shim(dir: &std::path::Path) -> std::path::PathBuf {
+        let bin = dir.join("bin");
+        fs::create_dir_all(&bin).unwrap();
+        let exec = bin.join("ruby");
+        let script = "\
+#!/bin/bash
+echo \"ruby\"
+echo \"3.0.1\"
+echo \"aarch64-darwin23\"
+echo \"aarch64\"
+echo \"darwin23\"
+echo \"\"
+";
+        fs::write(&exec, script).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(&exec).unwrap().permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&exec, perms).unwrap();
+        }
+        exec
+    }
 
     // Writes a fake shim of a Ruby file to test if it shows up.
     #[test]
@@ -126,5 +198,127 @@ mod tests {
         }
         assert!(probe_path_entry(tmp.path(), "ruby").is_some());
         assert!(probe_path_entry(tmp.path(), "nonexistent").is_none());
+    }
+
+    #[test]
+    fn probe_path_entry_skips_directories() {
+        let tmp = TempDir::new().unwrap();
+        // A directory named "ruby" must not be picked up — would otherwise
+        // trigger false positives during PATH probing.
+        fs::create_dir(tmp.path().join("ruby")).unwrap();
+        assert!(probe_path_entry(tmp.path(), "ruby").is_none());
+    }
+
+    #[test]
+    fn discover_system_rubies_returns_empty_when_path_unset() {
+        let config = Config::new_dummy();
+        let env = FakeEnv::new();
+        let result = config.discover_system_rubies_with(&env);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn discover_system_rubies_finds_ruby_on_path() {
+        let tmp = TempDir::new().unwrap();
+        make_mock_ruby_shim(tmp.path());
+
+        let config = Config::new_dummy();
+        let env = FakeEnv::new().with("PATH", tmp.path().to_str().unwrap());
+        let result = config.discover_system_rubies_with(&env);
+
+        assert_eq!(result.len(), 1, "expected 1 system ruby, got: {result:?}");
+        assert!(!result[0].managed, "system ruby must be unmanaged");
+    }
+
+    #[test]
+    fn discover_system_rubies_probes_bin_subdir() {
+        // PATH entry points to a dir whose ruby shim lives at `<dir>/bin/ruby`.
+        // Probe code checks both `<dir>/ruby` and `<dir>/bin/ruby`.
+        let tmp = TempDir::new().unwrap();
+        make_mock_ruby_shim(tmp.path());
+
+        let config = Config::new_dummy();
+        let env = FakeEnv::new().with("PATH", tmp.path().to_str().unwrap());
+        let result = config.discover_system_rubies_with(&env);
+
+        assert_eq!(
+            result.len(),
+            1,
+            "<dir>/bin/ruby must be probed, got: {result:?}",
+        );
+    }
+
+    #[test]
+    fn discover_system_rubies_dedupes_canonicalized_paths() {
+        // Two PATH entries whose canonical paths resolve to the same file
+        // must produce a single result.
+        let tmp1 = TempDir::new().unwrap();
+        let tmp2 = TempDir::new().unwrap();
+        make_mock_ruby_shim(tmp1.path());
+        // tmp2/bin -> tmp1/bin
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(tmp1.path().join("bin"), tmp2.path().join("bin")).unwrap();
+
+        let path_value = format!(
+            "{}:{}",
+            tmp1.path().to_str().unwrap(),
+            tmp2.path().to_str().unwrap()
+        );
+        let config = Config::new_dummy();
+        let env = FakeEnv::new().with("PATH", &path_value);
+        let result = config.discover_system_rubies_with(&env);
+
+        #[cfg(unix)]
+        assert_eq!(
+            result.len(),
+            1,
+            "canonicalized dedupe should yield 1, got: {result:?}",
+        );
+    }
+
+    #[test]
+    fn discover_system_rubies_skips_managed_dirs() {
+        let config = Config::new_dummy();
+        let managed = &config.ruby_dirs[0];
+        // `Config::new_dummy` drops its internal `TempDir` after returning,
+        // which deletes the on-disk directory. Recreate it before writing.
+        fs::create_dir_all(managed.as_std_path()).unwrap();
+        let exec = managed.join("ruby");
+        fs::write(&exec, "#!/bin/sh\nexit 0\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(&exec).unwrap().permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&exec, perms).unwrap();
+        }
+
+        let env = FakeEnv::new().with("PATH", managed.as_str());
+        let result = config.discover_system_rubies_with(&env);
+
+        assert!(
+            result.is_empty(),
+            "exec under ruby_dirs must be skipped, got: {result:?}",
+        );
+    }
+
+    #[test]
+    fn discover_system_rubies_filtered_applies_predicate() {
+        let tmp = TempDir::new().unwrap();
+        make_mock_ruby_shim(tmp.path());
+
+        let config = Config::new_dummy();
+        let env = FakeEnv::new().with("PATH", tmp.path().to_str().unwrap());
+
+        let matching =
+            config.discover_system_rubies_filtered_with(&env, &|s: &str| s.contains("3.0.1"));
+        assert_eq!(
+            matching.len(),
+            1,
+            "predicate matching canonical_name must yield the ruby",
+        );
+
+        let none = config.discover_system_rubies_filtered_with(&env, &|_: &str| false);
+        assert!(none.is_empty(), "predicate rejecting all must yield none");
     }
 }

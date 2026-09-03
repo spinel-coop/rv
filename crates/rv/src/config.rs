@@ -14,7 +14,7 @@ use rv_settings::RvSettings;
 use tracing::{debug, error, instrument};
 
 use rv_ruby::{
-    RemoteRuby, Ruby,
+    EnvProvider, RemoteRuby, Ruby, SystemEnv,
     request::{RequestError, RubyRequest, Source},
     version::RubyVersion,
 };
@@ -388,11 +388,15 @@ impl Config {
 /// Returns whether to surface system Rubies (Debian `/usr/bin/ruby`, etc.) in
 /// `rv ruby list` and friends. Defaults to `true`. Set `RV_INCLUDE_SYSTEM_RUBY=0`
 /// (or `false`) to disable — useful for CI that wants only `rv`-managed rubies.
-fn include_system_rubies() -> bool {
-    match env::var("RV_INCLUDE_SYSTEM_RUBY") {
-        Ok(val) => !matches!(val.to_ascii_lowercase().as_str(), "0" | "false" | "no" | "off"),
-        Err(_) => true,
+fn include_system_rubies_with<E: EnvProvider>(env: &E) -> bool {
+    match env.get_var("RV_INCLUDE_SYSTEM_RUBY") {
+        Some(val) => !matches!(val.to_ascii_lowercase().as_str(), "0" | "false" | "no" | "off"),
+        None => true,
     }
+}
+
+fn include_system_rubies() -> bool {
+    include_system_rubies_with(&SystemEnv)
 }
 
 fn find_directory_ruby(dir: &Utf8PathBuf) -> Result<Option<(RubyRequest, Source)>> {
@@ -482,5 +486,56 @@ impl Env {
 
     pub fn split(&self) -> (Vec<&'static str>, Vec<(&'static str, String)>) {
         (self.unset.clone(), self.set.clone())
+    }
+}
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use rv_ruby::EnvProvider;
+
+    use super::include_system_rubies_with;
+
+    #[derive(Default)]
+    struct FakeEnv {
+        vars: HashMap<String, String>,
+    }
+
+    impl FakeEnv {
+        fn with(mut self, key: &str, value: &str) -> Self {
+            self.vars.insert(key.to_string(), value.to_string());
+            self
+        }
+    }
+
+    impl EnvProvider for FakeEnv {
+        fn get_var(&self, key: &str) -> Option<String> {
+            self.vars.get(key).cloned()
+        }
+    }
+
+    #[test]
+    fn include_system_rubies_defaults_true_when_unset() {
+        let env = FakeEnv::default();
+        assert!(include_system_rubies_with(&env));
+    }
+
+    #[test]
+    fn include_system_rubies_truthy_values() {
+        for v in ["1", "true", "yes", "on", "TRUE", "Yes", "1"] {
+            let env = FakeEnv::default().with("RV_INCLUDE_SYSTEM_RUBY", v);
+            assert!(include_system_rubies_with(&env), "expected true for {v:?}");
+        }
+    }
+
+    #[test]
+    fn include_system_rubies_falsy_values() {
+        for v in ["0", "false", "no", "off", "FALSE", "No", "OFF"] {
+            let env = FakeEnv::default().with("RV_INCLUDE_SYSTEM_RUBY", v);
+            assert!(
+                !include_system_rubies_with(&env),
+                "expected false for {v:?}",
+            );
+        }
     }
 }

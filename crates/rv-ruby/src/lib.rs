@@ -710,4 +710,84 @@ mod tests {
         assert_eq!(&info["arch"], "arm64");
         assert_eq!(&info["os"], "darwin23");
     }
+
+    #[test]
+    fn from_executable_path_returns_no_ruby_executable_for_missing_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let missing = Utf8PathBuf::try_from(tmp.path().join("nope")).unwrap();
+        assert!(matches!(
+            Ruby::from_executable_path(missing),
+            Err(RubyError::NoRubyExecutable),
+        ));
+    }
+
+    #[test]
+    fn from_executable_path_marks_ruby_as_unmanaged() {
+        // exec at `<tmp>/bin/ruby` → `from_executable_path` derives
+        // `path=<tmp>` (parent.parent()) so `is_valid()` checks
+        // `<tmp>/bin/ruby` and returns true.
+        let tmp = tempfile::tempdir().unwrap();
+        let bin = tmp.path().join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let exec = bin.join("ruby");
+        write_mock_ruby_shim(&exec, "3.0.1");
+
+        let exec_path = Utf8PathBuf::try_from(exec.clone()).unwrap();
+        let ruby = Ruby::from_executable_path(exec_path)
+            .expect("from_executable_path should succeed");
+        assert!(!ruby.managed, "managed should be false for system ruby");
+        assert_eq!(
+            ruby.path.as_std_path(),
+            tmp.path(),
+            "path should be parent.parent() of exec",
+        );
+        assert!(
+            ruby.is_valid(),
+            "is_valid should be true when <path>/bin/<exec> exists",
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn from_executable_path_captures_symlink_target() {
+        let tmp = tempfile::tempdir().unwrap();
+        let bin = tmp.path().join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let target = bin.join("ruby_target");
+        write_mock_ruby_shim(&target, "3.0.1");
+        let link = bin.join("ruby");
+        std::os::unix::fs::symlink(&target, &link).unwrap();
+
+        let exec = Utf8PathBuf::try_from(link.clone()).unwrap();
+        let ruby = Ruby::from_executable_path(exec).expect("should succeed");
+        assert!(
+            ruby.symlink.is_some(),
+            "symlink target should be captured",
+        );
+    }
+
+    /// Writes a shell script that mimics a Ruby executable by emitting the
+    /// metadata stream expected by [`extract_ruby_info`] (engine, version,
+    /// platform, host_cpu, host_os, enable_shared, gem_root). The final
+    /// `echo ""` produces an empty `RUBY_DESCRIPTION`, so the version falls
+    /// back to `<engine>-<version>` parsing.
+    fn write_mock_ruby_shim(exec: &std::path::Path, version: &str) {
+        let script = format!(
+            "#!/bin/bash\n\
+             echo \"ruby\"\n\
+             echo \"{version}\"\n\
+             echo \"aarch64-darwin23\"\n\
+             echo \"aarch64\"\n\
+             echo \"darwin23\"\n\
+             echo \"\"\n"
+        );
+        std::fs::write(exec, script).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(exec).unwrap().permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(exec, perms).unwrap();
+        }
+    }
 }

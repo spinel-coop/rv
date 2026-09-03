@@ -51,3 +51,39 @@ fn test_ruby_uninstall_matching_request() {
         "Deleting /tmp/home/.local/share/rv/rubies/ruby-3.3.5\n"
     );
 }
+#[test]
+fn test_ruby_uninstall_refuses_system_ruby() {
+    let mut test = RvTest::new();
+
+    // Create a system ruby shim that the uninstall command will resolve.
+    let sys_bin = test.temp_root().join("system_bin");
+    std::fs::create_dir_all(&sys_bin).unwrap();
+    let exec = test.create_system_ruby(&sys_bin, "3.3.5");
+    test.env.insert("PATH".into(), sys_bin.to_string().into());
+
+    let uninstall = test.ruby_uninstall(&["3.3.5"]);
+    uninstall.assert_failure();
+    uninstall.assert_stderr_contains("UnmanagedRuby");
+    uninstall.assert_stderr_contains("/system_bin");
+
+    assert!(
+        exec.exists(),
+        "system ruby shim must not be deleted by uninstall",
+    );
+}
+
+#[test]
+fn test_ruby_uninstall_system_ruby_disabled_returns_no_matching_ruby() {
+    let mut test = RvTest::new();
+
+    let sys_bin = test.temp_root().join("system_bin");
+    std::fs::create_dir_all(&sys_bin).unwrap();
+    let exec = test.create_system_ruby(&sys_bin, "3.3.5");
+    test.env.insert("PATH".into(), sys_bin.to_string().into());
+    test.env.insert("RV_INCLUDE_SYSTEM_RUBY".into(), "0".into());
+
+    let uninstall = test.ruby_uninstall(&["3.3.5"]);
+    uninstall.assert_failure();
+    uninstall.assert_stderr_contains("NoMatchingRuby");
+    assert!(exec.exists(), "system ruby shim must not be touched");
+}
