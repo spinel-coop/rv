@@ -1,0 +1,130 @@
+use camino::Utf8PathBuf;
+use std::env;
+use tracing::{debug, instrument};
+
+use rv_ruby::Ruby;
+use rv_ruby::canonical_name::CanonicalName;
+
+use super::Config;
+
+/// System ruby discovery (Debian `/usr/bin/ruby`, `which ruby`, etc.).
+///
+/// These are surfaced via `rv ruby list` (and `find`) for visibility, but are
+/// not managed by `rv`: they cannot be installed, uninstalled, or modified
+/// through `rv`. They are also never used as the destination of `rv ruby install`.
+impl Config {
+    /// Discover Ruby executables on PATH.
+    ///
+    /// Returns Rubies with `managed = false`, deduplicated against installed
+    /// Rubies in `ruby_dirs` (same canonical name + same executable path).
+    ///
+    /// Only PATH is consulted. The Debian/Ubuntu system Ruby at
+    /// `/usr/bin/ruby` is reached through PATH; hardcoding absolute paths
+    /// would leak the host's installed Ruby into containerized tests and
+    /// CI environments that did not opt in.
+    #[instrument(skip_all, level = "trace")]
+    pub fn discover_system_rubies(&self) -> Vec<Ruby> {
+        let mut candidates: Vec<Utf8PathBuf> = Vec::new();
+
+        if let Ok(path_var) = env::var("PATH") {
+            for dir in env::split_paths(&path_var) {
+                // Probe both `<dir>/ruby` (PATH entries like `/usr/bin`) and
+                // `<dir>/bin/ruby` (PATH entries like `/opt/rubies`). The
+                // convention varies — Debian `/usr/bin/ruby` lives at PATH root,
+                // while rvm/rbenv shims put `<version>/bin/ruby` under a single
+                // PATH entry.
+                let bin_dir = dir.join("bin");
+                for entry in [dir.as_path(), bin_dir.as_path()] {
+                    for name in ["ruby", "ruby3", "ruby2"] {
+                        if let Some(found) = probe_path_entry(entry, name) {
+                            candidates.push(found);
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut seen: Vec<Utf8PathBuf> = Vec::new();
+        let mut rubies: Vec<Ruby> = Vec::new();
+        for exec in candidates {
+            let canonical = exec.canonicalize_utf8().unwrap_or_else(|_| exec.clone());
+            if seen.iter().any(|p| p == &canonical) {
+                continue;
+            }
+            seen.push(canonical);
+
+            // Skip any executable that lives under a managed ruby_dir.
+            if self.ruby_dirs.iter().any(|d| exec.starts_with(d)) {
+                continue;
+            }
+
+            match Ruby::from_executable_path(exec.clone()) {
+                Ok(ruby) => {
+                    if ruby.is_valid() {
+                        rubies.push(ruby);
+                    } else {
+                        debug!("System ruby at {:?} is invalid", exec);
+                    }
+                }
+                Err(err) => {
+                    debug!("Failed to probe system ruby at {:?}: {err}", exec);
+                }
+            }
+        }
+
+        rubies.sort();
+        rubies
+    }
+
+    /// Like [`Self::discover_system_rubies`] but applies `predicate` to the
+    /// canonical version string of each candidate. Used by `uninstall` to
+    /// detect the version-specific match.
+    #[instrument(skip_all, level = "trace")]
+    pub fn discover_system_rubies_filtered<F>(&self, predicate: &F) -> Vec<Ruby>
+    where
+        F: Fn(&str) -> bool,
+    {
+        self.discover_system_rubies()
+            .into_iter()
+            .filter(|r| {
+                let name = r.version.canonical_name();
+                predicate(&name) || predicate(r.path.as_str())
+            })
+            .collect()
+    }
+}
+
+/// Look for `name` in `dir`. Only returns the path if it is a regular file
+/// (executable bit on Unix). Skips directories to avoid false positives like
+/// `/usr/bin/ruby-foo` when probing for `ruby`.
+fn probe_path_entry(dir: &std::path::Path, name: &str) -> Option<Utf8PathBuf> {
+    let path = dir.join(name);
+    if !path.is_file() {
+        return None;
+    }
+    Utf8PathBuf::try_from(path).ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::TempDir;
+
+    // Writes a fake shim of a Ruby file to test if it shows up.
+    #[test]
+    fn probe_path_entry_finds_executable() {
+        let tmp = TempDir::new().unwrap();
+        let bin = tmp.path().join("ruby");
+        fs::write(&bin, "#!/bin/sh\nexit 0\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(&bin).unwrap().permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&bin, perms).unwrap();
+        }
+        assert!(probe_path_entry(tmp.path(), "ruby").is_some());
+        assert!(probe_path_entry(tmp.path(), "nonexistent").is_none());
+    }
+}

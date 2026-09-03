@@ -29,6 +29,7 @@ pub mod github;
 mod ruby_cache;
 mod ruby_fetcher;
 pub mod rv_settings;
+mod system_ruby;
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -192,7 +193,28 @@ impl Config {
 
     #[instrument(skip_all, level = "trace")]
     pub fn rubies(&self) -> Vec<Ruby> {
-        self.discover_installed_rubies()
+        let mut rubies = self.discover_installed_rubies();
+        if include_system_rubies() {
+            rubies.extend(self.discover_system_rubies());
+            rubies.sort();
+        }
+        rubies
+    }
+
+    /// Like [`Self::rubies`], but applies `predicate` to the version string of
+    /// each candidate. Used by [`Self::highest_ruby_matching`] for version
+    /// pinning and `uninstall`. Includes system Rubies when discovery is
+    /// enabled so the uninstall safety check (#762) can fire.
+    fn rubies_with_filter<F>(&self, predicate: F) -> Vec<Ruby>
+    where
+        F: Fn(&str) -> bool + Clone,
+    {
+        let mut rubies = self.discover_installed_rubies_matching(&predicate);
+        if include_system_rubies() {
+            rubies.extend(self.discover_system_rubies_filtered(&predicate));
+            rubies.sort();
+        }
+        rubies
     }
 
     pub async fn remote_rubies(&self) -> Vec<RemoteRuby> {
@@ -351,7 +373,7 @@ impl Config {
     }
 
     fn highest_ruby_matching(&self, request: &RubyRequest) -> Option<Ruby> {
-        self.discover_rubies_matching(|dir_name| {
+        self.rubies_with_filter(|dir_name| {
             if dir_name == "ruby-dev" {
                 request.is_dev()
             } else {
@@ -360,6 +382,16 @@ impl Config {
         })
         .last()
         .cloned()
+    }
+}
+
+/// Returns whether to surface system Rubies (Debian `/usr/bin/ruby`, etc.) in
+/// `rv ruby list` and friends. Defaults to `true`. Set `RV_INCLUDE_SYSTEM_RUBY=0`
+/// (or `false`) to disable — useful for CI that wants only `rv`-managed rubies.
+fn include_system_rubies() -> bool {
+    match env::var("RV_INCLUDE_SYSTEM_RUBY") {
+        Ok(val) => !matches!(val.to_ascii_lowercase().as_str(), "0" | "false" | "no" | "off"),
+        Err(_) => true,
     }
 }
 
