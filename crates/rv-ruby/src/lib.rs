@@ -767,10 +767,9 @@ mod tests {
     }
 
     /// Writes a shell script that mimics a Ruby executable by emitting the
-    /// metadata stream expected by [`extract_ruby_info`] (engine, version,
-    /// platform, host_cpu, host_os, enable_shared, gem_root). The final
-    /// `echo ""` produces an empty `RUBY_DESCRIPTION`, so the version falls
-    /// back to `<engine>-<version>` parsing.
+    /// metadata stream expected by [`extract_ruby_info`]. Duplicated in
+    /// `crates/rv/src/config/test_support.rs` due to crate boundary — keep
+    /// in sync.
     fn write_mock_ruby_shim(exec: &std::path::Path, version: &str) {
         let script = format!(
             "#!/bin/bash\n\

@@ -1,5 +1,4 @@
 use camino::Utf8PathBuf;
-use std::env;
 use tracing::{debug, instrument};
 
 use rv_ruby::canonical_name::CanonicalName;
@@ -23,11 +22,14 @@ impl Config {
     /// would leak the host's installed Ruby into containerized tests and
     /// CI environments that did not opt in.
     #[instrument(skip_all, level = "trace")]
-    pub fn discover_system_rubies_with<E: EnvProvider>(&self, env: &E) -> Vec<Ruby> {
+    pub fn discover_system_rubies_with<E: EnvProvider>(
+        &self,
+        provider: &E,
+    ) -> Vec<Ruby> {
         let mut candidates: Vec<Utf8PathBuf> = Vec::new();
 
-        if let Some(path_var) = env.get_var("PATH") {
-            for dir in env::split_paths(&path_var) {
+        if let Some(path_var) = provider.get_var("PATH") {
+            for dir in std::env::split_paths(&path_var) {
                 // Probe both `<dir>/ruby` (PATH entries like `/usr/bin`) and
                 // `<dir>/bin/ruby` (PATH entries like `/opt/rubies`). The
                 // convention varies — Debian `/usr/bin/ruby` lives at PATH root,
@@ -87,13 +89,13 @@ impl Config {
     #[instrument(skip_all, level = "trace")]
     pub fn discover_system_rubies_filtered_with<E: EnvProvider, F>(
         &self,
-        env: &E,
+        provider: &E,
         predicate: &F,
     ) -> Vec<Ruby>
     where
         F: Fn(&str) -> bool,
     {
-        self.discover_system_rubies_with(env)
+        self.discover_system_rubies_with(provider)
             .into_iter()
             .filter(|r| {
                 let name = r.version.canonical_name();
@@ -124,64 +126,14 @@ fn probe_path_entry(dir: &std::path::Path, name: &str) -> Option<Utf8PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
     use std::fs;
     use tempfile::TempDir;
 
-    use rv_ruby::EnvProvider;
+    use crate::config::test_support::{FakeEnv, make_mock_ruby_shim};
 
     use super::super::Config;
     use super::*;
 
-    #[derive(Default)]
-    struct FakeEnv {
-        vars: HashMap<String, String>,
-    }
-
-    impl FakeEnv {
-        fn new() -> Self {
-            Self::default()
-        }
-
-        fn with(mut self, key: &str, value: &str) -> Self {
-            self.vars.insert(key.to_string(), value.to_string());
-            self
-        }
-    }
-
-    impl EnvProvider for FakeEnv {
-        fn get_var(&self, key: &str) -> Option<String> {
-            self.vars.get(key).cloned()
-        }
-    }
-
-    /// Writes a mock ruby executable at `<dir>/bin/ruby` that produces the
-    /// metadata stream expected by `extract_ruby_info`. Placing it under
-    /// `bin/` ensures `Ruby::from_executable_path` derives `path=<dir>` so
-    /// `is_valid()` (which checks `<path>/bin/<exec>`) passes.
-    fn make_mock_ruby_shim(dir: &std::path::Path) -> std::path::PathBuf {
-        let bin = dir.join("bin");
-        fs::create_dir_all(&bin).unwrap();
-        let exec = bin.join("ruby");
-        let script = "\
-#!/bin/bash
-echo \"ruby\"
-echo \"3.0.1\"
-echo \"aarch64-darwin23\"
-echo \"aarch64\"
-echo \"darwin23\"
-echo \"\"
-";
-        fs::write(&exec, script).unwrap();
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = fs::metadata(&exec).unwrap().permissions();
-            perms.set_mode(0o755);
-            fs::set_permissions(&exec, perms).unwrap();
-        }
-        exec
-    }
 
     // Writes a fake shim of a Ruby file to test if it shows up.
     #[test]
@@ -280,8 +232,6 @@ echo \"\"
     fn discover_system_rubies_skips_managed_dirs() {
         let config = Config::new_dummy();
         let managed = &config.ruby_dirs[0];
-        // `Config::new_dummy` drops its internal `TempDir` after returning,
-        // which deletes the on-disk directory. Recreate it before writing.
         fs::create_dir_all(managed.as_std_path()).unwrap();
         let exec = managed.join("ruby");
         fs::write(&exec, "#!/bin/sh\nexit 0\n").unwrap();
@@ -320,5 +270,56 @@ echo \"\"
 
         let none = config.discover_system_rubies_filtered_with(&env, &|_: &str| false);
         assert!(none.is_empty(), "predicate rejecting all must yield none");
+    }
+
+    #[test]
+    fn discover_system_rubies_finds_ruby3_and_ruby2() {
+        let tmp = TempDir::new().unwrap();
+        // `is_valid()` checks `<path>/bin/ruby` exists, so create a
+        // placeholder `ruby` alongside `ruby3`/`ruby2` to satisfy the gate.
+        let bin = tmp.path().join("bin");
+        fs::create_dir_all(&bin).unwrap();
+        for name in ["ruby", "ruby3", "ruby2"] {
+            let exec = bin.join(name);
+            let script = "\
+#!/bin/bash
+ echo \"ruby\"\n echo \"3.0.1\"\n echo \"aarch64-darwin23\"\n echo \"aarch64\"\n echo \"darwin23\"\n echo \"\"\n";
+            fs::write(&exec, script).unwrap();
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let mut perms = fs::metadata(&exec).unwrap().permissions();
+                perms.set_mode(0o755);
+                fs::set_permissions(&exec, perms).unwrap();
+            }
+        }
+
+        let config = Config::new_dummy();
+        let env = FakeEnv::new().with("PATH", tmp.path().to_str().unwrap());
+        let result = config.discover_system_rubies_with(&env);
+
+        // All three names are probed; `ruby3`/`ruby2` need `bin/ruby` for `is_valid`.
+        assert!(
+            result.len() >= 2,
+            "expected at least ruby3 and ruby2, got: {result:?}"
+        );
+        assert!(result.iter().all(|r| !r.managed));
+    }
+
+    #[test]
+    fn discover_system_rubies_ignores_empty_path_segments() {
+        let tmp = TempDir::new().unwrap();
+        make_mock_ruby_shim(tmp.path());
+
+        let config = Config::new_dummy();
+        let path_with_empty = format!("::{}::", tmp.path().to_str().unwrap());
+        let env = FakeEnv::new().with("PATH", &path_with_empty);
+        let result = config.discover_system_rubies_with(&env);
+
+        assert_eq!(
+            result.len(),
+            1,
+            "empty PATH segments should be ignored, got: {result:?}"
+        );
     }
 }
