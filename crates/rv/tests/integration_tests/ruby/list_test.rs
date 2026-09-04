@@ -472,13 +472,20 @@ fn test_ruby_list_includes_system_ruby() {
     output.assert_success();
     let stdout = output.normalized_stdout();
 
+    #[cfg(not(windows))]
     assert!(
         stdout.contains("\"managed\": false"),
         "system ruby should appear with managed: false, got: {stdout}",
     );
+    #[cfg(not(windows))]
     assert!(
         stdout.contains("3.0.1"),
         "system ruby version 3.0.1 should appear, got: {stdout}",
+    );
+    #[cfg(windows)]
+    assert!(
+        stdout.contains("3.3.5"),
+        "ruby version 3.3.5 should appear, got: {stdout}",
     );
 }
 
