@@ -3311,6 +3311,7 @@ dependencies = [
  "rv-version",
  "serde",
  "serde_with",
+ "tempfile",
  "thiserror",
  "tracing",
 ]
