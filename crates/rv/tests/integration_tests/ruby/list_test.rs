@@ -466,7 +466,7 @@ fn test_ruby_list_includes_system_ruby() {
     let sys_bin = test.temp_root().join("system_bin");
     std::fs::create_dir_all(&sys_bin).unwrap();
     test.create_system_ruby(&sys_bin, "3.0.1");
-    test.env.insert("PATH".into(), sys_bin.to_string().into());
+    test.env.insert("PATH".into(), sys_bin.to_string());
 
     let output = test.ruby_list(&["--format", "json"]);
     output.assert_success();
@@ -490,7 +490,7 @@ fn test_ruby_list_respects_rv_include_system_ruby_off() {
     let sys_bin = test.temp_root().join("system_bin");
     std::fs::create_dir_all(&sys_bin).unwrap();
     test.create_system_ruby(&sys_bin, "3.0.1");
-    test.env.insert("PATH".into(), sys_bin.to_string().into());
+    test.env.insert("PATH".into(), sys_bin.to_string());
     test.env.insert("RV_INCLUDE_SYSTEM_RUBY".into(), "0".into());
 
     let output = test.ruby_list(&["--format", "json"]);

@@ -732,7 +732,7 @@ mod tests {
         let exec = bin.join("ruby");
         write_mock_ruby_shim(&exec, "3.0.1");
 
-        let exec_path = Utf8PathBuf::try_from(exec.clone()).unwrap();
+        let exec_path = Utf8PathBuf::try_from(exec).unwrap();
         let ruby =
             Ruby::from_executable_path(exec_path).expect("from_executable_path should succeed");
         assert!(!ruby.managed, "managed should be false for system ruby");
@@ -758,7 +758,7 @@ mod tests {
         let link = bin.join("ruby");
         std::os::unix::fs::symlink(&target, &link).unwrap();
 
-        let exec = Utf8PathBuf::try_from(link.clone()).unwrap();
+        let exec = Utf8PathBuf::try_from(link).unwrap();
         let ruby = Ruby::from_executable_path(exec).expect("should succeed");
         assert!(ruby.symlink.is_some(), "symlink target should be captured",);
     }

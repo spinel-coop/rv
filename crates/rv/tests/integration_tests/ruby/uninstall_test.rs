@@ -59,7 +59,7 @@ fn test_ruby_uninstall_refuses_system_ruby() {
     let sys_bin = test.temp_root().join("system_bin");
     std::fs::create_dir_all(&sys_bin).unwrap();
     let exec = test.create_system_ruby(&sys_bin, "3.3.5");
-    test.env.insert("PATH".into(), sys_bin.to_string().into());
+    test.env.insert("PATH".into(), sys_bin.to_string());
 
     let uninstall = test.ruby_uninstall(&["3.3.5"]);
     uninstall.assert_failure();
@@ -79,7 +79,7 @@ fn test_ruby_uninstall_system_ruby_disabled_returns_no_matching_ruby() {
     let sys_bin = test.temp_root().join("system_bin");
     std::fs::create_dir_all(&sys_bin).unwrap();
     let exec = test.create_system_ruby(&sys_bin, "3.3.5");
-    test.env.insert("PATH".into(), sys_bin.to_string().into());
+    test.env.insert("PATH".into(), sys_bin.to_string());
     test.env.insert("RV_INCLUDE_SYSTEM_RUBY".into(), "0".into());
 
     let uninstall = test.ruby_uninstall(&["3.3.5"]);
