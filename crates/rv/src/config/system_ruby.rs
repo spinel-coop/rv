@@ -22,10 +22,7 @@ impl Config {
     /// would leak the host's installed Ruby into containerized tests and
     /// CI environments that did not opt in.
     #[instrument(skip_all, level = "trace")]
-    pub fn discover_system_rubies_with<E: EnvProvider>(
-        &self,
-        provider: &E,
-    ) -> Vec<Ruby> {
+    pub fn discover_system_rubies_with<E: EnvProvider>(&self, provider: &E) -> Vec<Ruby> {
         let mut candidates: Vec<Utf8PathBuf> = Vec::new();
 
         if let Some(path_var) = provider.get_var("PATH") {
@@ -133,7 +130,6 @@ mod tests {
 
     use super::super::Config;
     use super::*;
-
 
     // Writes a fake shim of a Ruby file to test if it shows up.
     #[test]

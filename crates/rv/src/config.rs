@@ -443,7 +443,10 @@ impl Config {
 /// (or `false`) to disable — useful for CI that wants only `rv`-managed rubies.
 fn include_system_rubies_with<E: EnvProvider>(env: &E) -> bool {
     match env.get_var("RV_INCLUDE_SYSTEM_RUBY") {
-        Some(val) => !matches!(val.to_ascii_lowercase().as_str(), "0" | "false" | "no" | "off"),
+        Some(val) => !matches!(
+            val.to_ascii_lowercase().as_str(),
+            "0" | "false" | "no" | "off"
+        ),
         None => true,
     }
 }

@@ -733,8 +733,8 @@ mod tests {
         write_mock_ruby_shim(&exec, "3.0.1");
 
         let exec_path = Utf8PathBuf::try_from(exec.clone()).unwrap();
-        let ruby = Ruby::from_executable_path(exec_path)
-            .expect("from_executable_path should succeed");
+        let ruby =
+            Ruby::from_executable_path(exec_path).expect("from_executable_path should succeed");
         assert!(!ruby.managed, "managed should be false for system ruby");
         assert_eq!(
             ruby.path.as_std_path(),
@@ -760,10 +760,7 @@ mod tests {
 
         let exec = Utf8PathBuf::try_from(link.clone()).unwrap();
         let ruby = Ruby::from_executable_path(exec).expect("should succeed");
-        assert!(
-            ruby.symlink.is_some(),
-            "symlink target should be captured",
-        );
+        assert!(ruby.symlink.is_some(), "symlink target should be captured",);
     }
 
     /// Writes a shell script that mimics a Ruby executable by emitting the
