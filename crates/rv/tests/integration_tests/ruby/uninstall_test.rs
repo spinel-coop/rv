@@ -52,6 +52,7 @@ fn test_ruby_uninstall_matching_request() {
     );
 }
 #[test]
+#[cfg(not(windows))]
 fn test_ruby_uninstall_refuses_system_ruby() {
     let mut test = RvTest::new();
 

@@ -122,6 +122,7 @@ fn probe_path_entry(dir: &std::path::Path, name: &str) -> Option<Utf8PathBuf> {
 }
 
 #[cfg(test)]
+#[cfg(not(windows))]
 mod tests {
     use std::fs;
     use tempfile::TempDir;

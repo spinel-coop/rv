@@ -721,6 +721,7 @@ mod tests {
         ));
     }
 
+    #[cfg(not(windows))]
     #[test]
     fn from_executable_path_marks_ruby_as_unmanaged() {
         // exec at `<tmp>/bin/ruby` → `from_executable_path` derives
@@ -767,6 +768,7 @@ mod tests {
     /// metadata stream expected by [`extract_ruby_info`]. Duplicated in
     /// `crates/rv/src/config/test_support.rs` due to crate boundary — keep
     /// in sync.
+    #[cfg(not(windows))]
     fn write_mock_ruby_shim(exec: &std::path::Path, version: &str) {
         let script = format!(
             "#!/bin/bash\n\
