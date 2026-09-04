@@ -12,6 +12,7 @@ use crate::commands::shell::init::init;
 
 #[derive(Args)]
 #[command(args_conflicts_with_subcommands = true)]
+#[command(disable_help_subcommand = true)]
 #[group(required = true, multiple = false)]
 pub struct ShellArgs {
     #[arg(value_enum)]
