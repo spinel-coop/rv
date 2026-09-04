@@ -13,7 +13,6 @@ pub mod find;
 pub mod install;
 pub mod list;
 pub mod pin;
-pub mod run;
 pub mod uninstall;
 
 #[derive(Args)]
@@ -111,26 +110,6 @@ pub enum RubyCommand {
         /// Ruby version to uninstall
         version: RubyRequest,
     },
-
-    #[command(
-        about = "Run Ruby with arguments, using the pinned version or a specific version",
-        hide = true,
-        dont_delimit_trailing_values = true
-    )]
-    Run {
-        /// By default, if your requested Ruby version isn't installed,
-        /// it will be installed with `rv ruby install`'s default options.
-        /// This option disables that behaviour.
-        #[arg(long)]
-        no_install: bool,
-
-        /// Ruby version to run
-        version: Option<RubyRequest>,
-
-        /// Arguments passed to the `ruby` invocation
-        #[arg(last = true, allow_hyphen_values = true)]
-        args: Vec<String>,
-    },
 }
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -147,8 +126,6 @@ pub enum Error {
     InstallError(#[from] crate::commands::ruby::install::Error),
     #[error(transparent)]
     UninstallError(#[from] crate::commands::ruby::uninstall::Error),
-    #[error(transparent)]
-    RunError(#[from] crate::commands::ruby::run::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -170,19 +147,6 @@ pub(crate) async fn ruby(global_args: &GlobalArgs, args: RubyArgs) -> Result<()>
             force,
         } => install::install(global_args, install_dir, version, tarball_path, force).await?,
         RubyCommand::Uninstall { version } => uninstall::uninstall(global_args, version).await?,
-        RubyCommand::Run {
-            version,
-            no_install,
-            args,
-        } => {
-            if env!("CARGO_PKG_VERSION_MINOR").parse::<u8>().unwrap() >= 7 {
-                panic!("Remove this subcommand before releasing 0.7.0");
-            };
-
-            run::run(global_args, version, no_install, args)
-                .await
-                .map(|_| ())?
-        }
     };
 
     Ok(())

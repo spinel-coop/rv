@@ -190,8 +190,6 @@ pub enum Error {
     #[error(transparent)]
     CiError(#[from] commands::clean_install::Error),
     #[error(transparent)]
-    RunError(#[from] commands::ruby::run::Error),
-    #[error(transparent)]
     ScriptRunError(#[from] commands::run::Error),
     #[error(transparent)]
     CacheError(#[from] commands::cache::Error),

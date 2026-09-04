@@ -1,5 +1,24 @@
 # `rv` changelog
 
+## rv 0.7.0 (2 Sept, 2026)
+
+### Added
+
+  - support for JRuby, try it with `rv ruby install jruby`
+  - quick formatting via `rubyfmt`, try it with `rv fmt`
+  - `rvx` with optional gems, like `rvx --with pg sequel`
+
+### Fixed
+  
+  - auto-switching for PowerShell
+
+### Removed
+
+  - remove `rv ruby run`, replaced by `rv run` in 0.5.0
+
+Thank you to new contributors @afomera, @gilesbowkett, and @ziggythehamster!
+
+
 ## rv 0.6.0 (15 June, 2026)
 
 The significant changes in 0.6.0 include:
@@ -24,7 +43,7 @@ Thank you to new contributors @parkr, @alepore, @solojavier, @kbruccoleri, and @
 
 ### Fixed
 
-- Path traversal vulnerabilities in zip and tar extraction (#702, @deivid-rodriguez)
+ - Path traversal vulnerabilities in zip and tar extraction (#702, @deivid-rodriguez)
  - Don't confuse `XDG_DATA_HOME` with `XDG_STATE_HOME` (#676, @deivid-rodriguez)
  - User and gemspec inputs are now properly escaped (#670, @indirect)
  - Several bugs compiling native extensions (#666, @deivid-rodriguez)
