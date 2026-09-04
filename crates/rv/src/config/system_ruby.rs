@@ -216,7 +216,6 @@ mod tests {
         let env = FakeEnv::new().with("PATH", &path_value);
         let result = config.discover_system_rubies_with(&env);
 
-        #[cfg(unix)]
         assert_eq!(
             result.len(),
             1,
