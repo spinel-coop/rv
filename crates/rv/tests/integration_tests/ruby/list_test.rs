@@ -102,7 +102,7 @@ fn test_ruby_list_multiple_matching_rubies() {
           "arch": "aarch64",
           "os": "macos",
           "gem_root": null,
-          "enable_shared": true,
+          "enable_shared": false,
           "rubygems_platform": "aarch64-darwin23"
         },
         "active": false
@@ -116,7 +116,7 @@ fn test_ruby_list_multiple_matching_rubies() {
           "arch": "aarch64",
           "os": "macos",
           "gem_root": null,
-          "enable_shared": true,
+          "enable_shared": false,
           "rubygems_platform": "aarch64-darwin23"
         },
         "active": false
@@ -130,7 +130,7 @@ fn test_ruby_list_multiple_matching_rubies() {
           "arch": "aarch64",
           "os": "macos",
           "gem_root": null,
-          "enable_shared": true,
+          "enable_shared": false,
           "rubygems_platform": "aarch64-darwin23"
         },
         "active": true
@@ -152,7 +152,7 @@ fn test_ruby_list_multiple_matching_rubies() {
           "arch": "aarch64",
           "os": "macos",
           "gem_root": null,
-          "enable_shared": true,
+          "enable_shared": false,
           "rubygems_platform": "aarch64-darwin23"
         },
         "active": false
@@ -166,7 +166,7 @@ fn test_ruby_list_multiple_matching_rubies() {
           "arch": "aarch64",
           "os": "macos",
           "gem_root": null,
-          "enable_shared": true,
+          "enable_shared": false,
           "rubygems_platform": "aarch64-darwin23"
         },
         "active": false
@@ -180,7 +180,7 @@ fn test_ruby_list_multiple_matching_rubies() {
           "arch": "aarch64",
           "os": "macos",
           "gem_root": null,
-          "enable_shared": true,
+          "enable_shared": false,
           "rubygems_platform": "aarch64-darwin23"
         },
         "active": false
@@ -194,7 +194,7 @@ fn test_ruby_list_multiple_matching_rubies() {
           "arch": "aarch64",
           "os": "macos",
           "gem_root": null,
-          "enable_shared": true,
+          "enable_shared": false,
           "rubygems_platform": "aarch64-darwin23"
         },
         "active": true
@@ -220,7 +220,7 @@ fn test_ruby_list_multiple_matching_rubies() {
           "arch": "aarch64",
           "os": "macos",
           "gem_root": null,
-          "enable_shared": true,
+          "enable_shared": false,
           "rubygems_platform": "aarch64-darwin23"
         },
         "active": false
@@ -234,7 +234,7 @@ fn test_ruby_list_multiple_matching_rubies() {
           "arch": "aarch64",
           "os": "macos",
           "gem_root": null,
-          "enable_shared": true,
+          "enable_shared": false,
           "rubygems_platform": "aarch64-darwin23"
         },
         "active": false
@@ -248,7 +248,7 @@ fn test_ruby_list_multiple_matching_rubies() {
           "arch": "aarch64",
           "os": "macos",
           "gem_root": null,
-          "enable_shared": true,
+          "enable_shared": false,
           "rubygems_platform": "aarch64-darwin23"
         },
         "active": false
@@ -262,7 +262,7 @@ fn test_ruby_list_multiple_matching_rubies() {
           "arch": "aarch64",
           "os": "macos",
           "gem_root": null,
-          "enable_shared": true,
+          "enable_shared": false,
           "rubygems_platform": "aarch64-darwin23"
         },
         "active": true

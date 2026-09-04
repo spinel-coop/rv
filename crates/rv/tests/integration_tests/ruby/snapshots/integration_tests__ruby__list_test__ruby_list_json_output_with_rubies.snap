@@ -12,7 +12,7 @@ expression: output.normalized_stdout()
       "arch": "aarch64",
       "os": "macos",
       "gem_root": null,
-      "enable_shared": true,
+      "enable_shared": false,
       "rubygems_platform": "aarch64-darwin23"
     },
     "active": false
@@ -26,7 +26,7 @@ expression: output.normalized_stdout()
       "arch": "aarch64",
       "os": "macos",
       "gem_root": null,
-      "enable_shared": true,
+      "enable_shared": false,
       "rubygems_platform": "aarch64-darwin23"
     },
     "active": true
