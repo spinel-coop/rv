@@ -31,7 +31,7 @@ mod ruby_fetcher;
 pub mod rv_settings;
 mod system_ruby;
 
-#[cfg(test)]
+#[cfg(all(test, not(windows)))]
 pub(crate) mod test_support {
     use std::collections::HashMap;
 
@@ -43,7 +43,6 @@ pub(crate) mod test_support {
     }
 
     impl FakeEnv {
-        #[cfg(not(windows))]
         pub fn new() -> Self {
             Self::default()
         }
@@ -62,7 +61,6 @@ pub(crate) mod test_support {
 
     /// Writes a mock ruby at `<dir>/bin/ruby` that emits the metadata
     /// expected by `extract_ruby_info`. Used by `system_ruby` tests.
-    #[cfg(not(windows))]
     pub fn make_mock_ruby_shim(dir: &std::path::Path) -> std::path::PathBuf {
         use std::fs;
         let bin = dir.join("bin");
