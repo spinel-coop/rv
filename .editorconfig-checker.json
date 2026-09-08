@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/editorconfig-checker/editorconfig-checker/v4.0.1/.editorconfig-checker.schema.json",
+  "Exclude": [
+    "crates/rv-gem-package/tests/fixtures/",
+    "crates/rv-gem-specification-yaml/tests/fixtures/",
+    "crates/rv-gem-specification-yaml/tests/yaml-to-ruby/",
+    "crates/rv-lockfile/tests/inputs/",
+    "testdata/",
+    "\\.gem$",
+    "\\.snap$",
+    "Cargo\\.lock$",
+    "target/"
+  ]
+}

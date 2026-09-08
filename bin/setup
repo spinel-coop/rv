@@ -2,84 +2,99 @@
 set -euo pipefail
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
-  set -x
-
-  if [[ -z $(which brew) ]]; then
-    echo "Homebrew is not installed. Please install Homebrew first."
-    exit 1
-  fi
-
-  if [[ -z $(which rustup) ]]; then
-    brew install rustup
-    rustup install stable
-  fi
-
-  if [[ -z $(which cargo-binstall) ]]; then
-    brew install cargo-binstall
-  fi
-elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-  # Check if required build tools are available
-  MISSING_TOOLS=()
-  for tool in curl pkg-config git gcc; do
-    if ! which "$tool" > /dev/null 2>&1; then
-      MISSING_TOOLS+=("$tool")
-    fi
-  done
-
-  # Check for OpenSSL development headers (needed for Rust crates)
-  if ! pkg-config --exists openssl 2>/dev/null; then
-    MISSING_TOOLS+=("openssl-dev")
-  fi
-
-  if [[ ${#MISSING_TOOLS[@]} -gt 0 ]]; then
-    echo "Missing required tools: ${MISSING_TOOLS[*]}"
-
-    SUDO=""
-    if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
-      SUDO="sudo"
-    fi
-
     set -x
-    if apt-get --version > /dev/null 2>&1; then
-      $SUDO apt-get update -qq
-      $SUDO apt-get install -y -qq curl pkg-config git gcc libssl-dev
-    elif dnf --version > /dev/null 2>&1; then
-      # Fedora, RHEL, CentOS
-      # NOTE: Atomic variants (Silverblue, Kinoite, Aurora, Bazzite, etc.) should use
-      # distrobox/toolbox or install these tools via homebrew instead.
-      $SUDO dnf install -y -q curl pkgconf-pkg-config git gcc openssl-devel
-    else
-      echo "We don't support automatic dev setup for your package manager yet, sorry."
-      echo "Please install the following tools manually: ${MISSING_TOOLS[*]}"
-      echo "We'd love to get a pull request adding support, though!"
-      exit 1
+
+    if [[ -z $(which brew) ]]; then
+        echo "Homebrew is not installed. Please install Homebrew first."
+        exit 1
     fi
-    set +x
-  else
-    echo "All required build tools are already installed."
-  fi
 
-  if [[ -z $(which rustup) ]]; then
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-    . "$HOME/.cargo/env"
-  fi
+    if [[ -z $(which rustup) ]]; then
+        brew install rustup
+        rustup install stable
+    fi
 
-  if [[ -z $(which cargo-binstall) ]]; then
-    curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-  fi
+    if [[ -z $(which cargo-binstall) ]]; then
+        brew install cargo-binstall
+    fi
+
+    if [[ -z $(which editorconfig-checker) ]]; then
+        brew install editorconfig-checker
+    fi
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    # Check if required build tools are available
+    MISSING_TOOLS=()
+    for tool in curl pkg-config git gcc; do
+        if ! which "$tool" >/dev/null 2>&1; then
+            MISSING_TOOLS+=("$tool")
+        fi
+    done
+
+    # Check for OpenSSL development headers (needed for Rust crates)
+    if ! pkg-config --exists openssl 2>/dev/null; then
+        MISSING_TOOLS+=("openssl-dev")
+    fi
+
+    if [[ ${#MISSING_TOOLS[@]} -gt 0 ]]; then
+        echo "Missing required tools: ${MISSING_TOOLS[*]}"
+
+        SUDO=""
+        if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+            SUDO="sudo"
+        fi
+
+        set -x
+        if apt-get --version >/dev/null 2>&1; then
+            $SUDO apt-get update -qq
+            $SUDO apt-get install -y -qq curl pkg-config git gcc libssl-dev
+        elif dnf --version >/dev/null 2>&1; then
+            # Fedora, RHEL, CentOS
+            # NOTE: Atomic variants (Silverblue, Kinoite, Aurora, Bazzite, etc.) should use
+            # distrobox/toolbox or install these tools via homebrew instead.
+            $SUDO dnf install -y -q curl pkgconf-pkg-config git gcc openssl-devel
+        else
+            echo "We don't support automatic dev setup for your package manager yet, sorry."
+            echo "Please install the following tools manually: ${MISSING_TOOLS[*]}"
+            echo "We'd love to get a pull request adding support, though!"
+            exit 1
+        fi
+        set +x
+    else
+        echo "All required build tools are already installed."
+    fi
+
+    if [[ -z $(which rustup) ]]; then
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        . "$HOME/.cargo/env"
+    fi
+
+    if [[ -z $(which editorconfig-checker) ]]; then
+        EC_VERSION="v4.0.1"
+        EC_OS="linux"
+        EC_ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/;s/armv7l/arm/')"
+        curl -L --proto '=https' --tlsv1.2 -sSf -o "/tmp/editorconfig-checker-${EC_OS}-${EC_ARCH}.tar.gz" \
+            "https://github.com/editorconfig-checker/editorconfig-checker/releases/download/${EC_VERSION}/editorconfig-checker-${EC_OS}-${EC_ARCH}.tar.gz"
+        tar -xzf "/tmp/editorconfig-checker-${EC_OS}-${EC_ARCH}.tar.gz" -C /tmp
+        install -m 755 "/tmp/editorconfig-checker" "$HOME/.cargo/bin/editorconfig-checker"
+        rm -rf "/tmp/editorconfig-checker-${EC_OS}-${EC_ARCH}.tar.gz" "/tmp/editorconfig-checker" "/tmp/CHANGELOG.md" "/tmp/LICENSE" "/tmp/README.md"
+    fi
+
+    if [[ -z $(which cargo-binstall) ]]; then
+        curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+    fi
 else
-  echo "We don't support automatic setup on $OSTYPE yet, sorry."
-  exit 1
+    echo "We don't support automatic setup on $OSTYPE yet, sorry."
+    exit 1
 fi
 
 if [[ -z $(which cargo-nextest) ]]; then
-  cargo binstall cargo-nextest -y
+    cargo binstall cargo-nextest -y
 fi
 
 if [[ -z $(which cargo-insta) ]]; then
-  cargo binstall cargo-insta -y
+    cargo binstall cargo-insta -y
 fi
 
 if [[ -z $(which dist) ]]; then
-  cargo binstall cargo-dist -y
+    cargo binstall cargo-dist -y
 fi

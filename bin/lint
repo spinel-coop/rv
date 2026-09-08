@@ -4,9 +4,20 @@ set -x
 
 cargo clippy --all-targets --all-features "$@" -- -D warnings
 
-if [ $# -gt 0 ] && [ "$1" = "--fix" ]
-then
-  cargo fmt --all
+if [ $# -gt 0 ] && [ "$1" = "--fix" ]; then
+    cargo fmt --all
+    if command -v editorconfig-checker >/dev/null 2>&1; then
+        editorconfig-checker --fix
+    else
+        echo "editorconfig-checker not found. Run bin/setup or: brew install editorconfig-checker" >&2
+        exit 1
+    fi
 else
-  cargo fmt --all -- --check
+    cargo fmt --all -- --check
+    if command -v editorconfig-checker >/dev/null 2>&1; then
+        editorconfig-checker
+    else
+        echo "editorconfig-checker not found. Run bin/setup or: brew install editorconfig-checker" >&2
+        exit 1
+    fi
 fi
