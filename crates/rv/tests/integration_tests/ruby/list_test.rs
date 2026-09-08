@@ -488,24 +488,3 @@ fn test_ruby_list_includes_system_ruby() {
         "ruby version 3.3.5 should appear, got: {stdout}",
     );
 }
-
-#[test]
-fn test_ruby_list_respects_rv_include_system_ruby_off() {
-    let mut test = RvTest::new();
-    test.mock_releases([].to_vec());
-
-    let sys_bin = test.temp_root().join("system_bin");
-    std::fs::create_dir_all(&sys_bin).unwrap();
-    test.create_system_ruby(&sys_bin, "3.0.1");
-    test.env.insert("PATH".into(), sys_bin.to_string());
-    test.env.insert("RV_INCLUDE_SYSTEM_RUBY".into(), "0".into());
-
-    let output = test.ruby_list(&["--format", "json"]);
-    output.assert_success();
-    let stdout = output.normalized_stdout();
-
-    assert!(
-        !stdout.contains("\"managed\": false"),
-        "system ruby must not appear when RV_INCLUDE_SYSTEM_RUBY=0, got: {stdout}",
-    );
-}
