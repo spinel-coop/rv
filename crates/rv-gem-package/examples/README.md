@@ -21,7 +21,7 @@ cargo run --example verify_gems -- path/to/specific.gem
 
 - **Automatic Discovery**: Finds gems in `~/.gem/ruby/*/cache/` by default
 - **Batch Processing**: Processes multiple directories and files efficiently
-- **Comprehensive Verification**: 
+- **Comprehensive Verification**:
   - Opens each gem file
   - Reads and validates the specification
   - Verifies checksums against the gem's internal checksums

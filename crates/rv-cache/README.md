@@ -5,7 +5,7 @@ A caching system for the `rv` Ruby version manager.
 ## Features
 
 - **Cache buckets** for organizing different types of data
-- **CLI integration** with `--no-cache` and `--cache-dir` options  
+- **CLI integration** with `--no-cache` and `--cache-dir` options
 - **Safe cleanup** with detailed reporting
 - **Stable cache keys** using SeaHash
 - **Timestamp-based invalidation**

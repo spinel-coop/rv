@@ -139,10 +139,10 @@ fn test_ci_respects_rv_setting_gem_home() {
     let install_path = temp_dir.path().as_str().replace('\\', "/");
     let config_content = format!(
         r#"
-	rv{{
-	  install-path "{}"
-	}}
-	"#,
+        rv{{
+          install-path "{}"
+        }}
+        "#,
         install_path
     );
 

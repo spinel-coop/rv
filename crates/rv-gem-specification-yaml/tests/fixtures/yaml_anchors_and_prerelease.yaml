@@ -1,27 +1,27 @@
---- !ruby/object:Gem::Specification 
+--- !ruby/object:Gem::Specification
 name: mocha-on-bacon
-version: !ruby/object:Gem::Version 
+version: !ruby/object:Gem::Version
   hash: 19
-  prerelease: 
-  segments: 
+  prerelease:
+  segments:
   - 0
   - 2
   - 2
   version: 0.2.2
 platform: ruby
-authors: 
+authors:
 - Eloy Duran
-dependencies: 
-- !ruby/object:Gem::Dependency 
+dependencies:
+- !ruby/object:Gem::Dependency
   name: mocha
   prerelease: false
-  requirement: &id001 !ruby/object:Gem::Requirement 
+  requirement: &id001 !ruby/object:Gem::Requirement
     none: false
-    requirements: 
+    requirements:
     - - ">="
-      - !ruby/object:Gem::Version 
+      - !ruby/object:Gem::Version
         hash: 43
-        segments: 
+        segments:
         - 0
         - 13
         - 0
@@ -29,12 +29,12 @@ dependencies:
   type: :runtime
   version_requirements: *id001
 summary: A Mocha adapter for Bacon
-required_ruby_version: !ruby/object:Gem::Requirement 
+required_ruby_version: !ruby/object:Gem::Requirement
   none: false
-  requirements: 
+  requirements:
   - - ">="
-    - !ruby/object:Gem::Version 
+    - !ruby/object:Gem::Version
       hash: 3
-      segments: 
+      segments:
       - 0
       version: "0"

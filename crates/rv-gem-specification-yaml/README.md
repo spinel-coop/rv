@@ -81,7 +81,7 @@ The following Ruby gem patterns are **not yet supported** (affecting 0.2% of tes
 description: ! 'Multi-line text with
   folded scalar syntax...'
 ```
-**Example**: `bacon-1.2.0.gem`  
+**Example**: `bacon-1.2.0.gem`
 **Status**: Valid YAML syntax not supported by parser
 
 ### 2. Gem::Version::Requirement Class
@@ -92,7 +92,7 @@ required_ruby_version: !ruby/object:Gem::Version::Requirement
     - !ruby/object:Gem::Version
       version: 0.0.0
 ```
-**Example**: `terminal-table-1.4.5.gem`  
+**Example**: `terminal-table-1.4.5.gem`
 **Status**: Different class hierarchy than standard `Gem::Requirement`
 
 ### 3. YAML Anchors and References
@@ -104,7 +104,7 @@ dependencies:
   version_requirements: *id001
   prerelease: false
 ```
-**Example**: `mocha-on-bacon-0.2.2.gem`  
+**Example**: `mocha-on-bacon-0.2.2.gem`
 **Status**: YAML anchors/references and dependency `prerelease` field not implemented
 
 ## Architecture

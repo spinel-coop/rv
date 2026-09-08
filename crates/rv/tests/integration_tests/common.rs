@@ -771,12 +771,12 @@ impl RvTest {
     fn ruby_mock_script(&self, engine: &str, version: &str) -> String {
         format!(
             "#!/bin/bash\n\
-             echo \"{engine}\"\n\
-             echo \"{version}\"\n\
-             echo \"aarch64-darwin23\"\n\
-             echo \"aarch64\"\n\
-             echo \"darwin23\"\n\
-             echo \"\"\n"
+            echo \"{engine}\"\n\
+            echo \"{version}\"\n\
+            echo \"aarch64-darwin23\"\n\
+            echo \"aarch64\"\n\
+            echo \"darwin23\"\n\
+            echo \"\"\n"
         )
     }
 
@@ -784,12 +784,12 @@ impl RvTest {
     fn ruby_mock_script(&self, engine: &str, version: &str) -> String {
         format!(
             "@echo off\r\n\
-             echo {engine}\r\n\
-             echo {version}\r\n\
-             echo aarch64-darwin23\r\n\
-             echo aarch64\r\n\
-             echo darwin23\r\n\
-             echo.\r\n"
+            echo {engine}\r\n\
+            echo {version}\r\n\
+            echo aarch64-darwin23\r\n\
+            echo aarch64\r\n\
+            echo darwin23\r\n\
+            echo.\r\n"
         )
     }
 
