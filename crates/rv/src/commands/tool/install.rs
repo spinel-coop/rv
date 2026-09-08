@@ -195,7 +195,9 @@ pub(crate) async fn install(
             }
         }
         Err(error) => {
-            fs::remove_dir_all(install_path).unwrap();
+            if install_path.exists() {
+                fs::remove_dir_all(install_path).unwrap();
+            }
             return Err(Error::InstallError(error));
         }
     }

@@ -14,7 +14,7 @@ use rv_settings::RvSettings;
 use tracing::{debug, error, instrument};
 
 use rv_ruby::{
-    EnvProvider, RemoteRuby, Ruby, SystemEnv,
+    RemoteRuby, Ruby,
     request::{RequestError, RubyRequest, Source},
     version::RubyVersion,
 };
@@ -249,26 +249,22 @@ impl Config {
     #[instrument(skip_all, level = "trace")]
     pub fn rubies(&self) -> Vec<Ruby> {
         let mut rubies = self.discover_installed_rubies();
-        if include_system_rubies() {
-            rubies.extend(self.discover_system_rubies());
-            rubies.sort();
-        }
+        rubies.extend(self.discover_system_rubies());
+        rubies.sort();
         rubies
     }
 
     /// Like [`Self::rubies`], but applies `predicate` to the version string of
     /// each candidate. Used by [`Self::highest_ruby_matching`] for version
-    /// pinning and `uninstall`. Includes system Rubies when discovery is
-    /// enabled so the uninstall safety check (#762) can fire.
+    /// pinning and `uninstall`. Includes system Rubies so the uninstall
+    /// safety check (#762) can fire.
     fn rubies_with_filter<F>(&self, predicate: F) -> Vec<Ruby>
     where
         F: Fn(&str) -> bool + Clone,
     {
         let mut rubies = self.discover_installed_rubies_matching(&predicate);
-        if include_system_rubies() {
-            rubies.extend(self.discover_system_rubies_filtered(&predicate));
-            rubies.sort();
-        }
+        rubies.extend(self.discover_system_rubies_filtered(&predicate));
+        rubies.sort();
         rubies
     }
 
@@ -440,23 +436,6 @@ impl Config {
     }
 }
 
-/// Returns whether to surface system Rubies (Debian `/usr/bin/ruby`, etc.) in
-/// `rv ruby list` and friends. Defaults to `true`. Set `RV_INCLUDE_SYSTEM_RUBY=0`
-/// (or `false`) to disable — useful for CI that wants only `rv`-managed rubies.
-fn include_system_rubies_with<E: EnvProvider>(env: &E) -> bool {
-    match env.get_var("RV_INCLUDE_SYSTEM_RUBY") {
-        Some(val) => !matches!(
-            val.to_ascii_lowercase().as_str(),
-            "0" | "false" | "no" | "off"
-        ),
-        None => true,
-    }
-}
-
-fn include_system_rubies() -> bool {
-    include_system_rubies_with(&SystemEnv)
-}
-
 fn find_directory_ruby(dir: &Utf8PathBuf) -> Result<Option<(RubyRequest, Source)>> {
     let ruby_version = dir.join(".ruby-version");
     if ruby_version.exists() {
@@ -544,35 +523,5 @@ impl Env {
 
     pub fn split(&self) -> (Vec<&'static str>, Vec<(&'static str, String)>) {
         (self.unset.clone(), self.set.clone())
-    }
-}
-#[cfg(test)]
-mod tests {
-    use super::include_system_rubies_with;
-    use crate::config::test_support::FakeEnv;
-
-    #[test]
-    fn include_system_rubies_defaults_true_when_unset() {
-        let env = FakeEnv::default();
-        assert!(include_system_rubies_with(&env));
-    }
-
-    #[test]
-    fn include_system_rubies_truthy_values() {
-        for v in ["1", "true", "yes", "on", "TRUE", "Yes", "1"] {
-            let env = FakeEnv::default().with("RV_INCLUDE_SYSTEM_RUBY", v);
-            assert!(include_system_rubies_with(&env), "expected true for {v:?}");
-        }
-    }
-
-    #[test]
-    fn include_system_rubies_falsy_values() {
-        for v in ["0", "false", "no", "off", "FALSE", "No", "OFF"] {
-            let env = FakeEnv::default().with("RV_INCLUDE_SYSTEM_RUBY", v);
-            assert!(
-                !include_system_rubies_with(&env),
-                "expected false for {v:?}",
-            );
-        }
     }
 }
