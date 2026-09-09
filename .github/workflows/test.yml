@@ -90,6 +90,48 @@ jobs:
           # Workaround for https://github.com/Swatinem/rust-cache/issues/341
           cache-bin: "false"
 
+      - name: Cache editorconfig-checker
+        id: cache-ec
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/bin/editorconfig-checker
+            ~/.cargo/bin/editorconfig-checker.exe
+          key: editorconfig-checker-v4.0.1-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Install editorconfig-checker (Linux)
+        if: matrix.os == 'linux' && steps.cache-ec.outputs.cache-hit != 'true'
+        run: |
+          curl -L --proto '=https' --tlsv1.2 -sSf -o /tmp/editorconfig-checker-linux-amd64.tar.gz https://github.com/editorconfig-checker/editorconfig-checker/releases/download/v4.0.1/editorconfig-checker-linux-amd64.tar.gz
+          tar -xzf /tmp/editorconfig-checker-linux-amd64.tar.gz -C /tmp
+          install -m 755 /tmp/editorconfig-checker "$HOME/.cargo/bin/editorconfig-checker"
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          editorconfig-checker --version
+
+      - name: Install editorconfig-checker (Windows)
+        if: matrix.os == 'windows' && steps.cache-ec.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          curl.exe -L --proto "=https" --tlsv1.2 -sSf -o $env:TEMP\editorconfig-checker-windows-amd64.tar.gz https://github.com/editorconfig-checker/editorconfig-checker/releases/download/v4.0.1/editorconfig-checker-windows-amd64.tar.gz
+          tar.exe -xzf $env:TEMP\editorconfig-checker-windows-amd64.tar.gz -C $env:TEMP
+          New-Item -ItemType Directory -Force -Path $env:USERPROFILE\.cargo\bin | Out-Null
+          Copy-Item $env:TEMP\editorconfig-checker.exe $env:USERPROFILE\.cargo\bin\editorconfig-checker.exe -Force
+          Add-Content $env:GITHUB_PATH $env:USERPROFILE\.cargo\bin
+          editorconfig-checker --version
+
+      - name: Ensure editorconfig-checker on PATH (Linux cache hit)
+        if: matrix.os == 'linux' && steps.cache-ec.outputs.cache-hit == 'true'
+        run: |
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          editorconfig-checker --version
+
+      - name: Ensure editorconfig-checker on PATH (Windows cache hit)
+        if: matrix.os == 'windows' && steps.cache-ec.outputs.cache-hit == 'true'
+        shell: pwsh
+        run: |
+          Add-Content $env:GITHUB_PATH $env:USERPROFILE\.cargo\bin
+          editorconfig-checker --version
+
       - name: Run linters (Unix)
         if: matrix.os == 'linux'
         run: ./bin/lint
@@ -188,7 +230,7 @@ jobs:
           path: ~/bin
 
       - name: Add rv to PATH
-        run: chmod +x ~/bin/rv && echo "$HOME/bin" >> $GITHUB_PATH
+        run: chmod +x ~/bin/rv && echo "$HOME/bin" >> "$GITHUB_PATH"
 
       - name: rv clean-install for ${{ matrix.project }}
         run: bin/smoke-tests/${{ matrix.project }}
