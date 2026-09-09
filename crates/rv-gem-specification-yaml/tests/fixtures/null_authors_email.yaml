@@ -5,10 +5,10 @@ version: !ruby/object:Gem::Version
 summary: Test null value handling
 authors:
 - Real Author
--
+- 
 - Another Author
 email:
 - real@example.com
--
+- 
 - another@example.com
 dependencies: []

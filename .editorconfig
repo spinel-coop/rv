@@ -47,3 +47,11 @@ indent_size = 4
 indent_style = space
 indent_size = 4
 
+[**/tests/fixtures/**.{yml,yaml}]
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+indent_style = unset
+indent_size = unset
+

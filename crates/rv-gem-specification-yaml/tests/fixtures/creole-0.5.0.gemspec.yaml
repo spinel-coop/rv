@@ -2,12 +2,12 @@
 name: creole
 version: !ruby/object:Gem::Version
   version: 0.5.0
-  prerelease:
+  prerelease: 
 platform: ruby
 authors:
 - Lars Christensen
 - Daniel Mendler
-autorequire:
+autorequire: 
 bindir: bin
 cert_chain: []
 date: 2012-10-29 00:00:00.000000000 Z
@@ -56,7 +56,7 @@ files:
 - test/parser_test.rb
 homepage: http://github.com/minad/creole
 licenses: []
-post_install_message:
+post_install_message: 
 rdoc_options: []
 require_paths:
 - lib
@@ -75,7 +75,7 @@ required_rubygems_version: !ruby/object:Gem::Requirement
 requirements: []
 rubyforge_project: creole
 rubygems_version: 1.8.15
-signing_key:
+signing_key: 
 specification_version: 3
 summary: Lightweight markup language
 test_files: []

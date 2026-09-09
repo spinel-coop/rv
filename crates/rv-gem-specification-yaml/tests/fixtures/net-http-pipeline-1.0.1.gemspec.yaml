@@ -1,19 +1,19 @@
---- !ruby/object:Gem::Specification
+--- !ruby/object:Gem::Specification 
 name: net-http-pipeline
-version: !ruby/object:Gem::Version
+version: !ruby/object:Gem::Version 
   hash: 21
-  prerelease:
-  segments:
+  prerelease: 
+  segments: 
   - 1
   - 0
   - 1
   version: 1.0.1
 platform: ruby
-authors:
+authors: 
 - Eric Hodel
-autorequire:
+autorequire: 
 bindir: bin
-cert_chain:
+cert_chain: 
 - |
   -----BEGIN CERTIFICATE-----
   MIIDeDCCAmCgAwIBAgIBATANBgkqhkiG9w0BAQUFADBBMRAwDgYDVQQDDAdkcmJy
@@ -38,47 +38,47 @@ cert_chain:
   -----END CERTIFICATE-----
 
 date: 2012-04-13 00:00:00 Z
-dependencies:
-- !ruby/object:Gem::Dependency
+dependencies: 
+- !ruby/object:Gem::Dependency 
   name: minitest
   prerelease: false
-  requirement: &id001 !ruby/object:Gem::Requirement
+  requirement: &id001 !ruby/object:Gem::Requirement 
     none: false
-    requirements:
+    requirements: 
     - - ~>
-      - !ruby/object:Gem::Version
+      - !ruby/object:Gem::Version 
         hash: 21
-        segments:
+        segments: 
         - 2
         - 11
         version: "2.11"
   type: :development
   version_requirements: *id001
-- !ruby/object:Gem::Dependency
+- !ruby/object:Gem::Dependency 
   name: rdoc
   prerelease: false
-  requirement: &id002 !ruby/object:Gem::Requirement
+  requirement: &id002 !ruby/object:Gem::Requirement 
     none: false
-    requirements:
+    requirements: 
     - - ~>
-      - !ruby/object:Gem::Version
+      - !ruby/object:Gem::Version 
         hash: 19
-        segments:
+        segments: 
         - 3
         - 10
         version: "3.10"
   type: :development
   version_requirements: *id002
-- !ruby/object:Gem::Dependency
+- !ruby/object:Gem::Dependency 
   name: hoe
   prerelease: false
-  requirement: &id003 !ruby/object:Gem::Requirement
+  requirement: &id003 !ruby/object:Gem::Requirement 
     none: false
-    requirements:
+    requirements: 
     - - ~>
-      - !ruby/object:Gem::Version
+      - !ruby/object:Gem::Version 
         hash: 35
-        segments:
+        segments: 
         - 2
         - 16
         version: "2.16"
@@ -88,17 +88,17 @@ description: |-
   An HTTP/1.1 pipelining implementation atop Net::HTTP.  A pipelined connection
   sends multiple requests to the HTTP server without waiting for the responses.
   The server will respond in-order.
-email:
+email: 
 - drbrain@segment7.net
 executables: []
 
 extensions: []
 
-extra_rdoc_files:
+extra_rdoc_files: 
 - History.txt
 - Manifest.txt
 - README.txt
-files:
+files: 
 - .autotest
 - History.txt
 - Manifest.txt
@@ -111,36 +111,36 @@ files:
 homepage: http://docs.seattlerb.org/net-http-pipeline
 licenses: []
 
-post_install_message:
-rdoc_options:
+post_install_message: 
+rdoc_options: 
 - --main
 - README.txt
-require_paths:
+require_paths: 
 - lib
-required_ruby_version: !ruby/object:Gem::Requirement
+required_ruby_version: !ruby/object:Gem::Requirement 
   none: false
-  requirements:
+  requirements: 
   - - ">="
-    - !ruby/object:Gem::Version
+    - !ruby/object:Gem::Version 
       hash: 3
-      segments:
+      segments: 
       - 0
       version: "0"
-required_rubygems_version: !ruby/object:Gem::Requirement
+required_rubygems_version: !ruby/object:Gem::Requirement 
   none: false
-  requirements:
+  requirements: 
   - - ">="
-    - !ruby/object:Gem::Version
+    - !ruby/object:Gem::Version 
       hash: 3
-      segments:
+      segments: 
       - 0
       version: "0"
 requirements: []
 
 rubyforge_project: net-http-pipeline
 rubygems_version: 1.8.21
-signing_key:
+signing_key: 
 specification_version: 3
 summary: An HTTP/1.1 pipelining implementation atop Net::HTTP
-test_files:
+test_files: 
 - test/test_net_http_pipeline.rb

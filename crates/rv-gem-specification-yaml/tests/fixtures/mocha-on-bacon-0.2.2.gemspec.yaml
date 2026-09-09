@@ -1,32 +1,32 @@
---- !ruby/object:Gem::Specification
+--- !ruby/object:Gem::Specification 
 name: mocha-on-bacon
-version: !ruby/object:Gem::Version
+version: !ruby/object:Gem::Version 
   hash: 19
-  prerelease:
-  segments:
+  prerelease: 
+  segments: 
   - 0
   - 2
   - 2
   version: 0.2.2
 platform: ruby
-authors:
+authors: 
 - Eloy Duran
-autorequire:
+autorequire: 
 bindir: bin
 cert_chain: []
 
 date: 2013-01-28 00:00:00 Z
-dependencies:
-- !ruby/object:Gem::Dependency
+dependencies: 
+- !ruby/object:Gem::Dependency 
   name: mocha
   prerelease: false
-  requirement: &id001 !ruby/object:Gem::Requirement
+  requirement: &id001 !ruby/object:Gem::Requirement 
     none: false
-    requirements:
+    requirements: 
     - - ">="
-      - !ruby/object:Gem::Version
+      - !ruby/object:Gem::Version 
         hash: 43
-        segments:
+        segments: 
         - 0
         - 13
         - 0
@@ -39,46 +39,46 @@ executables: []
 
 extensions: []
 
-extra_rdoc_files:
+extra_rdoc_files: 
 - LICENSE
 - README.md
-files:
+files: 
 - LICENSE
 - README.md
 - lib/mocha-on-bacon.rb
 homepage: https://github.com/alloy/mocha-on-bacon
 licenses: []
 
-post_install_message:
-rdoc_options:
+post_install_message: 
+rdoc_options: 
 - --charset=UTF-8
-require_paths:
+require_paths: 
 - lib
-required_ruby_version: !ruby/object:Gem::Requirement
+required_ruby_version: !ruby/object:Gem::Requirement 
   none: false
-  requirements:
+  requirements: 
   - - ">="
-    - !ruby/object:Gem::Version
+    - !ruby/object:Gem::Version 
       hash: 3
-      segments:
+      segments: 
       - 0
       version: "0"
-required_rubygems_version: !ruby/object:Gem::Requirement
+required_rubygems_version: !ruby/object:Gem::Requirement 
   none: false
-  requirements:
+  requirements: 
   - - ">="
-    - !ruby/object:Gem::Version
+    - !ruby/object:Gem::Version 
       hash: 3
-      segments:
+      segments: 
       - 0
       version: "0"
 requirements: []
 
-rubyforge_project:
+rubyforge_project: 
 rubygems_version: 1.8.24
-signing_key:
+signing_key: 
 specification_version: 3
 summary: A Mocha adapter for Bacon
 test_files: []
 
-has_rdoc:
+has_rdoc: 

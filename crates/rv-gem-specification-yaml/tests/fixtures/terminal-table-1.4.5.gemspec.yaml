@@ -1,35 +1,35 @@
---- !ruby/object:Gem::Specification
+--- !ruby/object:Gem::Specification 
 rubygems_version: 0.9.4
 specification_version: 1
 name: terminal-table
-version: !ruby/object:Gem::Version
+version: !ruby/object:Gem::Version 
   version: 1.4.5
 date: 2012-03-15 00:00:00 +00:00
 summary: Simple, feature rich ascii table generation library
-require_paths:
+require_paths: 
 - lib
 email: tj@vision-media.ca
 homepage: http://github.com/visionmedia/terminal-table
 rubyforge_project: terminal-table
 description: Simple, feature rich ascii table generation library
-autorequire:
-default_executable:
+autorequire: 
+default_executable: 
 bindir: bin
 has_rdoc: false
-required_ruby_version: !ruby/object:Gem::Version::Requirement
-  requirements:
+required_ruby_version: !ruby/object:Gem::Version::Requirement 
+  requirements: 
   - - ">"
-    - !ruby/object:Gem::Version
+    - !ruby/object:Gem::Version 
       version: 0.0.0
-  version:
+  version: 
 platform: ruby
-signing_key:
-cert_chain:
-post_install_message:
-authors:
+signing_key: 
+cert_chain: 
+post_install_message: 
+authors: 
 - TJ Holowaychuk
 - Scott J. Goldman
-files:
+files: 
 - History.rdoc
 - Manifest
 - README.rdoc
@@ -58,14 +58,14 @@ files:
 - terminal-table.gemspec
 test_files: []
 
-rdoc_options:
+rdoc_options: 
 - --line-numbers
 - --inline-source
 - --title
 - Terminal-table
 - --main
 - README.rdoc
-extra_rdoc_files:
+extra_rdoc_files: 
 - README.rdoc
 - lib/terminal-table.rb
 - lib/terminal-table/cell.rb

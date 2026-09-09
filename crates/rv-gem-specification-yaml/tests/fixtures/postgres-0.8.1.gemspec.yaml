@@ -1,19 +1,19 @@
---- !ruby/object:Gem::Specification
+--- !ruby/object:Gem::Specification 
 name: postgres
-version: !ruby/object:Gem::Version
+version: !ruby/object:Gem::Version 
   hash: 61
-  prerelease:
-  segments:
+  prerelease: 
+  segments: 
   - 0
   - 8
   - 1
   version: 0.8.1
 platform: ruby
-authors:
+authors: 
 - Michael Granger
-autorequire:
+autorequire: 
 bindir: bin
-cert_chain:
+cert_chain: 
 - |
   -----BEGIN CERTIFICATE-----
   MIIDLDCCAhSgAwIBAgIBADANBgkqhkiG9w0BAQUFADA8MQwwCgYDVQQDDANnZWQx
@@ -36,78 +36,78 @@ cert_chain:
   -----END CERTIFICATE-----
 
 date: 2008-01-30 00:00:00 Z
-dependencies:
-- !ruby/object:Gem::Dependency
+dependencies: 
+- !ruby/object:Gem::Dependency 
   name: pg
   prerelease: false
-  requirement: &id001 !ruby/object:Gem::Requirement
+  requirement: &id001 !ruby/object:Gem::Requirement 
     none: false
-    requirements:
+    requirements: 
     - - ~>
-      - !ruby/object:Gem::Version
+      - !ruby/object:Gem::Version 
         hash: 3
-        segments:
+        segments: 
         - 0
         version: "0"
   type: :runtime
   version_requirements: *id001
-- !ruby/object:Gem::Dependency
+- !ruby/object:Gem::Dependency 
   name: hoe-mercurial
   prerelease: false
-  requirement: &id002 !ruby/object:Gem::Requirement
+  requirement: &id002 !ruby/object:Gem::Requirement 
     none: false
-    requirements:
+    requirements: 
     - - ~>
-      - !ruby/object:Gem::Version
+      - !ruby/object:Gem::Version 
         hash: 25
-        segments:
+        segments: 
         - 1
         - 3
         - 1
         version: 1.3.1
   type: :development
   version_requirements: *id002
-- !ruby/object:Gem::Dependency
+- !ruby/object:Gem::Dependency 
   name: hoe-highline
   prerelease: false
-  requirement: &id003 !ruby/object:Gem::Requirement
+  requirement: &id003 !ruby/object:Gem::Requirement 
     none: false
-    requirements:
+    requirements: 
     - - ~>
-      - !ruby/object:Gem::Version
+      - !ruby/object:Gem::Version 
         hash: 29
-        segments:
+        segments: 
         - 0
         - 0
         - 1
         version: 0.0.1
   type: :development
   version_requirements: *id003
-- !ruby/object:Gem::Dependency
+- !ruby/object:Gem::Dependency 
   name: rdoc
   prerelease: false
-  requirement: &id004 !ruby/object:Gem::Requirement
+  requirement: &id004 !ruby/object:Gem::Requirement 
     none: false
-    requirements:
+    requirements: 
     - - ~>
-      - !ruby/object:Gem::Version
+      - !ruby/object:Gem::Version 
         hash: 19
-        segments:
+        segments: 
         - 3
         - 10
         version: "3.10"
   type: :development
   version_requirements: *id004
-- !ruby/object:Gem::Dependency
+- !ruby/object:Gem::Dependency 
   name: hoe
   prerelease: false
-  requirement: &id005 !ruby/object:Gem::Requirement
+  requirement: &id005 !ruby/object:Gem::Requirement 
     none: false
-    requirements:
+    requirements: 
     - - ~>
-      - !ruby/object:Gem::Version
+      - !ruby/object:Gem::Version 
         hash: 27
-        segments:
+        segments: 
         - 2
         - 12
         version: "2.12"
@@ -116,29 +116,29 @@ dependencies:
 description: |-
   This is an old, deprecated version of the Ruby PostgreSQL driver that hasn't
   been maintained or supported since early 2008.
-
+  
   You should install/require 'pg' instead.
-
+  
   If you need the 'postgres' gem for legacy code that can't be converted, you can
   still install it using an explicit version, like so:
-
+  
     gem install postgres -v '0.7.9.2008.01.28'
     gem uninstall postgres -v '>0.7.9.2008.01.28'
-
+  
   If you have any questions, the nice folks in the Google group can help:
-
+  
     http://goo.gl/OjOPP / ruby-pg@googlegroups.com
-email:
+email: 
 - ged@FaerieMUD.org
 executables: []
 
 extensions: []
 
-extra_rdoc_files:
+extra_rdoc_files: 
 - History.txt
 - Manifest.txt
 - README.txt
-files:
+files: 
 - History.txt
 - Manifest.txt
 - README.txt
@@ -149,52 +149,52 @@ licenses: []
 
 post_install_message: |
   ---------------------------------------------------------------------------
-
+  
   This is an old, deprecated version of the Ruby PostgreSQL driver that hasn't
   been maintained or supported since early 2008.
-
+  
   You should install/require 'pg' instead.
-
+  
   If you need the 'postgres' gem for legacy code that can't be converted, you can
   still install it using an explicit version, like so:
-
+  
     gem install postgres -v '0.7.9.2008.01.28'
     gem uninstall postgres -v '>0.7.9.2008.01.28'
-
+  
   If you have any questions, the nice folks in the Google group can help:
-
+  
     http://goo.gl/OjOPP / ruby-pg@googlegroups.com
-
+  
   ---------------------------------------------------------------------------
 
-rdoc_options:
+rdoc_options: 
 - --main
 - README.txt
-require_paths:
+require_paths: 
 - lib
-required_ruby_version: !ruby/object:Gem::Requirement
+required_ruby_version: !ruby/object:Gem::Requirement 
   none: false
-  requirements:
+  requirements: 
   - - ">="
-    - !ruby/object:Gem::Version
+    - !ruby/object:Gem::Version 
       hash: 3
-      segments:
+      segments: 
       - 0
       version: "0"
-required_rubygems_version: !ruby/object:Gem::Requirement
+required_rubygems_version: !ruby/object:Gem::Requirement 
   none: false
-  requirements:
+  requirements: 
   - - ">="
-    - !ruby/object:Gem::Version
+    - !ruby/object:Gem::Version 
       hash: 3
-      segments:
+      segments: 
       - 0
       version: "0"
 requirements: []
 
 rubyforge_project: postgres
 rubygems_version: 1.8.12
-signing_key:
+signing_key: 
 specification_version: 3
 summary: This is an old, deprecated version of the Ruby PostgreSQL driver that hasn't been maintained or supported since early 2008
 test_files: []

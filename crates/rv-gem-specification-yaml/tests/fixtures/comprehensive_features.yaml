@@ -2,15 +2,15 @@
 name: comprehensive-test
 version: !ruby/object:Gem::Version
   version: 1.0.0
-  prerelease:
+  prerelease: 
 platform: ruby
 authors:
 - First Author
--
+- 
 - Third Author
 email:
 - first@example.com
--
+- 
 - third@example.com
 summary: A comprehensive test gem
 description: A longer description
