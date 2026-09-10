@@ -454,3 +454,37 @@ fn test_ruby_list_all_platforms_find_rubies() {
         );
     }
 }
+#[test]
+fn test_ruby_list_includes_system_ruby() {
+    let mut test = RvTest::new();
+    test.mock_releases([].to_vec());
+
+    // Create a managed ruby as a baseline.
+    test.create_ruby_dir("ruby-3.3.5");
+
+    // Create a system ruby shim outside the rubies directory and put it on PATH.
+    let sys_bin = test.temp_root().join("system_bin");
+    std::fs::create_dir_all(&sys_bin).unwrap();
+    test.create_system_ruby(&sys_bin, "3.0.1");
+    test.env.insert("PATH".into(), sys_bin.to_string());
+
+    let output = test.ruby_list(&["--format", "json"]);
+    output.assert_success();
+    let stdout = output.normalized_stdout();
+
+    #[cfg(not(windows))]
+    assert!(
+        stdout.contains("\"managed\": false"),
+        "system ruby should appear with managed: false, got: {stdout}",
+    );
+    #[cfg(not(windows))]
+    assert!(
+        stdout.contains("3.0.1"),
+        "system ruby version 3.0.1 should appear, got: {stdout}",
+    );
+    #[cfg(windows)]
+    assert!(
+        stdout.contains("3.3.5"),
+        "ruby version 3.3.5 should appear, got: {stdout}",
+    );
+}
