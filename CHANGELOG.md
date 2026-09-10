@@ -9,7 +9,7 @@
   - `rvx` with optional gems, like `rvx --with pg sequel`
 
 ### Fixed
-  
+
   - auto-switching for PowerShell
 
 ### Removed
@@ -198,7 +198,7 @@ Thank you to new contributors @a-chacon and @phromo!
  - Better error messages when gemspecs fail parsing #432 #435 @deivid-rodriguez
  - Build Rakefile extensions with build dependencies #436 @deivid-rodriguez
  - Native extensions were installing in the wrong order #442 @deivid-rodriguez
- - Use platform-specific gems where possible #454 @case 
+ - Use platform-specific gems where possible #454 @case
  - Consistent behavior when there's no user HOME #463 @deivid-rodriguez
  - Better errors when trying to install a Ruby version that doesn’t exist #467 @adamchalmers
  - rv clean-install no longer requires a Gemfile #468 @deivid-rodriguez

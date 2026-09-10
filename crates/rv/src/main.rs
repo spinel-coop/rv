@@ -61,7 +61,7 @@ struct GlobalArgs {
     let value_style = AnsiColor::Cyan.on_default().bold();
     format!(
         "{header_style}Project URL:{header_style:#}      {value_style}{PROJECT_URL}{value_style:#}\n\
-         {header_style}Software Version:{header_style:#} {value_style}{SOFTWARE_VERSION}{value_style:#}"
+        {header_style}Software Version:{header_style:#} {value_style}{SOFTWARE_VERSION}{value_style:#}"
     )
 })]
 struct Cli {

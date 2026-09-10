@@ -7,8 +7,8 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RV="$DIR/target/debug/rv"
 
 cleanup() {
-  rm -rf fmt-test
-  rm -f .ruby-version
+    rm -rf fmt-test
+    rm -f .ruby-version
 }
 trap cleanup EXIT
 
@@ -63,8 +63,8 @@ echo "PASS: rv ruby uninstall exits without error"
 echo "=== Verify $RUBY_VERSION is no longer listed ==="
 list_after=$($RV ruby list --installed-only 2>/dev/null || true)
 if echo "$list_after" | grep -q "$RUBY_VERSION.*installed"; then
-  echo "FAIL: $RUBY_VERSION still appears as installed after uninstall"
-  exit 1
+    echo "FAIL: $RUBY_VERSION still appears as installed after uninstall"
+    exit 1
 fi
 echo "PASS: $RUBY_VERSION no longer listed after uninstall"
 
@@ -79,8 +79,8 @@ echo "class Hello; end" | $RV fmt > hello.rb
 result="$(cat hello.rb)"
 rm hello.rb
 if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
-  echo "FAIL: stdin formatted to $result"
-  exit 1
+    echo "FAIL: stdin formatted to $result"
+    exit 1
 fi
 echo "PASS: stdin formatted on stdout"
 
@@ -88,14 +88,14 @@ echo "=== rv fmt . (formatting a directory in place) ==="
 mkdir fmt-test
 echo "class Hello; end" > fmt-test/hello.rb
 (
-  cd fmt-test
-  $RV fmt .
+    cd fmt-test
+    $RV fmt .
 )
 result="$(cat fmt-test/hello.rb)"
 rm -rf fmt-test
 if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
-  echo "FAIL: stdin formatted to $result"
-  exit 1
+    echo "FAIL: stdin formatted to $result"
+    exit 1
 fi
 echo "PASS: file formatted in place"
 
@@ -103,14 +103,14 @@ echo "=== rv fmt (formatting PWD by default) ==="
 mkdir fmt-test
 echo "class Hello; end" > fmt-test/hello.rb
 (
-  cd fmt-test
-  $RV fmt
+    cd fmt-test
+    $RV fmt
 )
 result="$(cat fmt-test/hello.rb)"
 rm -rf fmt-test
 if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
-  echo "FAIL: fmt-test/hello.rb didn't format; was '$result'"
-  exit 1
+    echo "FAIL: fmt-test/hello.rb didn't format; was '$result'"
+    exit 1
 fi
 echo "PASS: file formatted in place"
 
@@ -118,14 +118,14 @@ echo "=== rv fmt (ignoring stdin while formatting a directory) ==="
 mkdir fmt-test
 echo "class Hello; end" > fmt-test/hello.rb
 (
-  cd fmt-test
-  echo "class Bad" | $RV fmt .
+    cd fmt-test
+    echo "class Bad" | $RV fmt .
 )
 result="$(cat fmt-test/hello.rb)"
 rm -rf fmt-test
 if [[ "$result" != "$(printf 'class Hello\nend\n')" ]]; then
-  echo "FAIL: fmt-test/hello.rb didn't format; was '$result'"
-  exit 1
+    echo "FAIL: fmt-test/hello.rb didn't format; was '$result'"
+    exit 1
 fi
 echo "PASS: file formatted in place"
 

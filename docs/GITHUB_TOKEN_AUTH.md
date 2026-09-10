@@ -106,7 +106,7 @@ install_ruby:
 
 If you're still seeing rate limiting errors:
 
-1. **Verify token is set**: 
+1. **Verify token is set**:
    ```bash
    echo $GITHUB_TOKEN
    echo $GH_TOKEN

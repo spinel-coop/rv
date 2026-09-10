@@ -46,4 +46,14 @@ if (-not (Get-Command dist -ErrorAction SilentlyContinue)) {
     cargo binstall cargo-dist -y
 }
 
+# Install editorconfig-checker if not present
+if (-not (Get-Command editorconfig-checker -ErrorAction SilentlyContinue)) {
+    Write-Host "Installing editorconfig-checker..."
+    curl.exe -L --proto "=https" --tlsv1.2 -sSf -o $env:TEMP\editorconfig-checker-windows-amd64.tar.gz https://github.com/editorconfig-checker/editorconfig-checker/releases/download/v4.0.1/editorconfig-checker-windows-amd64.tar.gz
+    tar.exe -xzf $env:TEMP\editorconfig-checker-windows-amd64.tar.gz -C $env:TEMP
+    New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.cargo\bin" | Out-Null
+    Copy-Item "$env:TEMP\editorconfig-checker.exe" "$env:USERPROFILE\.cargo\bin\editorconfig-checker.exe" -Force
+    Write-Host "editorconfig-checker installed to $env:USERPROFILE\.cargo\bin\editorconfig-checker.exe"
+}
+
 Write-Host "Setup complete!"
