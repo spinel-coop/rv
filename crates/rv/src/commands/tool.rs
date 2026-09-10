@@ -10,6 +10,7 @@ use clap::{Args, Subcommand};
 use crate::{GlobalArgs, commands::tool, output_format::OutputFormat};
 
 #[derive(Args)]
+#[command(disable_help_subcommand = true)]
 pub struct ToolArgs {
     #[command(subcommand)]
     pub command: ToolCommand,

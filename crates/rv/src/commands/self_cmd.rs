@@ -16,6 +16,7 @@ pub enum Error {
 type Result<T> = miette::Result<T, Error>;
 
 #[derive(Args)]
+#[command(disable_help_subcommand = true)]
 pub struct SelfArgs {
     #[command(subcommand)]
     pub command: SelfCommand,
