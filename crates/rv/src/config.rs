@@ -102,20 +102,22 @@ impl RequestedRuby {
         Ok(requested_ruby)
     }
 
+    /// A sentence explaining where the default version came from, for callers
+    /// to render however they like.
     pub fn explain(&self, installed: bool) -> String {
         match self {
-            Self::Explicit(_) => "* Default version explicitly selected".to_string(),
+            Self::Explicit(_) => "Default version explicitly selected".to_string(),
             Self::Project((_, source)) => format!(
-                "* Default version pinned by {}",
+                "Default version pinned by {}",
                 rv_dirs::relativize(source.path())
             ),
             Self::User((_, source)) => format!(
-                "* Default version pinned by {}",
+                "Default version pinned by {}",
                 rv_dirs::unexpand(source.path())
             ),
             Self::Global => {
                 let installed_or_available = if installed { "installed" } else { "available" };
-                format!("* Default version is the latest {installed_or_available}")
+                format!("Default version is the latest {installed_or_available}")
             }
         }
     }
@@ -285,6 +287,19 @@ impl Config {
         ruby.gem_home()
     }
 
+    /// The directories rv prepends to `PATH` for `ruby`, in the order they
+    /// appear once [`Self::env_with_path_for`] is done with them.
+    ///
+    /// Split out so `rv doctor` can check a live `PATH` against the same list
+    /// the shell integration builds, rather than a second guess at it.
+    pub fn path_prefix_for(&self, ruby: &Ruby) -> [Utf8PathBuf; 3] {
+        [
+            ruby.user_home().join("bin"),
+            self.gem_home(ruby).join("bin"),
+            ruby.bin_path(),
+        ]
+    }
+
     pub fn env_for(&self, ruby: Option<&Ruby>) -> Result<Env> {
         self.env_with_path_for(ruby, Default::default())
     }
@@ -311,19 +326,19 @@ impl Config {
         paths.retain(|p| !old_ruby_paths.contains(p) && !old_gem_paths.contains(p));
 
         if let Some(ruby) = ruby {
-            let mut gem_paths = vec![];
-            paths.insert_before(0, ruby.bin_path().into());
             env.insert("RUBY_ROOT", ruby.path.to_string());
             env.insert("RUBY_ENGINE", ruby.version.engine.name().into());
             env.insert("RUBY_VERSION", ruby.version.number());
+
+            // Prepend in reverse so the first element of the prefix ends up first.
+            for dir in self.path_prefix_for(ruby).into_iter().rev() {
+                paths.insert_before(0, dir.into());
+            }
+
             let gem_home = self.gem_home(ruby);
-            paths.insert_before(0, gem_home.join("bin").into());
-            gem_paths.insert(0, gem_home.clone());
-            env.insert("GEM_HOME", gem_home.into_string());
             let user_home = ruby.user_home();
-            paths.insert_before(0, user_home.join("bin").into());
-            gem_paths.insert(0, user_home);
-            let gem_path = join_paths(gem_paths)?;
+            env.insert("GEM_HOME", gem_home.clone().into_string());
+            let gem_path = join_paths([user_home, gem_home])?;
             if let Some(gem_path) = gem_path.to_str() {
                 env.insert("GEM_PATH", gem_path.into());
             }
@@ -363,55 +378,94 @@ impl Config {
     }
 }
 
-fn find_directory_ruby(dir: &Utf8PathBuf) -> Result<Option<(RubyRequest, Source)>> {
-    let ruby_version = dir.join(".ruby-version");
-    if ruby_version.exists() {
-        let ruby_version_string = std::fs::read_to_string(&ruby_version)?;
-        return Ok(Some((
-            ruby_version_string.parse()?,
-            Source::DotRubyVersion(ruby_version),
-        )));
+/// A directory-level Ruby pin, and where it was written down.
+type Pin = (RubyRequest, Source);
+
+/// Every file in `dir` that names a Ruby version, in the order rv prefers them.
+///
+/// Lazy, so a caller that only wants the winner — [`find_directory_ruby`] — never
+/// reads the files it would have ignored anyway. `rv doctor` walks the whole
+/// iterator to report pins that are being silently overruled.
+pub(crate) fn directory_ruby_pins(dir: &Utf8Path) -> impl Iterator<Item = Result<Pin>> {
+    let dir = dir.to_owned();
+
+    [
+        dot_ruby_version as fn(&Utf8Path) -> Option<Result<Pin>>,
+        dot_tool_versions,
+        gemfile_lock,
+    ]
+    .into_iter()
+    .filter_map(move |read| read(&dir))
+}
+
+fn find_directory_ruby(dir: &Utf8Path) -> Result<Option<Pin>> {
+    directory_ruby_pins(dir).next().transpose()
+}
+
+fn dot_ruby_version(dir: &Utf8Path) -> Option<Result<Pin>> {
+    let path = dir.join(".ruby-version");
+    if !path.exists() {
+        return None;
     }
 
-    let tool_versions = dir.join(".tool-versions");
-    if tool_versions.exists() {
-        let tool_versions_string = std::fs::read_to_string(&tool_versions)?;
-        let tool_version = tool_versions_string
-            .lines()
-            .find_map(|l| l.trim_start().strip_prefix("ruby "));
+    let pin = std::fs::read_to_string(&path)
+        .map_err(Error::from)
+        .and_then(|contents| Ok((contents.parse()?, Source::DotRubyVersion(path))));
 
-        if let Some(version) = tool_version {
-            return Ok(Some((
-                version.parse()?,
-                Source::DotToolVersions(tool_versions),
-            )));
-        }
+    Some(pin)
+}
+
+fn dot_tool_versions(dir: &Utf8Path) -> Option<Result<Pin>> {
+    let path = dir.join(".tool-versions");
+    if !path.exists() {
+        return None;
     }
 
-    let lockfile = dir.join("Gemfile.lock");
-    if lockfile.exists() {
-        let raw_contents = std::fs::read_to_string(&lockfile)?;
-        // Normalize Windows line endings (CRLF) to Unix (LF) for the parser
-        let lockfile_contents = rv_lockfile::normalize_line_endings(&raw_contents);
+    let contents = match std::fs::read_to_string(&path) {
+        Ok(contents) => contents,
+        Err(err) => return Some(Err(err.into())),
+    };
 
-        if let Ok(parsed_lockfile) = rv_lockfile::parse(&lockfile_contents) {
-            let lockfile_ruby = parsed_lockfile.ruby_version;
+    // A `.tool-versions` without a `ruby` line pins nothing; fall through to the
+    // next source rather than reporting an error.
+    let version = contents
+        .lines()
+        .find_map(|l| l.trim_start().strip_prefix("ruby "))?
+        .to_owned();
 
-            if let Some(lockfile_ruby) = lockfile_ruby {
-                return Ok(Some((
-                    lockfile_ruby.cruby_version.into(),
-                    Source::GemfileLock(lockfile),
-                )));
-            }
-        } else {
-            debug!(
-                "Ignoring {} while discovering ruby version to use because it could not be parsed",
-                lockfile
-            );
-        }
+    let pin = version
+        .parse()
+        .map(|request| (request, Source::DotToolVersions(path)))
+        .map_err(Error::from);
+
+    Some(pin)
+}
+
+fn gemfile_lock(dir: &Utf8Path) -> Option<Result<Pin>> {
+    let path = dir.join("Gemfile.lock");
+    if !path.exists() {
+        return None;
     }
 
-    Ok(None)
+    let raw_contents = match std::fs::read_to_string(&path) {
+        Ok(contents) => contents,
+        Err(err) => return Some(Err(err.into())),
+    };
+
+    // Normalize Windows line endings (CRLF) to Unix (LF) for the parser
+    let contents = rv_lockfile::normalize_line_endings(&raw_contents);
+
+    let Ok(lockfile) = rv_lockfile::parse(&contents) else {
+        debug!(
+            "Ignoring {} while discovering ruby version to use because it could not be parsed",
+            path
+        );
+        return None;
+    };
+
+    let ruby = lockfile.ruby_version?;
+
+    Some(Ok((ruby.cruby_version.into(), Source::GemfileLock(path))))
 }
 
 pub struct Env {

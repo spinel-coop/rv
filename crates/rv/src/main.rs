@@ -22,6 +22,7 @@ pub mod update;
 
 use crate::commands::cache::{CacheCommandArgs, cache};
 use crate::commands::clean_install::{CleanInstallArgs, ci};
+use crate::commands::doctor::{DoctorArgs, doctor};
 use crate::commands::fmt::{FmtArgs, fmt};
 use crate::commands::ruby::{RubyArgs, ruby};
 use crate::commands::run::{RunArgs, run};
@@ -135,6 +136,11 @@ enum Commands {
     Run(RunArgs),
     #[command(about = "Format Ruby files consistently")]
     Fmt(FmtArgs),
+    #[command(
+        about = "Check your environment for problems and suggest fixes",
+        visible_alias = "dr"
+    )]
+    Doctor(DoctorArgs),
 }
 
 #[derive(Debug, Copy, Clone, clap::ValueEnum)]
@@ -201,6 +207,8 @@ pub enum Error {
     ToolError(#[from] commands::tool::Error),
     #[error(transparent)]
     ConfigError(#[from] crate::config::Error),
+    #[error(transparent)]
+    DoctorError(#[from] commands::doctor::Error),
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -311,6 +319,7 @@ async fn run_cmd(global_args: &GlobalArgs, command: Commands) -> Result<()> {
         Commands::Tool(tool_args) => tool(global_args, tool_args).await?,
         Commands::Run(run_args) => run(global_args, run_args).await?,
         Commands::Fmt(fmt_args) => fmt(global_args, fmt_args).await?,
+        Commands::Doctor(doctor_args) => doctor(global_args, doctor_args)?,
     };
 
     Ok(())
