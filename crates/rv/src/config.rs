@@ -367,10 +367,18 @@ fn find_directory_ruby(dir: &Utf8PathBuf) -> Result<Option<(RubyRequest, Source)
     let ruby_version = dir.join(".ruby-version");
     if ruby_version.exists() {
         let ruby_version_string = std::fs::read_to_string(&ruby_version)?;
-        return Ok(Some((
-            ruby_version_string.parse()?,
-            Source::DotRubyVersion(ruby_version),
-        )));
+        match ruby_version_string.parse::<RubyRequest>() {
+            Ok(req) => {
+                return Ok(Some((req, Source::DotRubyVersion(ruby_version))));
+            }
+            Err(RequestError::EmptyInput) => {
+                error!(
+                    "The file {} is empty. Please provide a ruby version or remove the file.",
+                    ruby_version
+                );
+            }
+            Err(err) => return Err(err.into()),
+        };
     }
 
     let tool_versions = dir.join(".tool-versions");
@@ -381,10 +389,13 @@ fn find_directory_ruby(dir: &Utf8PathBuf) -> Result<Option<(RubyRequest, Source)
             .find_map(|l| l.trim_start().strip_prefix("ruby "));
 
         if let Some(version) = tool_version {
-            return Ok(Some((
-                version.parse()?,
-                Source::DotToolVersions(tool_versions),
-            )));
+            match version.parse::<RubyRequest>() {
+                Ok(req) => return Ok(Some((req, Source::DotToolVersions(tool_versions)))),
+                Err(RequestError::EmptyInput) => {
+                    error!("The entry for ruby in {} is empty.", tool_versions);
+                }
+                Err(err) => return Err(err.into()),
+            }
         }
     }
 
