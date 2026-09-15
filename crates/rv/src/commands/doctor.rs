@@ -427,7 +427,7 @@ mod tests {
         let check = Check::fail(Section::Environment, "ruby", "not found")
             .suggest_command("install it", "rv ruby install");
         let row = Row::from_check(&check);
-        let msg = plain(row.message.clone());
+        let msg = plain(row.message);
         assert!(msg.contains("not found"));
         assert!(!msg.contains("install it"));
         assert!(!msg.contains("rv ruby install"));
