@@ -192,17 +192,10 @@ struct Row {
 
 impl Row {
     fn from_check(c: &Check) -> Self {
-        let mut msg = c.message.clone();
-        if let Some(fix) = &c.fix {
-            msg.push_str(&format!("\n{}", fix.detail.dimmed()));
-            if let Some(cmd) = &fix.command {
-                msg.push_str(&format!("\n{} {}", "→".dimmed(), cmd.cyan()));
-            }
-        }
         Self {
             status: c.status.render(),
             name: c.name,
-            message: msg,
+            message: c.message.clone(),
         }
     }
 }
@@ -256,6 +249,14 @@ impl Report {
             let mut table = Table::new(rows);
             table.with(Style::sharp().horizontals([(1, HorizontalLine::full('─', '┼', '├', '┤'))]));
             println!("{table}");
+            for check in &checks {
+                if let Some(fix) = &check.fix {
+                    println!("  {}: {}", check.name, fix.detail.dimmed());
+                    if let Some(command) = &fix.command {
+                        println!("  {} {}", "→".dimmed(), command.cyan());
+                    }
+                }
+            }
         }
         println!("\n{}", self.summary());
     }
@@ -422,16 +423,13 @@ mod tests {
     }
 
     #[test]
-    fn row_folds_fix_into_message() {
+    fn row_keeps_message_lean() {
         let check = Check::fail(Section::Environment, "ruby", "not found")
             .suggest_command("install it", "rv ruby install");
         let row = Row::from_check(&check);
         let msg = plain(row.message.clone());
-        assert!(msg.contains("not found"), "missing original message: {msg}");
-        assert!(msg.contains("install it"), "missing fix detail: {msg}");
-        assert!(
-            msg.contains("rv ruby install"),
-            "missing fix command: {msg}"
-        );
+        assert!(msg.contains("not found"));
+        assert!(!msg.contains("install it"));
+        assert!(!msg.contains("rv ruby install"));
     }
 }
