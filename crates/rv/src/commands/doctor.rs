@@ -19,6 +19,10 @@ use camino::Utf8PathBuf;
 use clap::Args;
 use owo_colors::OwoColorize;
 use serde::Serialize;
+use tabled::{
+    Table,
+    settings::{Style, style::HorizontalLine},
+};
 
 use crate::GlobalArgs;
 use crate::config::Config;
@@ -241,45 +245,20 @@ impl Report {
         Ok(())
     }
 
-    // FIXME: Use something like https://lib.rs/crates/ratatui here for a table view.
-    //        Or reuse what's done in ./ruby/list.rs.
     fn render_text(&self) {
-        // Align the message column across every section, not just within one.
-        let width = self
-            .checks
-            .iter()
-            .map(|c| c.name.len())
-            .max()
-            .unwrap_or_default();
-        // Line up wrapped advice under the message it belongs to: two spaces of
-        // indent, the status symbol and its space, the name column, two spaces.
-        let hang = " ".repeat(2 + 2 + width + 2);
-
         let mut sections: BTreeMap<Section, Vec<&Check>> = BTreeMap::new();
         for check in &self.checks {
             sections.entry(check.section).or_default().push(check);
         }
-
         for (section, checks) in sections {
             println!("\n{}", section.to_string().green().bold());
-
-            for check in checks {
-                println!(
-                    "  {} {:width$}  {}",
-                    check.status.render(),
-                    check.name,
-                    check.message
-                );
-
-                let Some(fix) = &check.fix else { continue };
-
-                println!("{hang}{}", fix.detail.dimmed());
-                if let Some(command) = &fix.command {
-                    println!("{hang}{} {}", "→".dimmed(), command.cyan());
-                }
-            }
+            let rows: Vec<Row> = checks.iter().map(|c| Row::from_check(c)).collect();
+            let mut table = Table::new(rows);
+            table.with(Style::sharp().horizontals([
+                (1, HorizontalLine::full('─', '┼', '├', '┤')),
+            ]));
+            println!("{table}");
         }
-
         println!("\n{}", self.summary());
     }
 
