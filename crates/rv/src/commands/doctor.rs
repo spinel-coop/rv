@@ -10,6 +10,7 @@ pub mod configuration;
 pub mod environment;
 pub mod installation;
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -179,6 +180,45 @@ impl Check {
     }
 }
 
+struct Row {
+    status: String,
+    name: &'static str,
+    message: String,
+}
+
+impl Row {
+    fn from_check(c: &Check) -> Self {
+        let mut msg = c.message.clone();
+        if let Some(fix) = &c.fix {
+            msg.push_str(&format!("\n{}", fix.detail.dimmed()));
+            if let Some(cmd) = &fix.command {
+                msg.push_str(&format!("\n{} {}", "→".dimmed(), cmd.cyan()));
+            }
+        }
+        Self {
+            status: c.status.render(),
+            name: c.name,
+            message: msg,
+        }
+    }
+}
+
+impl tabled::Tabled for Row {
+    const LENGTH: usize = 3;
+
+    fn fields(&self) -> Vec<Cow<'_, str>> {
+        vec![
+            self.status.clone().into(),
+            self.name.into(),
+            self.message.clone().into(),
+        ]
+    }
+
+    fn headers() -> Vec<Cow<'static, str>> {
+        vec!["".into(), "Check".into(), "Message".into()]
+    }
+}
+
 #[derive(Debug, Default, Serialize)]
 pub struct Report {
     checks: Vec<Check>,
@@ -201,6 +241,8 @@ impl Report {
         Ok(())
     }
 
+    // FIXME: Use something like https://lib.rs/crates/ratatui here for a table view.
+    //        Or reuse what's done in ./ruby/list.rs.
     fn render_text(&self) {
         // Align the message column across every section, not just within one.
         let width = self
@@ -400,5 +442,19 @@ mod tests {
         };
 
         assert_eq!(plain(report.summary()), "Everything looks good.");
+    }
+
+    #[test]
+    fn row_folds_fix_into_message() {
+        let check = Check::fail(Section::Environment, "ruby", "not found")
+            .suggest_command("install it", "rv ruby install");
+        let row = Row::from_check(&check);
+        let msg = plain(row.message.clone());
+        assert!(msg.contains("not found"), "missing original message: {msg}");
+        assert!(msg.contains("install it"), "missing fix detail: {msg}");
+        assert!(
+            msg.contains("rv ruby install"),
+            "missing fix command: {msg}"
+        );
     }
 }
