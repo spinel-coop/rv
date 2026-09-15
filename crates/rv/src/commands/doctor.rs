@@ -254,9 +254,7 @@ impl Report {
             println!("\n{}", section.to_string().green().bold());
             let rows: Vec<Row> = checks.iter().map(|c| Row::from_check(c)).collect();
             let mut table = Table::new(rows);
-            table.with(Style::sharp().horizontals([
-                (1, HorizontalLine::full('─', '┼', '├', '┤')),
-            ]));
+            table.with(Style::sharp().horizontals([(1, HorizontalLine::full('─', '┼', '├', '┤'))]));
             println!("{table}");
         }
         println!("\n{}", self.summary());
