@@ -252,10 +252,10 @@ fn write_lockfile_pinning(test: &RvTest, version: &str) {
         test.current_dir().join("Gemfile.lock"),
         format!(
             "GEM\n  remote: https://rubygems.org/\n  specs:\n\n\
-             PLATFORMS\n  ruby\n\n\
-             DEPENDENCIES\n\n\
-             RUBY VERSION\n   ruby {version}\n\n\
-             BUNDLED WITH\n   2.5.3\n"
+          PLATFORMS\n  ruby\n\n\
+          DEPENDENCIES\n\n\
+          RUBY VERSION\n   ruby {version}\n\n\
+          BUNDLED WITH\n   2.5.3\n"
         ),
     )
     .unwrap();

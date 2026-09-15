@@ -137,8 +137,7 @@ fn drift(config: &Config, env: &ProcessEnv, ruby: &Ruby) -> Result<Vec<Check>> {
         .filter(|var| env.get(var).is_some())
         .map(|var| {
             Check::warn(SECTION, var, "set, but rv clears it").suggest_command(
-                "Usually left behind by another Ruby manager. It leaks into \
-                 everything rv runs.",
+                "Usually left behind by another Ruby manager. It leaks into everything rv runs.",
                 format!("unset {var}"),
             )
         });
@@ -216,8 +215,7 @@ fn resolves_to(entries: &[Utf8PathBuf], ruby: &Ruby, env: &ProcessEnv) -> Check 
 
     match competing_manager(&found) {
         Some(manager) => check.suggest(format!(
-            "{manager} is ahead of rv on PATH. Remove its setup from your shell \
-             startup files, or move rv's after it.",
+            "{manager} is ahead of rv on PATH. Remove its setup from your shell startup files, or move rv's after it.",
         )),
         None => check.suggest_command(
             format!("rv expects {}", shorten(&expected)),

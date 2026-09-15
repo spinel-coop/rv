@@ -52,8 +52,7 @@ fn bundler_settings(config: &Config) -> Check {
             },
         ),
         Err(err) => Check::warn(SECTION, "bundler settings", err.to_string()).suggest(
-            "rv is falling back to its defaults, so gems may not land where \
-             bundler expects them.",
+            "rv is falling back to its defaults, so gems may not land where bundler expects them.",
         ),
     }
 }
