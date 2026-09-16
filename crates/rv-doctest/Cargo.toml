@@ -1,0 +1,25 @@
+[package]
+name = "rv-doctest"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+async-trait = { workspace = true }
+rv-ruby = { workspace = true }
+rv-ruby-parser = { workspace = true }
+tempfile = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = [
+  "fs",
+  "process",
+  "io-util",
+  "sync",
+  "rt",
+] }
+
+[dev-dependencies]
+indoc = { workspace = true }
+
+[lints]
+workspace = true
+

@@ -3200,6 +3200,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "rv-doctest"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "indoc",
+ "rv-ruby",
+ "rv-ruby-parser",
+ "tempfile",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "rv-fuzz"
 version = "0.0.0"
 dependencies = [
