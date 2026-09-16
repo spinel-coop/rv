@@ -288,3 +288,18 @@ fn invalid_source_surfaces_errors() {
         ]
     );
 }
+#[test]
+fn comment_with_indentation_preserves_leading_spaces() {
+    let source = "#     indented code\ndef foo\nend\n";
+    let parsed = parse(source.as_bytes());
+    assert!(parsed.is_success());
+    let item = find_item_kind_of(&parsed.items, ItemKind::Def, "foo");
+    // After Phase 1 transform: strip '#', then strip exactly ONE space.
+    // Source '#     indented code' has 5 spaces after #.
+    // Expected: '    indented code' (4 spaces preserved).
+    assert_eq!(
+        item.comments,
+        vec!["    indented code"],
+        "indentation should be preserved (4 spaces after stripping # + 1 space)"
+    );
+}

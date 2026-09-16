@@ -240,10 +240,9 @@ pub fn parse(source: &[u8]) -> ParsedFile {
         let (end_line, _) = lines.line_col(loc.end_offset());
         if is_standalone_comment(source, &lines, start) {
             comments_by_end_line.insert(end_line, {
-                let text = comment.text();
-                String::from_utf8_lossy(text)
-                    .trim_start_matches(|c: char| c == '#' || c.is_whitespace())
-                    .to_string()
+                let text = String::from_utf8_lossy(comment.text());
+                let stripped = text.trim_start_matches('#');
+                stripped.strip_prefix(' ').unwrap_or(stripped).to_string()
             });
         }
     }
