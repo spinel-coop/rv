@@ -12,6 +12,7 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberI
 
 pub mod commands;
 pub mod config;
+pub mod discovery;
 pub mod gemserver;
 pub mod output_format;
 pub mod progress;
@@ -22,6 +23,7 @@ pub mod update;
 
 use crate::commands::cache::{CacheCommandArgs, cache};
 use crate::commands::clean_install::{CleanInstallArgs, ci};
+use crate::commands::doctest::{DoctestArgs, doctest};
 use crate::commands::fmt::{FmtArgs, fmt};
 use crate::commands::ruby::{RubyArgs, ruby};
 use crate::commands::run::{RunArgs, run};
@@ -118,6 +120,8 @@ enum Commands {
     Shell(ShellArgs),
     #[command(about = "Clean install from a Gemfile.lock", visible_alias = "ci")]
     CleanInstall(CleanInstallArgs),
+    #[command(about = "Run doctests")]
+    Doctest(DoctestArgs),
     #[command(
         name = "self",
         about = "Manage rv itself",
@@ -311,6 +315,7 @@ async fn run_cmd(global_args: &GlobalArgs, command: Commands) -> Result<()> {
         Commands::Tool(tool_args) => tool(global_args, tool_args).await?,
         Commands::Run(run_args) => run(global_args, run_args).await?,
         Commands::Fmt(fmt_args) => fmt(global_args, fmt_args).await?,
+        Commands::Doctest(doctest_args) => doctest(global_args, doctest_args).await?,
     };
 
     Ok(())

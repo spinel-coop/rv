@@ -152,11 +152,20 @@ fn is_indented_line(line: &str) -> bool {
 }
 
 /// Checks multiple snippets, collecting all failures.
-pub async fn check_snippets(
-    _snippets: &[Snippet],
-    _checker: &mut impl RubyChecker,
-) -> Vec<Failure> {
-    Vec::new()
+pub async fn check_snippets(snippets: &[Snippet], checker: &mut impl RubyChecker) -> Vec<Failure> {
+    let mut failures = Vec::new();
+    for snippet in snippets {
+        match checker.check(&snippet.code).await {
+            Ok(()) => {}
+            Err(e) => {
+                failures.push(Failure {
+                    snippet: snippet.clone(),
+                    message: e.to_string(),
+                });
+            }
+        }
+    }
+    failures
 }
 
 /// Convenience: extract & check from a parsed file.

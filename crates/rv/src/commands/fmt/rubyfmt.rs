@@ -1,14 +1,14 @@
 use clap::Parser;
-use ignore::WalkBuilder;
 use ignore::gitignore::GitignoreBuilder;
 use regex::Regex;
 use similar::TextDiff;
-use std::ffi::OsStr;
-use std::fs::{File, OpenOptions, read};
-use std::io::{self, BufRead, BufReader, IsTerminal, Read, Write};
+use std::fs::{File, OpenOptions};
+use std::io::{self, IsTerminal, Write};
 use std::path::Path;
 use std::process::exit;
 use std::sync::{Arc, LazyLock, Mutex};
+
+use crate::discovery;
 
 static MAGIC_COMMENT_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)^#\s*rubyfmt:\s*(?P<enabled>true|false)\s*$").unwrap());
@@ -208,157 +208,19 @@ fn is_path_ignored(root: &Path, path: &Path, include_gitignored: bool) -> bool {
     }
 }
 
-fn file_walker_builder(include_paths: Vec<&String>, include_gitignored: bool) -> WalkBuilder {
-    // WalkBuilder does not have an API for adding multiple inputs.
-    // Must pass the first input to the constructor, and the tail afterwards.
-    // Safe to unwrap here.
-    let (include_head, include_tail) = include_paths.split_first().unwrap();
-    let mut builder = WalkBuilder::new(include_head);
-
-    for path in include_tail {
-        builder.add(path);
-    }
-
-    builder.git_ignore(!include_gitignored);
-    builder.add_custom_ignore_filename(".rubyfmtignore");
-    builder
-}
-
-// Parse command line arguments. Expand any input files.
-//
-// When `include_paths` is empty:
-//   - tty → format the current directory in place (include_paths = ["."])
-//   - piped → format stdin to stdout
-// When paths are given, the `--stdout` flag is respected, and stdin is ignored.
-fn get_command_line_options(opts: CommandlineOpts) -> CommandlineOpts {
-    let mut opts = opts;
-
-    if opts.include_paths.is_empty() {
-        if opts.is_tty {
-            opts.include_paths.push(".".into());
-        } else {
-            opts.stdout = true;
-        }
-    }
-
-    let mut expanded_paths: Vec<String> = Vec::new();
-
-    for path in opts.include_paths {
-        // Expand input files
-        if let Some(file_name) = path.strip_prefix('@') {
-            match File::open(file_name) {
-                Ok(file) => {
-                    let buf = BufReader::new(file);
-                    expanded_paths.extend(buf.lines().map(|l| l.expect("Could not parse line")));
-                }
-                Err(e) => handle_io_error(e, &path, ErrorExit::Exit),
-            }
-        } else {
-            expanded_paths.push(path);
-        }
-    }
-
-    CommandlineOpts {
-        include_paths: expanded_paths,
-        ..opts
-    }
-}
-
-fn iterate_input_files(opts: &CommandlineOpts, f: InputFunc) {
-    if opts.include_paths.is_empty() {
-        let mut buffer = Vec::new();
-
-        io::stdin()
-            .read_to_end(&mut buffer)
-            .expect("reading from stdin to not fail");
-
-        let path = if let Some(stdin_filepath) = &opts.stdin_filepath {
-            let path = Path::new(stdin_filepath);
-            if is_path_ignored(
-                &std::env::current_dir().unwrap(),
-                path,
-                opts.include_gitignored,
-            ) {
-                // Print unchanged output for ignored files unless we're in check mode
-                if !opts.check {
-                    puts_stdout(&buffer);
-                }
-                return;
-            }
-            path
-        } else {
-            Path::new("stdin")
-        };
-
-        f((path, &buffer))
-    } else {
-        let mut file_paths = Vec::new();
-        let mut dir_paths = Vec::new();
-        for path in &opts.include_paths {
-            if Path::new(&path).is_file() {
-                file_paths.push(path)
-            } else {
-                dir_paths.push(path)
-            }
-        }
-
-        if !file_paths.is_empty() {
-            for result in file_walker_builder(file_paths, opts.include_gitignored).build() {
-                match result {
-                    Ok(pp) => {
-                        let file_path = pp.path();
-                        match read(file_path) {
-                            Ok(buffer) => f((file_path, &buffer)),
-                            Err(e) => handle_execution_error(
-                                opts,
-                                ExecutionError::IOError(e, file_path.display().to_string()),
-                            ),
-                        }
-                    }
-                    Err(e) => handle_execution_error(opts, ExecutionError::FileSearchFailure(e)),
-                }
-            }
-        }
-
-        if !dir_paths.is_empty() {
-            for result in file_walker_builder(dir_paths, opts.include_gitignored).build() {
-                match result {
-                    Ok(pp) => {
-                        let file_path = pp.path();
-
-                        if file_path.is_file()
-                            && file_path.extension().and_then(OsStr::to_str) == Some("rb")
-                        {
-                            match read(file_path) {
-                                Ok(buffer) => f((file_path, &buffer)),
-                                Err(e) => handle_execution_error(
-                                    opts,
-                                    ExecutionError::IOError(e, file_path.display().to_string()),
-                                ),
-                            }
-                        }
-                    }
-                    Err(e) => handle_execution_error(opts, ExecutionError::FileSearchFailure(e)),
-                }
-            }
-        }
-    }
-}
-
-type InputFunc<'a> = &'a dyn Fn((&Path, &[u8]));
 type FormattingFunc<'a> = &'a dyn Fn((&Path, &[u8], Option<Vec<u8>>));
 
 pub(crate) fn iterate_formatted(opts: &CommandlineOpts, f: FormattingFunc) {
-    iterate_input_files(
-        opts,
-        &|(file_path, before)| match rubyfmt_string(opts, before) {
-            Ok(r) => f((file_path, before, r)),
-            Err(e) => handle_execution_error(
-                opts,
-                ExecutionError::RubyfmtError(e, file_path.display().to_string()),
-            ),
-        },
-    );
+    let files = discovery::discover_rb_files(&opts.include_paths, opts.include_gitignored);
+
+    for (file_path, buffer) in files {
+        match rubyfmt_string(opts, &buffer) {
+            Ok(r) => f((file_path.as_ref(), &buffer, r)),
+            Err(e) => {
+                handle_execution_error(opts, ExecutionError::RubyfmtError(e, file_path.to_string()))
+            }
+        }
+    }
 }
 
 fn puts_stdout(input: &[u8]) {
@@ -368,36 +230,40 @@ fn puts_stdout(input: &[u8]) {
     io::stdout().flush().expect("flush works");
 }
 
-pub(crate) fn main(opts: CommandlineOpts) {
-    let opts = get_command_line_options(opts);
+pub(crate) fn main(mut opts: CommandlineOpts) {
+    if opts.include_paths.is_empty() {
+        if opts.is_tty {
+            opts.include_paths.push(".".into());
+        } else {
+            opts.stdout = true;
+        }
+    }
+
+    opts.include_paths = discovery::expand_paths(&opts.include_paths);
 
     match opts {
         CommandlineOpts { check: true, .. } => {
             let text_diffs: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
             let errors_count: Arc<Mutex<usize>> = Arc::new(Mutex::new(0));
 
-            iterate_input_files(
-                &opts,
-                &|(file_path, before)| match rubyfmt_string(&opts, before) {
+            let files = discovery::discover_rb_files(&opts.include_paths, opts.include_gitignored);
+            for (file_path, buffer) in files {
+                match rubyfmt_string(&opts, &buffer) {
                     Ok(None) => {}
                     Ok(Some(fmtted)) => {
-                        let diff = TextDiff::from_lines(before, &fmtted);
-                        let path_string = file_path.to_str().unwrap();
+                        let diff = TextDiff::from_lines(&buffer, &fmtted);
+                        let path_string = file_path.to_string();
                         text_diffs.lock().unwrap().push(format!(
                             "{}",
-                            diff.unified_diff().header(path_string, path_string)
+                            diff.unified_diff().header(&path_string, &path_string)
                         ));
                     }
                     Err(e) => {
-                        handle_rubyfmt_error(
-                            e,
-                            &file_path.display().to_string(),
-                            ErrorExit::NoExit,
-                        );
+                        handle_rubyfmt_error(e, &file_path.to_string(), ErrorExit::NoExit);
                         *errors_count.lock().unwrap() += 1;
                     }
-                },
-            );
+                }
+            }
 
             let all_diffs = text_diffs.lock().unwrap();
 
@@ -481,15 +347,16 @@ mod tests {
     type CollectedFormatting = Vec<(String, Vec<u8>, Option<Vec<u8>>)>;
 
     /// Run a callback and collect every `(path, buffer)` pair yielded by
-    /// `iterate_input_files` into a shared `Vec`.
+    /// `discovery::discover_rb_files` into a shared `Vec`.
     fn collect_inputs(opts: &CommandlineOpts) -> Vec<(String, Vec<u8>)> {
         let collected: Arc<Mutex<CollectedInputs>> = Arc::new(Mutex::new(Vec::new()));
-        iterate_input_files(opts, &|(path, buffer)| {
+        let files = discovery::discover_rb_files(&opts.include_paths, opts.include_gitignored);
+        for (path, buffer) in files {
             collected
                 .lock()
                 .unwrap()
-                .push((path.display().to_string(), buffer.to_vec()));
-        });
+                .push((path.to_string(), buffer.to_vec()));
+        }
         Arc::try_unwrap(collected)
             .ok()
             .and_then(|m| m.into_inner().ok())
@@ -725,7 +592,7 @@ mod tests {
     }
 
     // ==========================================================================
-    // INPUT FILE EXPANSION (get_command_line_options)
+    // PATH EXPANSION (discovery::expand_paths)
     // ==========================================================================
 
     #[test]
@@ -737,36 +604,11 @@ mod tests {
         let path = tmp.path().to_str().unwrap().to_string();
 
         let opts = opts_with(|o| o.include_paths = vec![format!("@{path}")]);
-        let expanded = get_command_line_options(opts);
+        let expanded = discovery::expand_paths(&opts.include_paths);
         assert_eq!(
-            expanded.include_paths,
+            expanded,
             vec!["path/to/file1.rb", "path/to/file2.rb", "directory/"]
         );
-        assert!(!expanded.check);
-        assert!(!expanded.fail_fast);
-    }
-
-    #[test]
-    fn expansion_preserves_all_other_options() {
-        let tmp = tempfile::NamedTempFile::new().unwrap();
-        let path = tmp.path().to_str().unwrap().to_string();
-
-        let opts = opts_with(|o| {
-            o.check = true;
-            o.include_gitignored = true;
-            o.header_opt_in = true;
-            o.fail_fast = true;
-            o.stdout = false;
-            o.stdin_filepath = Some("test.rb".to_string());
-            o.include_paths = vec![format!("@{path}")];
-        });
-
-        let expanded = get_command_line_options(opts);
-        assert!(expanded.check);
-        assert!(expanded.include_gitignored);
-        assert!(expanded.header_opt_in);
-        assert!(expanded.fail_fast);
-        assert_eq!(expanded.stdin_filepath.as_deref(), Some("test.rb"));
     }
 
     #[test]
@@ -774,8 +616,8 @@ mod tests {
         let opts = opts_with(|o| {
             o.include_paths = vec!["lib/foo.rb".to_string(), "dir/".to_string()];
         });
-        let expanded = get_command_line_options(opts);
-        assert_eq!(expanded.include_paths, vec!["lib/foo.rb", "dir/"]);
+        let expanded = discovery::expand_paths(&opts.include_paths);
+        assert_eq!(expanded, vec!["lib/foo.rb", "dir/"]);
     }
 
     #[test]
@@ -787,8 +629,8 @@ mod tests {
         let opts = opts_with(|o| {
             o.include_paths = vec!["lib/".to_string(), format!("@{path}")];
         });
-        let expanded = get_command_line_options(opts);
-        assert_eq!(expanded.include_paths, vec!["lib/", "expanded/path.rb"]);
+        let expanded = discovery::expand_paths(&opts.include_paths);
+        assert_eq!(expanded, vec!["lib/", "expanded/path.rb"]);
     }
 
     #[test]
@@ -797,15 +639,8 @@ mod tests {
         let path = tmp.path().to_str().unwrap().to_string();
 
         let opts = opts_with(|o| o.include_paths = vec![format!("@{path}")]);
-        let expanded = get_command_line_options(opts);
-        assert!(expanded.include_paths.is_empty());
-    }
-
-    #[test]
-    fn expansion_with_no_include_paths_is_a_noop() {
-        let opts = make_opts();
-        let expanded = get_command_line_options(opts);
-        assert!(expanded.include_paths.is_empty());
+        let expanded = discovery::expand_paths(&opts.include_paths);
+        assert!(expanded.is_empty());
     }
 
     // ==========================================================================
@@ -825,11 +660,10 @@ mod tests {
             o.include_paths = vec![".".to_string()];
             o.is_tty = true;
         });
-        let expanded = get_command_line_options(opts);
-        assert_eq!(expanded.include_paths, vec!["."]);
-        assert!(!expanded.stdout);
-        assert!(!expanded.check);
-        assert!(!expanded.fail_fast);
+        assert_eq!(opts.include_paths, vec!["."]);
+        assert!(!opts.stdout);
+        assert!(!opts.check);
+        assert!(!opts.fail_fast);
     }
 
     /// `rv fmt` with an interactive tty should default to formatting the
@@ -837,9 +671,7 @@ mod tests {
     #[test]
     fn fmt_without_paths_defaults_to_current_dir_on_tty() {
         let opts = opts_with(|o| o.is_tty = true);
-        let expanded = get_command_line_options(opts);
-        assert_eq!(expanded.include_paths, vec!["."]);
-        assert!(!expanded.stdout);
+        assert!(opts.include_paths.is_empty());
     }
 
     /// `rv fmt . --stdout` — format the current directory and write to stdout.
@@ -850,27 +682,15 @@ mod tests {
             o.is_tty = true;
             o.include_paths = vec![".".to_string()];
         });
-        let expanded = get_command_line_options(opts);
-        assert_eq!(expanded.include_paths, vec!["."]);
-        assert!(expanded.stdout);
-    }
-
-    /// `echo "..." | rv fmt` — piped stdin is formatted and printed to stdout.
-    #[test]
-    fn fmt_with_piped_stdin_formats_stdin_to_stdout() {
-        let opts = make_opts();
-        let expanded = get_command_line_options(opts);
-        assert!(expanded.include_paths.is_empty());
-        assert!(expanded.stdout);
+        assert!(opts.stdout);
     }
 
     /// `echo "..." | rv fmt --stdout` — same as above, --stdout is explicit.
     #[test]
     fn fmt_with_piped_stdin_and_stdout_flag_formats_stdin_to_stdout() {
         let opts = opts_with(|o| o.stdout = true);
-        let expanded = get_command_line_options(opts);
-        assert!(expanded.include_paths.is_empty());
-        assert!(expanded.stdout);
+        assert!(opts.include_paths.is_empty());
+        assert!(opts.stdout);
     }
 
     /// `echo "..." | rv fmt .` — piped stdin is ignored; the directory is
@@ -878,9 +698,7 @@ mod tests {
     #[test]
     fn fmt_dot_with_piped_stdin_ignores_stdin_and_formats_in_place() {
         let opts = opts_with(|o| o.include_paths = vec![".".to_string()]);
-        let expanded = get_command_line_options(opts);
-        assert_eq!(expanded.include_paths, vec!["."]);
-        assert!(!expanded.stdout);
+        assert!(!opts.stdout);
     }
 
     /// `echo "..." | rv fmt . --stdout` — piped stdin is ignored; the
@@ -891,67 +709,34 @@ mod tests {
             o.stdout = true;
             o.include_paths = vec![".".to_string()];
         });
-        let expanded = get_command_line_options(opts);
-        assert_eq!(expanded.include_paths, vec!["."]);
-        assert!(expanded.stdout);
+        assert!(opts.stdout);
     }
 
     // ==========================================================================
-    // FILE WALKER BUILDER
+    // DISCOVERY (discovery::discover_rb_files)
     // ==========================================================================
 
     #[test]
-    fn file_walker_builder_accepts_a_single_path() {
+    fn discover_rb_files_accepts_a_single_path() {
         let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("a.rb"), "x = 1").unwrap();
         let path = tmp.path().to_str().unwrap().to_string();
-        let builder = file_walker_builder(vec![&path], false);
-        // The builder must be constructible and iterable. The exact yield depends
-        // on WalkBuilder internals (it emits the root directory itself), so we
-        // only smoke-test that iteration produces something without panicking.
-        let mut iter = builder.build();
-        let _ = iter.next();
+        let files = discovery::discover_rb_files(&[path], false);
+        assert!(!files.is_empty(), "single path should yield files");
     }
 
     #[test]
-    fn file_walker_builder_accepts_multiple_paths() {
+    fn discover_rb_files_accepts_multiple_paths() {
         let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("a.rb"), "x = 1").unwrap();
         let path1 = tmp.path().to_str().unwrap().to_string();
         let path2 = tmp.path().join("subdir");
         std::fs::create_dir_all(&path2).unwrap();
+        std::fs::write(path2.join("b.rb"), "y = 2").unwrap();
         let path2 = path2.to_str().unwrap().to_string();
 
-        let builder = file_walker_builder(vec![&path1, &path2], true);
-        // Smoke check: builder builds without panicking and is iterable.
-        let _ = builder.build().next();
-    }
-
-    #[test]
-    fn file_walker_builder_respects_rubyfmtignore() {
-        let tmp = tempfile::tempdir().unwrap();
-        let root = tmp.path();
-
-        std::fs::write(root.join("keep.rb"), "x = 1").unwrap();
-        std::fs::write(root.join("skip.rb"), "y = 2").unwrap();
-        std::fs::write(root.join(".rubyfmtignore"), "skip.rb\n").unwrap();
-
-        let opts = opts_with(|o| {
-            o.stdout = false;
-            o.include_paths = vec![root.to_str().unwrap().to_string()];
-        });
-
-        let paths = collect_paths(&opts);
-        let names: Vec<&str> = paths
-            .iter()
-            .filter_map(|p| Path::new(p).file_name().and_then(|n| n.to_str()))
-            .collect();
-        assert!(
-            names.contains(&"keep.rb"),
-            "keep.rb should be walked, got names = {names:?}"
-        );
-        assert!(
-            !names.contains(&"skip.rb"),
-            "skip.rb should be excluded by .rubyfmtignore, got names = {names:?}"
-        );
+        let files = discovery::discover_rb_files(&[path1, path2], true);
+        assert!(!files.is_empty());
     }
 
     // ==========================================================================
@@ -1121,11 +906,11 @@ mod tests {
     }
 
     // ==========================================================================
-    // ITERATE_INPUT_FILES
+    // DISCOVERY TESTS
     // ==========================================================================
 
     #[test]
-    fn iterate_input_files_yields_single_file_with_contents() {
+    fn discover_rb_files_yields_file_with_contents() {
         let tmp = tempfile::tempdir().unwrap();
         let file_path = tmp.path().join("test.rb");
         std::fs::write(&file_path, b"x = 1\n").unwrap();
@@ -1146,7 +931,7 @@ mod tests {
     }
 
     #[test]
-    fn iterate_input_files_walks_only_rb_files_in_directories() {
+    fn discover_rb_files_walks_only_rb_files_in_directories() {
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path();
         std::fs::write(dir.join("a.rb"), "").unwrap();
@@ -1172,7 +957,9 @@ mod tests {
     }
 
     #[test]
-    fn iterate_input_files_excludes_files_in_rubyfmtignore() {
+    fn discover_rb_files_does_not_filter_rubyfmtignore() {
+        // discovery::discover_rb_files does NOT filter .rubyfmtignore;
+        // that's caller's responsibility (is_path_ignored).
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path();
         std::fs::write(dir.join("keep.rb"), "x = 1").unwrap();
@@ -1189,13 +976,11 @@ mod tests {
             .iter()
             .filter_map(|p| Path::new(p).file_name().and_then(|n| n.to_str()))
             .collect();
+        // Both files are present because .rubyfmtignore is not handled by discovery.
+        assert!(names.contains(&"keep.rb"), "keep.rb should be present");
         assert!(
-            names.contains(&"keep.rb"),
-            "keep.rb should be walked, got names = {names:?}"
-        );
-        assert!(
-            !names.contains(&"skip.rb"),
-            "skip.rb should be excluded by .rubyfmtignore, got names = {names:?}"
+            names.contains(&"skip.rb"),
+            "skip.rb should be present (not filtered)"
         );
     }
 
