@@ -10,6 +10,7 @@ members = [
   "crates/rv-gem-types",
   "crates/rv-platform",
   "crates/rv-ruby",
+  "crates/rv-ruby-parser",
   "crates/rv-version",
   "fuzz",
 ]
@@ -53,8 +54,9 @@ reqwest = { version = "0.13.5", default-features = false, features = [
   "json",
   "http2",
 ] }
-saphyr = "0.0.11"
-saphyr-parser = "0.0.11"
+ruby-prism = "1.9"
+saphyr = "0.0.12"
+saphyr-parser = "0.0.12"
 seahash = "4.1.0"
 serde = "1.0.219"
 serde_json = "1.0"
@@ -84,6 +86,7 @@ rv-gem-specification-yaml = { version = "0.1.0", path = "crates/rv-gem-specifica
 rv-gem-types = { version = "0.1.0", path = "crates/rv-gem-types" }
 rv-platform = { version = "0.1.0", path = "crates/rv-platform" }
 rv-ruby = { version = "0.1.0", path = "crates/rv-ruby" }
+rv-ruby-parser = { version = "0.1.0", path = "crates/rv-ruby-parser" }
 rv-version = { version = "0.1.0", path = "crates/rv-version" }
 dep-graph = { version = "0.2.1", git = "https://github.com/spinel-coop/dep-graph" }
 url = { version = "2.5.8" }
