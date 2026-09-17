@@ -1,8 +1,7 @@
 use clap::Parser;
-use ignore::gitignore::GitignoreBuilder;
 use regex::Regex;
 use similar::TextDiff;
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 use std::io::{self, IsTerminal, Write};
 use std::path::Path;
 use std::process::exit;
@@ -28,7 +27,6 @@ pub(crate) enum ExecutionError {
     // Errors seen when performing IO s
     IOError(io::Error, String),
     // Errors seen when grepping for files
-    FileSearchFailure(ignore::Error),
 }
 
 /// Rubyfmt CLI
@@ -90,14 +88,6 @@ fn handle_io_error(err: io::Error, source: &str, error_exit: ErrorExit) {
     }
 }
 
-fn handle_ignore_error(err: ignore::Error, error_exit: ErrorExit) {
-    let msg = format!("Rubyfmt experienced an error searching for files: {}", err);
-    print_error(&msg, None, &mut io::stderr().lock());
-    if error_exit == ErrorExit::Exit {
-        exit(rubyfmt::FormatError::IOError as i32);
-    }
-}
-
 fn handle_rubyfmt_error(err: rubyfmt::RichFormatError, source: &str, error_exit: ErrorExit) {
     use rubyfmt::RichFormatError::*;
     let exit_code = err.as_exit_code();
@@ -140,7 +130,6 @@ pub(crate) fn handle_execution_error(opts: &CommandlineOpts, err: ExecutionError
     match err {
         ExecutionError::RubyfmtError(e, path) => handle_rubyfmt_error(e, &path, exit_type),
         ExecutionError::IOError(e, path) => handle_io_error(e, &path, exit_type),
-        ExecutionError::FileSearchFailure(e) => handle_ignore_error(e, exit_type),
     }
 }
 
@@ -187,26 +176,6 @@ fn rubyfmt_string(
 /******************************************************/
 /* Helpers                                            */
 /******************************************************/
-
-/// Check if a path should be ignored based on .gitignore and .rubyfmtignore patterns.
-/// `path` is interpreted relative to `root` (the directory that holds the ignore files).
-fn is_path_ignored(root: &Path, path: &Path, include_gitignored: bool) -> bool {
-    let mut builder = GitignoreBuilder::new(root);
-
-    if !include_gitignored {
-        builder.add(root.join(".gitignore"));
-    }
-    builder.add(root.join(".rubyfmtignore"));
-
-    if let Ok(gitignore) = builder.build() {
-        let is_dir = path.is_dir();
-        gitignore
-            .matched_path_or_any_parents(path, is_dir)
-            .is_ignore()
-    } else {
-        false
-    }
-}
 
 type FormattingFunc<'a> = &'a dyn Fn((&Path, &[u8], Option<Vec<u8>>));
 
@@ -259,7 +228,7 @@ pub(crate) fn main(mut opts: CommandlineOpts) {
                         ));
                     }
                     Err(e) => {
-                        handle_rubyfmt_error(e, &file_path.to_string(), ErrorExit::NoExit);
+                        handle_rubyfmt_error(e, file_path.as_str(), ErrorExit::NoExit);
                         *errors_count.lock().unwrap() += 1;
                     }
                 }
@@ -737,104 +706,6 @@ mod tests {
 
         let files = discovery::discover_rb_files(&[path1, path2], true);
         assert!(!files.is_empty());
-    }
-
-    // ==========================================================================
-    // PATH IGNORING (is_path_ignored)
-    // ==========================================================================
-
-    fn write_ignore(dir: &Path, name: &str, contents: &str) {
-        let mut f = File::create(dir.join(name)).unwrap();
-        f.write_all(contents.as_bytes()).unwrap();
-    }
-
-    #[test]
-    fn is_path_ignored_matches_gitignore_pattern() {
-        let tmp = tempfile::tempdir().unwrap();
-        write_ignore(tmp.path(), ".gitignore", "*.rb\n");
-
-        assert!(
-            is_path_ignored(tmp.path(), Path::new("test.rb"), false),
-            "*.rb in .gitignore should match test.rb"
-        );
-        assert!(
-            !is_path_ignored(tmp.path(), Path::new("README.md"), false),
-            "README.md should not be matched"
-        );
-    }
-
-    #[test]
-    fn is_path_ignored_ignores_gitignore_when_flag_is_set() {
-        let tmp = tempfile::tempdir().unwrap();
-        write_ignore(tmp.path(), ".gitignore", "*.rb\n");
-
-        assert!(
-            !is_path_ignored(tmp.path(), Path::new("test.rb"), true),
-            "with include_gitignored=true, .gitignore patterns must not apply"
-        );
-        // .rubyfmtignore should still apply.
-        write_ignore(tmp.path(), ".rubyfmtignore", "special.rb\n");
-        assert!(
-            is_path_ignored(tmp.path(), Path::new("special.rb"), true),
-            ".rubyfmtignore patterns apply regardless of include_gitignored"
-        );
-    }
-
-    #[test]
-    fn is_path_ignored_matches_rubyfmtignore_pattern() {
-        let tmp = tempfile::tempdir().unwrap();
-        write_ignore(tmp.path(), ".rubyfmtignore", "ignored_file.rb\n");
-
-        assert!(
-            is_path_ignored(tmp.path(), Path::new("ignored_file.rb"), false),
-            "ignored_file.rb should be ignored by .rubyfmtignore"
-        );
-        assert!(
-            !is_path_ignored(tmp.path(), Path::new("lib/active.rb"), false),
-            "lib/active.rb should not be ignored"
-        );
-    }
-
-    #[test]
-    fn is_path_ignored_returns_false_when_no_ignore_files_exist() {
-        let tmp = tempfile::tempdir().unwrap();
-        assert!(
-            !is_path_ignored(tmp.path(), Path::new("test.rb"), false),
-            "Without ignore files, nothing should be ignored"
-        );
-    }
-
-    #[test]
-    fn is_path_ignored_matches_directory_pattern() {
-        let tmp = tempfile::tempdir().unwrap();
-        write_ignore(tmp.path(), ".gitignore", "vendor/\n");
-
-        assert!(
-            is_path_ignored(tmp.path(), Path::new("vendor/bundle"), false),
-            "vendor/ pattern should match vendor/bundle"
-        );
-    }
-
-    #[test]
-    fn is_path_ignored_matches_nested_pattern() {
-        let tmp = tempfile::tempdir().unwrap();
-        write_ignore(tmp.path(), ".gitignore", "**/tmp/\n");
-
-        assert!(
-            is_path_ignored(tmp.path(), Path::new("app/tmp/cache"), false),
-            "**/tmp/ pattern should match app/tmp/cache"
-        );
-    }
-
-    #[test]
-    fn is_path_ignored_does_not_match_unrelated_path() {
-        let tmp = tempfile::tempdir().unwrap();
-        write_ignore(tmp.path(), ".gitignore", "*.log\n");
-
-        assert!(
-            !is_path_ignored(tmp.path(), Path::new("test.rb"), false),
-            "test.rb should not be ignored when .gitignore only covers *.log"
-        );
     }
 
     // ==========================================================================

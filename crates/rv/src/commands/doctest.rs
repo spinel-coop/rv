@@ -27,6 +27,11 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         .map(|(path, source)| (path.to_string(), rv_ruby_parser::parse(source)))
         .collect();
 
+    let total_snippets: usize = parsed
+        .par_iter()
+        .map(|(_, parsed_file)| extract(parsed_file).len())
+        .sum();
+
     let ruby = Config::new(global_args, None)
         .ok()
         .and_then(|c| c.best_ruby());
@@ -48,12 +53,8 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
             }
         }
         while let Some(result) = set.join_next().await {
-            let (path, file_failures) = result.map_err(|e| {
-                Error::IoError(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    e.to_string(),
-                ))
-            })?;
+            let (path, file_failures) =
+                result.map_err(|e| Error::IoError(std::io::Error::other(e.to_string())))?;
             for failure in file_failures {
                 failures.push((path.clone(), failure));
             }
@@ -61,7 +62,10 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
     }
 
     if failures.is_empty() {
-        println!("All doctests passed.");
+        let paths_str = opts.include_paths.join(", ");
+        println!(
+            "All {total_snippets} of fenced Ruby codeblocks in {paths_str} pass syntax checks."
+        );
     } else {
         for (path, failure) in &failures {
             println!(

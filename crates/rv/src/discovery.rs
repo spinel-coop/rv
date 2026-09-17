@@ -54,23 +54,19 @@ pub fn discover_rb_files(
     }
 
     if !dir_paths.is_empty() {
-        let mut builder = WalkBuilder::new(&dir_paths[0]);
+        let mut builder = WalkBuilder::new(std::path::Path::new(&dir_paths[0]));
         for path in &dir_paths[1..] {
             builder.add(path);
         }
         builder.git_ignore(!include_gitignored);
 
-        for result in builder.build() {
-            match result {
-                Ok(pp) => {
-                    let file_path = pp.path();
-                    if file_path.extension().and_then(|e| e.to_str()) == Some("rb") {
-                        if let Ok(buffer) = read(file_path) {
-                            results.push((file_path.to_path_buf().try_into().unwrap(), buffer));
-                        }
-                    }
+        for pp in builder.build().filter_map(Result::ok) {
+            let file_path = pp.path();
+            match read(file_path) {
+                Ok(buffer) if file_path.extension().and_then(|e| e.to_str()) == Some("rb") => {
+                    results.push((file_path.to_path_buf().try_into().unwrap(), buffer));
                 }
-                Err(_) => {}
+                _ => {}
             }
         }
     }
