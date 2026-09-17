@@ -110,24 +110,6 @@ pub fn extract(parsed: &ParsedFileFromParser) -> Vec<Snippet> {
                 } else {
                     code_end
                 };
-            } else if is_indented_line(lines[comment_idx]) {
-                let mut code_end = comment_idx;
-                while code_end < lines.len() && is_indented_line(lines[code_end]) {
-                    code_end += 1;
-                }
-                let code = lines[comment_idx..code_end].to_vec();
-                snippets.push(Snippet {
-                    item_name: item.name.clone(),
-                    item_kind: item.kind(),
-                    start_line: item.span.start_line,
-                    code: code
-                        .iter()
-                        .map(|l| &l[4..]) // keep only the code, not the whitespace
-                        .map(|s| s.to_string())
-                        .collect::<Vec<_>>()
-                        .join("\n"),
-                });
-                comment_idx = code_end;
             } else {
                 comment_idx += 1;
             }
@@ -145,10 +127,6 @@ fn is_fence_open(line: &str) -> bool {
 
 fn is_fence_close(line: &str) -> bool {
     line.trim() == "```"
-}
-
-fn is_indented_line(line: &str) -> bool {
-    line.starts_with("    ")
 }
 
 /// Checks multiple snippets, collecting all failures.

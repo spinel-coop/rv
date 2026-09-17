@@ -82,23 +82,6 @@ fn unterminated_fence_is_ignored() {
 }
 
 #[test]
-fn indented_block_is_extracted_and_dedented() {
-    let source = indoc! {"
-        # Adds two numbers.
-        #
-        #     add(1, 2)
-        #     add(3, 4)
-        #
-        def add(a, b)
-          a + b
-        end
-    "};
-    let snips = snippets(source);
-    assert_eq!(snips.len(), 1);
-    assert_eq!(snips[0].code, "add(1, 2)\nadd(3, 4)");
-}
-
-#[test]
 fn prose_is_not_a_snippet() {
     let source = indoc! {"
         # Adds two numbers.
@@ -184,17 +167,4 @@ fn snippet_in_class_is_extracted() {
 fn items_without_comments_yield_no_snippets() {
     let source = "def add(a, b)\n  a + b\nend\n";
     assert!(snippets(source).is_empty());
-}
-
-#[test]
-fn indented_block_extracted_from_comment_with_leading_spaces() {
-    let source = "#     indented code\ndef foo\nend\n";
-    let parsed = parse(source.as_bytes());
-    assert!(parsed.is_success());
-    let snips = extract(&parsed);
-    assert_eq!(snips.len(), 1);
-    // Parser preserves 4 spaces: # + 5 spaces -> strips # + 1 space = 4 spaces
-    // extract() strips that 4-space indent for indented blocks
-    assert_eq!(snips[0].code, "indented code");
-    assert_eq!(snips[0].item_name, "foo");
 }
