@@ -1,9 +1,15 @@
+mod checkers;
+pub mod checker;
+pub mod rbs;
+
 use async_trait::async_trait;
-use rv_ruby::Ruby;
 use rv_ruby_parser::{ItemKind, ParsedFile as ParsedFileFromParser};
-use std::path::PathBuf;
 
 use thiserror::Error;
+
+pub use checker::{RbsChecker, RbsViolation};
+pub use checkers::{AssertionChecker, SyntaxChecker};
+pub use rbs::{ArityResult, MethodSig, RbsEnvironment};
 
 /// Error returned from snippet checking.
 #[derive(Debug, Error)]
@@ -12,6 +18,10 @@ pub enum CheckError {
     Io(#[from] std::io::Error),
     #[error("syntax check failed:\n{stderr}")]
     Syntax { stderr: String },
+    #[error("assertion failed:\nstdout:\n{stdout}\nstderr:\n{stderr}")]
+    Assertion { stdout: String, stderr: String },
+    #[error("RBS error: {0}")]
+    Rbs(String),
 }
 
 /// A reader of Ruby code that we can validate.
@@ -20,45 +30,30 @@ pub trait RubyChecker {
     async fn check(&mut self, code: &str) -> Result<(), CheckError>;
 }
 
-/// Checks Ruby syntax by running the interpreter with `-c`.
-pub struct CommandRubyChecker {
-    ruby: Ruby,
+/// Checker dispatcher: routes to Syntax or Assert based on snippet content.
+pub enum Checker {
+    Syntax(SyntaxChecker),
+    Assert(AssertionChecker),
 }
 
-impl CommandRubyChecker {
-    pub fn new(ruby: Ruby) -> Self {
-        Self { ruby }
+impl Checker {
+    /// Returns the appropriate checker variant for the given snippet,
+    /// creating it with the provided Ruby interpreter.
+    pub fn for_snippet(ruby: rv_ruby::Ruby, snippet: &Snippet) -> Self {
+        if AssertionChecker::applies_to(&snippet.code) {
+            Checker::Assert(AssertionChecker::new(ruby))
+        } else {
+            Checker::Syntax(SyntaxChecker::new(ruby))
+        }
     }
 }
 
 #[async_trait]
-impl RubyChecker for CommandRubyChecker {
+impl RubyChecker for Checker {
     async fn check(&mut self, code: &str) -> Result<(), CheckError> {
-        use tokio::io::AsyncWriteExt;
-
-        let tmp_path: PathBuf = tempfile::Builder::new()
-            .suffix(".rb")
-            .tempfile()?
-            .into_temp_path()
-            .to_path_buf();
-
-        {
-            let mut file = tokio::fs::File::create(&tmp_path).await?;
-            file.write_all(code.as_bytes()).await?;
-        }
-
-        let output = tokio::process::Command::new(self.ruby.executable_path())
-            .args(["-c"])
-            .arg(&tmp_path)
-            .output()
-            .await?;
-
-        if output.status.success() {
-            Ok(())
-        } else {
-            Err(CheckError::Syntax {
-                stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
-            })
+        match self {
+            Checker::Syntax(c) => c.check(code).await,
+            Checker::Assert(c) => c.check(code).await,
         }
     }
 }
@@ -68,6 +63,7 @@ impl RubyChecker for CommandRubyChecker {
 pub struct Snippet {
     pub item_name: String,
     pub item_kind: ItemKind,
+    pub parent_path: String,
     pub start_line: u32,
     pub code: String,
 }
@@ -101,6 +97,7 @@ pub fn extract(parsed: &ParsedFileFromParser) -> Vec<Snippet> {
                     snippets.push(Snippet {
                         item_name: item.name.clone(),
                         item_kind: item.kind(),
+                        parent_path: String::new(),
                         start_line: item.span.start_line,
                         code: content.join("\n"),
                     });
@@ -130,9 +127,11 @@ fn is_fence_close(line: &str) -> bool {
 }
 
 /// Checks multiple snippets, collecting all failures.
-pub async fn check_snippets(snippets: &[Snippet], checker: &mut impl RubyChecker) -> Vec<Failure> {
+/// Dispatches each snippet to the appropriate checker (Syntax or Assertion).
+pub async fn check_snippets(snippets: &[Snippet], ruby: &rv_ruby::Ruby) -> Vec<Failure> {
     let mut failures = Vec::new();
     for snippet in snippets {
+        let mut checker = Checker::for_snippet(ruby.clone(), snippet);
         match checker.check(&snippet.code).await {
             Ok(()) => {}
             Err(e) => {
@@ -147,8 +146,8 @@ pub async fn check_snippets(snippets: &[Snippet], checker: &mut impl RubyChecker
 }
 
 /// Convenience: extract & check from a parsed file.
-pub async fn check(parsed: &ParsedFileFromParser, checker: &mut impl RubyChecker) -> Vec<Failure> {
-    check_snippets(&extract(parsed), checker).await
+pub async fn check(parsed: &ParsedFileFromParser, ruby: &rv_ruby::Ruby) -> Vec<Failure> {
+    check_snippets(&extract(parsed), ruby).await
 }
 
 #[cfg(test)]

@@ -3,7 +3,7 @@ use crate::discovery;
 use crate::{Error, GlobalArgs};
 use clap::Parser;
 use rayon::prelude::*;
-use rv_doctest::{CommandRubyChecker, check_snippets, extract};
+use rv_doctest::{Failure, RbsChecker, RbsEnvironment, check_snippets, extract};
 use rv_ruby_parser::ParsedFile;
 
 pub(crate) type DoctestArgs = CommandlineOpts;
@@ -17,6 +17,14 @@ pub(crate) struct CommandlineOpts {
     /// Include files ignored by .gitignore.
     #[arg(long)]
     pub include_gitignored: bool,
+
+    /// Check method call arity in fenced examples against RBS signatures.
+    #[arg(long)]
+    pub rbs: bool,
+
+    /// Directories to search for .rbs files (comma-separated).
+    #[arg(long, default_value = "sig", value_delimiter = ',')]
+    pub rbs_dirs: Vec<String>,
 }
 
 pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Result<(), Error> {
@@ -46,8 +54,7 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
                 let ruby = ruby.clone();
                 let path = path.clone();
                 set.spawn(async move {
-                    let mut checker = CommandRubyChecker::new(ruby);
-                    let file_failures = check_snippets(&snippets, &mut checker).await;
+                    let file_failures = check_snippets(&snippets, &ruby).await;
                     (path, file_failures)
                 });
             }
@@ -61,10 +68,33 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         }
     }
 
+    if opts.rbs {
+        let rbs_dirs: Vec<&str> = opts.rbs_dirs.iter().map(String::as_str).collect();
+        let env = RbsEnvironment::load(&rbs_dirs)
+            .map_err(|e| Error::IoError(std::io::Error::other(e.to_string())))?;
+        let checker = RbsChecker::new(env);
+        for (path, parsed_file) in &parsed {
+            for snippet in extract(parsed_file) {
+                for violation in checker.check(&snippet) {
+                    failures.push((
+                        path.clone(),
+                        Failure {
+                            snippet: snippet.clone(),
+                            message: format!(
+                                "RBS arity: {}#{}: {}",
+                                violation.class_name, violation.method_name, violation.message
+                            ),
+                        },
+                    ));
+                }
+            }
+        }
+    }
+
     if failures.is_empty() {
         let paths_str = opts.include_paths.join(", ");
         println!(
-            "All {total_snippets} of fenced Ruby codeblocks in {paths_str} pass syntax checks."
+            "All {total_snippets} of fenced Ruby codeblocks in {paths_str} pass all checks."
         );
     } else {
         for (path, failure) in &failures {

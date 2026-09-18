@@ -5,8 +5,12 @@ edition = "2024"
 
 [dependencies]
 async-trait = { workspace = true }
+cc = { workspace = true }
+glob = { workspace = true }
+regex = { workspace = true }
 rv-ruby = { workspace = true }
 rv-ruby-parser = { workspace = true }
+ruby-rbs = "0.3"
 tempfile = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = [
@@ -18,8 +22,11 @@ tokio = { workspace = true, features = [
 ] }
 
 [dev-dependencies]
+camino = { workspace = true }
 indoc = { workspace = true }
+regex.workspace = true
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["macros"] }
 
 [lints]
 workspace = true
-
