@@ -19,3 +19,4 @@ cd openai_ruby
 rv doctest --rbs verbose --rbs-dirs sig lib/openai/*.rb
 
 smoke_test_success "openai_ruby"
+

@@ -20,3 +20,4 @@ cd stripe_ruby
 rv doctest --rbs=verbose lib/stripe/*.rb
 
 smoke_test_success "stripe_ruby"
+

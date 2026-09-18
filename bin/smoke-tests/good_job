@@ -20,3 +20,4 @@ cd good_job
 rv doctest --rbs=verbose lib
 
 smoke_test_success "good_job"
+
