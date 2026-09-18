@@ -86,7 +86,10 @@ pub fn extract(parsed: &rv_ruby_parser::ParsedFile) -> Vec<Snippet> {
 }
 
 fn is_fence_open(line: &str) -> bool {
-    line.trim().starts_with("```")
+    let t = line.trim();
+    t.strip_prefix("```")
+        .map(|rest| rest.trim().eq_ignore_ascii_case("ruby"))
+        .unwrap_or(false)
 }
 
 fn is_fence_close(line: &str) -> bool {

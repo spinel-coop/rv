@@ -47,11 +47,11 @@ fn snippet_start_line_points_inside_fence() {
 }
 
 #[test]
-fn bare_fence_is_extracted() {
+fn ruby_fence_is_extracted() {
     let source = indoc! {"
         # Example:
         #
-        #   ```
+        #   ```ruby
         #   add(1, 2)
         #   ```
         #
@@ -63,22 +63,7 @@ fn bare_fence_is_extracted() {
 }
 
 #[test]
-fn non_ruby_fence_is_extracted() {
-    let source = indoc! {"
-        # Example:
-        #
-        #   ```text
-        #   some output
-        #   ```
-        #
-        def foo = 1
-    "};
-    let snips = snippets(source);
-    assert!(!snips.is_empty());
-}
-
-#[test]
-fn any_fence_is_extracted() {
+fn ruby_fence_is_case_insensitive() {
     let source = indoc! {"
         #   ```RUBY
         #   1 + 1
@@ -86,6 +71,18 @@ fn any_fence_is_extracted() {
         def foo = 1
     "};
     assert_eq!(snippets(source).len(), 1);
+}
+
+#[test]
+fn non_ruby_fence_is_not_extracted() {
+    let source = indoc! {"
+        # Example:
+        #
+        #   ```text
+        #   some output
+        #   ```
+    "};
+    assert!(snippets(source).is_empty());
 }
 
 #[test]
