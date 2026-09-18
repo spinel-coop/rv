@@ -5,10 +5,9 @@
 
 use rv_ruby_parser::ItemKind;
 
-mod checker;
 mod checkers;
 
-pub use checker::{assertion_applies_to, assertion_check, check_file_syntax, syntax_check};
+pub use checkers::{assertion_applies_to, assertion_check, check_file_syntax, syntax_check};
 #[derive(Clone, PartialEq, Eq)]
 pub struct Snippet {
     pub item_name: String,
