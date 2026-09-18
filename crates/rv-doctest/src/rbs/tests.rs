@@ -1,11 +1,7 @@
 use super::*;
-use std::path::PathBuf;
-
-fn write_rbs(dir: &Path, name: &str, content: &str) -> PathBuf {
-    let path = dir.join(format!("{name}.rbs"));
-    std::fs::write(&path, content).unwrap();
-    path
-}
+#[path = "../../tests/common/mod.rs"]
+mod common;
+use common::write_rbs;
 
 #[test]
 fn test_load_simple_class() {

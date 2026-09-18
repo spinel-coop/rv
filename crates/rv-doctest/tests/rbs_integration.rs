@@ -1,17 +1,15 @@
 //! End-to-end test: extract fenced examples from a Ruby file and validate
 //! their method calls against RBS signatures.
 
+mod common;
+use common::write_rbs;
 use indoc::indoc;
 use rv_doctest::{RbsChecker, RbsEnvironment, extract};
 
 #[test]
 fn rbs_arity_check_on_real_ruby_source() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(
-        dir.path().join("user.rbs"),
-        "class User\n  def initialize: (String name, Integer age) -> void\nend\n",
-    )
-    .unwrap();
+    write_rbs(dir.path(), "user", "class User\n  def initialize: (String name, Integer age) -> void\nend\n");
 
     let ruby_source = indoc! {r#"
         class User
@@ -39,11 +37,7 @@ fn rbs_arity_check_on_real_ruby_source() {
 #[test]
 fn rbs_arity_mismatch_is_detected() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(
-        dir.path().join("user.rbs"),
-        "class User\n  def initialize: (String name, Integer age) -> void\nend\n",
-    )
-    .unwrap();
+    write_rbs(dir.path(), "user", "class User\n  def initialize: (String name, Integer age) -> void\nend\n");
 
     let ruby_source = indoc! {r#"
         class User
@@ -73,11 +67,7 @@ fn rbs_arity_mismatch_is_detected() {
 #[test]
 fn equivalence_block_produces_no_violations() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(
-        dir.path().join("object.rbs"),
-        "class Object\n  def blank?: () -> bool\nend\n",
-    )
-    .unwrap();
+    write_rbs(dir.path(), "object", "class Object\n  def blank?: () -> bool\nend\n");
 
     // Rails-style equivalence explanation: shows what `blank?` replaces,
     // not a call to it. Must not be flagged.
@@ -140,11 +130,7 @@ fn missing_sig_dir_returns_empty_env() {
 #[test]
 fn mixed_calls_report_coverage_split() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(
-        dir.path().join("user.rbs"),
-        "class User\n  def initialize: (String name, Integer age) -> void\nend\n",
-    )
-    .unwrap();
+    write_rbs(dir.path(), "user", "class User\n  def initialize: (String name, Integer age) -> void\nend\n");
 
     let ruby_source = indoc! {r#"
         class User

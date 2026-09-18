@@ -141,52 +141,41 @@ fn walk_node(
     index: &mut HashMap<String, HashMap<String, MethodSig>>,
 ) {
     match node {
-        Node::Class(class_node) => walk_class(class_node, parent_path, index),
-        Node::Module(module_node) => walk_module(module_node, parent_path, index),
+        Node::Class(class_node) => walk_type_node(
+            &class_node.name(),
+            &class_node.members(),
+            parent_path,
+            index,
+        ),
+        Node::Module(module_node) => walk_type_node(
+            &module_node.name(),
+            &module_node.members(),
+            parent_path,
+            index,
+        ),
         _ => {}
     }
 }
 
-fn walk_class(
-    node: &ClassNode,
+fn walk_type_node(
+    name: &TypeNameNode,
+    members: &NodeList,
     parent_path: &str,
     index: &mut HashMap<String, HashMap<String, MethodSig>>,
 ) {
-    let name = type_name_string(&node.name());
+    let name = type_name_string(name);
     let full_path = if parent_path.is_empty() {
         name
     } else {
         format!("{parent_path}::{name}")
     };
 
-    let sigs = extract_method_sigs(&node.members());
+    let sigs = extract_method_sigs(members);
     if !sigs.is_empty() {
         index.insert(full_path.clone(), sigs);
     }
 
-    for member_node in node.members().iter() {
-        walk_node(&member_node, &full_path, index);
-    }
-}
-
-fn walk_module(
-    node: &ModuleNode,
-    parent_path: &str,
-    index: &mut HashMap<String, HashMap<String, MethodSig>>,
-) {
-    let name = type_name_string(&node.name());
-    let full_path = if parent_path.is_empty() {
-        name
-    } else {
-        format!("{parent_path}::{name}")
-    };
-
-    let sigs = extract_method_sigs(&node.members());
-    if !sigs.is_empty() {
-        index.insert(full_path.clone(), sigs);
-    }
-
-    for member_node in node.members().iter() {
+    for member_node in members.iter() {
         walk_node(&member_node, &full_path, index);
     }
 }

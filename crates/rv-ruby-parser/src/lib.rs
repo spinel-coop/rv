@@ -111,69 +111,48 @@ pub enum Item {
     Def(DefItem),
 }
 
-impl Deref for ClassItem {
-    type Target = CommonItem;
-
-    fn deref(&self) -> &CommonItem {
-        &self.common
-    }
-}
-
-impl DerefMut for ClassItem {
-    fn deref_mut(&mut self) -> &mut CommonItem {
-        &mut self.common
-    }
-}
-
-impl Deref for ModuleItem {
-    type Target = CommonItem;
-
-    fn deref(&self) -> &CommonItem {
-        &self.0
-    }
-}
-
-impl DerefMut for ModuleItem {
-    fn deref_mut(&mut self) -> &mut CommonItem {
-        &mut self.0
-    }
-}
-
-impl Deref for DefItem {
-    type Target = CommonItem;
-
-    fn deref(&self) -> &CommonItem {
-        &self.common
-    }
-}
-
-impl DerefMut for DefItem {
-    fn deref_mut(&mut self) -> &mut CommonItem {
-        &mut self.common
-    }
-}
-
-impl Deref for Item {
-    type Target = CommonItem;
-
-    fn deref(&self) -> &CommonItem {
-        match self {
-            Item::Class(class) => class,
-            Item::Module(module) => module,
-            Item::Def(def) => def,
+macro_rules! impl_deref {
+    (field=$ty:ty) => {
+        impl Deref for $ty {
+            type Target = CommonItem;
+            fn deref(&self) -> &CommonItem { &self.common }
         }
-    }
+        impl DerefMut for $ty {
+            fn deref_mut(&mut self) -> &mut CommonItem { &mut self.common }
+        }
+    };
+    (tuple=$ty:ty) => {
+        impl Deref for $ty {
+            type Target = CommonItem;
+            fn deref(&self) -> &CommonItem { &self.0 }
+        }
+        impl DerefMut for $ty {
+            fn deref_mut(&mut self) -> &mut CommonItem { &mut self.0 }
+        }
+    };
+    (enum $ty:ident { $($variant:ident),* }) => {
+        impl Deref for $ty {
+            type Target = CommonItem;
+            fn deref(&self) -> &CommonItem {
+                match self {
+                    $($ty::$variant(v) => v,)*
+                }
+            }
+        }
+        impl DerefMut for $ty {
+            fn deref_mut(&mut self) -> &mut CommonItem {
+                match self {
+                    $($ty::$variant(v) => v,)*
+                }
+            }
+        }
+    };
 }
 
-impl DerefMut for Item {
-    fn deref_mut(&mut self) -> &mut CommonItem {
-        match self {
-            Item::Class(class) => class,
-            Item::Module(module) => module,
-            Item::Def(def) => def,
-        }
-    }
-}
+impl_deref!(field=ClassItem);
+impl_deref!(tuple=ModuleItem);
+impl_deref!(field=DefItem);
+impl_deref!(enum Item { Class, Module, Def });
 
 impl Item {
     pub fn kind(&self) -> ItemKind {
