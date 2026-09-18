@@ -74,6 +74,11 @@ fn process_stmt(node: &Node<'_>, lines: &LineIndex, source: &[u8], calls: &mut V
             process_statements_from_body(body, lines, source, calls);
         }
     }
+    if let Some(singleton) = node.as_singleton_class_node() {
+        if let Some(body) = singleton.body() {
+            process_statements_from_body(body, lines, source, calls);
+        }
+    }
 }
 
 fn process_statements_from_body(
