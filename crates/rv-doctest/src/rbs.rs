@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use ruby_rbs::node::{
-    ClassNode, MethodDefinitionNode, ModuleNode, Node, NodeList, SymbolNode, TypeNameNode, parse,
+    MethodDefinitionNode, Node, NodeList, SymbolNode, TypeNameNode, parse,
 };
 
 use crate::CheckError;
