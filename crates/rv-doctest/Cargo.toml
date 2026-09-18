@@ -4,8 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-async-trait = { workspace = true }
-cc = { workspace = true }
 glob = { workspace = true }
 regex = { workspace = true }
 rv-ruby = { workspace = true }

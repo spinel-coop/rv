@@ -3322,9 +3322,7 @@ dependencies = [
 name = "rv-doctest"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "camino",
- "cc",
  "glob",
  "indoc",
  "regex",

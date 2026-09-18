@@ -1,4 +1,4 @@
-use crate::{Snippet, extract};
+use crate::{Snippet, assertion_applies_to, assertion_check, extract, syntax_check};
 use indoc::indoc;
 use rv_ruby_parser::ItemKind;
 use rv_ruby_parser::parse;
@@ -30,13 +30,6 @@ fn strict_fence_is_extracted() {
 
 #[test]
 fn snippet_start_line_points_inside_fence() {
-    // 1: # Adds two numbers.
-    // 2: #
-    // 3: #   ```ruby
-    // 4: #   add(1, 2)
-    // 5: #   ```
-    // 6: #
-    // 7: def add(a, b)
     let source = indoc! {"
         # Adds two numbers.
         #
@@ -50,7 +43,6 @@ fn snippet_start_line_points_inside_fence() {
     "};
     let snips = snippets(source);
     assert_eq!(snips.len(), 1);
-    // Points at the first code line inside the fence, not the `def`.
     assert_eq!(snips[0].start_line, 4);
 }
 
@@ -201,19 +193,13 @@ fn items_without_comments_yield_no_snippets() {
 
 #[test]
 fn assertion_checker_applies_to_minitest() {
-    assert!(crate::AssertionChecker::applies_to(
-        "require \"minitest\"\n"
-    ));
-    assert!(crate::AssertionChecker::applies_to(
-        "require 'minitest/autorun'\n"
-    ));
-    assert!(crate::AssertionChecker::applies_to(
+    assert!(assertion_applies_to("require \"minitest\"\n"));
+    assert!(assertion_applies_to("require 'minitest/autorun'\n"));
+    assert!(assertion_applies_to(
         "require \"minitest\"\nrequire \"minitest/autorun\"\n"
     ));
-    assert!(!crate::AssertionChecker::applies_to(
-        "require \"test/unit\"\n"
-    ));
-    assert!(!crate::AssertionChecker::applies_to("1 + 1\n"));
+    assert!(!assertion_applies_to("require \"test/unit\"\n"));
+    assert!(!assertion_applies_to("1 + 1\n"));
 }
 
 #[test]
@@ -228,7 +214,7 @@ fn checker_dispatches_to_assert_for_minitest() {
         def foo = 1
     "});
     assert_eq!(snips.len(), 1);
-    assert!(crate::AssertionChecker::applies_to(&snips[0].code));
+    assert!(assertion_applies_to(&snips[0].code));
 }
 
 #[test]
@@ -243,13 +229,11 @@ fn checker_dispatches_to_syntax_for_non_minitest() {
         def add(a, b) = a + b
     "});
     assert_eq!(snips.len(), 1);
-    assert!(!crate::AssertionChecker::applies_to(&snips[0].code));
+    assert!(!assertion_applies_to(&snips[0].code));
 }
 
 use rv_ruby::Ruby;
 
-/// Locates the Ruby on PATH as a `Ruby` for execution tests.
-/// Returns None when no interpreter is available.
 fn test_ruby() -> Option<Ruby> {
     let output = std::process::Command::new("ruby")
         .args(["-e", "print RbConfig.ruby"])
@@ -267,17 +251,15 @@ fn test_ruby() -> Option<Ruby> {
 #[tokio::test]
 async fn passes_simple_assertion_via_injection() {
     let Some(ruby) = test_ruby() else { return };
-    let mut checker = crate::AssertionChecker::new(ruby);
     let code = "require \"minitest\"\nassert_equal 2, 1 + 1\n";
-    assert!(crate::RubyChecker::check(&mut checker, code).await.is_ok());
+    assert!(assertion_check(ruby, code).await.is_ok());
 }
 
 #[tokio::test]
 async fn reports_failing_assertion() {
     let Some(ruby) = test_ruby() else { return };
-    let mut checker = crate::AssertionChecker::new(ruby);
     let code = "require \"minitest\"\nassert_equal 3, 1 + 1\n";
-    match crate::RubyChecker::check(&mut checker, code).await {
+    match assertion_check(ruby, code).await {
         Err(crate::CheckError::Assertion { stderr, .. }) => {
             assert!(stderr.contains("Expected"), "stderr: {stderr}");
             assert!(stderr.contains("Actual"), "stderr: {stderr}");
@@ -289,7 +271,6 @@ async fn reports_failing_assertion() {
 #[tokio::test]
 async fn manual_frame_still_passes() {
     let Some(ruby) = test_ruby() else { return };
-    let mut checker = crate::AssertionChecker::new(ruby);
     let code = indoc! {"
         require \"minitest\"
         include Minitest::Assertions
@@ -297,24 +278,19 @@ async fn manual_frame_still_passes() {
         self.assertions = 0
         assert_equal 4, 2 + 2
     "};
-    assert!(crate::RubyChecker::check(&mut checker, code).await.is_ok());
+    assert!(assertion_check(ruby, code).await.is_ok());
 }
 
 #[tokio::test]
-async fn checker_enum_routes_minimest_to_assertion() {
+async fn syntax_check_passes_valid_code() {
     let Some(ruby) = test_ruby() else { return };
-    let snippet = Snippet {
-        item_name: String::new(),
-        item_kind: ItemKind::Def,
-        parent_path: String::new(),
-        start_line: 1,
-        code: "require \"minitest\"\nassert_equal 2, 1 + 1".into(),
-    };
-    let mut checker = crate::Checker::for_snippet(ruby, &snippet);
-    assert!(matches!(checker, crate::Checker::Assert(_)));
-    assert!(
-        crate::RubyChecker::check(&mut checker, &snippet.code)
-            .await
-            .is_ok()
-    );
+    let code = "def add(a, b); a + b; end\n";
+    assert!(syntax_check(ruby, code).await.is_ok());
+}
+
+#[tokio::test]
+async fn syntax_check_fails_invalid_code() {
+    let Some(ruby) = test_ruby() else { return };
+    let code = "def foo(\n";
+    assert!(syntax_check(ruby, code).await.is_err());
 }

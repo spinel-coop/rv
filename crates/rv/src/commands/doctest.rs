@@ -102,7 +102,7 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         for (path, parsed_file) in &parsed {
             for snippet in extract(parsed_file) {
                 let report = checker.check(&snippet, path);
-                stats.merge(&report.stats);
+                stats.merge(report.stats);
                 for violation in report.violations {
                     failures.push((
                         path.clone(),
@@ -143,16 +143,16 @@ fn print_coverage(stats: &CheckStats, mode: RbsMode) {
     let classes: u32 = stats.unknown_classes.values().map(|e| e.count).sum();
     let methods: u32 = stats.unknown_methods.values().map(|e| e.count).sum();
     println!(
-        "RBS coverage: {} checked, {skipped} skipped \
+        "RBS coverage: {} checked, {skipped} \
           ({receivers} unknown receiver, {classes} unknown class, {methods} unknown method)",
-        stats.checked
+        stats.checked_count()
     );
 
     if mode == RbsMode::Verbose {
         let linkify = std::io::stdout().is_terminal();
-        print_table("Unknown receivers", &stats.unknown_receivers, linkify);
-        print_table("Unknown classes", &stats.unknown_classes, linkify);
-        print_table("Unknown methods", &stats.unknown_methods, linkify);
+        print_table("[RBS] Unknown receivers", &stats.unknown_receivers, linkify);
+        print_table("[RBS] Unknown classes", &stats.unknown_classes, linkify);
+        print_table("[RBS] Unknown methods", &stats.unknown_methods, linkify);
     }
 }
 
@@ -167,6 +167,7 @@ fn osc8_link(path_line: &str) -> String {
 }
 
 fn print_table(title: &str, entries: &BTreeMap<String, UnknownEntry>, linkify: bool) {
+    let _ = linkify;
     if entries.is_empty() {
         return;
     }

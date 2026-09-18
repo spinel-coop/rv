@@ -130,7 +130,7 @@ macro_rules! impl_deref {
             fn deref_mut(&mut self) -> &mut CommonItem { &mut self.0 }
         }
     };
-    (enum $ty:ident { $($variant:ident),* }) => {
+    (enum $ty:ident { $($variant:ident),* $(,)? }) => {
         impl Deref for $ty {
             type Target = CommonItem;
             fn deref(&self) -> &CommonItem {
@@ -149,10 +149,16 @@ macro_rules! impl_deref {
     };
 }
 
-impl_deref!(field=ClassItem);
-impl_deref!(tuple=ModuleItem);
-impl_deref!(field=DefItem);
-impl_deref!(enum Item { Class, Module, Def });
+impl_deref!(field = ClassItem);
+impl_deref!(tuple = ModuleItem);
+impl_deref!(field = DefItem);
+impl_deref!(
+    enum Item {
+        Class,
+        Module,
+        Def,
+    }
+);
 
 impl Item {
     pub fn kind(&self) -> ItemKind {
