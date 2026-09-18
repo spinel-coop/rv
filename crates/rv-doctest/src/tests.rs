@@ -100,7 +100,7 @@ fn unterminated_fence_is_ignored() {
         #
         #   ```ruby
         #   add(1, 2)
-        # 
+        #
         def add(a, b)
           a + b
         end

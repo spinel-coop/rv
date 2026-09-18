@@ -144,7 +144,7 @@ fn print_coverage(stats: &CheckStats, mode: RbsMode) {
     let methods: u32 = stats.unknown_methods.values().map(|e| e.count).sum();
     println!(
         "RBS coverage: {} checked, {skipped} skipped \
-         ({receivers} unknown receiver, {classes} unknown class, {methods} unknown method)",
+          ({receivers} unknown receiver, {classes} unknown class, {methods} unknown method)",
         stats.checked
     );
 
