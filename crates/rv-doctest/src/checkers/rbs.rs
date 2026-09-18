@@ -9,8 +9,8 @@ use std::path::Path;
 use ruby_rbs::node::{MethodDefinitionNode, Node, NodeList, TypeNameNode, parse};
 
 use crate::{CheckError, Snippet};
-use rv_ruby_parser::calls::parse_calls as parse_calls_ast;
 use rv_ruby_parser::calls::CallSite;
+use rv_ruby_parser::calls::parse_calls as parse_calls_ast;
 
 /// Result of an arity check.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -418,12 +418,10 @@ pub(crate) fn resolve_class(call: &CallSite, snippet: &Snippet) -> Option<String
     match (&call.class_name, &call.receiver_text) {
         (Some(name), _) => Some(name.clone()),
         (None, None) if !snippet.parent_path.is_empty() => Some(snippet.parent_path.clone()),
-    _ => None,
-  }
+        _ => None,
+    }
 }
 
 pub fn parse_calls(source: &[u8]) -> Vec<CallSite> {
     parse_calls_ast(source)
 }
-
-

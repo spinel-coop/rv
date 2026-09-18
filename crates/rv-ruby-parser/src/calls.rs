@@ -2,7 +2,7 @@
 
 use ruby_prism::Node;
 
-use super::{node_source_slice, LineIndex};
+use super::{LineIndex, node_source_slice};
 
 /// A method call extracted from Ruby source code.
 #[derive(Debug, Clone, PartialEq)]
@@ -23,11 +23,11 @@ pub struct CallSite {
 
 pub fn parse_calls(source: &[u8]) -> Vec<CallSite> {
     let result = ruby_prism::parse(source);
-    
+
     if result.errors().next().is_some() {
         return Vec::new();
     }
-    
+
     let lines = LineIndex::new(source);
     let mut calls = Vec::new();
     walk_stmts(&result.node(), &lines, source, &mut calls);
@@ -39,7 +39,7 @@ fn walk_stmts(node: &Node<'_>, lines: &LineIndex, source: &[u8], calls: &mut Vec
         Some(s) => s,
         None => return,
     };
-    
+
     for stmt in stmts.body().iter() {
         process_stmt(&stmt, lines, source, calls);
     }
@@ -47,9 +47,10 @@ fn walk_stmts(node: &Node<'_>, lines: &LineIndex, source: &[u8], calls: &mut Vec
 
 fn process_stmt(node: &Node<'_>, lines: &LineIndex, source: &[u8], calls: &mut Vec<CallSite>) {
     if let Some(call) = node.as_call_node()
-        && let Some(call_site) = extract_call_site(&call, lines, source) {
-            calls.push(call_site);
-        }
+        && let Some(call_site) = extract_call_site(&call, lines, source)
+    {
+        calls.push(call_site);
+    }
 
     // Handle nested statements
     if let Some(stmts) = node.as_statements_node() {
@@ -57,7 +58,7 @@ fn process_stmt(node: &Node<'_>, lines: &LineIndex, source: &[u8], calls: &mut V
             process_stmt(&stmt, lines, source, calls);
         }
     }
-    
+
     // Handle nested bodies (class/module/def/singleton)
     walk_node_body(node, lines, source, calls);
 }

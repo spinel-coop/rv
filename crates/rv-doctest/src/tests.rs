@@ -7,41 +7,69 @@ fn snippets(source: &str) -> Vec<Snippet> {
     extract(&parse(source.as_bytes()))
 }
 
+macro_rules! assert_snippet {
+    ($snips:expr, $idx:expr, name: $name:literal, kind: $kind:ident, code: $code:literal) => {
+        assert_eq!($snips[$idx].item_name, $name);
+        assert_eq!($snips[$idx].item_kind, ItemKind::$kind);
+        assert_eq!($snips[$idx].parent_path, String::new());
+        assert_eq!($snips[$idx].code, $code);
+    };
+}
+
+fn def_with_fence(doc: &str, code: &str, body: &str) -> String {
+    format!(
+        indoc! {"
+            # {}
+            #
+            #   ```ruby
+            #   {}
+            #   ```
+            #
+            {}
+        "},
+        doc, code, body
+    )
+}
+
+fn def_with_two_fences(doc: &str, code1: &str, code2: &str, body: &str) -> String {
+    format!(
+        indoc! {"
+            # {}
+            #
+            #   ```ruby
+            #   {}
+            #   ```
+            #
+            #   ```ruby
+            #   {}
+            #   ```
+            #
+            {}
+        "},
+        doc, code1, code2, body
+    )
+}
+
 #[test]
 fn strict_fence_is_extracted() {
-    let source = indoc! {"
-        # Adds two numbers.
-        #
-        #   ```ruby
-        #   add(1, 2)
-        #   ```
-        #
-        def add(a, b)
-          a + b
-        end
-    "};
-    let snips = snippets(source);
+    let source = def_with_fence(
+        "Adds two numbers.",
+        "add(1, 2)",
+        "def add(a, b)\n  a + b\nend",
+    );
+    let snips = snippets(&source);
     assert_eq!(snips.len(), 1);
-    assert_eq!(snips[0].item_name, "add");
-    assert_eq!(snips[0].item_kind, ItemKind::Def);
-    assert_eq!(snips[0].parent_path, String::new());
-    assert_eq!(snips[0].code, "  add(1, 2)");
+    assert_snippet!(snips, 0, name: "add", kind: Def, code: "  add(1, 2)");
 }
 
 #[test]
 fn snippet_start_line_points_inside_fence() {
-    let source = indoc! {"
-        # Adds two numbers.
-        #
-        #   ```ruby
-        #   add(1, 2)
-        #   ```
-        #
-        def add(a, b)
-          a + b
-        end
-    "};
-    let snips = snippets(source);
+    let source = def_with_fence(
+        "Adds two numbers.",
+        "add(1, 2)",
+        "def add(a, b)\n  a + b\nend",
+    );
+    let snips = snippets(&source);
     assert_eq!(snips.len(), 1);
     assert_eq!(snips[0].start_line, 4);
 }
@@ -116,22 +144,13 @@ fn prose_is_not_a_snippet() {
 
 #[test]
 fn multiple_fences_in_one_comment() {
-    let source = indoc! {"
-        # Adds numbers.
-        #
-        #   ```ruby
-        #   add(1, 2)
-        #   ```
-        #
-        #   ```ruby
-        #   add(3, 4)
-        #   ```
-        #
-        def add(a, b)
-          a + b
-        end
-    "};
-    let snips = snippets(source);
+    let source = def_with_two_fences(
+        "Adds numbers.",
+        "add(1, 2)",
+        "add(3, 4)",
+        "def add(a, b)\n  a + b\nend",
+    );
+    let snips = snippets(&source);
     assert_eq!(snips.len(), 2);
     assert_eq!(snips[0].code, "  add(1, 2)");
     assert_eq!(snips[1].code, "  add(3, 4)");
@@ -155,14 +174,8 @@ fn snippet_in_module_is_extracted() {
     "};
     let snips = snippets(source);
     assert_eq!(snips.len(), 2);
-    assert_eq!(snips[0].item_name, "Utils");
-    assert_eq!(snips[0].item_kind, ItemKind::Module);
-    assert_eq!(snips[0].parent_path, String::new());
-    assert_eq!(snips[0].code, "  Utils.answer");
-    assert_eq!(snips[1].item_name, "noop");
-    assert_eq!(snips[1].item_kind, ItemKind::Def);
-    assert_eq!(snips[1].parent_path, String::new());
-    assert_eq!(snips[1].code, "  Utils.noop");
+    assert_snippet!(snips, 0, name: "Utils", kind: Module, code: "  Utils.answer");
+    assert_snippet!(snips, 1, name: "noop", kind: Def, code: "  Utils.noop");
 }
 
 #[test]
@@ -179,10 +192,7 @@ fn snippet_in_class_is_extracted() {
     "};
     let snips = snippets(source);
     assert_eq!(snips.len(), 1);
-    assert_eq!(snips[0].item_name, "Foo");
-    assert_eq!(snips[0].item_kind, ItemKind::Class);
-    assert_eq!(snips[0].parent_path, String::new());
-    assert_eq!(snips[0].code, "  Foo.new");
+    assert_snippet!(snips, 0, name: "Foo", kind: Class, code: "  Foo.new");
 }
 
 #[test]
