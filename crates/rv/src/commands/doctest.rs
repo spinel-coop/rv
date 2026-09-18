@@ -122,9 +122,7 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
 
     if failures.is_empty() {
         let paths_str = opts.include_paths.join(", ");
-        println!(
-            "All {total_snippets} of fenced Ruby codeblocks in {paths_str} pass all checks."
-        );
+        println!("All {total_snippets} of fenced Ruby codeblocks in {paths_str} pass all checks.");
     } else {
         for (path, failure) in &failures {
             println!("{}:{}: {}", path, failure.line, failure.message);

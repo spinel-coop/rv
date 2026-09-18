@@ -9,8 +9,8 @@ use std::collections::BTreeMap;
 
 use regex::Regex;
 
-use crate::rbs::{ArityResult, RbsEnvironment};
 use crate::Snippet;
+use crate::rbs::{ArityResult, RbsEnvironment};
 
 pub struct RbsChecker {
     env: RbsEnvironment,
@@ -88,7 +88,10 @@ impl CheckStats {
 
     /// Total number of skipped calls across all categories.
     pub fn skipped(&self) -> u32 {
-        self.unknown_receivers.values().map(|e| e.count).sum::<u32>()
+        self.unknown_receivers
+            .values()
+            .map(|e| e.count)
+            .sum::<u32>()
             + self.unknown_classes.values().map(|e| e.count).sum::<u32>()
             + self.unknown_methods.values().map(|e| e.count).sum::<u32>()
     }
@@ -125,11 +128,48 @@ pub struct CheckReport {
 
 /// Ruby keywords and builtins that must never be treated as method calls.
 const KEYWORDS: &[&str] = &[
-    "alias", "and", "attr_accessor", "attr_reader", "attr_writer", "begin", "break", "case",
-    "class", "def", "do", "else", "elsif", "end", "ensure", "extend", "for", "if", "include",
-    "lambda", "module", "next", "not", "or", "private", "protected", "public", "raise", "redo",
-    "require", "require_relative", "rescue", "retry", "return", "self", "super", "then", "unless",
-    "until", "when", "while", "yield",
+    "alias",
+    "and",
+    "attr_accessor",
+    "attr_reader",
+    "attr_writer",
+    "begin",
+    "break",
+    "case",
+    "class",
+    "def",
+    "do",
+    "else",
+    "elsif",
+    "end",
+    "ensure",
+    "extend",
+    "for",
+    "if",
+    "include",
+    "lambda",
+    "module",
+    "next",
+    "not",
+    "or",
+    "private",
+    "protected",
+    "public",
+    "raise",
+    "redo",
+    "require",
+    "require_relative",
+    "rescue",
+    "retry",
+    "return",
+    "self",
+    "super",
+    "then",
+    "unless",
+    "until",
+    "when",
+    "while",
+    "yield",
 ];
 
 impl RbsChecker {
@@ -183,7 +223,11 @@ impl RbsChecker {
                 continue;
             }
 
-            if self.env.lookup(&resolved_class, &call.method_name).is_none() {
+            if self
+                .env
+                .lookup(&resolved_class, &call.method_name)
+                .is_none()
+            {
                 report
                     .stats
                     .unknown_methods

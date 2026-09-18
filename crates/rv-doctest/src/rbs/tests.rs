@@ -244,4 +244,3 @@ fn test_attr_reader_arity_zero() {
         }
     );
 }
-

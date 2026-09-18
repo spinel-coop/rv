@@ -47,7 +47,10 @@ fn test_too_few_args() {
 #[test]
 fn test_too_many_args() {
     let (checker, _dir) = checker_with_env();
-    let report = checker.check(&make_snippet("User.initialize(\"alice\", 30, \"extra\")"), PATH);
+    let report = checker.check(
+        &make_snippet("User.initialize(\"alice\", 30, \"extra\")"),
+        PATH,
+    );
     assert_eq!(report.violations.len(), 1);
     assert!(report.violations[0].message.contains("expected at most"));
     assert_eq!(report.stats.checked, 1);
@@ -143,7 +146,10 @@ fn test_bare_call_without_parent_path_counted_as_unknown_receiver() {
 #[test]
 fn test_comments_ignored() {
     let (checker, _dir) = checker_with_env();
-    let report = checker.check(&make_snippet("# User.initialize(1)\n# User.initialize()"), PATH);
+    let report = checker.check(
+        &make_snippet("# User.initialize(1)\n# User.initialize()"),
+        PATH,
+    );
     assert!(report.violations.is_empty());
     assert_eq!(report.stats.checked, 0);
     assert_eq!(report.stats.skipped(), 0);
@@ -152,7 +158,10 @@ fn test_comments_ignored() {
 #[test]
 fn test_multiline_call_valid() {
     let (checker, _dir) = checker_with_env();
-    let report = checker.check(&make_snippet("User.initialize(\n  \"alice\",\n  30\n)"), PATH);
+    let report = checker.check(
+        &make_snippet("User.initialize(\n  \"alice\",\n  30\n)"),
+        PATH,
+    );
     assert!(report.violations.is_empty());
     assert_eq!(report.stats.checked, 1);
 }
@@ -204,8 +213,10 @@ fn test_args_with_string_commas() {
 
 #[test]
 fn test_stats_merge() {
-    let mut a = CheckStats::default();
-    a.checked = 1;
+    let mut a = CheckStats {
+        checked: 1,
+        ..Default::default()
+    };
     a.unknown_classes.insert(
         "Foo".to_string(),
         UnknownEntry {
@@ -221,8 +232,10 @@ fn test_stats_merge() {
         },
     );
 
-    let mut b = CheckStats::default();
-    b.checked = 3;
+    let mut b = CheckStats {
+        checked: 3,
+        ..Default::default()
+    };
     b.unknown_classes.insert(
         "Foo".to_string(),
         UnknownEntry {
@@ -283,6 +296,12 @@ fn test_call_line_tracks_snippet_start_line() {
     snippet.start_line = 10;
     snippet.code = "user.save(1)\n# comment\nuser.load(2)".to_string();
     let report = checker.check(&snippet, PATH);
-    assert_eq!(report.stats.unknown_receivers["user.save"].locations, vec!["test.rb:10"]);
-    assert_eq!(report.stats.unknown_receivers["user.load"].locations, vec!["test.rb:12"]);
+    assert_eq!(
+        report.stats.unknown_receivers["user.save"].locations,
+        vec!["test.rb:10"]
+    );
+    assert_eq!(
+        report.stats.unknown_receivers["user.load"].locations,
+        vec!["test.rb:12"]
+    );
 }

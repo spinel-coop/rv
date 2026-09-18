@@ -133,9 +133,6 @@ mod tests {
     fn injection_only_happens_once() {
         let code = "require \"minitest\"\nrequire \"minitest/autorun\"\n";
         let injected = inject_assertion_frame(code);
-        assert_eq!(
-            injected.matches("include Minitest::Assertions").count(),
-            1
-        );
+        assert_eq!(injected.matches("include Minitest::Assertions").count(), 1);
     }
 }

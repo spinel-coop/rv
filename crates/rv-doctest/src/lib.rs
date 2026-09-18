@@ -1,5 +1,5 @@
-mod checkers;
 pub mod checker;
+mod checkers;
 pub mod rbs;
 
 use async_trait::async_trait;
@@ -99,9 +99,7 @@ pub fn extract(parsed: &ParsedFileFromParser) -> Vec<Snippet> {
                     // Comments attach contiguously above the item, so
                     // `comments[i]` sits at `span.start_line - len + i`.
                     // Point at the first code line inside the fence.
-                    let fence_line = item.span.start_line
-                        - lines.len() as u32
-                        + comment_idx as u32;
+                    let fence_line = item.span.start_line - lines.len() as u32 + comment_idx as u32;
                     snippets.push(Snippet {
                         item_name: item.name.clone(),
                         item_kind: item.kind(),

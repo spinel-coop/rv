@@ -131,7 +131,10 @@ fn missing_sig_dir_returns_empty_env() {
     assert_eq!(report.stats.checked, 0);
     let entry = &report.stats.unknown_classes["User"];
     assert_eq!(entry.count, 1);
-    assert_eq!(entry.locations, vec![format!("fixture.rb:{}", snippets[0].start_line)]);
+    assert_eq!(
+        entry.locations,
+        vec![format!("fixture.rb:{}", snippets[0].start_line)]
+    );
 }
 
 #[test]

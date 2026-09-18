@@ -201,12 +201,18 @@ fn items_without_comments_yield_no_snippets() {
 
 #[test]
 fn assertion_checker_applies_to_minitest() {
-    assert!(crate::AssertionChecker::applies_to("require \"minitest\"\n"));
-    assert!(crate::AssertionChecker::applies_to("require 'minitest/autorun'\n"));
+    assert!(crate::AssertionChecker::applies_to(
+        "require \"minitest\"\n"
+    ));
+    assert!(crate::AssertionChecker::applies_to(
+        "require 'minitest/autorun'\n"
+    ));
     assert!(crate::AssertionChecker::applies_to(
         "require \"minitest\"\nrequire \"minitest/autorun\"\n"
     ));
-    assert!(!crate::AssertionChecker::applies_to("require \"test/unit\"\n"));
+    assert!(!crate::AssertionChecker::applies_to(
+        "require \"test/unit\"\n"
+    ));
     assert!(!crate::AssertionChecker::applies_to("1 + 1\n"));
 }
 
@@ -306,5 +312,9 @@ async fn checker_enum_routes_minimest_to_assertion() {
     };
     let mut checker = crate::Checker::for_snippet(ruby, &snippet);
     assert!(matches!(checker, crate::Checker::Assert(_)));
-    assert!(crate::RubyChecker::check(&mut checker, &snippet.code).await.is_ok());
+    assert!(
+        crate::RubyChecker::check(&mut checker, &snippet.code)
+            .await
+            .is_ok()
+    );
 }
