@@ -1,8 +1,11 @@
 //! RBS-aware arity checker for doctest snippets.
 //!
 //! Extracts method calls from fenced Ruby code blocks and validates
-//! argument counts against RBS method signatures. Permissive by design:
-//! unknown receivers or methods are skipped rather than flagged.
+//! argument counts against RBS method signatures. Every extracted call is
+//! classified — checked, or skipped with a reason — so callers can report
+//! how much of their documentation is actually covered by signatures.
+
+use std::collections::BTreeMap;
 
 use regex::Regex;
 
@@ -16,10 +19,16 @@ pub struct RbsChecker {
 /// A method call extracted from a snippet.
 #[derive(Debug, Clone, PartialEq)]
 struct MethodCall {
+    /// Resolved class constant if the receiver is one (`Foo`, `Foo::Bar`).
     class_name: Option<String>,
+    /// Raw receiver text for greppable reporting (`user.name`, `self.foo`).
+    /// `None` for bare calls.
+    receiver_text: Option<String>,
     method_name: String,
     arg_count: usize,
     has_block: bool,
+    /// 0-based physical line of the call within the snippet's code.
+    line_offset: u32,
 }
 
 /// A violation of an RBS method arity found in a snippet.
@@ -28,6 +37,90 @@ pub struct RbsViolation {
     pub class_name: String,
     pub method_name: String,
     pub message: String,
+    /// Absolute 1-based line of the call in the source file.
+    pub line: u32,
+}
+
+/// One skipped call name plus where it was seen.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnknownEntry {
+    pub count: u32,
+    /// Plain `path:line` strings, one per occurrence, insertion-ordered
+    /// and deduplicated.
+    pub locations: Vec<String>,
+}
+
+impl UnknownEntry {
+    fn new() -> Self {
+        Self {
+            count: 0,
+            locations: Vec::new(),
+        }
+    }
+
+    fn record(&mut self, location: String) {
+        self.count += 1;
+        if !self.locations.contains(&location) {
+            self.locations.push(location);
+        }
+    }
+}
+
+/// How many calls were checked versus skipped, with greppable names and
+/// source locations for the skipped ones.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CheckStats {
+    pub checked: u32,
+    pub unknown_receivers: BTreeMap<String, UnknownEntry>,
+    pub unknown_classes: BTreeMap<String, UnknownEntry>,
+    pub unknown_methods: BTreeMap<String, UnknownEntry>,
+}
+
+impl CheckStats {
+    /// Fold `other` into `self`, summing per-name counts and unioning
+    /// locations (deduplicated, insertion-ordered).
+    pub fn merge(&mut self, other: &CheckStats) {
+        self.checked += other.checked;
+        merge_entries(&mut self.unknown_receivers, &other.unknown_receivers);
+        merge_entries(&mut self.unknown_classes, &other.unknown_classes);
+        merge_entries(&mut self.unknown_methods, &other.unknown_methods);
+    }
+
+    /// Total number of skipped calls across all categories.
+    pub fn skipped(&self) -> u32 {
+        self.unknown_receivers.values().map(|e| e.count).sum::<u32>()
+            + self.unknown_classes.values().map(|e| e.count).sum::<u32>()
+            + self.unknown_methods.values().map(|e| e.count).sum::<u32>()
+    }
+}
+
+fn merge_entries(into: &mut BTreeMap<String, UnknownEntry>, from: &BTreeMap<String, UnknownEntry>) {
+    for (name, entry) in from {
+        into.entry(name.clone())
+            .or_insert_with(|| UnknownEntry {
+                count: 0,
+                locations: Vec::new(),
+            })
+            .merge_from(entry);
+    }
+}
+
+impl UnknownEntry {
+    fn merge_from(&mut self, other: &UnknownEntry) {
+        self.count += other.count;
+        for location in &other.locations {
+            if !self.locations.contains(location) {
+                self.locations.push(location.clone());
+            }
+        }
+    }
+}
+
+/// The outcome of checking one snippet: arity violations plus coverage stats.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct CheckReport {
+    pub violations: Vec<RbsViolation>,
+    pub stats: CheckStats,
 }
 
 /// Ruby keywords and builtins that must never be treated as method calls.
@@ -45,16 +138,62 @@ impl RbsChecker {
     }
 
     /// Check all method calls in a snippet against the RBS environment.
-    pub fn check(&self, snippet: &Snippet) -> Vec<RbsViolation> {
+    ///
+    /// `source_path` is recorded in the stats so skipped entries can be
+    /// traced back to the files they came from. Every extracted call is
+    /// classified: it increments `checked` (and may produce a violation),
+    /// or it lands in exactly one skip bucket.
+    pub fn check(&self, snippet: &Snippet, source_path: &str) -> CheckReport {
         let calls = extract_calls(&snippet.code);
-        let mut violations = Vec::new();
+        let mut report = CheckReport::default();
 
         for call in &calls {
-            let resolved_class = match &call.class_name {
-                Some(name) => name.clone(),
-                None if !snippet.parent_path.is_empty() => snippet.parent_path.clone(),
-                None => continue,
+            // Only bare calls (no receiver at all) fall back to `parent_path`.
+            // An explicit lowercase/ivar/self receiver is unresolvable, period.
+            let resolved_class = match (&call.class_name, &call.receiver_text) {
+                (Some(name), _) => Some(name.clone()),
+                (None, None) if !snippet.parent_path.is_empty() => {
+                    Some(snippet.parent_path.clone())
+                }
+                _ => None,
             };
+            let call_line = snippet.start_line + call.line_offset;
+
+            let Some(resolved_class) = resolved_class else {
+                let key = call
+                    .receiver_text
+                    .clone()
+                    .unwrap_or_else(|| call.method_name.clone());
+                report
+                    .stats
+                    .unknown_receivers
+                    .entry(key)
+                    .or_insert_with(UnknownEntry::new)
+                    .record(format!("{source_path}:{call_line}"));
+                continue;
+            };
+
+            if !self.env.has_class(&resolved_class) {
+                report
+                    .stats
+                    .unknown_classes
+                    .entry(resolved_class.clone())
+                    .or_insert_with(UnknownEntry::new)
+                    .record(format!("{source_path}:{call_line}"));
+                continue;
+            }
+
+            if self.env.lookup(&resolved_class, &call.method_name).is_none() {
+                report
+                    .stats
+                    .unknown_methods
+                    .entry(format!("{resolved_class}.{}", call.method_name))
+                    .or_insert_with(UnknownEntry::new)
+                    .record(format!("{source_path}:{call_line}"));
+                continue;
+            }
+
+            report.stats.checked += 1;
 
             match self.env.check_arity(
                 &resolved_class,
@@ -63,53 +202,59 @@ impl RbsChecker {
                 call.has_block,
             ) {
                 ArityResult::TooFew { expected, found } => {
-                    violations.push(RbsViolation {
+                    report.violations.push(RbsViolation {
                         class_name: resolved_class,
                         method_name: call.method_name.clone(),
                         message: format!("expected at least {expected} args, found {found}"),
+                        line: call_line,
                     });
                 }
                 ArityResult::TooMany { expected, found } => {
-                    violations.push(RbsViolation {
+                    report.violations.push(RbsViolation {
                         class_name: resolved_class,
                         method_name: call.method_name.clone(),
                         message: format!("expected at most {expected} args, found {found}"),
+                        line: call_line,
                     });
                 }
                 ArityResult::MissingBlock => {
-                    violations.push(RbsViolation {
+                    report.violations.push(RbsViolation {
                         class_name: resolved_class,
                         method_name: call.method_name.clone(),
                         message: "expected a block".to_string(),
+                        line: call_line,
                     });
                 }
                 ArityResult::Valid => {}
             }
         }
 
-        violations
+        report
     }
 }
 
 /// Extract method calls from a code snippet using line-based heuristics.
 ///
-/// Handles two shapes:
-///   - `Receiver.method(args)` — receiver that looks like a class constant
-///     (`Foo`, `Foo::Bar`, `::Foo`) resolves to a class name; any other
-///     receiver produces a call with an unknown class (skipped later).
-///   - `method(args)` — bare call, resolved later against the snippet's
-///     `parent_path`.
+/// Handles three shapes:
+///   - `Class.method(args)` — receiver is a class constant; resolves directly.
+///   - `receiver.method(args)` — lowercase/`self`/ivar receiver; reported as
+///     an unknown receiver.
+///   - `method(args)` — bare call, resolved against the snippet's
+///     `parent_path` if one is set.
 fn extract_calls(code: &str) -> Vec<MethodCall> {
-    // Receiver-qualified call: `Foo.method(...)`, `Foo::Bar.method x, y`
+    // (content, 0-based physical line of the logical line's first line)
+    // Receiver-qualified call on a class constant: `Foo.method(...)`, `Foo::Bar.method(...)`
     let qualified =
-        Regex::new(r"(::)?([A-Z][\w]*(?:::[A-Z][\w]*)*)\.(\w+)([?!]?)\s*(\()(?P<args>.*)")
-            .unwrap();
+        Regex::new(r"(::)?([A-Z][\w]*(?:::[A-Z][\w]*)*)\.(\w+)([?!]?)\s*\((?P<args>.*)").unwrap();
+    // Unresolvable receiver: `user.name(...)`, `self.foo(...)`, `@bar.baz(...)`
+    let unresolvable =
+        Regex::new(r"(?:^|[\s,=(\[{])(@?[a-z_]\w*|self)\.(\w+)([?!]?)\s*\((?P<args>.*)").unwrap();
     // Bare call at (possibly indented) line start: `method(...)`
-    let bare = Regex::new(r"^\s*([a-z_]\w*)([?!]?)\s*(\()(?P<args>.*)").unwrap();
+    let bare = Regex::new(r"^\s*([a-z_]\w*)([?!]?)\s*\((?P<args>.*)").unwrap();
 
     let mut calls = Vec::new();
 
-    for line in logical_lines(code) {
+    for (line_no, line) in logical_lines(code) {
         let trimmed = line.trim();
         if trimmed.is_empty() || trimmed.starts_with('#') {
             continue;
@@ -125,9 +270,25 @@ fn extract_calls(code: &str) -> Vec<MethodCall> {
             let args = cap.name("args").map(|m| m.as_str()).unwrap_or("");
             calls.push(MethodCall {
                 class_name: Some(class_name),
+                receiver_text: None,
                 method_name,
                 arg_count: count_args(strip_matching_paren(args)),
                 has_block: has_block(&line),
+                line_offset: line_no as u32,
+            });
+        }
+
+        for cap in unresolvable.captures_iter(&line) {
+            let receiver = cap[1].to_string();
+            let method_name = format!("{}{}", &cap[2], &cap[3]);
+            let args = cap.name("args").map(|m| m.as_str()).unwrap_or("");
+            calls.push(MethodCall {
+                class_name: None,
+                receiver_text: Some(format!("{receiver}.{method_name}")),
+                method_name,
+                arg_count: count_args(strip_matching_paren(args)),
+                has_block: has_block(&line),
+                line_offset: line_no as u32,
             });
         }
 
@@ -137,9 +298,11 @@ fn extract_calls(code: &str) -> Vec<MethodCall> {
                 let args = cap.name("args").map(|m| m.as_str()).unwrap_or("");
                 calls.push(MethodCall {
                     class_name: None,
+                    receiver_text: None,
                     method_name,
                     arg_count: count_args(strip_matching_paren(args)),
                     has_block: has_block(&line),
+                    line_offset: line_no as u32,
                 });
             }
         }
@@ -152,15 +315,21 @@ fn extract_calls(code: &str) -> Vec<MethodCall> {
 /// brace, or paren without closing it is continued with the following
 /// lines until balance is restored. Strings are honored so `(` inside a
 /// literal doesn't count.
-fn logical_lines(code: &str) -> Vec<String> {
+///
+/// Each yielded pair is `(0-based physical start line, joined content)` so
+/// callers can map a call back to the exact line it starts on.
+fn logical_lines(code: &str) -> Vec<(usize, String)> {
     let mut out = Vec::new();
     let mut buf = String::new();
+    let mut start_line = 0usize;
     let mut depth = 0i32;
     let mut in_string: Option<char> = None;
     let mut escaped = false;
 
-    for line in code.lines() {
-        if !buf.is_empty() {
+    for (i, line) in code.lines().enumerate() {
+        if buf.is_empty() {
+            start_line = i;
+        } else {
             buf.push(' ');
         }
         for ch in line.chars() {
@@ -184,11 +353,11 @@ fn logical_lines(code: &str) -> Vec<String> {
             buf.push(ch);
         }
         if depth == 0 {
-            out.push(std::mem::take(&mut buf));
+            out.push((start_line, std::mem::take(&mut buf)));
         }
     }
     if !buf.is_empty() {
-        out.push(buf);
+        out.push((start_line, buf));
     }
     out
 }

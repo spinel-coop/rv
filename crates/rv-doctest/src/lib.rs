@@ -7,7 +7,7 @@ use rv_ruby_parser::{ItemKind, ParsedFile as ParsedFileFromParser};
 
 use thiserror::Error;
 
-pub use checker::{RbsChecker, RbsViolation};
+pub use checker::{CheckReport, CheckStats, RbsChecker, RbsViolation, UnknownEntry};
 pub use checkers::{AssertionChecker, SyntaxChecker};
 pub use rbs::{ArityResult, MethodSig, RbsEnvironment};
 
@@ -73,6 +73,8 @@ pub struct Snippet {
 pub struct Failure {
     pub snippet: Snippet,
     pub message: String,
+    /// Absolute 1-based line in the source file the failure refers to.
+    pub line: u32,
 }
 
 /// Extracts snippets from Ruby documentation comments.
@@ -94,11 +96,17 @@ pub fn extract(parsed: &ParsedFileFromParser) -> Vec<Snippet> {
                 }
                 if closed_code_block {
                     let content = lines[comment_idx + 1..code_end].to_vec();
+                    // Comments attach contiguously above the item, so
+                    // `comments[i]` sits at `span.start_line - len + i`.
+                    // Point at the first code line inside the fence.
+                    let fence_line = item.span.start_line
+                        - lines.len() as u32
+                        + comment_idx as u32;
                     snippets.push(Snippet {
                         item_name: item.name.clone(),
                         item_kind: item.kind(),
                         parent_path: String::new(),
-                        start_line: item.span.start_line,
+                        start_line: fence_line + 1,
                         code: content.join("\n"),
                     });
                 }
@@ -138,6 +146,7 @@ pub async fn check_snippets(snippets: &[Snippet], ruby: &rv_ruby::Ruby) -> Vec<F
                 failures.push(Failure {
                     snippet: snippet.clone(),
                     message: e.to_string(),
+                    line: snippet.start_line,
                 });
             }
         }

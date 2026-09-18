@@ -62,6 +62,11 @@ impl RbsEnvironment {
         self.class_methods.get(class_path)?.get(method)
     }
 
+    /// Whether the environment has any signatures for a class path.
+    pub fn has_class(&self, class_path: &str) -> bool {
+        self.class_methods.contains_key(class_path)
+    }
+
     /// Check whether `arg_count` positional arguments are valid for the method.
     /// Unknown classes or methods return `Valid` (permissive by design).
     pub fn check_arity(

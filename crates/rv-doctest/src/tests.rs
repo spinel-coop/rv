@@ -29,6 +29,32 @@ fn strict_fence_is_extracted() {
 }
 
 #[test]
+fn snippet_start_line_points_inside_fence() {
+    // 1: # Adds two numbers.
+    // 2: #
+    // 3: #   ```ruby
+    // 4: #   add(1, 2)
+    // 5: #   ```
+    // 6: #
+    // 7: def add(a, b)
+    let source = indoc! {"
+        # Adds two numbers.
+        #
+        #   ```ruby
+        #   add(1, 2)
+        #   ```
+        #
+        def add(a, b)
+          a + b
+        end
+    "};
+    let snips = snippets(source);
+    assert_eq!(snips.len(), 1);
+    // Points at the first code line inside the fence, not the `def`.
+    assert_eq!(snips[0].start_line, 4);
+}
+
+#[test]
 fn bare_fence_is_ignored() {
     let source = indoc! {"
         # Example:
