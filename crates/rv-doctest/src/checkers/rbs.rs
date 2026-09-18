@@ -6,11 +6,11 @@
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 
-use regex::Regex;
-
 use ruby_rbs::node::{MethodDefinitionNode, Node, NodeList, TypeNameNode, parse};
 
 use crate::{CheckError, Snippet};
+use rv_ruby_parser::calls::parse_calls as parse_calls_ast;
+use rv_ruby_parser::calls::CallSite;
 
 /// Result of an arity check.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -327,21 +327,6 @@ pub fn full_path_to_parent(full_path: &str) -> Option<String> {
     Some(full_path[..last_segment].to_string())
 }
 
-/// A method call extracted from a snippet.
-#[derive(Debug, Clone, PartialEq)]
-pub struct CallSite {
-    /// Resolved class constant if the receiver is a class constant (`Foo`, `Foo::Bar`).
-    pub class_name: Option<String>,
-    /// Raw receiver text for greppable reporting (`user.name`, `self.foo`).
-    /// `None` for bare calls.
-    pub receiver_text: Option<String>,
-    pub name: String,
-    pub arg_count: usize,
-    pub has_block: bool,
-    /// 0-based physical line of the call within the snippet's code.
-    pub line: usize,
-}
-
 /// RBS-aware arity checker for doctest snippets.
 pub struct RbsChecker {
     env: RbsEnvironment,
@@ -353,7 +338,7 @@ impl RbsChecker {
     }
 
     pub fn check(&self, snippet: &Snippet, source_path: &str) -> CheckReport {
-        let calls = parse_calls(snippet.code.as_bytes());
+        let calls = parse_calls_ast(snippet.code.as_bytes());
         let mut report = CheckReport::default();
 
         for call in calls {
@@ -429,230 +414,16 @@ fn record_unknown_in_map(key: &str, target: &mut BTreeMap<String, UnknownEntry>,
         .record(location.to_string());
 }
 
-pub fn parse_calls(source: &[u8]) -> Vec<CallSite> {
-    let code = String::from_utf8_lossy(source);
-    extract_calls(&code)
-}
-
-const KEYWORDS: &[&str] = &[
-    "alias",
-    "and",
-    "attr_accessor",
-    "attr_reader",
-    "attr_writer",
-    "begin",
-    "break",
-    "case",
-    "class",
-    "def",
-    "do",
-    "else",
-    "elsif",
-    "end",
-    "ensure",
-    "extend",
-    "for",
-    "if",
-    "include",
-    "lambda",
-    "module",
-    "next",
-    "not",
-    "or",
-    "private",
-    "protected",
-    "public",
-    "raise",
-    "redo",
-    "require",
-    "require_relative",
-    "rescue",
-    "retry",
-    "return",
-    "self",
-    "super",
-    "then",
-    "unless",
-    "until",
-    "when",
-    "while",
-    "yield",
-];
-
-fn extract_calls(code: &str) -> Vec<CallSite> {
-    let qualified =
-        Regex::new(r"(::)?([A-Z][\w]*(?:::[A-Z][\w]*)*)\.(\w+)([?!]?)\s*\((?P<args>.*)").unwrap();
-    let unresolvable =
-        Regex::new(r"(?:^|[\s,=(\[{])(@?[a-z_]\w*|self)\.(\w+)([?!]?)\s*\((?P<args>.*)").unwrap();
-    let bare = Regex::new(r"^\s*([a-z_]\w*)([?!]?)\s*\((?P<args>.*)").unwrap();
-
-    let mut calls = Vec::new();
-
-    let lines: Vec<(usize, String)> = logical_lines(code);
-    for (line_no, line) in lines {
-        let line = line.as_str();
-        let trimmed = line.trim();
-        if trimmed.is_empty() || trimmed.starts_with('#') {
-            continue;
-        }
-
-        for cap in qualified.captures_iter(line) {
-            let class_name = format!(
-                "{}{}",
-                cap.get(1).map(|g| g.as_str()).unwrap_or(""),
-                &cap[2]
-            );
-            let name = format!("{}{}", &cap[3], &cap[4]);
-            let args = cap.name("args").map(|m| m.as_str()).unwrap_or("");
-            calls.push(CallSite {
-                class_name: Some(class_name),
-                receiver_text: None,
-                name,
-                arg_count: count_args(strip_matching_paren(args)),
-                has_block: has_block(line),
-                line: line_no,
-            });
-        }
-
-        for cap in unresolvable.captures_iter(line) {
-            let receiver = cap[1].to_string();
-            let name = format!("{}{}", &cap[2], &cap[3]);
-            let args = cap.name("args").map(|m| m.as_str()).unwrap_or("");
-            calls.push(CallSite {
-                class_name: None,
-                receiver_text: Some(format!("{receiver}.{name}")),
-                name,
-                arg_count: count_args(strip_matching_paren(args)),
-                has_block: has_block(line),
-                line: line_no,
-            });
-        }
-
-        if let Some(cap) = bare.captures(line) {
-            let name = format!("{}{}", &cap[1], &cap[2]);
-            if KEYWORDS.contains(&name.as_str()) {
-                continue;
-            }
-            let args = cap.name("args").map(|m| m.as_str()).unwrap_or("");
-            calls.push(CallSite {
-                class_name: None,
-                receiver_text: None,
-                name,
-                arg_count: count_args(strip_matching_paren(args)),
-                has_block: has_block(line),
-                line: line_no,
-            });
-        }
-    }
-
-    calls
-}
-
-fn logical_lines(code: &str) -> Vec<(usize, String)> {
-    let mut buf = String::new();
-    let mut start_line = 0usize;
-    let mut depth = 0i32;
-    let mut in_string: Option<char> = None;
-    let mut escaped = false;
-    let mut result = Vec::new();
-
-    for (i, line) in code.lines().enumerate() {
-        if buf.is_empty() {
-            start_line = i;
-        } else {
-            buf.push(' ');
-        }
-        for ch in line.chars() {
-            if let Some(quote) = in_string {
-                if escaped {
-                    escaped = false;
-                } else if ch == '\\' {
-                    escaped = true;
-                } else if ch == quote {
-                    in_string = None;
-                }
-                buf.push(ch);
-                continue;
-            }
-            match ch {
-                '"' | '\'' => in_string = Some(ch),
-                '(' | '[' | '{' => depth += 1,
-                ')' | ']' | '}' => depth = depth.saturating_sub(1),
-                _ => {}
-            }
-            buf.push(ch);
-        }
-        if depth == 0 {
-            result.push((start_line, std::mem::take(&mut buf)));
-        }
-    }
-    if !buf.is_empty() {
-        result.push((start_line, buf));
-    }
-    result
-}
-
-fn strip_matching_paren(s: &str) -> &str {
-    let mut depth = 1;
-    for (i, ch) in s.char_indices() {
-        match ch {
-            '(' | '[' | '{' => depth += 1,
-            ')' | ']' | '}' => {
-                depth -= 1;
-                if depth == 0 {
-                    return &s[..i];
-                }
-            }
-            _ => {}
-        }
-    }
-    s
-}
-
-fn count_args(s: &str) -> usize {
-    let trimmed = s.trim();
-    if trimmed.is_empty() {
-        return 0;
-    }
-    let mut count = 1;
-    let mut depth = 0i32;
-    let mut in_string: Option<char> = None;
-    let mut escaped = false;
-
-    for ch in trimmed.chars() {
-        if let Some(quote) = in_string {
-            if escaped {
-                escaped = false;
-            } else if ch == '\\' {
-                escaped = true;
-            } else if ch == quote {
-                in_string = None;
-            }
-            continue;
-        }
-        match ch {
-            '"' | '\'' => in_string = Some(ch),
-            '(' | '[' | '{' => depth += 1,
-            ')' | ']' | '}' => depth = depth.saturating_sub(1),
-            ',' if depth == 0 => count += 1,
-            _ => {}
-        }
-    }
-    count
-}
-
-fn has_block(line: &str) -> bool {
-    let has_brace = line.contains('{') && line.contains('}');
-    let has_do = line.split_whitespace().any(|tok| tok == "do")
-        || line.contains(" do ")
-        || line.ends_with(" do");
-    has_brace || has_do
-}
-
-fn resolve_class(call: &CallSite, snippet: &Snippet) -> Option<String> {
+pub(crate) fn resolve_class(call: &CallSite, snippet: &Snippet) -> Option<String> {
     match (&call.class_name, &call.receiver_text) {
         (Some(name), _) => Some(name.clone()),
         (None, None) if !snippet.parent_path.is_empty() => Some(snippet.parent_path.clone()),
-        _ => None,
-    }
+    _ => None,
+  }
 }
+
+pub fn parse_calls(source: &[u8]) -> Vec<CallSite> {
+    parse_calls_ast(source)
+}
+
+

@@ -15,17 +15,19 @@ use std::ops::{Deref, DerefMut};
 
 use ruby_prism::{CommentType, Node};
 
+pub mod calls;
+
 /// A byte-offset-based line index over the source.
 ///
 /// Prism's Rust `Location` type exposes byte offsets but not line/column
 /// numbers, so we compute them ourselves.
-struct LineIndex {
+pub(crate) struct LineIndex {
     /// Byte offset of the start of each line (0-based line number).
     line_starts: Vec<usize>,
 }
 
 impl LineIndex {
-    fn new(source: &[u8]) -> Self {
+    pub(crate) fn new(source: &[u8]) -> Self {
         let mut line_starts = vec![0usize];
         for (i, &b) in source.iter().enumerate() {
             if b == b'\n' {
@@ -41,7 +43,7 @@ impl LineIndex {
     }
 
     /// Returns the 1-based (line, column) of the given byte offset.
-    fn line_col(&self, offset: usize) -> (u32, u32) {
+    pub(crate) fn line_col(&self, offset: usize) -> (u32, u32) {
         let line = match self.line_starts.binary_search(&offset) {
             Ok(l) => l,
             Err(l) => l - 1,

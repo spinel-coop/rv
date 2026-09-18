@@ -5,7 +5,6 @@ edition = "2024"
 
 [dependencies]
 glob = { workspace = true }
-regex = { workspace = true }
 rv-ruby = { workspace = true }
 rv-ruby-parser = { workspace = true }
 ruby-rbs = "0.3"

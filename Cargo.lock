@@ -3325,7 +3325,6 @@ dependencies = [
  "camino",
  "glob",
  "indoc",
- "regex",
  "ruby-rbs",
  "rv-ruby",
  "rv-ruby-parser",
