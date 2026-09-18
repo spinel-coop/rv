@@ -1,0 +1,22 @@
+#!/bin/bash
+set -euo pipefail
+
+# Smoke test for good_job - https://github.com/bensheldon/good_job
+
+source "$(dirname "$0")/shared.sh"
+
+macos_docker_reexec
+
+setup_packages
+
+setup_rv
+
+[[ -d good_job ]] || git clone --depth 1 https://github.com/bensheldon/good_job.git good_job
+cd good_job
+
+# Run doctest with RBS checking (requires `--rbs` to avoid Ruby dependency)
+# good_job uses Sorbet, no RBS files, so will show 0 checked
+# No doctests expected in this codebase
+rv doctest --rbs=verbose lib
+
+smoke_test_success "good_job"

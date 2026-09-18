@@ -211,12 +211,15 @@ jobs:
           - discourse
           - fastlane
           - gitlab
+          - good_job
           - homebrew
           - huginn
           - llhttp-ffi
           - lobsters
           - local-gemspec
           - mastodon
+          - openai_ruby
+          - stripe_ruby
     steps:
       - name: Check out repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

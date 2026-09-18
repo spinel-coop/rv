@@ -1,0 +1,21 @@
+#!/bin/bash
+set -euo pipefail
+
+# Smoke test for openai-ruby - https://github.com/openai/openai-ruby
+
+source "$(dirname "$0")/shared.sh"
+
+macos_docker_reexec
+
+setup_packages
+
+setup_rv
+
+[[ -d openai_ruby ]] || git clone --depth 1 https://github.com/openai/openai-ruby.git openai_ruby
+cd openai_ruby
+
+# Run doctest with RBS checking
+# openai-ruby has RBS files in sig/ directory
+rv doctest --rbs verbose --rbs-dirs sig lib/openai/*.rb
+
+smoke_test_success "openai_ruby"

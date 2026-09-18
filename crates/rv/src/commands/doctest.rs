@@ -57,6 +57,17 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         .map(|(_, parsed_file)| extract(parsed_file).len())
         .sum();
 
+    let total_files: usize = parsed
+        .par_iter()
+        .map(|(_, parsed_file)| {
+            if extract(parsed_file).is_empty() {
+                0
+            } else {
+                1
+            }
+        })
+        .sum();
+
     let ruby = Config::new(global_args, None)
         .ok()
         .and_then(|c| c.best_ruby());
@@ -122,7 +133,9 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
 
     if failures.is_empty() {
         let paths_str = opts.include_paths.join(", ");
-        println!("All {total_snippets} of fenced Ruby codeblocks in {paths_str} pass all checks.");
+        println!(
+            "All {total_snippets} of fenced Ruby codeblocks in {total_files} files in {paths_str} pass all checks."
+        );
     } else {
         for (path, failure) in &failures {
             println!("{}:{}: {}", path, failure.line, failure.message);

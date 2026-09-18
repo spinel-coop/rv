@@ -47,7 +47,7 @@ fn snippet_start_line_points_inside_fence() {
 }
 
 #[test]
-fn bare_fence_is_ignored() {
+fn bare_fence_is_extracted() {
     let source = indoc! {"
         # Example:
         #
@@ -57,11 +57,13 @@ fn bare_fence_is_ignored() {
         #
         def add(a, b) = a + b
     "};
-    assert!(snippets(source).is_empty());
+    let snips = snippets(source);
+    assert_eq!(snips.len(), 1);
+    assert_eq!(snips[0].code, "  add(1, 2)");
 }
 
 #[test]
-fn non_ruby_fence_is_ignored() {
+fn non_ruby_fence_is_extracted() {
     let source = indoc! {"
         # Example:
         #
@@ -71,11 +73,12 @@ fn non_ruby_fence_is_ignored() {
         #
         def foo = 1
     "};
-    assert!(snippets(source).is_empty());
+    let snips = snippets(source);
+    assert!(!snips.is_empty());
 }
 
 #[test]
-fn info_string_is_case_insensitive() {
+fn any_fence_is_extracted() {
     let source = indoc! {"
         #   ```RUBY
         #   1 + 1

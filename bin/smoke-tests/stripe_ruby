@@ -1,0 +1,22 @@
+#!/bin/bash
+set -euo pipefail
+
+# Smoke test for stripe-ruby - https://github.com/stripe/stripe-ruby
+
+source "$(dirname "$0")/shared.sh"
+
+macos_docker_reexec
+
+setup_packages
+
+setup_rv
+
+[[ -d stripe_ruby ]] || git clone --depth 1 https://github.com/stripe/stripe-ruby.git stripe_ruby
+cd stripe_ruby
+
+# Run doctest with RBS checking (requires `--rbs` to avoid Ruby dependency)
+# Note: stripe-ruby uses Sorbet (.rbi) not RBS, so will show 0 checked
+# No doctests expected in this codebase
+rv doctest --rbs=verbose lib/stripe/*.rb
+
+smoke_test_success "stripe_ruby"
