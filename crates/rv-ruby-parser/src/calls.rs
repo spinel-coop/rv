@@ -58,26 +58,22 @@ fn process_stmt(node: &Node<'_>, lines: &LineIndex, source: &[u8], calls: &mut V
         }
     }
     
-    // Handle nested bodies (class/module/def)
-    if let Some(class) = node.as_class_node() {
-        if let Some(body) = class.body() {
-            process_statements_from_body(body, lines, source, calls);
-        }
+    // Handle nested bodies (class/module/def/singleton)
+    walk_node_body(node, lines, source, calls);
+}
+
+fn walk_node_body(node: &Node<'_>, lines: &LineIndex, source: &[u8], calls: &mut Vec<CallSite>) {
+    if let Some(body) = node.as_class_node().and_then(|n| n.body()) {
+        process_statements_from_body(body, lines, source, calls);
     }
-    if let Some(module) = node.as_module_node() {
-        if let Some(body) = module.body() {
-            process_statements_from_body(body, lines, source, calls);
-        }
+    if let Some(body) = node.as_module_node().and_then(|n| n.body()) {
+        process_statements_from_body(body, lines, source, calls);
     }
-    if let Some(def) = node.as_def_node() {
-        if let Some(body) = def.body() {
-            process_statements_from_body(body, lines, source, calls);
-        }
+    if let Some(body) = node.as_def_node().and_then(|n| n.body()) {
+        process_statements_from_body(body, lines, source, calls);
     }
-    if let Some(singleton) = node.as_singleton_class_node() {
-        if let Some(body) = singleton.body() {
-            process_statements_from_body(body, lines, source, calls);
-        }
+    if let Some(body) = node.as_singleton_class_node().and_then(|n| n.body()) {
+        process_statements_from_body(body, lines, source, calls);
     }
 }
 
