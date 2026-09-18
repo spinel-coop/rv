@@ -59,13 +59,6 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         )));
     }
 
-    let ruby = ruby.ok_or_else(|| {
-        Error::IoError(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            "Ruby is not installed. Run `rv ruby install` or use --rbs for RBS-only checking.",
-        ))
-    })?;
-
     let progress = ProgressBar::new(total_files_count as u64);
     progress.set_style(ProgressStyle::default_bar()
         .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} files ({eta} remaining)")
@@ -83,7 +76,7 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
     let mut syntax_failures: Vec<(String, String)> = Vec::new();
     let mut total_snippets: usize = 0;
 
-    if let Some(ruby) = Some(ruby.clone()) {
+    if let Some(ruby) = ruby {
         let ruby_clone = ruby.clone();
         for (path, source, parsed_file) in &parsed {
             let source_str = String::from_utf8_lossy(source);
@@ -103,6 +96,12 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
                 }
             }
 
+            progress.inc(1);
+        }
+    } else {
+        for (_path, _, parsed_file) in &parsed {
+            let snippets = extract(parsed_file);
+            total_snippets += snippets.len();
             progress.inc(1);
         }
     }
@@ -187,14 +186,6 @@ fn print_coverage(stats: &CheckStats, mode: RbsMode) {
     }
 }
 
-fn osc8_link(path_line: &str) -> String {
-    let (path, _line) = path_line.rsplit_once(':').unwrap_or((path_line, ""));
-    let absolute = std::fs::canonicalize(path)
-        .map(|p| p.to_string_lossy().into_owned())
-        .unwrap_or_else(|_| path.to_string());
-    format!("\x1b]8;;file://{absolute}\x1b\\{path_line}\x1b]8;;\x1b\\")
-}
-
 fn print_table(title: &str, entries: &BTreeMap<String, UnknownEntry>, linkify: bool) {
     let _ = linkify;
     if entries.is_empty() {
@@ -228,4 +219,12 @@ fn render_locations(locations: &[String], linkify: bool) -> String {
     } else {
         shown.join("\n")
     }
+}
+
+fn osc8_link(path_line: &str) -> String {
+    let (path, _line) = path_line.rsplit_once(':').unwrap_or((path_line, ""));
+    let absolute = std::fs::canonicalize(path)
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_else(|_| path.to_string());
+    format!("\x1b]8;;file://{absolute}\x1b\\{path_line}\x1b]8;;\x1b\\")
 }
