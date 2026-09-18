@@ -2,7 +2,7 @@
 
 use ruby_prism::Node;
 
-use super::LineIndex;
+use super::{node_source_slice, LineIndex};
 
 /// A method call extracted from Ruby source code.
 #[derive(Debug, Clone, PartialEq)]
@@ -58,32 +58,35 @@ fn process_stmt(node: &Node<'_>, lines: &LineIndex, source: &[u8], calls: &mut V
         }
     }
     
-    // Handle class bodies
-    if let Some(class) = node.as_class_node()
-        && let Some(body) = class.body()
-            && let Some(stmts) = body.as_statements_node() {
-                for stmt in stmts.body().iter() {
-                    process_stmt(&stmt, lines, source, calls);
-                }
-            }
-    
-    // Handle module bodies
-    if let Some(module) = node.as_module_node()
-        && let Some(body) = module.body()
-            && let Some(stmts) = body.as_statements_node() {
-                for stmt in stmts.body().iter() {
-                    process_stmt(&stmt, lines, source, calls);
-                }
-            }
-    
-    // Handle def bodies
-    if let Some(def) = node.as_def_node()
-        && let Some(body) = def.body()
-            && let Some(stmts) = body.as_statements_node() {
-                for stmt in stmts.body().iter() {
-                    process_stmt(&stmt, lines, source, calls);
-                }
-            }
+    // Handle nested bodies (class/module/def)
+    if let Some(class) = node.as_class_node() {
+        if let Some(body) = class.body() {
+            process_statements_from_body(body, lines, source, calls);
+        }
+    }
+    if let Some(module) = node.as_module_node() {
+        if let Some(body) = module.body() {
+            process_statements_from_body(body, lines, source, calls);
+        }
+    }
+    if let Some(def) = node.as_def_node() {
+        if let Some(body) = def.body() {
+            process_statements_from_body(body, lines, source, calls);
+        }
+    }
+}
+
+fn process_statements_from_body(
+    body: Node<'_>,
+    lines: &LineIndex,
+    source: &[u8],
+    calls: &mut Vec<CallSite>,
+) {
+    if let Some(stmts) = body.as_statements_node() {
+        for stmt in stmts.body().iter() {
+            process_stmt(&stmt, lines, source, calls);
+        }
+    }
 }
 
 fn extract_call_site(
@@ -167,10 +170,4 @@ fn extract_full_constant_path(const_path: &ruby_prism::ConstantPathNode<'_>) -> 
         parts.push(String::from_utf8_lossy(name.as_slice()).into_owned());
     }
     parts.join("::")
-}
-
-fn node_source_slice(source: &[u8], node: &Node<'_>) -> String {
-    let loc = node.location();
-    let bytes: &[u8] = &source[loc.start_offset()..loc.end_offset()];
-    String::from_utf8_lossy(bytes).into_owned()
 }

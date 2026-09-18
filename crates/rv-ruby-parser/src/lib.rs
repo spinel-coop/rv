@@ -351,7 +351,7 @@ fn make_span(lines: &LineIndex, start: usize, end: usize) -> Span {
 }
 
 /// Returns the source text of a node's location.
-fn node_source_slice(source: &[u8], node: &Node<'_>) -> String {
+pub(crate) fn node_source_slice(source: &[u8], node: &Node<'_>) -> String {
     let loc = node.location();
     let bytes: &[u8] = &source[loc.start_offset()..loc.end_offset()];
     String::from_utf8_lossy(bytes).into_owned()
