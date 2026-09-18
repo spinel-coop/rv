@@ -96,3 +96,29 @@ pub async fn syntax_check(ruby: Ruby, code: &str) -> Result<(), CheckError> {
 pub async fn assertion_check(ruby: Ruby, code: &str) -> Result<(), CheckError> {
     run_ruby(ruby, code, RunMode::Assertion).await
 }
+
+pub async fn check_file_syntax(ruby: Ruby, source: &str) -> Result<(), CheckError> {
+    let tmp_path: PathBuf = tempfile::Builder::new()
+        .suffix(".rb")
+        .tempfile()?
+        .into_temp_path()
+        .to_path_buf();
+
+    {
+        let mut file = tokio::fs::File::create(&tmp_path).await?;
+        file.write_all(source.as_bytes()).await?;
+    }
+
+    let mut cmd = tokio::process::Command::new(ruby.executable_path());
+    cmd.args(["-c"]).arg(&tmp_path);
+
+    let output = cmd.output().await?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(CheckError::Syntax {
+            stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+        })
+    }
+}

@@ -5,9 +5,11 @@ use crate::config::Config;
 use crate::discovery;
 use crate::{Error, GlobalArgs};
 use clap::{Parser, ValueEnum};
+use indicatif::{ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use rv_doctest::{
-    CheckStats, Failure, RbsChecker, RbsEnvironment, UnknownEntry, check_snippets, extract,
+    CheckStats, Failure, RbsChecker, RbsEnvironment, UnknownEntry, check_file_syntax,
+    check_snippets, extract,
 };
 use rv_ruby_parser::ParsedFile;
 use tabled::Table;
@@ -38,35 +40,13 @@ pub(crate) struct CommandlineOpts {
 
 #[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub(crate) enum RbsMode {
-    /// Print a one-line coverage summary.
     Stat,
-    /// Print the summary plus a table per unknown category.
     Verbose,
 }
 
 pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Result<(), Error> {
     let files = discovery::discover_rb_files(&opts.include_paths, opts.include_gitignored);
-
-    let parsed: Vec<(String, ParsedFile)> = files
-        .par_iter()
-        .map(|(path, source)| (path.to_string(), rv_ruby_parser::parse(source)))
-        .collect();
-
-    let total_snippets: usize = parsed
-        .par_iter()
-        .map(|(_, parsed_file)| extract(parsed_file).len())
-        .sum();
-
-    let total_files: usize = parsed
-        .par_iter()
-        .map(|(_, parsed_file)| {
-            if extract(parsed_file).is_empty() {
-                0
-            } else {
-                1
-            }
-        })
-        .sum();
+    let total_files_count = files.len();
 
     let ruby = Config::new(global_args, None)
         .ok()
@@ -79,29 +59,60 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         )));
     }
 
-    let mut failures: Vec<(String, rv_doctest::Failure)> = Vec::new();
+    let ruby = ruby.ok_or_else(|| {
+        Error::IoError(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "Ruby is not installed. Run `rv ruby install` or use --rbs for RBS-only checking.",
+        ))
+    })?;
 
-    if let Some(ruby) = ruby {
-        let mut set = tokio::task::JoinSet::new();
-        for (path, parsed_file) in &parsed {
+    let progress = ProgressBar::new(total_files_count as u64);
+    progress.set_style(ProgressStyle::default_bar()
+        .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} files ({eta} remaining)")
+        .unwrap_or_else(|_| ProgressStyle::default_bar()));
+
+    let parsed: Vec<(String, Vec<u8>, ParsedFile)> = files
+        .par_iter()
+        .map(|(path, source)| {
+            let parsed = rv_ruby_parser::parse(source);
+            (path.to_string(), source.clone(), parsed)
+        })
+        .collect();
+
+    let mut failures: Vec<(String, rv_doctest::Failure)> = Vec::new();
+    let mut syntax_failures: Vec<(String, String)> = Vec::new();
+    let mut total_snippets: usize = 0;
+
+    if let Some(ruby) = Some(ruby.clone()) {
+        let ruby_clone = ruby.clone();
+        for (path, source, parsed_file) in &parsed {
+            let source_str = String::from_utf8_lossy(source);
+
+            if let Err(e) = check_file_syntax(ruby_clone.clone(), &source_str).await {
+                syntax_failures.push((path.clone(), e.to_string()));
+            }
+
             let snippets = extract(parsed_file);
+            total_snippets += snippets.len();
+
             if !snippets.is_empty() {
-                let ruby = ruby.clone();
-                let path = path.clone();
-                set.spawn(async move {
-                    let file_failures = check_snippets(&snippets, &ruby).await;
-                    (path, file_failures)
-                });
+                let ruby_clone = ruby.clone();
+                let snippet_failures = check_snippets(&snippets, &ruby_clone).await;
+                for failure in snippet_failures {
+                    failures.push((path.clone(), failure));
+                }
             }
-        }
-        while let Some(result) = set.join_next().await {
-            let (path, file_failures) =
-                result.map_err(|e| Error::IoError(std::io::Error::other(e.to_string())))?;
-            for failure in file_failures {
-                failures.push((path.clone(), failure));
-            }
+
+            progress.inc(1);
         }
     }
+
+    progress.finish_and_clear();
+
+    let total_files_with_snippets: usize = parsed
+        .iter()
+        .filter(|(_, _, pf)| !extract(pf).is_empty())
+        .count();
 
     let mut stats = CheckStats::default();
 
@@ -110,7 +121,7 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         let env = RbsEnvironment::load(&rbs_dirs)
             .map_err(|e| Error::IoError(std::io::Error::other(e.to_string())))?;
         let checker = RbsChecker::new(env);
-        for (path, parsed_file) in &parsed {
+        for (path, _, parsed_file) in &parsed {
             for snippet in extract(parsed_file) {
                 let report = checker.check(&snippet, path);
                 stats.merge(report.stats);
@@ -131,12 +142,19 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         }
     }
 
-    if failures.is_empty() {
-        let paths_str = opts.include_paths.join(", ");
+    if syntax_failures.is_empty() && failures.is_empty() {
+        let file_word = if total_files_with_snippets == 1 {
+            "file"
+        } else {
+            "files"
+        };
         println!(
-            "All {total_snippets} of fenced Ruby codeblocks in {total_files} files in {paths_str} pass all checks."
+            "All {total_snippets} fenced Ruby codeblocks in {total_files_with_snippets} {file_word} pass all checks."
         );
     } else {
+        for (path, msg) in &syntax_failures {
+            println!("{}: syntax error: {}", path, msg);
+        }
         for (path, failure) in &failures {
             println!("{}:{}: {}", path, failure.line, failure.message);
             println!("{}", failure.snippet.code);
@@ -169,8 +187,6 @@ fn print_coverage(stats: &CheckStats, mode: RbsMode) {
     }
 }
 
-/// Wrap a plain `path:line` string in an OSC 8 hyperlink pointing at the
-/// absolute `file://` URI. The visible text stays plain `path:line`.
 fn osc8_link(path_line: &str) -> String {
     let (path, _line) = path_line.rsplit_once(':').unwrap_or((path_line, ""));
     let absolute = std::fs::canonicalize(path)
@@ -208,7 +224,7 @@ fn render_locations(locations: &[String], linkify: bool) -> String {
         .collect();
     let extra = locations.len().saturating_sub(MAX_LOCATIONS);
     if extra > 0 {
-        format!("{}\n\u{2026} (+{extra} more)", shown.join("\n"))
+        format!("{} \u{2026} (+{extra} more)", shown.join("\n"))
     } else {
         shown.join("\n")
     }
