@@ -98,46 +98,45 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
 
     if let Some(ref ruby_val) = ruby {
         futures_util::stream::iter(parsed.clone())
-            .map(
-                |ParsedSourceFile {
-                     path,
-                     bytes: source,
-                     parsed: parsed_file,
-                 }| {
-                    let ruby_check = ruby_val.clone();
-                    let progress_ref = progress_clone.clone();
-                    let syntax_count = syntax_checked_count.clone();
-                    let failures = failures.clone();
-                    let syntax_failures = syntax_failures.clone();
-                    let snippets_count = total_snippets.clone();
-                    async move {
-                        let source_str = String::from_utf8_lossy(&source);
-                        let mut file_syntax_failures: Vec<(String, String)> = Vec::new();
-                        let mut file_snippet_failures: Vec<(String, Failure)> = Vec::new();
+            .map(|pf| {
+                let ParsedSourceFile {
+                    path,
+                    bytes: source,
+                    parsed: parsed_file,
+                } = pf;
+                let ruby_check = ruby_val.clone();
+                let progress_ref = progress_clone.clone();
+                let syntax_count = syntax_checked_count.clone();
+                let failures = failures.clone();
+                let syntax_failures = syntax_failures.clone();
+                let snippets_count = total_snippets.clone();
+                async move {
+                    let source_str = String::from_utf8_lossy(&source);
+                    let mut file_syntax_failures: Vec<(String, String)> = Vec::new();
+                    let mut file_snippet_failures: Vec<(String, Failure)> = Vec::new();
 
-                        if let Err(e) = check_file_syntax(ruby_check.clone(), &source_str).await {
-                            file_syntax_failures.push((path.clone(), e.to_string()));
-                        }
-
-                        let snippets = extract(&parsed_file);
-
-                        if !snippets.is_empty() {
-                            file_snippet_failures = check_snippets(&snippets, &ruby_check)
-                                .await
-                                .into_iter()
-                                .map(|f| (path.clone(), f))
-                                .collect();
-                        }
-
-                        syntax_count.fetch_add(1, OrderingType::SeqCst);
-                        progress_ref.inc(1);
-                        snippets_count.fetch_add(snippets.len(), OrderingType::SeqCst);
-
-                        failures.lock().unwrap().extend(file_snippet_failures);
-                        syntax_failures.lock().unwrap().extend(file_syntax_failures);
+                    if let Err(e) = check_file_syntax(ruby_check.clone(), &source_str).await {
+                        file_syntax_failures.push((path.clone(), e.to_string()));
                     }
-                },
-            )
+
+                    let snippets = extract(&parsed_file);
+
+                    if !snippets.is_empty() {
+                        file_snippet_failures = check_snippets(&snippets, &ruby_check)
+                            .await
+                            .into_iter()
+                            .map(|f| (path.clone(), f))
+                            .collect();
+                    }
+
+                    syntax_count.fetch_add(1, OrderingType::SeqCst);
+                    progress_ref.inc(1);
+                    snippets_count.fetch_add(snippets.len(), OrderingType::SeqCst);
+
+                    failures.lock().unwrap().extend(file_snippet_failures);
+                    syntax_failures.lock().unwrap().extend(file_syntax_failures);
+                }
+            })
             .buffer_unordered(MAX_CONCURRENT_CHECKS)
             .collect::<()>()
             .await;
