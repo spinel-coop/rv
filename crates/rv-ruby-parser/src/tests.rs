@@ -363,7 +363,7 @@ fn minitest_require_after_other_code() {
         end
     "};
     let line = minitest_require_line(source.as_bytes());
-    assert_eq!(line, Some(3), "found require on line 3");
+    assert_eq!(line, Some(4), "found require on line 4");
 }
 
 #[test]
