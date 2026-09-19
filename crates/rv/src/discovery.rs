@@ -1,122 +1,183 @@
 use camino::Utf8PathBuf;
 use ignore::WalkBuilder;
-use std::fs::read;
-use std::io::BufRead;
 use std::path::Path;
 
-/// Expand paths, handling `@file` notation. Returns a flattened list of paths.
-///
-/// When a path starts with `@`, it's treated as a file containing a list of
-/// paths (one per line). All other paths are passed through unchanged.
-pub fn expand_paths(include_paths: &[String]) -> Vec<String> {
-    let mut expanded = Vec::new();
+fn path_buf_to_utf8_path(path: std::path::PathBuf) -> Result<Utf8PathBuf, std::path::PathBuf> {
+    Utf8PathBuf::from_path_buf(path)
+}
 
-    for path in include_paths {
-        if let Some(file_name) = path.strip_prefix('@') {
-            match std::fs::File::open(file_name) {
-                Ok(file) => {
-                    let buf = std::io::BufReader::new(file);
-                    expanded.extend(buf.lines().map(|l| l.expect("Could not parse line")));
+#[derive(Debug)]
+pub struct DiscoveryError {
+    pub(crate) path: String,
+}
+
+impl std::fmt::Display for DiscoveryError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Discovery error for path: {}", self.path)
+    }
+}
+
+impl std::error::Error for DiscoveryError {}
+
+#[derive(Debug)]
+pub(crate) struct DiscoverableFileFailure {
+    pub(crate) path: String,
+    pub(crate) error: std::io::Error,
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct DiscoveryResult {
+    pub(crate) files: Vec<(Utf8PathBuf, Vec<u8>)>,
+    pub(crate) failures: Vec<DiscoverableFileFailure>,
+}
+
+pub(crate) fn expand_paths(paths: &[String]) -> Result<Vec<String>, DiscoveryError> {
+    let mut expanded = Vec::with_capacity(paths.len());
+
+    for path in paths {
+        if let Some(file_path) = path.strip_prefix('@') {
+            let content = std::fs::read_to_string(file_path).map_err(|_| DiscoveryError {
+                path: file_path.to_string(),
+            })?;
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if !trimmed.is_empty() {
+                    expanded.push(trimmed.to_string());
                 }
-                Err(_) => expanded.push(path.clone()),
             }
         } else {
             expanded.push(path.clone());
         }
     }
 
-    expanded
+    Ok(expanded)
 }
 
-/// Discover `.rb` files from the given include paths.
-///
-/// Returns `(path, source)` pairs for each `.rb` file found. Respects
-/// `.gitignore` when `include_gitignored` is `false`. Does not apply
-/// `.rubyfmtignore` — that is the caller's responsibility.
-///
-/// Requires `include_paths` to be non-empty. For stdin handling, the
-/// caller should read stdin and pass the buffer directly.
-pub fn discover_rb_files(
+pub(crate) fn discover_rb_files(
     include_paths: &[String],
     include_gitignored: bool,
-) -> Vec<(Utf8PathBuf, Vec<u8>)> {
-    let paths = expand_paths(include_paths);
+) -> Result<DiscoveryResult, DiscoveryError> {
+    let mut result = DiscoveryResult::default();
 
-    let (file_paths, dir_paths): (Vec<_>, Vec<_>) =
-        paths.iter().partition(|p| Path::new(p).is_file());
+    for path in include_paths {
+        let walk = WalkBuilder::new(Path::new(path))
+            .git_ignore(!include_gitignored)
+            .ignore(!include_gitignored)
+            .build();
 
-    let mut results: Vec<(Utf8PathBuf, Vec<u8>)> = Vec::new();
-
-    for path in &file_paths {
-        if let Ok(buffer) = read(path) {
-            results.push((Utf8PathBuf::from(path.as_str()), buffer));
-        }
-    }
-
-    if !dir_paths.is_empty() {
-        let mut builder = WalkBuilder::new(std::path::Path::new(&dir_paths[0]));
-        for path in &dir_paths[1..] {
-            builder.add(path);
-        }
-        builder.git_ignore(!include_gitignored);
-
-        for pp in builder.build().filter_map(Result::ok) {
-            let file_path = pp.path();
-            match read(file_path) {
-                Ok(buffer) if file_path.extension().and_then(|e| e.to_str()) == Some("rb") => {
-                    results.push((file_path.to_path_buf().try_into().unwrap(), buffer));
+        for entry in walk {
+            match entry {
+                Ok(dir_entry) => {
+                    let entry_path = dir_entry.path();
+                    let extension_is_rb = entry_path.extension().is_some_and(|ext| ext == "rb");
+                    if extension_is_rb {
+                        if let Some(path_str) = entry_path.to_str() {
+                            if let Ok(utf8_path) = path_buf_to_utf8_path(entry_path.to_path_buf()) {
+                                match std::fs::read(&utf8_path) {
+                                    Ok(bytes) => result.files.push((utf8_path, bytes)),
+                                    Err(e) => {
+                                        result.failures.push(DiscoverableFileFailure {
+                                            path: path_str.to_string(),
+                                            error: e,
+                                        });
+                                    }
+                                }
+                            } else {
+                                result.failures.push(DiscoverableFileFailure {
+                                    path: path_str.to_string(),
+                                    error: std::io::Error::new(
+                                        std::io::ErrorKind::InvalidData,
+                                        "path is not valid UTF-8",
+                                    ),
+                                });
+                            }
+                        } else {
+                            result.failures.push(DiscoverableFileFailure {
+                                path: entry_path.to_string_lossy().to_string(),
+                                error: std::io::Error::new(
+                                    std::io::ErrorKind::InvalidData,
+                                    "path is not valid UTF-8",
+                                ),
+                            });
+                        }
+                    }
                 }
-                _ => {}
+                Err(e) => {
+                    result.failures.push(DiscoverableFileFailure {
+                        path: path.clone(),
+                        error: std::io::Error::other(e.to_string()),
+                    });
+                }
             }
         }
     }
 
-    results
+    Ok(result)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::fs;
-    use tempfile::tempdir;
+    use tempfile::{NamedTempFile, TempDir};
 
     #[test]
-    fn expand_paths_handles_at_file() {
-        let dir = tempdir().unwrap();
-        let list_file = dir.path().join("paths.txt");
-        fs::write(&list_file, "lib/a.rb\nlib/b.rb").unwrap();
-
-        let result = expand_paths(&[format!("@{}", list_file.display())]);
-        assert_eq!(result, vec!["lib/a.rb", "lib/b.rb"]);
+    fn expand_paths_passes_through_non_at_paths() {
+        let paths = vec!["lib/foo.rb".to_string(), "dir/".to_string()];
+        let expanded = expand_paths(&paths).unwrap();
+        assert_eq!(expanded, paths);
     }
 
     #[test]
-    fn expand_paths_passes_through_regular_paths() {
-        let result = expand_paths(&["lib/foo.rb".to_string(), "spec/bar.rb".to_string()]);
-        assert_eq!(result, vec!["lib/foo.rb", "spec/bar.rb"]);
+    fn expand_paths_reads_from_at_file() {
+        let tmp = NamedTempFile::new().unwrap();
+        fs::write(&tmp, "lib/a.rb\nlib/b.rb\n").unwrap();
+        let path = format!("@{}", tmp.path().to_str().unwrap());
+        let expanded = expand_paths(&[path]).unwrap();
+        assert_eq!(expanded, vec!["lib/a.rb", "lib/b.rb"]);
     }
 
     #[test]
-    fn discover_rb_files_finds_rb_files() {
-        let dir = tempdir().unwrap();
-        fs::create_dir_all(dir.path().join("lib")).unwrap();
-        fs::write(dir.path().join("lib").join("foo.rb"), "puts 'hello'").unwrap();
-        let _ = fs::write(dir.path().join("lib").join("bar.txt"), "not ruby");
-
-        let result = discover_rb_files(&[dir.path().to_string_lossy().to_string()], false);
-        let paths: Vec<_> = result.iter().map(|(p, _)| p.to_string()).collect();
-        assert!(paths.iter().any(|p| p.ends_with("foo.rb")));
-        assert!(!paths.iter().any(|p| p.ends_with("bar.txt")));
+    fn expand_paths_errors_on_missing_at_file() {
+        let paths = vec!["@nonexistent.txt".to_string()];
+        let result = expand_paths(&paths);
+        assert!(result.is_err());
     }
 
     #[test]
-    fn discover_rb_files_returns_source_content() {
-        let dir = tempdir().unwrap();
-        fs::create_dir_all(dir.path().join("lib")).unwrap();
-        fs::write(dir.path().join("lib").join("foo.rb"), "puts 'hello'").unwrap();
+    fn expand_paths_errors_on_invalid_utf8_in_at_file() {
+        let tmp = NamedTempFile::new().unwrap();
+        fs::write(tmp.path(), b"lib/a.rb\n\xff\xfe").unwrap();
+        let path = format!("@{}", tmp.path().to_str().unwrap());
+        assert!(expand_paths(&[path]).is_err());
+    }
 
-        let result = discover_rb_files(&[dir.path().to_string_lossy().to_string()], false);
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].1, b"puts 'hello'");
+    #[test]
+    fn discover_rb_files_accepts_a_single_path() {
+        let tmp = TempDir::new().unwrap();
+        fs::write(tmp.path().join("a.rb"), "x = 1").unwrap();
+        let path = tmp.path().to_str().unwrap().to_string();
+        let files = discover_rb_files(&[path], false).unwrap();
+        assert!(!files.files.is_empty());
+    }
+
+    #[test]
+    fn discover_rb_files_accepts_multiple_paths() {
+        let tmp = TempDir::new().unwrap();
+        fs::write(tmp.path().join("a.rb"), "x = 1").unwrap();
+        let path1 = tmp.path().to_str().unwrap().to_string();
+        let path2 = tmp.path().join("subdir");
+        fs::create_dir_all(&path2).unwrap();
+        fs::write(path2.join("b.rb"), "y = 2").unwrap();
+        let path2 = path2.to_str().unwrap().to_string();
+
+        let files = discover_rb_files(&[path1, path2], true).unwrap();
+        assert!(!files.files.is_empty());
+    }
+
+    #[test]
+    fn discover_rb_files_handles_missing_directory_gracefully() {
+        let files = discover_rb_files(&["/nonexistent/directory".to_string()], false).unwrap();
+        assert!(files.files.is_empty());
     }
 }

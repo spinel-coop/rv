@@ -34,6 +34,121 @@ pub fn parse_calls(source: &[u8]) -> Vec<CallSite> {
     calls
 }
 
+/// Returns the 1-based line number for the first `require 'minitest*'` or
+/// `require "minitest*"` call found.
+pub fn minitest_require_line(source: &[u8]) -> Option<usize> {
+    let result = ruby_prism::parse(source);
+
+    if result.errors().next().is_some() {
+        return None;
+    }
+
+    let lines = LineIndex::new(source);
+    find_minitest_require_line(&result.node(), &lines, source)
+}
+
+fn find_minitest_require_line(node: &Node<'_>, lines: &LineIndex, source: &[u8]) -> Option<usize> {
+    if let Some(call) = node.as_call_node()
+        && call.name().as_slice() == b"require"
+        && let Some(arg_str) = get_first_string_arg(&call, source)
+        && arg_str.starts_with("minitest")
+    {
+        let location = call.location();
+        let (start_line, _) = lines.line_col(location.start_offset());
+        return Some(start_line as usize);
+    }
+
+    if let Some(stmts) = node.as_statements_node() {
+        for stmt in stmts.body().iter() {
+            if let Some(line) = process_stmt_for_minitest(&stmt, lines, source) {
+                return Some(line);
+            }
+        }
+    }
+
+    None
+}
+
+fn process_stmt_for_minitest(node: &Node<'_>, lines: &LineIndex, source: &[u8]) -> Option<usize> {
+    if let Some(call) = node.as_call_node() {
+        if call.name().as_slice() == b"require" {
+            if let Some(arg_str) = get_first_string_arg(&call, source) {
+                if arg_str.starts_with("minitest") {
+                    let location = call.location();
+                    let (start_line, _) = lines.line_col(location.start_offset());
+                    return Some(start_line as usize);
+                }
+            }
+        }
+    }
+
+    if let Some(stmts) = node.as_statements_node() {
+        for stmt in stmts.body().iter() {
+            if let Some(line) = process_stmt_for_minitest(&stmt, lines, source) {
+                return Some(line);
+            }
+        }
+    }
+
+    if let Some(body) = node.as_class_node().and_then(|n| n.body()) {
+        for stmt in body
+            .as_statements_node()
+            .map(|s| s.body().iter())
+            .into_iter()
+            .flatten()
+        {
+            if let Some(line) = process_stmt_for_minitest(&stmt, lines, source) {
+                return Some(line);
+            }
+        }
+    }
+    if let Some(body) = node.as_module_node().and_then(|n| n.body()) {
+        for stmt in body
+            .as_statements_node()
+            .map(|s| s.body().iter())
+            .into_iter()
+            .flatten()
+        {
+            if let Some(line) = process_stmt_for_minitest(&stmt, lines, source) {
+                return Some(line);
+            }
+        }
+    }
+    if let Some(body) = node.as_def_node().and_then(|n| n.body()) {
+        for stmt in body
+            .as_statements_node()
+            .map(|s| s.body().iter())
+            .into_iter()
+            .flatten()
+        {
+            if let Some(line) = process_stmt_for_minitest(&stmt, lines, source) {
+                return Some(line);
+            }
+        }
+    }
+
+    None
+}
+
+fn get_first_string_arg(call: &ruby_prism::CallNode<'_>, source: &[u8]) -> Option<String> {
+    let args = call.arguments()?;
+    for arg in args.arguments().iter() {
+        let loc = arg.location();
+        let slice = &source[loc.start_offset()..loc.end_offset()];
+        let s = String::from_utf8_lossy(slice);
+        
+        // Check if it's a double-quoted or single-quoted string
+        if s.len() >= 2 {
+            let first = s.chars().next()?;
+            let last = s.chars().last()?;
+            if (first == '"' && last == '"') || (first == '\'' && last == '\'') {
+                return Some(s[1..s.len()-1].to_string());
+            }
+        }
+    }
+    None
+}
+
 fn walk_stmts(node: &Node<'_>, lines: &LineIndex, source: &[u8], calls: &mut Vec<CallSite>) {
     let stmts = match node.as_statements_node() {
         Some(s) => s,
@@ -51,44 +166,6 @@ fn process_stmt(node: &Node<'_>, lines: &LineIndex, source: &[u8], calls: &mut V
     {
         calls.push(call_site);
     }
-
-    // Handle nested statements
-    if let Some(stmts) = node.as_statements_node() {
-        for stmt in stmts.body().iter() {
-            process_stmt(&stmt, lines, source, calls);
-        }
-    }
-
-    // Handle nested bodies (class/module/def/singleton)
-    walk_node_body(node, lines, source, calls);
-}
-
-fn walk_node_body(node: &Node<'_>, lines: &LineIndex, source: &[u8], calls: &mut Vec<CallSite>) {
-    if let Some(body) = node.as_class_node().and_then(|n| n.body()) {
-        process_statements_from_body(body, lines, source, calls);
-    }
-    if let Some(body) = node.as_module_node().and_then(|n| n.body()) {
-        process_statements_from_body(body, lines, source, calls);
-    }
-    if let Some(body) = node.as_def_node().and_then(|n| n.body()) {
-        process_statements_from_body(body, lines, source, calls);
-    }
-    if let Some(body) = node.as_singleton_class_node().and_then(|n| n.body()) {
-        process_statements_from_body(body, lines, source, calls);
-    }
-}
-
-fn process_statements_from_body(
-    body: Node<'_>,
-    lines: &LineIndex,
-    source: &[u8],
-    calls: &mut Vec<CallSite>,
-) {
-    if let Some(stmts) = body.as_statements_node() {
-        for stmt in stmts.body().iter() {
-            process_stmt(&stmt, lines, source, calls);
-        }
-    }
 }
 
 fn extract_call_site(
@@ -97,22 +174,22 @@ fn extract_call_site(
     source: &[u8],
 ) -> Option<CallSite> {
     let location = call.location();
-    let (start_line, _) = lines.line_col(location.start_offset());
+    let line = location.start_offset();
+    let (line_num, _) = lines.line_col(location.start_offset());
 
-    let name_bytes: &[u8] = call.name().as_slice();
-    let name = String::from_utf8_lossy(name_bytes).into_owned();
+    let name = String::from_utf8_lossy(call.name().as_slice()).into_owned();
+    let arguments = call.arguments();
 
-    let args = call.arguments();
-    let arg_count = args.map(|a| a.arguments().iter().count()).unwrap_or(0);
+    let has_parens = arguments.map(|a| a.parens()).unwrap_or(false);
+    let arg_count = arguments.map(|a| a.arguments().len()).unwrap_or(0);
 
-    let has_block = call.block().is_some();
-
-    let receiver_node = call.receiver();
-    let (class_name, receiver_text) = if let Some(r) = receiver_node {
-        extract_receiver_info(&r, source)
+    let (class_name, receiver_text) = if let Some(receiver) = call.receiver() {
+        extract_receiver_info(receiver, source)
     } else {
         (None, None)
     };
+
+    let has_block = arguments.map(|a| a.block().is_some()).unwrap_or(false);
 
     Some(CallSite {
         class_name,
@@ -120,7 +197,7 @@ fn extract_call_site(
         name,
         arg_count,
         has_block,
-        line: start_line as usize,
+        line: line_num as usize - 1,
     })
 }
 
@@ -139,13 +216,12 @@ fn extract_receiver_info(receiver: &Node<'_>, source: &[u8]) -> (Option<String>,
         return (Some(class_name.clone()), Some(class_name));
     }
 
-    if let ruby_prism::Node::SelfNode { .. } = receiver {
+    if matches!(receiver, Node::SelfNode { .. }) {
         return (None, Some("self".to_string()));
     }
-    if let ruby_prism::Node::InstanceVariableReadNode { .. } = receiver {
-        return (None, Some(receiver_text));
-    }
-    if let ruby_prism::Node::GlobalVariableReadNode { .. } = receiver {
+    if matches!(receiver, Node::InstanceVariableReadNode { .. })
+        || matches!(receiver, Node::GlobalVariableReadNode { .. })
+    {
         return (None, Some(receiver_text));
     }
 
@@ -155,21 +231,139 @@ fn extract_receiver_info(receiver: &Node<'_>, source: &[u8]) -> (Option<String>,
 fn extract_full_constant_path(const_path: &ruby_prism::ConstantPathNode<'_>) -> String {
     let mut parts: Vec<String> = Vec::new();
 
-    fn collect_parts(node: ruby_prism::Node<'_>, parts: &mut Vec<String>) {
-        if let Some(cp) = node.as_constant_path_node() {
-            collect_parts(cp.parent().unwrap(), parts);
-            if let Some(name) = cp.name() {
-                parts.push(String::from_utf8_lossy(name.as_slice()).into_owned());
-            }
-        } else if let Some(cr) = node.as_constant_read_node() {
-            let name = cr.name();
-            parts.push(String::from_utf8_lossy(name.as_slice()).into_owned());
-        }
+    if let Some(nested) = const_path.nested() {
+        let nested_name = nested.name();
+        parts.push(String::from_utf8_lossy(nested_name.as_slice()).into_owned());
     }
 
-    collect_parts(const_path.parent().unwrap(), &mut parts);
-    if let Some(name) = const_path.name() {
-        parts.push(String::from_utf8_lossy(name.as_slice()).into_owned());
+    if let Some(const_read) = const_path.constant() {
+        let name = const_read.name();
+        let name_bytes = name.as_slice();
+        let name_str = String::from_utf8_lossy(name_bytes).into_owned();
+        parts.insert(0, name_str);
     }
+
     parts.join("::")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use indoc::indoc;
+
+    #[test]
+    fn parse_calls_simple_method_call() {
+        let source = b"foo(1, 2)\n";
+        let calls = parse_calls(source);
+        assert_eq!(calls.len(), 1);
+        assert_eq!(calls[0].name, "foo");
+        assert_eq!(calls[0].arg_count, 2);
+    }
+
+    #[test]
+    fn parse_calls_with_block() {
+        let source = b"foo(1) { |x| x }\n";
+        let calls = parse_calls(source);
+        assert_eq!(calls.len(), 1);
+        assert!(calls[0].has_block);
+    }
+
+    #[test]
+    fn parse_calls_no_parens() {
+        let source = b"foo 1, 2\n";
+        let calls = parse_calls(source);
+        assert_eq!(calls.len(), 1);
+        assert!(!calls[0].has_parens);
+    }
+
+    #[test]
+    fn parse_calls_syntax_error() {
+        let source = b"def foo(\n";
+        let calls = parse_calls(source);
+        assert!(calls.is_empty());
+    }
+
+    #[test]
+    fn parse_calls_chained() {
+        let source = b"user.update!(\n  role: :admin,\n).save\n";
+        let calls = parse_calls(source);
+        assert!(calls.len() >= 2);
+    }
+
+    #[test]
+    fn minitest_require_single_quotes() {
+        let source = indoc! {"
+            require 'minitest'
+            def test
+            end
+        "};
+        let line = minitest_require_line(source.as_bytes());
+        assert_eq!(line, Some(1), "found require on line 1");
+    }
+
+    #[test]
+    fn minitest_require_double_quotes() {
+        let source = indoc! {"
+            require \"minitest\"
+            def test
+            end
+        "};
+        let line = minitest_require_line(source.as_bytes());
+        assert_eq!(line, Some(1), "found require on line 1");
+    }
+
+    #[test]
+    fn minitest_require_with_subpath() {
+        let source = indoc! {"
+            require 'minitest/autorun'
+            def test
+            end
+        "};
+        let line = minitest_require_line(source.as_bytes());
+        assert_eq!(line, Some(1), "found require on line 1");
+    }
+
+    #[test]
+    fn minitest_require_in_class() {
+        let source = indoc! {"
+            class Foo
+              require 'minitest'
+              def self.test
+              end
+            end
+        "};
+        let line = minitest_require_line(source.as_bytes());
+        assert_eq!(line, Some(2), "found require on line 2");
+    }
+
+    #[test]
+    fn minitest_require_after_other_code() {
+        let source = indoc! {"
+            def foo
+              1
+            end
+            require 'minitest'
+            def bar
+            end
+        "};
+        let line = minitest_require_line(source.as_bytes());
+        assert_eq!(line, Some(3), "found require on line 3");
+    }
+
+    #[test]
+    fn no_minitest_require() {
+        let source = indoc! {"
+            require 'json'
+            require 'rails'
+        "};
+        let line = minitest_require_line(source.as_bytes());
+        assert_eq!(line, None, "no minitest require found");
+    }
+
+    #[test]
+    fn minitest_require_none_syntax_error() {
+        let source = "def foo(\n";
+        let line = minitest_require_line(source.as_bytes());
+        assert_eq!(line, None, "syntax error returns None");
+    }
 }

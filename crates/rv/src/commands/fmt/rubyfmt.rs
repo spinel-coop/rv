@@ -7,7 +7,7 @@ use std::path::Path;
 use std::process::exit;
 use std::sync::{Arc, LazyLock, Mutex};
 
-use crate::discovery;
+use crate::discovery::{self, DiscoverableFileFailure};
 
 static MAGIC_COMMENT_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)^#\s*rubyfmt:\s*(?P<enabled>true|false)\s*$").unwrap());
@@ -24,9 +24,10 @@ enum ErrorExit {
 pub(crate) enum ExecutionError {
     // Errors seen when rubyfmt is executing
     RubyfmtError(rubyfmt::RichFormatError, String),
-    // Errors seen when performing IO s
+    // Errors seen when performing IO
     IOError(io::Error, String),
-    // Errors seen when grepping for files
+    // Errors seen when discovering files
+    DiscoverableFileFailure(discovery::DiscoverableFileFailure),
 }
 
 /// Rubyfmt CLI
@@ -120,16 +121,25 @@ fn print_error(msg: &str, file_path: Option<&str>, writer: &mut impl Write) {
     let _ = writeln!(writer, "{}\n{}", first_line, msg);
 }
 
-pub(crate) fn handle_execution_error(opts: &CommandlineOpts, err: ExecutionError) {
-    let mut exit_type = ErrorExit::NoExit;
-    // If include_paths are empty, this is operating on STDIN which should always exit
-    if opts.fail_fast || opts.include_paths.is_empty() {
-        exit_type = ErrorExit::Exit;
+fn handle_file_search_failure(err: DiscoverableFileFailure, error_exit: ErrorExit) {
+    let msg = format!("Rubyfmt could not read file '{}': {}", err.path, err.error);
+    print_error(&msg, None, &mut io::stderr().lock());
+    if error_exit == ErrorExit::Exit {
+        exit(rubyfmt::FormatError::IOError as i32);
     }
+}
+
+pub(crate) fn handle_execution_error(opts: &CommandlineOpts, err: ExecutionError) {
+    let exit_type = if opts.fail_fast || opts.include_paths.is_empty() {
+        ErrorExit::Exit
+    } else {
+        ErrorExit::NoExit
+    };
 
     match err {
         ExecutionError::RubyfmtError(e, path) => handle_rubyfmt_error(e, &path, exit_type),
         ExecutionError::IOError(e, path) => handle_io_error(e, &path, exit_type),
+        ExecutionError::DiscoverableFileFailure(e) => handle_file_search_failure(e, exit_type),
     }
 }
 
@@ -180,15 +190,34 @@ fn rubyfmt_string(
 type FormattingFunc<'a> = &'a dyn Fn((&Path, &[u8], Option<Vec<u8>>));
 
 pub(crate) fn iterate_formatted(opts: &CommandlineOpts, f: FormattingFunc) {
-    let files = discovery::discover_rb_files(&opts.include_paths, opts.include_gitignored);
-
-    for (file_path, buffer) in files {
-        match rubyfmt_string(opts, &buffer) {
-            Ok(r) => f((file_path.as_ref(), &buffer, r)),
-            Err(e) => {
-                handle_execution_error(opts, ExecutionError::RubyfmtError(e, file_path.to_string()))
+    match discovery::discover_rb_files(&opts.include_paths, opts.include_gitignored) {
+        Ok(result) => {
+            for (file_path, buffer) in result.files {
+                match rubyfmt_string(opts, &buffer) {
+                    Ok(r) => f((file_path.as_ref(), &buffer, r)),
+                    Err(e) => handle_execution_error(
+                        opts,
+                        ExecutionError::RubyfmtError(e, file_path.to_string()),
+                    ),
+                }
+            }
+            for failure in result.failures {
+                handle_execution_error(
+                    opts,
+                    ExecutionError::DiscoverableFileFailure(DiscoverableFileFailure {
+                        path: failure.path,
+                        error: failure.error,
+                    }),
+                );
             }
         }
+        Err(e) => handle_execution_error(
+            opts,
+            ExecutionError::DiscoverableFileFailure(DiscoverableFileFailure {
+                path: e.path,
+                error: std::io::Error::new(std::io::ErrorKind::NotFound, "path not found"),
+            }),
+        ),
     }
 }
 
@@ -208,29 +237,65 @@ pub(crate) fn main(mut opts: CommandlineOpts) {
         }
     }
 
-    opts.include_paths = discovery::expand_paths(&opts.include_paths);
+    opts.include_paths = match discovery::expand_paths(&opts.include_paths) {
+        Ok(paths) => paths,
+        Err(e) => {
+            handle_execution_error(
+                &opts,
+                ExecutionError::DiscoverableFileFailure(discovery::DiscoverableFileFailure {
+                    path: e.path,
+                    error: std::io::Error::new(std::io::ErrorKind::NotFound, "path not found"),
+                }),
+            );
+            return;
+        }
+    };
 
     match opts {
         CommandlineOpts { check: true, .. } => {
             let text_diffs: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
             let errors_count: Arc<Mutex<usize>> = Arc::new(Mutex::new(0));
 
-            let files = discovery::discover_rb_files(&opts.include_paths, opts.include_gitignored);
-            for (file_path, buffer) in files {
-                match rubyfmt_string(&opts, &buffer) {
-                    Ok(None) => {}
-                    Ok(Some(fmtted)) => {
-                        let diff = TextDiff::from_lines(&buffer, &fmtted);
-                        let path_string = file_path.to_string();
-                        text_diffs.lock().unwrap().push(format!(
-                            "{}",
-                            diff.unified_diff().header(&path_string, &path_string)
-                        ));
+            match discovery::discover_rb_files(&opts.include_paths, opts.include_gitignored) {
+                Ok(result) => {
+                    for (file_path, buffer) in result.files {
+                        match rubyfmt_string(&opts, &buffer) {
+                            Ok(None) => {}
+                            Ok(Some(fmtted)) => {
+                                let diff = TextDiff::from_lines(&buffer, &fmtted);
+                                let path_string = file_path.to_string();
+                                text_diffs.lock().unwrap().push(format!(
+                                    "{}",
+                                    diff.unified_diff().header(&path_string, &path_string)
+                                ));
+                            }
+                            Err(e) => {
+                                handle_rubyfmt_error(e, file_path.as_str(), ErrorExit::NoExit);
+                                *errors_count.lock().unwrap() += 1;
+                            }
+                        }
                     }
-                    Err(e) => {
-                        handle_rubyfmt_error(e, file_path.as_str(), ErrorExit::NoExit);
-                        *errors_count.lock().unwrap() += 1;
+                    for failure in result.failures {
+                        handle_execution_error(
+                            &opts,
+                            ExecutionError::DiscoverableFileFailure(failure),
+                        );
                     }
+                }
+                Err(e) => {
+                    handle_execution_error(
+                        &opts,
+                        ExecutionError::DiscoverableFileFailure(
+                            discovery::DiscoverableFileFailure {
+                                path: e.path,
+                                error: std::io::Error::new(
+                                    std::io::ErrorKind::NotFound,
+                                    "path not found",
+                                ),
+                            },
+                        ),
+                    );
+                    return;
                 }
             }
 
@@ -261,24 +326,49 @@ pub(crate) fn main(mut opts: CommandlineOpts) {
             })
         }
 
-        _ => iterate_formatted(&opts, &|(file_path, before, after)| match after {
-            Some(fmtted) if fmtted.ne(before) => {
-                let file_write = OpenOptions::new()
-                    .write(true)
-                    .truncate(true)
-                    .open(file_path)
-                    .and_then(|mut file| file.write_all(&fmtted));
+        _ => match discovery::discover_rb_files(&opts.include_paths, opts.include_gitignored) {
+            Ok(result) => {
+                for (file_path, buffer) in result.files {
+                    match rubyfmt_string(&opts, &buffer) {
+                        Ok(None) => {}
+                        Ok(Some(fmtted)) if fmtted.ne(&buffer) => {
+                            let file_write = OpenOptions::new()
+                                .write(true)
+                                .truncate(true)
+                                .open(&file_path)
+                                .and_then(|mut file| file.write_all(&fmtted));
 
-                match file_write {
-                    Ok(_) => {}
-                    Err(e) => handle_execution_error(
-                        &opts,
-                        ExecutionError::IOError(e, file_path.display().to_string()),
-                    ),
+                            match file_write {
+                                Ok(_) => {}
+                                Err(e) => handle_execution_error(
+                                    &opts,
+                                    ExecutionError::IOError(e, file_path.to_string()),
+                                ),
+                            }
+                        }
+                        Err(e) => {
+                            handle_execution_error(
+                                &opts,
+                                ExecutionError::RubyfmtError(e, file_path.to_string()),
+                            );
+                        }
+                        _ => {}
+                    }
+                }
+                for failure in result.failures {
+                    handle_execution_error(&opts, ExecutionError::DiscoverableFileFailure(failure));
                 }
             }
-            _ => {}
-        }),
+            Err(e) => {
+                handle_execution_error(
+                    &opts,
+                    ExecutionError::DiscoverableFileFailure(discovery::DiscoverableFileFailure {
+                        path: e.path,
+                        error: std::io::Error::new(std::io::ErrorKind::NotFound, "path not found"),
+                    }),
+                );
+            }
+        },
     }
 }
 
@@ -318,18 +408,22 @@ mod tests {
     /// Run a callback and collect every `(path, buffer)` pair yielded by
     /// `discovery::discover_rb_files` into a shared `Vec`.
     fn collect_inputs(opts: &CommandlineOpts) -> Vec<(String, Vec<u8>)> {
-        let collected: Arc<Mutex<CollectedInputs>> = Arc::new(Mutex::new(Vec::new()));
-        let files = discovery::discover_rb_files(&opts.include_paths, opts.include_gitignored);
-        for (path, buffer) in files {
-            collected
-                .lock()
-                .unwrap()
-                .push((path.to_string(), buffer.to_vec()));
+        match discovery::discover_rb_files(&opts.include_paths, opts.include_gitignored) {
+            Ok(result) => {
+                let collected: Arc<Mutex<CollectedInputs>> = Arc::new(Mutex::new(Vec::new()));
+                for (path, buffer) in result.files {
+                    collected
+                        .lock()
+                        .unwrap()
+                        .push((path.to_string(), buffer.to_vec()));
+                }
+                Arc::try_unwrap(collected)
+                    .ok()
+                    .and_then(|m| m.into_inner().ok())
+                    .unwrap_or_default()
+            }
+            Err(_) => Vec::new(),
         }
-        Arc::try_unwrap(collected)
-            .ok()
-            .and_then(|m| m.into_inner().ok())
-            .unwrap_or_default()
     }
 
     /// Same as `collect_inputs` but discards buffers.
@@ -573,7 +667,7 @@ mod tests {
         let path = tmp.path().to_str().unwrap().to_string();
 
         let opts = opts_with(|o| o.include_paths = vec![format!("@{path}")]);
-        let expanded = discovery::expand_paths(&opts.include_paths);
+        let expanded = discovery::expand_paths(&opts.include_paths).unwrap();
         assert_eq!(
             expanded,
             vec!["path/to/file1.rb", "path/to/file2.rb", "directory/"]
@@ -585,7 +679,7 @@ mod tests {
         let opts = opts_with(|o| {
             o.include_paths = vec!["lib/foo.rb".to_string(), "dir/".to_string()];
         });
-        let expanded = discovery::expand_paths(&opts.include_paths);
+        let expanded = discovery::expand_paths(&opts.include_paths).unwrap();
         assert_eq!(expanded, vec!["lib/foo.rb", "dir/"]);
     }
 
@@ -598,7 +692,7 @@ mod tests {
         let opts = opts_with(|o| {
             o.include_paths = vec!["lib/".to_string(), format!("@{path}")];
         });
-        let expanded = discovery::expand_paths(&opts.include_paths);
+        let expanded = discovery::expand_paths(&opts.include_paths).unwrap();
         assert_eq!(expanded, vec!["lib/", "expanded/path.rb"]);
     }
 
@@ -608,8 +702,23 @@ mod tests {
         let path = tmp.path().to_str().unwrap().to_string();
 
         let opts = opts_with(|o| o.include_paths = vec![format!("@{path}")]);
-        let expanded = discovery::expand_paths(&opts.include_paths);
+        let expanded = discovery::expand_paths(&opts.include_paths).unwrap();
         assert!(expanded.is_empty());
+    }
+
+    #[test]
+    fn expansion_errors_on_missing_at_file() {
+        let opts = opts_with(|o| o.include_paths = vec!["@nonexistent.txt".to_string()]);
+        assert!(discovery::expand_paths(&opts.include_paths).is_err());
+    }
+
+    #[test]
+    fn expansion_errors_on_invalid_utf8_in_at_file() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(tmp.path(), b"lib/a.rb\n\xff\xfe").unwrap();
+        let opts =
+            opts_with(|o| o.include_paths = vec![format!("@{}", tmp.path().to_str().unwrap())]);
+        assert!(discovery::expand_paths(&opts.include_paths).is_err());
     }
 
     // ==========================================================================
@@ -690,8 +799,8 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(tmp.path().join("a.rb"), "x = 1").unwrap();
         let path = tmp.path().to_str().unwrap().to_string();
-        let files = discovery::discover_rb_files(&[path], false);
-        assert!(!files.is_empty(), "single path should yield files");
+        let files = discovery::discover_rb_files(&[path], false).unwrap();
+        assert!(!files.files.is_empty(), "single path should yield files");
     }
 
     #[test]
@@ -704,8 +813,15 @@ mod tests {
         std::fs::write(path2.join("b.rb"), "y = 2").unwrap();
         let path2 = path2.to_str().unwrap().to_string();
 
-        let files = discovery::discover_rb_files(&[path1, path2], true);
-        assert!(!files.is_empty());
+        let files = discovery::discover_rb_files(&[path1, path2], true).unwrap();
+        assert!(!files.files.is_empty());
+    }
+
+    #[test]
+    fn discover_rb_files_handles_missing_directory_gracefully() {
+        let files =
+            discovery::discover_rb_files(&["/nonexistent/directory".to_string()], false).unwrap();
+        assert!(files.files.is_empty());
     }
 
     // ==========================================================================

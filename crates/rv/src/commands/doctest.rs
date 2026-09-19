@@ -1,6 +1,27 @@
 use std::collections::BTreeMap;
+/// RSpec-style doctest command for Ruby code in documentation comments.
+///
+/// This module provides the `rv doctest` command that validates Ruby code
+/// embedded in documentation comments. It supports:
+/// - Syntax validation via Ruby's `-c` check
+/// - Minitest assertion execution
+/// - RBS arity checking (optional)
+///
+/// # Example
+///
+/// ```ruby
+/// #!/usr/bin/env ruby
+/// def greet(name)
+///   puts "Hello, \#{name}!"
+/// end
+///
+/// ### Usage Example
+/// greet("World")  # => "Hello, World!"
+/// ```
+///
+/// The doctest command processes fenced ```ruby ``` blocks in documentation
+/// and validates them for correctness.
 use std::io::IsTerminal;
-use std::sync::atomic::{Ordering, Ordering as OrderingType};
 
 use crate::config::Config;
 use crate::discovery;
@@ -49,8 +70,16 @@ pub(crate) enum RbsMode {
 }
 
 pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Result<(), Error> {
-    let files = discovery::discover_rb_files(&opts.include_paths, opts.include_gitignored);
-    let total_files_count = files.len();
+    let expanded_paths = discovery::expand_paths(&opts.include_paths).map_err(|e| {
+        Error::IoError(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("Path not found: {}", e.path),
+        ))
+    })?;
+
+    let discovery_result = discovery::discover_rb_files(&expanded_paths, opts.include_gitignored)?;
+
+    let total_files_count = discovery_result.files.len();
 
     let ruby = Config::new(global_args, None)
         .ok()
@@ -73,21 +102,24 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         path: String,
         bytes: Vec<u8>,
         parsed: ParsedFile,
+        snippets: Vec<rv_doctest::Snippet>,
     }
 
-    let parsed: Vec<ParsedSourceFile> = files
+    let parsed: Vec<ParsedSourceFile> = discovery_result
+        .files
         .into_par_iter()
         .map(|(path, source)| {
             let parsed = rv_ruby_parser::parse(&source);
+            let snippets = extract(&parsed);
             ParsedSourceFile {
                 path: path.to_string(),
                 bytes: source,
                 parsed,
+                snippets,
             }
         })
         .collect();
 
-    let syntax_checked_count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let progress_clone = progress.clone();
 
     let failures: std::sync::Arc<std::sync::Mutex<Vec<(String, Failure)>>> =
@@ -102,11 +134,11 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
                 let ParsedSourceFile {
                     path,
                     bytes: source,
-                    parsed: parsed_file,
+                    parsed: _parsed_file,
+                    snippets,
                 } = pf;
                 let ruby_check = ruby_val.clone();
                 let progress_ref = progress_clone.clone();
-                let syntax_count = syntax_checked_count.clone();
                 let failures = failures.clone();
                 let syntax_failures = syntax_failures.clone();
                 let snippets_count = total_snippets.clone();
@@ -119,8 +151,6 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
                         file_syntax_failures.push((path.clone(), e.to_string()));
                     }
 
-                    let snippets = extract(&parsed_file);
-
                     if !snippets.is_empty() {
                         file_snippet_failures = check_snippets(&snippets, &ruby_check)
                             .await
@@ -129,9 +159,8 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
                             .collect();
                     }
 
-                    syntax_count.fetch_add(1, OrderingType::SeqCst);
                     progress_ref.inc(1);
-                    snippets_count.fetch_add(snippets.len(), OrderingType::SeqCst);
+                    snippets_count.fetch_add(snippets.len(), std::sync::atomic::Ordering::SeqCst);
 
                     failures.lock().unwrap().extend(file_snippet_failures);
                     syntax_failures.lock().unwrap().extend(file_syntax_failures);
@@ -144,17 +173,16 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         futures_util::stream::iter(parsed.clone())
             .map(|pf| {
                 let ParsedSourceFile {
-                    parsed: parsed_file,
+                    parsed: _parsed_file,
+                    snippets,
+                    path: _,
                     ..
                 } = pf;
                 let progress_ref = progress_clone.clone();
-                let syntax_count = syntax_checked_count.clone();
-                let snippets_count = total_snippets.clone();
+                let _snippets_count = total_snippets.clone();
                 async move {
-                    let snippets = extract(&parsed_file);
-                    syntax_count.fetch_add(1, OrderingType::SeqCst);
+                    let _ = snippets;
                     progress_ref.inc(1);
-                    snippets_count.fetch_add(snippets.len(), OrderingType::SeqCst);
                 }
             })
             .buffer_unordered(MAX_CONCURRENT_CHECKS)
@@ -164,7 +192,8 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
 
     let mut failures = failures.lock().unwrap().clone();
     let syntax_failures = syntax_failures.lock().unwrap().clone();
-    let total_snippets = total_snippets.load(Ordering::SeqCst);
+    let total_snippets = total_snippets.load(std::sync::atomic::Ordering::SeqCst);
+
     let mut stats = CheckStats::default();
 
     if opts.rbs.is_some() {
@@ -175,22 +204,13 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
 
         let all_snippets: Vec<_> = parsed
             .iter()
-            .flat_map(|pf| {
-                let ParsedSourceFile {
-                    path,
-                    parsed: parsed_file,
-                    ..
-                } = pf;
-                extract(parsed_file)
-                    .into_iter()
-                    .map(move |snippet| (path.clone(), snippet))
-            })
+            .flat_map(|pf| pf.snippets.iter().map(|snippet| (pf.path.clone(), snippet)))
             .collect();
 
         let rbs_results: Vec<_> = all_snippets
             .into_par_iter()
             .map(|(path, snippet)| {
-                let report = checker.check(&snippet, &path);
+                let report = checker.check(snippet, &path);
                 (path, snippet, report)
             })
             .collect();
@@ -214,10 +234,8 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         }
     }
 
-    let total_files_with_snippets: usize = parsed
-        .iter()
-        .filter(|ParsedSourceFile { parsed, .. }| !extract(parsed).is_empty())
-        .count();
+    let total_files_with_snippets: usize =
+        parsed.len() - parsed.iter().filter(|pf| pf.snippets.is_empty()).count();
 
     if syntax_failures.is_empty() && failures.is_empty() {
         let file_word = if total_files_with_snippets == 1 {
@@ -238,15 +256,8 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         }
     }
 
-    let syntax_checked = syntax_checked_count.load(Ordering::SeqCst);
-    println!(
-        "Syntax-checked {} file{}.",
-        syntax_checked,
-        if syntax_checked == 1 { "" } else { "s" }
-    );
-
-    if let Some(mode) = opts.rbs {
-        print_coverage(&stats, mode);
+    if let Some(rbs_mode) = opts.rbs {
+        print_coverage(&stats, rbs_mode);
     }
 
     Ok(())

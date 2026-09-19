@@ -303,3 +303,82 @@ fn comment_with_indentation_preserves_leading_spaces() {
         "indentation should be preserved (4 spaces after stripping # + 1 space)"
     );
 }
+
+use super::calls::minitest_require_line;
+
+#[test]
+fn minitest_require_single_quotes() {
+    let source = indoc! {"
+        require 'minitest'
+        def test
+        end
+    "};
+    let line = minitest_require_line(source.as_bytes());
+    assert_eq!(line, Some(1), "found require on line 1");
+}
+
+#[test]
+fn minitest_require_double_quotes() {
+    let source = indoc! {"
+        require \"minitest\"
+        def test
+        end
+    "};
+    let line = minitest_require_line(source.as_bytes());
+    assert_eq!(line, Some(1), "found require on line 1");
+}
+
+#[test]
+fn minitest_require_with_subpath() {
+    let source = indoc! {"
+        require 'minitest/autorun'
+        def test
+        end
+    "};
+    let line = minitest_require_line(source.as_bytes());
+    assert_eq!(line, Some(1), "found require on line 1");
+}
+
+#[test]
+fn minitest_require_in_class() {
+    let source = indoc! {"
+        class Foo
+          require 'minitest'
+          def self.test
+          end
+        end
+    "};
+    let line = minitest_require_line(source.as_bytes());
+    assert_eq!(line, Some(2), "found require on line 2");
+}
+
+#[test]
+fn minitest_require_after_other_code() {
+    let source = indoc! {"
+        def foo
+          1
+        end
+        require 'minitest'
+        def bar
+        end
+    "};
+    let line = minitest_require_line(source.as_bytes());
+    assert_eq!(line, Some(3), "found require on line 3");
+}
+
+#[test]
+fn no_minitest_require() {
+    let source = indoc! {"
+        require 'json'
+        require 'rails'
+    "};
+    let line = minitest_require_line(source.as_bytes());
+    assert_eq!(line, None, "no minitest require found");
+}
+
+#[test]
+fn minitest_require_none_syntax_error() {
+    let source = "def foo(\n";
+    let line = minitest_require_line(source.as_bytes());
+    assert_eq!(line, None, "syntax error returns None");
+}

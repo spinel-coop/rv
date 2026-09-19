@@ -5,10 +5,9 @@ use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
 
 use rv_ruby::Ruby;
+use rv_ruby_parser::calls::minitest_require_line;
 
 use crate::CheckError;
-
-const MINITEST_REQUIRE: (&str, &str) = ("require \"minitest", "require 'minitest");
 
 const MINITEST_FRAME: [&str; 3] = [
     "include Minitest::Assertions",
@@ -17,27 +16,29 @@ const MINITEST_FRAME: [&str; 3] = [
 ];
 
 pub fn assertion_applies_to(code: &str) -> bool {
-    code.contains(MINITEST_REQUIRE.0) || code.contains(MINITEST_REQUIRE.1)
+    minitest_require_line(code.as_bytes()).is_some()
 }
 
 fn inject_assertion_frame(code: &str) -> String {
-    if !assertion_applies_to(code) {
-        return code.to_string();
+    let require_line = match minitest_require_line(code.as_bytes()) {
+        Some(line) => line,
+        None => return code.to_string(),
+    };
+
+    let mut lines: Vec<&str> = code.lines().collect();
+    let insert_at = require_line;
+
+    if insert_at > 0 && insert_at <= lines.len() {
+        lines.insert(insert_at, MINITEST_FRAME[0]);
+        lines.insert(insert_at + 1, MINITEST_FRAME[1]);
+        lines.insert(insert_at + 2, MINITEST_FRAME[2]);
     }
-    let mut out: Vec<&str> = Vec::new();
-    let mut injected = false;
-    for line in code.lines() {
-        out.push(line);
-        if !injected && (line.contains(MINITEST_REQUIRE.0) || line.contains(MINITEST_REQUIRE.1)) {
-            out.extend(MINITEST_FRAME);
-            injected = true;
-        }
-    }
-    let mut joined = out.join("\n");
+
+    let mut result = lines.join("\n");
     if code.ends_with('\n') {
-        joined.push('\n');
+        result.push('\n');
     }
-    joined
+    result
 }
 
 pub(crate) enum RunMode {

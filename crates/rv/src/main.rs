@@ -205,6 +205,8 @@ pub enum Error {
     ToolError(#[from] commands::tool::Error),
     #[error(transparent)]
     ConfigError(#[from] crate::config::Error),
+    #[error(transparent)]
+    DiscoveryError(#[from] crate::discovery::DiscoveryError),
 }
 
 type Result<T> = miette::Result<T, Error>;
