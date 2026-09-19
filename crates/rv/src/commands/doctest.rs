@@ -10,8 +10,8 @@ use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use rv_doctest::{
-    CheckStats, Failure, RbsChecker, RbsEnvironment, Snippet, UnknownEntry, check_file_syntax,
-    check_snippets, extract,
+    CheckStats, Failure, RbsChecker, RbsEnvironment, Snippet, UnknownEntry, check_snippets,
+    extract, syntax_check,
 };
 use rv_ruby_parser::ParsedFile;
 use tabled::Table;
@@ -115,7 +115,7 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
                     let mut file_syntax_failures: Vec<(String, String)> = Vec::new();
                     let mut file_snippet_failures: Vec<(String, Failure)> = Vec::new();
 
-                    if let Err(e) = check_file_syntax(ruby_check.clone(), &source_str).await {
+                    if let Err(e) = syntax_check(ruby_check.clone(), &source_str).await {
                         file_syntax_failures.push((path.clone(), e.to_string()));
                     }
 
@@ -142,22 +142,21 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
             .await;
     } else {
         futures_util::stream::iter(parsed.clone())
-            .map(
-                |ParsedSourceFile {
-                     parsed: parsed_file,
-                     ..
-                 }| {
-                    let progress_ref = progress_clone.clone();
-                    let syntax_count = syntax_checked_count.clone();
-                    let snippets_count = total_snippets.clone();
-                    async move {
-                        let snippets = extract(&parsed_file);
-                        syntax_count.fetch_add(1, OrderingType::SeqCst);
-                        progress_ref.inc(1);
-                        snippets_count.fetch_add(snippets.len(), OrderingType::SeqCst);
-                    }
-                },
-            )
+            .map(|pf| {
+                let ParsedSourceFile {
+                    parsed: parsed_file,
+                    ..
+                } = pf;
+                let progress_ref = progress_clone.clone();
+                let syntax_count = syntax_checked_count.clone();
+                let snippets_count = total_snippets.clone();
+                async move {
+                    let snippets = extract(&parsed_file);
+                    syntax_count.fetch_add(1, OrderingType::SeqCst);
+                    progress_ref.inc(1);
+                    snippets_count.fetch_add(snippets.len(), OrderingType::SeqCst);
+                }
+            })
             .buffer_unordered(MAX_CONCURRENT_CHECKS)
             .collect::<()>()
             .await;
@@ -176,17 +175,16 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
 
         let all_snippets: Vec<_> = parsed
             .iter()
-            .flat_map(
-                |ParsedSourceFile {
-                     path,
-                     parsed: parsed_file,
-                     ..
-                 }| {
-                    extract(parsed_file)
-                        .into_iter()
-                        .map(move |snippet| (path.clone(), snippet))
-                },
-            )
+            .flat_map(|pf| {
+                let ParsedSourceFile {
+                    path,
+                    parsed: parsed_file,
+                    ..
+                } = pf;
+                extract(parsed_file)
+                    .into_iter()
+                    .map(move |snippet| (path.clone(), snippet))
+            })
             .collect();
 
         let rbs_results: Vec<_> = all_snippets

@@ -7,7 +7,7 @@ use rv_ruby_parser::ItemKind;
 
 mod checkers;
 
-pub use checkers::{assertion_applies_to, assertion_check, check_file_syntax, syntax_check};
+pub use checkers::{assertion_applies_to, assertion_check, syntax_check};
 #[derive(Clone, PartialEq, Eq)]
 pub struct Snippet {
     pub item_name: String,
