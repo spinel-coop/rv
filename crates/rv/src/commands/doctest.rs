@@ -6,17 +6,18 @@ use crate::config::Config;
 use crate::discovery;
 use crate::{Error, GlobalArgs};
 use clap::{Parser, ValueEnum};
-use futures_util::stream::FuturesUnordered;
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use rv_doctest::{
-    CheckStats, RbsChecker, RbsEnvironment, UnknownEntry, check_file_syntax,
+    CheckStats, Failure, RbsChecker, RbsEnvironment, Snippet, UnknownEntry, check_file_syntax,
     check_snippets, extract,
 };
 use rv_ruby_parser::ParsedFile;
 use tabled::Table;
 use tabled::settings::Style;
+
+const MAX_CONCURRENT_CHECKS: usize = 20;
 
 pub(crate) type DoctestArgs = CommandlineOpts;
 
@@ -78,75 +79,73 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
     let syntax_checked_count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let progress_clone = progress.clone();
 
-    let mut failures: Vec<(String, rv_doctest::Failure)> = Vec::new();
-    let mut syntax_failures: Vec<(String, String)> = Vec::new();
-    let mut total_snippets: usize = 0;
-    let mut stats = CheckStats::default();
+    let failures: std::sync::Arc<std::sync::Mutex<Vec<(String, Failure)>>> =
+        std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let syntax_failures: std::sync::Arc<std::sync::Mutex<Vec<(String, String)>>> =
+        std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let total_snippets = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
 
     if let Some(ref ruby_val) = ruby {
-        let mut in_flight = FuturesUnordered::new();
+        futures_util::stream::iter(parsed.clone())
+            .map(|(path, source, parsed_file)| {
+                let ruby_check = ruby_val.clone();
+                let progress_ref = progress_clone.clone();
+                let syntax_count = syntax_checked_count.clone();
+                let failures = failures.clone();
+                let syntax_failures = syntax_failures.clone();
+                let snippets_count = total_snippets.clone();
+                async move {
+                    let source_str = String::from_utf8_lossy(&source);
+                    let mut file_syntax_failures: Vec<(String, String)> = Vec::new();
+                    let mut file_snippet_failures: Vec<(String, Failure)> = Vec::new();
 
-        for (path, source, parsed_file) in parsed.clone() {
-            let ruby_check = ruby_val.clone();
-            let progress_ref = progress_clone.clone();
-            let syntax_count = syntax_checked_count.clone();
-            in_flight.push(async move {
-                let source_str = String::from_utf8_lossy(&source);
-                let mut file_syntax_failures: Vec<(String, String)> = Vec::new();
-                let mut file_snippet_failures: Vec<(String, rv_doctest::Failure)> = Vec::new();
+                    if let Err(e) = check_file_syntax(ruby_check.clone(), &source_str).await {
+                        file_syntax_failures.push((path.clone(), e.to_string()));
+                    }
 
-                if let Err(e) = check_file_syntax(ruby_check.clone(), &source_str).await {
-                    file_syntax_failures.push((path.clone(), e.to_string()));
+                    let snippets = extract(&parsed_file);
+
+                    if !snippets.is_empty() {
+                        file_snippet_failures = check_snippets(&snippets, &ruby_check)
+                            .await
+                            .into_iter()
+                            .map(|f| (path.clone(), f))
+                            .collect();
+                    }
+
+                    syntax_count.fetch_add(1, OrderingType::SeqCst);
+                    progress_ref.inc(1);
+                    snippets_count.fetch_add(snippets.len(), OrderingType::SeqCst);
+
+                    failures.lock().unwrap().extend(file_snippet_failures);
+                    syntax_failures.lock().unwrap().extend(file_syntax_failures);
                 }
-
-                let snippets = extract(&parsed_file);
-                let file_snippets_count = snippets.len();
-
-                if !snippets.is_empty() {
-                    file_snippet_failures = check_snippets(&snippets, &ruby_check).await
-                        .into_iter()
-                        .map(|f| (path.clone(), f))
-                        .collect();
-                }
-
-                syntax_count.fetch_add(1, OrderingType::SeqCst);
-                progress_ref.inc(1);
-
-                (file_snippet_failures, file_syntax_failures, file_snippets_count)
-            });
-        }
-
-        while let Some(result) = in_flight.next().await {
-            let (snippet_failures, sync_failures, snippets_count) = result;
-            failures.extend(snippet_failures);
-            syntax_failures.extend(sync_failures);
-            total_snippets += snippets_count;
-        }
+            })
+            .buffer_unordered(MAX_CONCURRENT_CHECKS)
+            .collect::<()>()
+            .await;
     } else {
-        let mut in_flight = FuturesUnordered::new();
-
-        for (_path, _source, parsed_file) in parsed.clone() {
-            let progress_ref = progress_clone.clone();
-            let syntax_count = syntax_checked_count.clone();
-            in_flight.push(async move {
-                let snippets = extract(&parsed_file);
-                syntax_count.fetch_add(1, OrderingType::SeqCst);
-                progress_ref.inc(1);
-                snippets.len()
-            });
-        }
-
-        while let Some(snippet_count) = in_flight.next().await {
-            total_snippets += snippet_count;
-        }
+        futures_util::stream::iter(parsed.clone())
+            .map(|(_path, _source, parsed_file)| {
+                let progress_ref = progress_clone.clone();
+                let syntax_count = syntax_checked_count.clone();
+                let snippets_count = total_snippets.clone();
+                async move {
+                    let snippets = extract(&parsed_file);
+                    syntax_count.fetch_add(1, OrderingType::SeqCst);
+                    progress_ref.inc(1);
+                    snippets_count.fetch_add(snippets.len(), OrderingType::SeqCst);
+                }
+            })
+            .buffer_unordered(MAX_CONCURRENT_CHECKS)
+            .collect::<()>()
+            .await;
     }
 
-    progress.finish_and_clear();
-
-    let total_files_with_snippets: usize = parsed
-        .par_iter()
-        .filter(|(_, _, pf)| !extract(pf).is_empty())
-        .count();
+    let mut failures = failures.lock().unwrap().clone();
+    let syntax_failures = syntax_failures.lock().unwrap().clone();
+    let total_snippets = total_snippets.load(Ordering::SeqCst);
+    let mut stats = CheckStats::default();
 
     if opts.rbs.is_some() {
         let rbs_dirs: Vec<&str> = opts.rbs_dirs.iter().map(String::as_str).collect();
@@ -157,9 +156,9 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         let all_snippets: Vec<_> = parsed
             .iter()
             .flat_map(|(path, _, parsed_file)| {
-                extract(parsed_file).into_iter().map(move |snippet| {
-                    (path.clone(), snippet)
-                })
+                extract(parsed_file)
+                    .into_iter()
+                    .map(move |snippet| (path.clone(), snippet))
             })
             .collect();
 
@@ -174,8 +173,8 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         for (path, snippet, report) in rbs_results {
             stats.merge(report.stats);
             for violation in report.violations {
-                let rbs_failure = rv_doctest::Failure {
-                    snippet: rv_doctest::Snippet {
+                let rbs_failure = Failure {
+                    snippet: Snippet {
                         item_name: format!("{}.{}", violation.class_name, violation.method_name),
                         item_kind: rv_ruby_parser::ItemKind::Def,
                         parent_path: violation.class_name.clone(),
@@ -189,6 +188,11 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
             }
         }
     }
+
+    let total_files_with_snippets: usize = parsed
+        .iter()
+        .filter(|(_, _, pf)| !extract(pf).is_empty())
+        .count();
 
     if syntax_failures.is_empty() && failures.is_empty() {
         let file_word = if total_files_with_snippets == 1 {
