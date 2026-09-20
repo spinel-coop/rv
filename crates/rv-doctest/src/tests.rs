@@ -19,43 +19,25 @@ macro_rules! assert_snippet {
     };
 }
 
-fn def_with_fence(doc: &str, code: &str, body: &str) -> String {
-    format!(
-        indoc! {"
-            # {}
-            #
-            #   ```ruby
-            #   {}
-            #   ```
-            #
-            {}
-        "},
-        doc, code, body
-    )
-}
-
-fn def_with_two_fences(doc: &str, code1: &str, code2: &str) -> String {
-    format!(
-        indoc! {"
-            # {}
-            #
-            #   ```ruby
-            #   {}
-            #   ```
-            #
-            #   ```ruby
-            #   {}
-            #   ```
-        "},
-        doc, code1, code2
-    )
+/// A doc comment with one fenced `ruby` block per `codes` entry, attached to
+/// `body` so `extract` has an item to hang it on.
+fn documented_def(doc: &str, codes: &[&str], body: &str) -> String {
+    let mut source = format!("# {doc}\n#\n");
+    for code in codes {
+        source.push_str("#   ```ruby\n");
+        source.push_str(&format!("#   {code}\n"));
+        source.push_str("#   ```\n#\n");
+    }
+    source.push_str(body);
+    source.push('\n');
+    source
 }
 
 #[test]
 fn strict_fence_is_extracted() {
-    let source = def_with_fence(
+    let source = documented_def(
         "Adds two numbers.",
-        "add(1, 2)",
+        &["add(1, 2)"],
         "def add(a, b)\n  a + b\nend",
     );
     let snips = snippets(&source);
@@ -65,9 +47,9 @@ fn strict_fence_is_extracted() {
 
 #[test]
 fn snippet_start_line_points_inside_fence() {
-    let source = def_with_fence(
+    let source = documented_def(
         "Adds two numbers.",
-        "add(1, 2)",
+        &["add(1, 2)"],
         "def add(a, b)\n  a + b\nend",
     );
     let snips = snippets(&source);
@@ -145,11 +127,15 @@ fn prose_is_not_a_snippet() {
 
 #[test]
 fn multiple_fences_in_one_comment() {
-    let source = def_with_two_fences("Adds numbers.", "add(1, 2)", "add(3, 4)");
+    let source = documented_def(
+        "Adds numbers.",
+        &["add(1, 2)", "add(3, 4)"],
+        "def add(a, b)\n  a + b\nend",
+    );
     let snips = snippets(&source);
     assert_eq!(snips.len(), 2);
-    assert_eq!(snips[0].code, "  add(1, 2)");
-    assert_eq!(snips[1].code, "  add(3, 4)");
+    assert_snippet!(snips, 0, name: "add", kind: Def, code: "  add(1, 2)");
+    assert_snippet!(snips, 1, name: "add", kind: Def, code: "  add(3, 4)");
 }
 
 #[test]
