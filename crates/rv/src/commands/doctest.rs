@@ -32,9 +32,9 @@ use indicatif::{ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use rv_doctest::{
     CheckStats, Failure, RbsChecker, RbsEnvironment, Snippet, UnknownEntry, check_snippets,
-    extract_analyzed, syntax_check,
+    extract_analyzed,
 };
-use rv_ruby_parser::ParsedFile;
+use rv_ruby_parser::Diagnostic;
 use tabled::Table;
 use tabled::settings::Style;
 
@@ -107,11 +107,9 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} files ({eta} remaining)")
         .unwrap_or_else(|_| ProgressStyle::default_bar()));
 
-    #[derive(Clone)]
     struct ParsedSourceFile {
         path: String,
-        bytes: Vec<u8>,
-        parsed: ParsedFile,
+        diagnostics: Vec<Diagnostic>,
         snippets: Vec<(rv_doctest::Snippet, rv_doctest::SnippetAnalysis)>,
     }
 
@@ -125,10 +123,30 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
             let snippets = extract_analyzed(&parsed);
             ParsedSourceFile {
                 path: path.to_string(),
-                bytes: source,
-                parsed,
+                diagnostics: parsed.diagnostics,
                 snippets,
             }
+        })
+        .collect();
+
+    // Counted from the parse itself, so the totals are right whether or not
+    // Ruby is available to run the snippets.
+    let total_snippets: usize = parsed.iter().map(|pf| pf.snippets.len()).sum();
+    let total_files_with_snippets = parsed.iter().filter(|pf| !pf.snippets.is_empty()).count();
+
+    // Prism already reported any parse error in the file. Re-checking with
+    // `ruby -c` over a lossy UTF-8 copy would spawn a process per file and
+    // invent errors for sources that are not UTF-8 (a `# encoding:` magic
+    // comment, binary literals) where the replacement character lands.
+    let syntax_failures: Vec<(String, String)> = parsed
+        .iter()
+        .flat_map(|pf| {
+            pf.diagnostics.iter().map(|diagnostic| {
+                (
+                    format!("{}:{}:{}", pf.path, diagnostic.line, diagnostic.column),
+                    diagnostic.message.clone(),
+                )
+            })
         })
         .collect();
 
@@ -136,75 +154,39 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
 
     let failures: std::sync::Arc<std::sync::Mutex<Vec<(String, Failure)>>> =
         std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
-    let syntax_failures: std::sync::Arc<std::sync::Mutex<Vec<(String, String)>>> =
-        std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
-    let total_snippets = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
 
     if let Some(ref ruby_val) = ruby {
-        futures_util::stream::iter(parsed.clone())
+        futures_util::stream::iter(&parsed)
             .map(|pf| {
-                let ParsedSourceFile {
-                    path,
-                    bytes: source,
-                    parsed: _parsed_file,
-                    snippets,
-                } = pf;
                 let ruby_check = ruby_val.clone();
                 let progress_ref = progress_clone.clone();
                 let failures = failures.clone();
-                let syntax_failures = syntax_failures.clone();
-                let snippets_count = total_snippets.clone();
                 async move {
-                    let source_str = String::from_utf8_lossy(&source);
-                    let mut file_syntax_failures: Vec<(String, String)> = Vec::new();
-                    let mut file_snippet_failures: Vec<(String, Failure)> = Vec::new();
-
-                    if let Err(e) = syntax_check(ruby_check.clone(), &source_str).await {
-                        file_syntax_failures.push((path.clone(), e.to_string()));
-                    }
-
-                    if !snippets.is_empty() {
-                        file_snippet_failures = check_snippets(&snippets, &ruby_check)
+                    let file_failures: Vec<(String, Failure)> = if pf.snippets.is_empty() {
+                        Vec::new()
+                    } else {
+                        check_snippets(&pf.snippets, &ruby_check)
                             .await
                             .into_iter()
-                            .map(|f| (path.clone(), f))
-                            .collect();
-                    }
+                            .map(|f| (pf.path.clone(), f))
+                            .collect()
+                    };
 
                     progress_ref.inc(1);
-                    snippets_count.fetch_add(snippets.len(), std::sync::atomic::Ordering::SeqCst);
-
-                    failures.lock().unwrap().extend(file_snippet_failures);
-                    syntax_failures.lock().unwrap().extend(file_syntax_failures);
+                    failures.lock().unwrap().extend(file_failures);
                 }
             })
             .buffer_unordered(MAX_CONCURRENT_CHECKS)
             .collect::<()>()
             .await;
     } else {
-        futures_util::stream::iter(parsed.clone())
-            .map(|pf| {
-                let ParsedSourceFile {
-                    parsed: _parsed_file,
-                    snippets,
-                    path: _,
-                    ..
-                } = pf;
-                let progress_ref = progress_clone.clone();
-                let _snippets_count = total_snippets.clone();
-                async move {
-                    let _ = snippets;
-                    progress_ref.inc(1);
-                }
-            })
-            .buffer_unordered(MAX_CONCURRENT_CHECKS)
-            .collect::<()>()
-            .await;
+        // RBS-only: nothing to run, so there is no per-file work to await.
+        progress_clone.inc(parsed.len() as u64);
     }
 
+    progress.finish_and_clear();
+
     let mut failures = failures.lock().unwrap().clone();
-    let syntax_failures = syntax_failures.lock().unwrap().clone();
-    let total_snippets = total_snippets.load(std::sync::atomic::Ordering::SeqCst);
 
     let mut stats = CheckStats::default();
 
@@ -249,9 +231,6 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
             }
         }
     }
-
-    let total_files_with_snippets: usize =
-        parsed.len() - parsed.iter().filter(|pf| pf.snippets.is_empty()).count();
 
     for failure in &discovery_failures {
         eprintln!("{}: could not be read: {}", failure.path, failure.error);
