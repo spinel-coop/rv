@@ -7,7 +7,7 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RV="$DIR/target/debug/rv"
 
 cleanup() {
-    rm -rf fmt-test
+    rm -rf fmt-test doctest-test
     rm -f .ruby-version
 }
 trap cleanup EXIT
@@ -71,6 +71,147 @@ echo "PASS: $RUBY_VERSION no longer listed after uninstall"
 echo "=== rv run --ruby $RUBY_VERSION ruby (re-install after uninstall) ==="
 $RV run --ruby "$RUBY_VERSION" ruby -e 'puts "re-installed"' | grep -q "re-installed"
 echo "PASS: re-installs and runs after uninstall"
+
+echo "=== rv doctest (valid fenced example) ==="
+mkdir -p doctest-test
+echo "$RUBY_VERSION" > doctest-test/.ruby-version
+cat > doctest-test/greeter.rb <<'RUBY'
+# A greeter.
+class Greeter
+  # Greets someone by name.
+  #
+  # ```ruby
+  # greeter = Greeter.new
+  # puts greeter.greet("World")
+  # ```
+  def greet(name)
+    "Hello, #{name}!"
+  end
+end
+RUBY
+(
+    cd doctest-test
+    out=$($RV doctest)
+    echo "  $out"
+    echo "$out" | grep -q "pass checks"
+)
+echo "PASS: rv doctest accepts a valid fenced example"
+
+echo "=== rv doctest (minitest assertion in fenced example) ==="
+cat > doctest-test/adder.rb <<'RUBY'
+# Adds numbers.
+class Adder
+  # Adds two numbers.
+  #
+  # ```ruby
+  # require "minitest/autorun"
+  # def add(a, b) = a + b
+  # assert_equal 3, add(1, 2)
+  # ```
+  def add(a, b)
+    a + b
+  end
+end
+RUBY
+(
+    cd doctest-test
+    out=$($RV doctest)
+    echo "  $out"
+    echo "$out" | grep -q "pass checks"
+)
+echo "PASS: rv doctest runs minitest assertions in fenced examples"
+
+echo "=== rv doctest (single file argument) ==="
+(
+    cd doctest-test
+    out=$($RV doctest greeter.rb)
+    echo "  $out"
+    echo "$out" | grep -q "in 1 file pass checks"
+)
+echo "PASS: rv doctest checks a single named file"
+
+echo "=== rv doctest --rbs (coverage summary) ==="
+mkdir -p doctest-test/sig
+cat > doctest-test/sig/greeter.rbs <<'RBS'
+class Greeter
+  def greet: (String name) -> String
+end
+RBS
+(
+    cd doctest-test
+    out=$($RV doctest --rbs=stat greeter.rb)
+    echo "$out"
+    echo "$out" | grep -q "RBS coverage:"
+)
+echo "PASS: rv doctest --rbs prints an RBS coverage summary"
+
+echo "=== rv doctest (syntax error in fenced example) ==="
+cat > doctest-test/broken.rb <<'RUBY'
+# Has a broken example.
+class Broken
+  # Broken example.
+  #
+  # ```ruby
+  # def oops(
+  # ```
+  def oops
+    1
+  end
+end
+RUBY
+(
+    cd doctest-test
+    if out=$($RV doctest broken.rb 2>&1); then
+        echo "$out"
+        echo "FAIL: rv doctest exited 0 despite a syntax error"
+        exit 1
+    fi
+    echo "$out" | grep -q "broken.rb"
+    echo "$out" | grep -q "syntax"
+)
+echo "PASS: rv doctest fails on a fenced example that does not parse"
+
+echo "=== rv doctest (failing minitest assertion) ==="
+cat > doctest-test/wrong.rb <<'RUBY'
+# Has a wrong example.
+class Wrong
+  # Wrong example.
+  #
+  # ```ruby
+  # require "minitest/autorun"
+  # def add(a, b) = a + b
+  # assert_equal 99, add(1, 2)
+  # ```
+  def add(a, b)
+    a + b
+  end
+end
+RUBY
+(
+    cd doctest-test
+    if out=$($RV doctest wrong.rb 2>&1); then
+        echo "$out"
+        echo "FAIL: rv doctest exited 0 despite a failing assertion"
+        exit 1
+    fi
+    echo "$out" | grep -q "wrong.rb"
+)
+echo "PASS: rv doctest fails on a failing minitest assertion"
+
+echo "=== rv doctest (unreadable path) ==="
+(
+    cd doctest-test
+    if out=$($RV doctest no-such-file.rb 2>&1); then
+        echo "$out"
+        echo "FAIL: rv doctest exited 0 for a nonexistent path"
+        exit 1
+    fi
+    echo "  $out"
+    echo "$out" | grep -q "no-such-file.rb"
+)
+echo "PASS: rv doctest fails on a path that cannot be read"
+
+rm -rf doctest-test
 
 [ -t 1 ] || exit 0
 
