@@ -4,6 +4,7 @@ members = [
   "crates/rv-cache",
   "crates/rv-client",
   "crates/rv-dirs",
+  "crates/rv-doctest",
   "crates/rv-lockfile",
   "crates/rv-gem-package",
   "crates/rv-gem-specification-yaml",
@@ -54,6 +55,7 @@ reqwest = { version = "0.13.5", default-features = false, features = [
   "json",
   "http2",
 ] }
+glob = "0.3"
 ruby-prism = "1.9"
 saphyr = "0.0.11"
 saphyr-parser = "0.0.11"
@@ -90,6 +92,7 @@ rv-ruby-parser = { version = "0.1.0", path = "crates/rv-ruby-parser" }
 rv-version = { version = "0.1.0", path = "crates/rv-version" }
 dep-graph = { version = "0.2.1", git = "https://github.com/spinel-coop/dep-graph" }
 url = { version = "2.5.8" }
+rv-doctest = { version = "0.1.0", path = "crates/rv-doctest" }
 
 # The profile that 'dist' will build with
 [profile.dist]
