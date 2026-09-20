@@ -128,9 +128,7 @@ pub(crate) fn discover_rb_files(
         let named_explicitly = root.is_file();
 
         let mut builder = WalkBuilder::new(root);
-        builder
-            .git_ignore(!include_gitignored)
-            .ignore(!include_gitignored);
+        builder.git_ignore(!include_gitignored);
         if let Some(ignore_filename) = custom_ignore_filename {
             builder.add_custom_ignore_filename(ignore_filename);
         }
