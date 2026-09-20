@@ -128,22 +128,25 @@ mod tests {
         }
     }
 
+    /// Assert that injecting the frame into `input` yields `expected`.
+    fn assert_injected(input: &str, expected: &str) {
+        assert_eq!(inject(input), expected);
+    }
+
     #[test]
     fn frame_follows_a_top_level_require() {
-        let injected = inject(indoc! {"
-            require \"minitest/autorun\"
-            assert_equal 1, 1
-        "});
-
-        assert_eq!(
-            injected,
+        assert_injected(
+            indoc! {"
+                require \"minitest/autorun\"
+                assert_equal 1, 1
+            "},
             indoc! {"
                 require \"minitest/autorun\"
                 include Minitest::Assertions
                 class << self; attr_accessor :assertions; end
                 self.assertions = 0
                 assert_equal 1, 1
-            "}
+            "},
         );
     }
 
@@ -152,15 +155,13 @@ mod tests {
         // Injecting after the `require` line itself would put the frame inside
         // `class Helper`, so `include Minitest::Assertions` would apply to the
         // class and a top-level `assert_equal` would raise `NoMethodError`.
-        let injected = inject(indoc! {"
-            class Helper
-              require \"minitest/autorun\"
-            end
-            assert_equal 1, 1
-        "});
-
-        assert_eq!(
-            injected,
+        assert_injected(
+            indoc! {"
+                class Helper
+                  require \"minitest/autorun\"
+                end
+                assert_equal 1, 1
+            "},
             indoc! {"
                 class Helper
                   require \"minitest/autorun\"
@@ -169,7 +170,7 @@ mod tests {
                 class << self; attr_accessor :assertions; end
                 self.assertions = 0
                 assert_equal 1, 1
-            "}
+            "},
         );
     }
 

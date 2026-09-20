@@ -510,6 +510,24 @@ mod tests {
         }
     }
 
+    /// An environment with a single `Widget` class whose body is `members`.
+    fn widget_env(members: &str) -> RbsEnvironment {
+        env_from(&[("a.rbs", &format!("class Widget\n{members}\nend\n"))])
+    }
+
+    /// Run one fence through the checker, as `check_snippets` would.
+    fn check_code(
+        env: RbsEnvironment,
+        code: &str,
+        parent_path: &str,
+        start_line: u32,
+    ) -> CheckReport {
+        let checker = RbsChecker::new(env);
+        let snippet = snippet_of(code, parent_path, start_line);
+        let calls = parse_calls_ast(snippet.code.as_bytes());
+        checker.check(&snippet, &calls, "lib.rb")
+    }
+
     #[test]
     fn full_path_to_parent_splits_on_the_namespace_separator() {
         // `rfind(':')` would land on the second colon and yield `Foo:`.
@@ -539,15 +557,10 @@ mod tests {
 
     #[test]
     fn every_overload_is_accepted_not_just_the_first() {
-        let env = env_from(&[(
-            "a.rbs",
-            indoc! {"
-                class Widget
-                  def one_or_two: (Integer) -> void
-                                | (Integer, Integer) -> void
-                end
-            "},
-        )]);
+        let env = widget_env(indoc! {"
+            def one_or_two: (Integer) -> void
+                          | (Integer, Integer) -> void
+        "});
 
         let sig = env.lookup("Widget", "one_or_two").expect("indexed");
         assert_eq!(sig.check_arity(1, false), ArityResult::Valid);
@@ -563,16 +576,11 @@ mod tests {
 
     #[test]
     fn a_block_is_required_only_when_every_overload_requires_one() {
-        let env = env_from(&[(
-            "a.rbs",
-            indoc! {"
-                class Widget
-                  def each: () { (untyped) -> void } -> self
-                          | () -> Enumerator[untyped, untyped]
-                  def always: () { (untyped) -> void } -> void
-                end
-            "},
-        )]);
+        let env = widget_env(indoc! {"
+            def each: () { (untyped) -> void } -> self
+                      | () -> Enumerator[untyped, untyped]
+            def always: () { (untyped) -> void } -> void
+        "});
 
         // `each` has a blockless overload, so omitting the block is fine.
         assert!(!env.lookup("Widget", "each").unwrap().has_block);
@@ -591,14 +599,9 @@ mod tests {
 
     #[test]
     fn an_optional_block_is_not_required() {
-        let env = env_from(&[(
-            "a.rbs",
-            indoc! {"
-                class Widget
-                  def maybe: () ?{ (untyped) -> void } -> void
-                end
-            "},
-        )]);
+        let env = widget_env(indoc! {"
+            def maybe: () ?{ (untyped) -> void } -> void
+        "});
 
         let sig = env.lookup("Widget", "maybe").expect("indexed");
         assert!(!sig.has_block, "`?{{ ... }}` declares an optional block");
@@ -633,12 +636,8 @@ mod tests {
             "a.rbs",
             "class Calculator\n  def add: (Integer, Integer) -> Integer\nend\n",
         )]);
-        let checker = RbsChecker::new(env);
-
         // A fence whose first code line is file line 4.
-        let snippet = snippet_of("Calculator.add 1, 2\nCalculator.add 1, 2, 3", "", 4);
-        let calls = parse_calls_ast(snippet.code.as_bytes());
-        let report = checker.check(&snippet, &calls, "lib.rb");
+        let report = check_code(env, "Calculator.add 1, 2\nCalculator.add 1, 2, 3", "", 4);
 
         assert_eq!(report.violations.len(), 1, "{:?}", report.violations);
         assert_eq!(
@@ -659,11 +658,7 @@ mod tests {
                 end
             "},
         )]);
-        let checker = RbsChecker::new(env);
-
-        let snippet = snippet_of("add 1, 2, 3", "Math::Calculator", 1);
-        let calls = parse_calls_ast(snippet.code.as_bytes());
-        let report = checker.check(&snippet, &calls, "lib.rb");
+        let report = check_code(env, "add 1, 2, 3", "Math::Calculator", 1);
 
         assert_eq!(report.stats.total_unknown_receivers(), 0);
         assert_eq!(report.violations.len(), 1, "{:?}", report.violations);

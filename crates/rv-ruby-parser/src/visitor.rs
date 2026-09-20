@@ -152,10 +152,9 @@ where
         if !scopes.classes {
             return Flow::Continue;
         }
-        let declared = node_source_slice(source, &class.constant_path());
-        return walk_body(
+        return walk_named_scope(
             class.body(),
-            Some(&declared),
+            &class.constant_path(),
             source,
             scopes,
             namespace,
@@ -167,10 +166,9 @@ where
         if !scopes.modules {
             return Flow::Continue;
         }
-        let declared = node_source_slice(source, &module.constant_path());
-        return walk_body(
+        return walk_named_scope(
             module.body(),
-            Some(&declared),
+            &module.constant_path(),
             source,
             scopes,
             namespace,
@@ -195,6 +193,23 @@ where
     }
 
     Flow::Continue
+}
+
+/// Descend into a `class`/`module` body, qualifying the written constant path
+/// under the enclosing namespace.
+fn walk_named_scope<F>(
+    body: Option<Node<'_>>,
+    constant_path: &Node<'_>,
+    source: &[u8],
+    scopes: Scopes,
+    namespace: &mut Namespace,
+    visit: &mut F,
+) -> Flow
+where
+    F: FnMut(&Node<'_>, &str) -> Flow,
+{
+    let declared = node_source_slice(source, constant_path);
+    walk_body(body, Some(&declared), source, scopes, namespace, visit)
 }
 
 fn walk_body<F>(

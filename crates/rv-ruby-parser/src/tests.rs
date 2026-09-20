@@ -1,6 +1,11 @@
 use super::calls::parse_calls;
-use super::{Diagnostic, ItemKind, ParsedFile, parse};
+use super::{Diagnostic, Item, ItemKind, ParsedFile, parse};
 use indoc::indoc;
+
+/// The fully-qualified path of every item, in source order.
+fn full_paths(items: &[Item]) -> Vec<&str> {
+    items.iter().map(|i| i.full_path.as_str()).collect()
+}
 
 fn find_item_kind_of<'a>(items: &'a [super::Item], kind: ItemKind, name: &str) -> &'a super::Item {
     items
@@ -420,7 +425,7 @@ fn full_path_qualifies_definitions_by_their_enclosing_namespace() {
         end
     "};
     let parsed = parse(source.as_bytes());
-    let paths: Vec<&str> = parsed.items.iter().map(|i| i.full_path.as_str()).collect();
+    let paths = full_paths(&parsed.items);
 
     assert_eq!(
         paths,
@@ -448,7 +453,7 @@ fn full_path_of_a_compact_namespace_is_not_double_qualified() {
         end
     "};
     let parsed = parse(source.as_bytes());
-    let paths: Vec<&str> = parsed.items.iter().map(|i| i.full_path.as_str()).collect();
+    let paths = full_paths(&parsed.items);
 
     assert_eq!(paths, vec!["Foo::Bar", "Foo::Bar#baz"]);
 }
