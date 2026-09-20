@@ -2,7 +2,7 @@
 
 use ruby_prism::Node;
 
-use super::{LineIndex, node_source_slice};
+use super::{LineIndex, ParsedSource, node_source_slice, visitor};
 
 /// A method call extracted from Ruby source code.
 #[derive(Debug, Clone, PartialEq)]
@@ -17,121 +17,121 @@ pub struct CallSite {
     pub arg_count: usize,
     /// Whether a block was passed.
     pub has_block: bool,
-    /// 0-based line number in the source.
+    /// 1-based line number in the source.
     pub line: usize,
 }
 
-pub fn parse_calls(source: &[u8]) -> Vec<CallSite> {
-    let result = ruby_prism::parse(source);
-
-    if result.errors().next().is_some() {
+/// Extracts every method call from an already-parsed source.
+pub(crate) fn collect_calls(parsed: &ParsedSource<'_>) -> Vec<CallSite> {
+    if !parsed.is_success() {
         return Vec::new();
     }
 
-    let Some(program) = result.node().as_program_node() else {
+    let Some(program) = parsed.program() else {
         return Vec::new();
     };
-    let stmts = program.statements();
-    let lines = LineIndex::new(source);
+
+    let source = parsed.source();
+    let lines = parsed.lines();
     let mut calls = Vec::new();
-    walk_stmts(&stmts.as_node(), &lines, source, &mut calls);
+
+    visitor::walk_program(&program, source, visitor::Scopes::ALL, &mut |node, _| {
+        if let Some(call) = node.as_call_node()
+            && let Some(call_site) = extract_call_site(&call, lines, source)
+        {
+            calls.push(call_site);
+        }
+        visitor::Flow::Continue
+    });
+
     calls
+}
+
+/// Extracts every method call from `source`.
+///
+/// Parses `source`; build a [`ParsedSource`] instead when other results are
+/// wanted from the same bytes.
+pub fn parse_calls(source: &[u8]) -> Vec<CallSite> {
+    collect_calls(&ParsedSource::new(source))
+}
+
+/// A `require` of minitest found in a snippet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MinitestRequire {
+    /// 1-based line of the `require` itself.
+    pub require_line: usize,
+    /// 1-based last line of the *top-level* statement containing the require.
+    ///
+    /// An assertion preamble must be inserted after this line rather than
+    /// after `require_line`: the `require` may sit inside a `class`, `module`,
+    /// or `def` body, and a preamble injected there would apply to that body
+    /// instead of `main`.
+    pub top_level_end_line: usize,
+}
+
+/// Finds the first minitest `require` in an already-parsed source.
+pub(crate) fn find_minitest_require(parsed: &ParsedSource<'_>) -> Option<MinitestRequire> {
+    if !parsed.is_success() {
+        return None;
+    }
+
+    let program = parsed.program()?;
+    let source = parsed.source();
+    let lines = parsed.lines();
+
+    for statement in program.statements().body().iter() {
+        let mut require_line = None;
+
+        // Only scopes that execute where they are written: a `class` or
+        // `module` body runs when the definition is evaluated, so a `require`
+        // inside one has taken effect by the time this top-level statement
+        // finishes. A `def` body does not run until the method is called.
+        visitor::walk_node(
+            &statement,
+            source,
+            visitor::Scopes::DECLARATIVE,
+            &mut |node, _| {
+                let Some(call) = node.as_call_node() else {
+                    return visitor::Flow::Continue;
+                };
+                if call.name().as_slice() != b"require" {
+                    return visitor::Flow::Continue;
+                }
+                if !get_first_string_arg(&call).is_some_and(|arg| arg.starts_with("minitest")) {
+                    return visitor::Flow::Continue;
+                }
+
+                let (line, _) = lines.line_col(call.location().start_offset());
+                require_line = Some(line as usize);
+                visitor::Flow::Stop
+            },
+        );
+
+        if let Some(require_line) = require_line {
+            let (end_line, _) = lines.line_col(statement.location().end_offset());
+            return Some(MinitestRequire {
+                require_line,
+                top_level_end_line: end_line as usize,
+            });
+        }
+    }
+
+    None
+}
+
+/// Finds the first `require 'minitest*'` / `require "minitest*"` in `source`,
+/// wherever it is nested, along with the top-level statement that contains it.
+///
+/// Parses `source`; build a [`ParsedSource`] instead when other results are
+/// wanted from the same bytes.
+pub fn minitest_require(source: &[u8]) -> Option<MinitestRequire> {
+    find_minitest_require(&ParsedSource::new(source))
 }
 
 /// Returns the 1-based line number for the first `require 'minitest*'` or
 /// `require "minitest*"` call found.
 pub fn minitest_require_line(source: &[u8]) -> Option<usize> {
-    let result = ruby_prism::parse(source);
-
-    if result.errors().next().is_some() {
-        return None;
-    }
-
-    let program = result.node().as_program_node()?;
-    let stmts = program.statements();
-    let lines = LineIndex::new(source);
-    find_minitest_require_line(&stmts.as_node(), &lines)
-}
-
-fn find_minitest_require_line(node: &Node<'_>, lines: &LineIndex) -> Option<usize> {
-    if let Some(call) = node.as_call_node()
-        && call.name().as_slice() == b"require"
-        && let Some(arg_str) = get_first_string_arg(&call)
-        && arg_str.starts_with("minitest")
-    {
-        let location = call.location();
-        let (start_line, _) = lines.line_col(location.start_offset());
-        return Some(start_line as usize);
-    }
-
-    if let Some(stmts) = node.as_statements_node() {
-        for stmt in stmts.body().iter() {
-            if let Some(line) = process_stmt_for_minitest(&stmt, lines) {
-                return Some(line);
-            }
-        }
-    }
-
-    None
-}
-
-fn process_stmt_for_minitest(node: &Node<'_>, lines: &LineIndex) -> Option<usize> {
-    if let Some(call) = node.as_call_node()
-        && call.name().as_slice() == b"require"
-        && let Some(arg_str) = get_first_string_arg(&call)
-        && arg_str.starts_with("minitest")
-    {
-        let location = call.location();
-        let (start_line, _) = lines.line_col(location.start_offset());
-        return Some(start_line as usize);
-    }
-
-    if let Some(stmts) = node.as_statements_node() {
-        for stmt in stmts.body().iter() {
-            if let Some(line) = process_stmt_for_minitest(&stmt, lines) {
-                return Some(line);
-            }
-        }
-    }
-
-    if let Some(body) = node.as_class_node().and_then(|n| n.body()) {
-        for stmt in body
-            .as_statements_node()
-            .map(|s| s.body().iter())
-            .into_iter()
-            .flatten()
-        {
-            if let Some(line) = process_stmt_for_minitest(&stmt, lines) {
-                return Some(line);
-            }
-        }
-    }
-    if let Some(body) = node.as_module_node().and_then(|n| n.body()) {
-        for stmt in body
-            .as_statements_node()
-            .map(|s| s.body().iter())
-            .into_iter()
-            .flatten()
-        {
-            if let Some(line) = process_stmt_for_minitest(&stmt, lines) {
-                return Some(line);
-            }
-        }
-    }
-    if let Some(body) = node.as_def_node().and_then(|n| n.body()) {
-        for stmt in body
-            .as_statements_node()
-            .map(|s| s.body().iter())
-            .into_iter()
-            .flatten()
-        {
-            if let Some(line) = process_stmt_for_minitest(&stmt, lines) {
-                return Some(line);
-            }
-        }
-    }
-
-    None
+    minitest_require(source).map(|found| found.require_line)
 }
 
 fn get_first_string_arg(call: &ruby_prism::CallNode<'_>) -> Option<String> {
@@ -143,63 +143,6 @@ fn get_first_string_arg(call: &ruby_prism::CallNode<'_>) -> Option<String> {
         }
     }
     None
-}
-
-fn walk_stmts(node: &Node<'_>, lines: &LineIndex, source: &[u8], calls: &mut Vec<CallSite>) {
-    let stmts = match node.as_statements_node() {
-        Some(s) => s,
-        None => return,
-    };
-
-    for stmt in stmts.body().iter() {
-        process_stmt(&stmt, lines, source, calls);
-    }
-}
-
-fn process_stmt(node: &Node<'_>, lines: &LineIndex, source: &[u8], calls: &mut Vec<CallSite>) {
-    if let Some(call) = node.as_call_node()
-        && let Some(call_site) = extract_call_site(&call, lines, source)
-    {
-        calls.push(call_site);
-    }
-
-    // Handle nested statements
-    if let Some(stmts) = node.as_statements_node() {
-        for stmt in stmts.body().iter() {
-            process_stmt(&stmt, lines, source, calls);
-        }
-    }
-
-    // Handle nested bodies (class/module/def/singleton)
-    walk_node_body(node, lines, source, calls);
-}
-
-fn walk_node_body(node: &Node<'_>, lines: &LineIndex, source: &[u8], calls: &mut Vec<CallSite>) {
-    if let Some(body) = node.as_class_node().and_then(|n| n.body()) {
-        process_statements_from_body(body, lines, source, calls);
-    }
-    if let Some(body) = node.as_module_node().and_then(|n| n.body()) {
-        process_statements_from_body(body, lines, source, calls);
-    }
-    if let Some(body) = node.as_def_node().and_then(|n| n.body()) {
-        process_statements_from_body(body, lines, source, calls);
-    }
-    if let Some(body) = node.as_singleton_class_node().and_then(|n| n.body()) {
-        process_statements_from_body(body, lines, source, calls);
-    }
-}
-
-fn process_statements_from_body(
-    body: Node<'_>,
-    lines: &LineIndex,
-    source: &[u8],
-    calls: &mut Vec<CallSite>,
-) {
-    if let Some(stmts) = body.as_statements_node() {
-        for stmt in stmts.body().iter() {
-            process_stmt(&stmt, lines, source, calls);
-        }
-    }
 }
 
 fn extract_call_site(
@@ -239,8 +182,12 @@ fn extract_receiver_info(receiver: &Node<'_>, source: &[u8]) -> (Option<String>,
     let receiver_text = node_source_slice(source, receiver);
 
     if let Some(const_path) = receiver.as_constant_path_node() {
-        let class_name = extract_full_constant_path(&const_path);
-        return (Some(class_name.clone()), Some(class_name));
+        return match extract_full_constant_path(&const_path) {
+            Some(class_name) => (Some(class_name.clone()), Some(class_name)),
+            // A constant path we cannot name (no constant parts at all); keep
+            // the raw text for reporting but do not claim a class.
+            None => (None, Some(receiver_text)),
+        };
     }
 
     if let Some(const_read) = receiver.as_constant_read_node() {
@@ -263,12 +210,19 @@ fn extract_receiver_info(receiver: &Node<'_>, source: &[u8]) -> (Option<String>,
     (None, Some(receiver_text))
 }
 
-fn extract_full_constant_path(const_path: &ruby_prism::ConstantPathNode<'_>) -> String {
+/// Join a constant path node into a `Foo::Bar::Baz` string.
+///
+/// Returns `None` when no constant parts can be recovered. A root-scoped path
+/// such as `::Foo::Bar` has no parent on its outermost node and resolves to
+/// `Foo::Bar`, matching how the constant is named in an RBS signature.
+fn extract_full_constant_path(const_path: &ruby_prism::ConstantPathNode<'_>) -> Option<String> {
     let mut parts: Vec<String> = Vec::new();
 
     fn collect_parts(node: ruby_prism::Node<'_>, parts: &mut Vec<String>) {
         if let Some(cp) = node.as_constant_path_node() {
-            collect_parts(cp.parent().unwrap(), parts);
+            if let Some(parent) = cp.parent() {
+                collect_parts(parent, parts);
+            }
             if let Some(name) = cp.name() {
                 parts.push(String::from_utf8_lossy(name.as_slice()).into_owned());
             }
@@ -278,9 +232,12 @@ fn extract_full_constant_path(const_path: &ruby_prism::ConstantPathNode<'_>) -> 
         }
     }
 
-    collect_parts(const_path.parent().unwrap(), &mut parts);
+    if let Some(parent) = const_path.parent() {
+        collect_parts(parent, &mut parts);
+    }
     if let Some(name) = const_path.name() {
         parts.push(String::from_utf8_lossy(name.as_slice()).into_owned());
     }
-    parts.join("::")
+
+    (!parts.is_empty()).then(|| parts.join("::"))
 }

@@ -32,16 +32,46 @@ pub struct MethodSig {
 }
 
 impl MethodSig {
+    /// The most positional arguments this signature accepts.
+    pub fn max_args(&self) -> usize {
+        if self.has_rest {
+            usize::MAX
+        } else {
+            self.required_args + self.optional_args
+        }
+    }
+
+    /// Broaden `self` to accept everything `other` accepts.
+    ///
+    /// An RBS method can declare several overloads, and a call is only a
+    /// violation when *no* overload accepts it. The signature used for
+    /// checking is therefore the union of them all: the smallest required
+    /// count, the largest accepted count, and a block that is mandatory only
+    /// when every overload requires one.
+    fn widen(self, other: MethodSig) -> MethodSig {
+        let max_args = self.max_args().max(other.max_args());
+        let required_args = self.required_args.min(other.required_args);
+        let has_rest = self.has_rest || other.has_rest;
+
+        MethodSig {
+            name: self.name,
+            required_args,
+            optional_args: if has_rest {
+                0
+            } else {
+                max_args - required_args
+            },
+            has_rest,
+            has_block: self.has_block && other.has_block,
+        }
+    }
+
     pub fn check_arity(&self, arg_count: usize, has_block: bool) -> ArityResult {
         if self.has_block && !has_block {
             return ArityResult::MissingBlock;
         }
 
-        let max_args = if self.has_rest {
-            usize::MAX
-        } else {
-            self.required_args + self.optional_args
-        };
+        let max_args = self.max_args();
 
         if arg_count < self.required_args {
             ArityResult::TooFew {
@@ -232,10 +262,12 @@ fn walk_node(
         format!("{parent_path}::{name}")
     };
 
+    // A class can be declared across several `.rbs` files (or reopened within
+    // one), so merge into whatever is already indexed rather than replacing
+    // it. The entry is registered even when it has no methods of its own, so
+    // that `has_class` is true for a class declaring only nested types.
     let sigs = extract_method_sigs(&members);
-    if !sigs.is_empty() {
-        index.insert(full_path.clone(), sigs);
-    }
+    index.entry(full_path.clone()).or_default().extend(sigs);
 
     for member_node in members.iter() {
         walk_node(&member_node, &full_path, index);
@@ -284,47 +316,67 @@ fn extract_method_sigs(members: &NodeList) -> HashMap<String, MethodSig> {
 
 fn insert_method(method: &MethodDefinitionNode, sigs: &mut HashMap<String, MethodSig>) {
     let name = method.name().to_string();
+    let mut merged: Option<MethodSig> = None;
 
-    let Some(overload) = method.overloads().iter().next() else {
-        return;
-    };
-    let Node::MethodDefinitionOverload(overload) = overload else {
-        return;
-    };
+    for overload in method.overloads().iter() {
+        let Node::MethodDefinitionOverload(overload) = overload else {
+            continue;
+        };
+        let Node::MethodType(method_type) = overload.method_type() else {
+            continue;
+        };
 
-    let Node::MethodType(method_type) = overload.method_type() else {
-        return;
-    };
+        let (required, optional, has_rest) = match method_type.type_() {
+            Node::FunctionType(function) => (
+                function.required_positionals().iter().count(),
+                function.optional_positionals().iter().count(),
+                function.rest_positionals().is_some(),
+            ),
+            _ => (0, 0, true),
+        };
 
-    let (required, optional, has_rest) = match method_type.type_() {
-        Node::FunctionType(function) => (
-            function.required_positionals().iter().count(),
-            function.optional_positionals().iter().count(),
-            function.rest_positionals().is_some(),
-        ),
-        _ => (0, 0, true),
-    };
+        // `block()` is also `Some` for an optional block (`?{ ... }`), which a
+        // caller is free to omit; only a required block is mandatory.
+        let has_block = method_type.block().is_some_and(|block| block.required());
 
-    let has_block = method_type.block().is_some();
-
-    sigs.insert(
-        name.clone(),
-        MethodSig {
-            name,
+        let sig = MethodSig {
+            name: name.clone(),
             required_args: required,
             optional_args: optional,
             has_rest,
             has_block,
-        },
-    );
+        };
+
+        merged = Some(match merged {
+            Some(existing) => existing.widen(sig),
+            None => sig,
+        });
+    }
+
+    if let Some(sig) = merged {
+        sigs.insert(name, sig);
+    }
 }
 
+/// The enclosing namespace of a fully-qualified definition path.
+///
+/// `Foo::Bar` -> `Foo`, `Foo::Bar#baz` -> `Foo::Bar`, `Foo.baz` -> `Foo`.
+/// Returns `None` for an unqualified name, which has no parent.
 pub fn full_path_to_parent(full_path: &str) -> Option<String> {
-    if full_path.is_empty() {
-        return None;
-    }
-    let last_segment = full_path.rfind(':').or_else(|| full_path.rfind('.'))?;
-    Some(full_path[..last_segment].to_string())
+    // `rfind(':')` would land on the second colon of `::` and leave a trailing
+    // one behind, so match the separator itself.
+    let namespace = full_path.rfind("::");
+    let method = full_path.rfind(['#', '.']);
+
+    let split_at = match (namespace, method) {
+        (Some(ns), Some(m)) => ns.max(m),
+        (Some(ns), None) => ns,
+        (None, Some(m)) => m,
+        (None, None) => return None,
+    };
+
+    // A leading separator (`::Foo`) means the top level, which has no parent.
+    (split_at > 0).then(|| full_path[..split_at].to_string())
 }
 
 /// RBS-aware arity checker for doctest snippets.
@@ -337,13 +389,18 @@ impl RbsChecker {
         Self { env }
     }
 
-    pub fn check(&self, snippet: &Snippet, source_path: &str) -> CheckReport {
-        let calls = parse_calls_ast(snippet.code.as_bytes());
+    /// Check every call in `calls` against the RBS index.
+    ///
+    /// `calls` comes from [`crate::SnippetAnalysis`], so the snippet's code is
+    /// parsed once and shared with the other checkers.
+    pub fn check(&self, snippet: &Snippet, calls: &[CallSite], source_path: &str) -> CheckReport {
         let mut report = CheckReport::default();
 
-        for call in calls {
+        for call in calls.iter().cloned() {
             let resolved_class = resolve_class(&call, snippet);
-            let call_line = snippet.start_line + call.line as u32;
+            // `CallSite.line` is 1-based and `snippet.start_line` is already
+            // the snippet's first code line, so the two overlap by one.
+            let call_line = snippet.start_line + (call.line as u32).saturating_sub(1);
             let location = format!("{source_path}:{call_line}");
 
             match resolved_class {
@@ -424,4 +481,192 @@ pub(crate) fn resolve_class(call: &CallSite, snippet: &Snippet) -> Option<String
 
 pub fn parse_calls(source: &[u8]) -> Vec<CallSite> {
     parse_calls_ast(source)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use indoc::indoc;
+
+    /// Load an `RbsEnvironment` from `(filename, contents)` pairs written into
+    /// a throwaway `sig/` directory.
+    fn env_from(files: &[(&str, &str)]) -> RbsEnvironment {
+        let tmp = tempfile::tempdir().unwrap();
+        let sig_dir = tmp.path().join("sig");
+        std::fs::create_dir_all(&sig_dir).unwrap();
+        for (name, contents) in files {
+            std::fs::write(sig_dir.join(name), contents).unwrap();
+        }
+        RbsEnvironment::load(&[sig_dir.to_str().unwrap()]).unwrap()
+    }
+
+    fn snippet_of(code: &str, parent_path: &str, start_line: u32) -> Snippet {
+        Snippet {
+            item_name: "documented".to_string(),
+            item_kind: rv_ruby_parser::ItemKind::Def,
+            parent_path: parent_path.to_string(),
+            start_line,
+            code: code.to_string(),
+        }
+    }
+
+    #[test]
+    fn full_path_to_parent_splits_on_the_namespace_separator() {
+        // `rfind(':')` would land on the second colon and yield `Foo:`.
+        assert_eq!(full_path_to_parent("Foo::Bar").as_deref(), Some("Foo"));
+        assert_eq!(
+            full_path_to_parent("Foo::Bar::Baz").as_deref(),
+            Some("Foo::Bar")
+        );
+    }
+
+    #[test]
+    fn full_path_to_parent_splits_on_the_method_separator() {
+        assert_eq!(
+            full_path_to_parent("Foo::Bar#baz").as_deref(),
+            Some("Foo::Bar")
+        );
+        assert_eq!(full_path_to_parent("Foo.baz").as_deref(), Some("Foo"));
+        assert_eq!(full_path_to_parent("Foo#baz").as_deref(), Some("Foo"));
+    }
+
+    #[test]
+    fn full_path_to_parent_has_no_parent_for_a_bare_name() {
+        assert_eq!(full_path_to_parent("add"), None);
+        assert_eq!(full_path_to_parent(""), None);
+        assert_eq!(full_path_to_parent("::Foo"), None);
+    }
+
+    #[test]
+    fn every_overload_is_accepted_not_just_the_first() {
+        let env = env_from(&[(
+            "a.rbs",
+            indoc! {"
+                class Widget
+                  def one_or_two: (Integer) -> void
+                                | (Integer, Integer) -> void
+                end
+            "},
+        )]);
+
+        let sig = env.lookup("Widget", "one_or_two").expect("indexed");
+        assert_eq!(sig.check_arity(1, false), ArityResult::Valid);
+        assert_eq!(sig.check_arity(2, false), ArityResult::Valid);
+        assert_eq!(
+            sig.check_arity(3, false),
+            ArityResult::TooMany {
+                expected: 2,
+                found: 3
+            }
+        );
+    }
+
+    #[test]
+    fn a_block_is_required_only_when_every_overload_requires_one() {
+        let env = env_from(&[(
+            "a.rbs",
+            indoc! {"
+                class Widget
+                  def each: () { (untyped) -> void } -> self
+                          | () -> Enumerator[untyped, untyped]
+                  def always: () { (untyped) -> void } -> void
+                end
+            "},
+        )]);
+
+        // `each` has a blockless overload, so omitting the block is fine.
+        assert!(!env.lookup("Widget", "each").unwrap().has_block);
+        assert_eq!(
+            env.lookup("Widget", "each").unwrap().check_arity(0, false),
+            ArityResult::Valid
+        );
+
+        assert_eq!(
+            env.lookup("Widget", "always")
+                .unwrap()
+                .check_arity(0, false),
+            ArityResult::MissingBlock
+        );
+    }
+
+    #[test]
+    fn an_optional_block_is_not_required() {
+        let env = env_from(&[(
+            "a.rbs",
+            indoc! {"
+                class Widget
+                  def maybe: () ?{ (untyped) -> void } -> void
+                end
+            "},
+        )]);
+
+        let sig = env.lookup("Widget", "maybe").expect("indexed");
+        assert!(!sig.has_block, "`?{{ ... }}` declares an optional block");
+        assert_eq!(sig.check_arity(0, false), ArityResult::Valid);
+    }
+
+    #[test]
+    fn a_class_split_across_files_keeps_every_method() {
+        let env = env_from(&[
+            ("a.rbs", "class Widget\n  def only_in_a: () -> void\nend\n"),
+            ("b.rbs", "class Widget\n  def only_in_b: () -> void\nend\n"),
+        ]);
+
+        assert!(env.lookup("Widget", "only_in_a").is_some(), "a.rbs lost");
+        assert!(env.lookup("Widget", "only_in_b").is_some(), "b.rbs lost");
+    }
+
+    #[test]
+    fn a_class_declaring_only_nested_types_is_still_known() {
+        let env = env_from(&[("a.rbs", "class Shell\n  type inner = Integer\nend\n")]);
+
+        assert!(
+            env.has_class("Shell"),
+            "a class with no methods of its own should still be known"
+        );
+        assert!(env.lookup("Shell", "nope").is_none());
+    }
+
+    #[test]
+    fn violation_lines_point_at_the_call_not_past_it() {
+        let env = env_from(&[(
+            "a.rbs",
+            "class Calculator\n  def add: (Integer, Integer) -> Integer\nend\n",
+        )]);
+        let checker = RbsChecker::new(env);
+
+        // A fence whose first code line is file line 4.
+        let snippet = snippet_of("Calculator.add 1, 2\nCalculator.add 1, 2, 3", "", 4);
+        let calls = parse_calls_ast(snippet.code.as_bytes());
+        let report = checker.check(&snippet, &calls, "lib.rb");
+
+        assert_eq!(report.violations.len(), 1, "{:?}", report.violations);
+        assert_eq!(
+            report.violations[0].line, 5,
+            "the bad call is on the fence's second line, i.e. file line 5"
+        );
+    }
+
+    #[test]
+    fn a_receiverless_call_resolves_against_the_enclosing_namespace() {
+        let env = env_from(&[(
+            "a.rbs",
+            indoc! {"
+                module Math
+                  class Calculator
+                    def add: (Integer, Integer) -> Integer
+                  end
+                end
+            "},
+        )]);
+        let checker = RbsChecker::new(env);
+
+        let snippet = snippet_of("add 1, 2, 3", "Math::Calculator", 1);
+        let calls = parse_calls_ast(snippet.code.as_bytes());
+        let report = checker.check(&snippet, &calls, "lib.rb");
+
+        assert_eq!(report.stats.total_unknown_receivers(), 0);
+        assert_eq!(report.violations.len(), 1, "{:?}", report.violations);
+        assert_eq!(report.violations[0].class_name, "Math::Calculator");
+    }
 }

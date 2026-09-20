@@ -9,9 +9,12 @@ fn snippets(source: &str) -> Vec<Snippet> {
 
 macro_rules! assert_snippet {
     ($snips:expr, $idx:expr, name: $name:literal, kind: $kind:ident, code: $code:literal) => {
+        assert_snippet!($snips, $idx, name: $name, kind: $kind, parent: "", code: $code);
+    };
+    ($snips:expr, $idx:expr, name: $name:literal, kind: $kind:ident, parent: $parent:literal, code: $code:literal) => {
         assert_eq!($snips[$idx].item_name, $name);
         assert_eq!($snips[$idx].item_kind, ItemKind::$kind);
-        assert_eq!($snips[$idx].parent_path, String::new());
+        assert_eq!($snips[$idx].parent_path, $parent);
         assert_eq!($snips[$idx].code, $code);
     };
 }
@@ -31,7 +34,7 @@ fn def_with_fence(doc: &str, code: &str, body: &str) -> String {
     )
 }
 
-fn def_with_two_fences(doc: &str, code1: &str, code2: &str, body: &str) -> String {
+fn def_with_two_fences(doc: &str, code1: &str, code2: &str) -> String {
     format!(
         indoc! {"
             # {}
@@ -43,10 +46,8 @@ fn def_with_two_fences(doc: &str, code1: &str, code2: &str, body: &str) -> Strin
             #   ```ruby
             #   {}
             #   ```
-            #
-            {}
         "},
-        doc, code1, code2, body
+        doc, code1, code2
     )
 }
 
@@ -144,12 +145,7 @@ fn prose_is_not_a_snippet() {
 
 #[test]
 fn multiple_fences_in_one_comment() {
-    let source = def_with_two_fences(
-        "Adds numbers.",
-        "add(1, 2)",
-        "add(3, 4)",
-        "def add(a, b)\n  a + b\nend",
-    );
+    let source = def_with_two_fences("Adds numbers.", "add(1, 2)", "add(3, 4)");
     let snips = snippets(&source);
     assert_eq!(snips.len(), 2);
     assert_eq!(snips[0].code, "  add(1, 2)");
@@ -175,7 +171,7 @@ fn snippet_in_module_is_extracted() {
     let snips = snippets(source);
     assert_eq!(snips.len(), 2);
     assert_snippet!(snips, 0, name: "Utils", kind: Module, code: "  Utils.answer");
-    assert_snippet!(snips, 1, name: "noop", kind: Def, code: "  Utils.noop");
+    assert_snippet!(snips, 1, name: "noop", kind: Def, parent: "Utils", code: "  Utils.noop");
 }
 
 #[test]
@@ -258,18 +254,25 @@ fn test_ruby() -> Option<Ruby> {
     Ruby::from_dir(dir, false).ok()
 }
 
+/// Run `code` as an assertion example the way `check_snippets` does.
+async fn run_assertion(ruby: Ruby, code: &str) -> Result<(), crate::CheckError> {
+    let analysis = crate::SnippetAnalysis::of(code);
+    let minitest = analysis.minitest.expect("code requires minitest");
+    assertion_check(ruby, code, minitest).await
+}
+
 #[tokio::test]
 async fn passes_simple_assertion_via_injection() {
     let Some(ruby) = test_ruby() else { return };
     let code = "require \"minitest\"\nassert_equal 2, 1 + 1\n";
-    assert!(assertion_check(ruby, code).await.is_ok());
+    assert!(run_assertion(ruby, code).await.is_ok());
 }
 
 #[tokio::test]
 async fn reports_failing_assertion() {
     let Some(ruby) = test_ruby() else { return };
     let code = "require \"minitest\"\nassert_equal 3, 1 + 1\n";
-    match assertion_check(ruby, code).await {
+    match run_assertion(ruby, code).await {
         Err(crate::CheckError::Assertion { stderr, .. }) => {
             assert!(stderr.contains("Expected"), "stderr: {stderr}");
             assert!(stderr.contains("Actual"), "stderr: {stderr}");
@@ -288,7 +291,7 @@ async fn manual_frame_still_passes() {
         self.assertions = 0
         assert_equal 4, 2 + 2
     "};
-    assert!(assertion_check(ruby, code).await.is_ok());
+    assert!(run_assertion(ruby, code).await.is_ok());
 }
 
 #[tokio::test]
@@ -303,4 +306,46 @@ async fn syntax_check_fails_invalid_code() {
     let Some(ruby) = test_ruby() else { return };
     let code = "def foo(\n";
     assert!(syntax_check(ruby, code).await.is_err());
+}
+
+#[test]
+fn snippet_analysis_answers_both_checkers_from_one_parse() {
+    let analysis = crate::SnippetAnalysis::of("require \"minitest\"\nassert_equal 2, 1 + 1\n");
+
+    assert!(analysis.is_assertion(), "minitest require should be found");
+    assert_eq!(analysis.minitest.map(|m| m.require_line), Some(1));
+
+    let names: Vec<&str> = analysis.calls.iter().map(|c| c.name.as_str()).collect();
+    assert!(names.contains(&"assert_equal"), "{names:?}");
+}
+
+#[test]
+fn snippet_analysis_of_a_plain_snippet_is_not_an_assertion() {
+    let analysis = crate::SnippetAnalysis::of("Foo.bar(1)\n");
+
+    assert!(!analysis.is_assertion());
+    assert_eq!(analysis.minitest, None);
+    assert_eq!(analysis.calls.len(), 1, "{:?}", analysis.calls);
+}
+
+#[test]
+fn extract_analyzed_pairs_each_snippet_with_its_analysis() {
+    let source = indoc! {"
+        # Adds.
+        #
+        #   ```ruby
+        #   require \"minitest\"
+        #   assert_equal 3, 1 + 2
+        #   ```
+        def add(a, b)
+          a + b
+        end
+    "};
+
+    let analyzed = crate::extract_analyzed(&parse(source.as_bytes()));
+    assert_eq!(analyzed.len(), 1);
+
+    let (snippet, analysis) = &analyzed[0];
+    assert_eq!(snippet.item_name, "add");
+    assert!(analysis.is_assertion(), "snippet requires minitest");
 }

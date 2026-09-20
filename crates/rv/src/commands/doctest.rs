@@ -32,7 +32,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use rv_doctest::{
     CheckStats, Failure, RbsChecker, RbsEnvironment, Snippet, UnknownEntry, check_snippets,
-    extract, syntax_check,
+    extract_analyzed, syntax_check,
 };
 use rv_ruby_parser::ParsedFile;
 use tabled::Table;
@@ -69,7 +69,15 @@ pub(crate) enum RbsMode {
     Verbose,
 }
 
-pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Result<(), Error> {
+/// Exit code reported when any discovered file fails a check. Distinct from the
+/// `1` that `main` uses for rv's own errors, so callers can tell "your examples
+/// are broken" from "rv could not run the checks".
+pub(crate) const FAILURE_EXIT_CODE: i32 = 2;
+
+/// Run the doctest checks, returning the process exit code to use: `0` when
+/// everything passed, [`FAILURE_EXIT_CODE`] when any file could not be read or
+/// any snippet failed a syntax, assertion, or RBS check.
+pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Result<i32, Error> {
     let expanded_paths = discovery::expand_paths(&opts.include_paths).map_err(|e| {
         Error::IoError(std::io::Error::new(
             std::io::ErrorKind::NotFound,
@@ -77,8 +85,10 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         ))
     })?;
 
-    let discovery_result = discovery::discover_rb_files(&expanded_paths, opts.include_gitignored)?;
+    let discovery_result =
+        discovery::discover_rb_files(&expanded_paths, opts.include_gitignored, None)?;
 
+    let discovery_failures = discovery_result.failures;
     let total_files_count = discovery_result.files.len();
 
     let ruby = Config::new(global_args, None)
@@ -102,7 +112,7 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         path: String,
         bytes: Vec<u8>,
         parsed: ParsedFile,
-        snippets: Vec<rv_doctest::Snippet>,
+        snippets: Vec<(rv_doctest::Snippet, rv_doctest::SnippetAnalysis)>,
     }
 
     let parsed: Vec<ParsedSourceFile> = discovery_result
@@ -110,7 +120,9 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         .into_par_iter()
         .map(|(path, source)| {
             let parsed = rv_ruby_parser::parse(&source);
-            let snippets = extract(&parsed);
+            // One parse per snippet, shared by the syntax, assertion, and RBS
+            // checkers.
+            let snippets = extract_analyzed(&parsed);
             ParsedSourceFile {
                 path: path.to_string(),
                 bytes: source,
@@ -204,13 +216,17 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
 
         let all_snippets: Vec<_> = parsed
             .iter()
-            .flat_map(|pf| pf.snippets.iter().map(|snippet| (pf.path.clone(), snippet)))
+            .flat_map(|pf| {
+                pf.snippets
+                    .iter()
+                    .map(|(snippet, analysis)| (pf.path.clone(), snippet, analysis))
+            })
             .collect();
 
         let rbs_results: Vec<_> = all_snippets
             .into_par_iter()
-            .map(|(path, snippet)| {
-                let report = checker.check(snippet, &path);
+            .map(|(path, snippet, analysis)| {
+                let report = checker.check(snippet, &analysis.calls, &path);
                 (path, snippet, report)
             })
             .collect();
@@ -237,7 +253,11 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
     let total_files_with_snippets: usize =
         parsed.len() - parsed.iter().filter(|pf| pf.snippets.is_empty()).count();
 
-    if syntax_failures.is_empty() && failures.is_empty() {
+    for failure in &discovery_failures {
+        eprintln!("{}: could not be read: {}", failure.path, failure.error);
+    }
+
+    if syntax_failures.is_empty() && failures.is_empty() && discovery_failures.is_empty() {
         let file_word = if total_files_with_snippets == 1 {
             "file"
         } else {
@@ -260,7 +280,10 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         print_coverage(&stats, rbs_mode);
     }
 
-    Ok(())
+    let failed =
+        !syntax_failures.is_empty() || !failures.is_empty() || !discovery_failures.is_empty();
+
+    Ok(if failed { FAILURE_EXIT_CODE } else { 0 })
 }
 
 fn print_coverage(stats: &CheckStats, mode: RbsMode) {

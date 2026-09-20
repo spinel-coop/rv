@@ -95,14 +95,56 @@ fn is_fence_close(line: &str) -> bool {
     line.trim() == "```"
 }
 
+/// Everything the checkers need from a snippet's code, from one parse of it.
+///
+/// Detecting the minitest `require`, injecting the assertion frame, and
+/// extracting call sites each used to parse the same fence separately.
+#[derive(Debug, Clone, Default)]
+pub struct SnippetAnalysis {
+    /// Every method call in the snippet, for RBS arity checking.
+    pub calls: Vec<rv_ruby_parser::calls::CallSite>,
+    /// The minitest `require`, when the snippet is an assertion example.
+    pub minitest: Option<rv_ruby_parser::calls::MinitestRequire>,
+}
+
+impl SnippetAnalysis {
+    /// Parse `code` once and collect everything the checkers need.
+    pub fn of(code: &str) -> Self {
+        let parsed = rv_ruby_parser::ParsedSource::new(code.as_bytes());
+        Self {
+            calls: parsed.calls(),
+            minitest: parsed.minitest_require(),
+        }
+    }
+
+    /// `true` when the snippet should be run rather than only syntax-checked.
+    pub fn is_assertion(&self) -> bool {
+        self.minitest.is_some()
+    }
+}
+
+/// Extracts snippets and analyzes each one, so every checker shares a single
+/// parse per snippet.
+pub fn extract_analyzed(parsed: &rv_ruby_parser::ParsedFile) -> Vec<(Snippet, SnippetAnalysis)> {
+    extract(parsed)
+        .into_iter()
+        .map(|snippet| {
+            let analysis = SnippetAnalysis::of(&snippet.code);
+            (snippet, analysis)
+        })
+        .collect()
+}
+
 /// Checks multiple snippets, collecting all failures.
-pub async fn check_snippets(snippets: &[Snippet], ruby: &rv_ruby::Ruby) -> Vec<Failure> {
+pub async fn check_snippets(
+    snippets: &[(Snippet, SnippetAnalysis)],
+    ruby: &rv_ruby::Ruby,
+) -> Vec<Failure> {
     let mut failures = Vec::new();
-    for snippet in snippets {
-        let result = if assertion_applies_to(&snippet.code) {
-            assertion_check(ruby.clone(), &snippet.code).await
-        } else {
-            syntax_check(ruby.clone(), &snippet.code).await
+    for (snippet, analysis) in snippets {
+        let result = match analysis.minitest {
+            Some(minitest) => assertion_check(ruby.clone(), &snippet.code, minitest).await,
+            None => syntax_check(ruby.clone(), &snippet.code).await,
         };
 
         if let Err(e) = result {

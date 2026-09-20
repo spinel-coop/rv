@@ -1,3 +1,4 @@
+use super::calls::parse_calls;
 use super::{Diagnostic, ItemKind, ParsedFile, parse};
 use indoc::indoc;
 
@@ -381,4 +382,158 @@ fn minitest_require_none_syntax_error() {
     let source = "def foo(\n";
     let line = minitest_require_line(source.as_bytes());
     assert_eq!(line, None, "syntax error returns None");
+}
+
+#[test]
+fn call_on_root_scoped_constant_resolves_without_the_leading_colons() {
+    let calls = parse_calls(b"::Kernel.puts 1\n");
+    assert_eq!(calls.len(), 1, "expected one call, got {calls:?}");
+    assert_eq!(calls[0].class_name.as_deref(), Some("Kernel"));
+    assert_eq!(calls[0].name, "puts");
+}
+
+#[test]
+fn call_on_nested_root_scoped_constant_keeps_every_segment() {
+    let calls = parse_calls(b"::Foo::Bar.baz\n");
+    assert_eq!(calls.len(), 1, "expected one call, got {calls:?}");
+    assert_eq!(calls[0].class_name.as_deref(), Some("Foo::Bar"));
+}
+
+#[test]
+fn call_on_nested_constant_path_keeps_every_segment() {
+    let calls = parse_calls(b"Foo::Bar::Baz.qux\n");
+    assert_eq!(calls.len(), 1, "expected one call, got {calls:?}");
+    assert_eq!(calls[0].class_name.as_deref(), Some("Foo::Bar::Baz"));
+}
+
+#[test]
+fn full_path_qualifies_definitions_by_their_enclosing_namespace() {
+    let source = indoc! {"
+        module Math
+          class Calculator
+            def add(a, b)
+            end
+
+            def self.build
+            end
+          end
+        end
+    "};
+    let parsed = parse(source.as_bytes());
+    let paths: Vec<&str> = parsed.items.iter().map(|i| i.full_path.as_str()).collect();
+
+    assert_eq!(
+        paths,
+        vec![
+            "Math",
+            "Math::Calculator",
+            "Math::Calculator#add",
+            "Math::Calculator.build",
+        ]
+    );
+}
+
+#[test]
+fn full_path_of_a_top_level_definition_is_its_own_name() {
+    let parsed = parse(b"def add(a, b)\nend\n");
+    assert_eq!(parsed.items[0].full_path, "add");
+}
+
+#[test]
+fn full_path_of_a_compact_namespace_is_not_double_qualified() {
+    let source = indoc! {"
+        module Foo::Bar
+          def baz
+          end
+        end
+    "};
+    let parsed = parse(source.as_bytes());
+    let paths: Vec<&str> = parsed.items.iter().map(|i| i.full_path.as_str()).collect();
+
+    assert_eq!(paths, vec!["Foo::Bar", "Foo::Bar#baz"]);
+}
+
+#[test]
+fn minitest_require_in_def_body_is_not_detected() {
+    // A `def` body does not run until the method is called, so the require
+    // cannot be relied on having happened at the enclosing statement's end.
+    let source = indoc! {"
+        def setup_env
+          require 'minitest/autorun'
+        end
+        setup_env
+    "};
+    assert_eq!(minitest_require_line(source.as_bytes()), None);
+}
+
+#[test]
+fn minitest_require_reports_the_enclosing_top_level_statement() {
+    use super::calls::minitest_require;
+
+    let source = indoc! {"
+        class Helper
+          require 'minitest/autorun'
+        end
+        assert_equal 1, 1
+    "};
+    let found = minitest_require(source.as_bytes()).expect("require found");
+    assert_eq!(found.require_line, 2, "the require itself is on line 2");
+    assert_eq!(
+        found.top_level_end_line, 3,
+        "the enclosing `class` statement ends on line 3"
+    );
+}
+
+#[test]
+fn minitest_require_at_top_level_is_its_own_statement() {
+    use super::calls::minitest_require;
+
+    let found = minitest_require(b"require 'minitest'\nassert_equal 1, 1\n").expect("found");
+    assert_eq!(found.require_line, 1);
+    assert_eq!(found.top_level_end_line, 1);
+}
+
+#[test]
+fn parsed_source_serves_every_consumer_from_one_parse() {
+    use super::ParsedSource;
+
+    let source = indoc! {"
+        require 'minitest/autorun'
+
+        class Calculator
+          def add(a, b)
+            helper(a, b)
+          end
+        end
+    "};
+
+    let parsed = ParsedSource::new(source.as_bytes());
+
+    assert!(parsed.is_success());
+    assert!(parsed.diagnostics().is_empty());
+
+    let items = parsed.items();
+    let paths: Vec<&str> = items.iter().map(|i| i.full_path.as_str()).collect();
+    assert_eq!(paths, vec!["Calculator", "Calculator#add"]);
+
+    let names: Vec<String> = parsed.calls().iter().map(|c| c.name.clone()).collect();
+    assert!(names.contains(&"require".to_string()), "{names:?}");
+    assert!(names.contains(&"helper".to_string()), "{names:?}");
+
+    assert_eq!(
+        parsed.minitest_require().map(|m| m.require_line),
+        Some(1),
+        "the same parse also answers the minitest question"
+    );
+}
+
+#[test]
+fn parsed_source_reports_diagnostics_for_broken_source() {
+    use super::ParsedSource;
+
+    let parsed = ParsedSource::new(b"def broken(\n");
+    assert!(!parsed.is_success());
+    assert!(!parsed.diagnostics().is_empty());
+    assert!(parsed.calls().is_empty(), "no calls from a broken parse");
+    assert_eq!(parsed.minitest_require(), None);
 }

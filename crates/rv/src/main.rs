@@ -213,18 +213,22 @@ type Result<T> = miette::Result<T, Error>;
 
 #[main]
 async fn main() {
-    if let Err(err) = main_inner().await {
-        let is_tty = std::io::stderr().is_terminal();
-        if is_tty {
-            eprintln!("{:?}", Report::new(err));
-        } else {
-            eprintln!("Error: {:?}", err);
+    match main_inner().await {
+        Ok(0) => {}
+        Ok(exit_code) => std::process::exit(exit_code),
+        Err(err) => {
+            let is_tty = std::io::stderr().is_terminal();
+            if is_tty {
+                eprintln!("{:?}", Report::new(err));
+            } else {
+                eprintln!("Error: {:?}", err);
+            }
+            std::process::exit(1);
         }
-        std::process::exit(1);
     }
 }
 
-async fn main_inner() -> Result<()> {
+async fn main_inner() -> Result<i32> {
     let is_rvx = std::env::args().next().unwrap().ends_with("rvx");
     let cli = if is_rvx {
         let mut args = std::env::args().collect::<Vec<String>>();
@@ -304,10 +308,10 @@ async fn main_inner() -> Result<()> {
     run_cmd(&cli.global_args(), cli.command).await
 }
 
-/// Run an `rv` subcommand.
+/// Run an `rv` subcommand, returning the process exit code to use.
 /// This is like shelling out to `rv` except it reuses the current context
 /// and doesn't need to start a new process.
-async fn run_cmd(global_args: &GlobalArgs, command: Commands) -> Result<()> {
+async fn run_cmd(global_args: &GlobalArgs, command: Commands) -> Result<i32> {
     match command {
         Commands::Ruby(ruby_args) => ruby(global_args, ruby_args).await?,
         Commands::CleanInstall(ci_args) => ci(global_args, ci_args).await?,
@@ -317,8 +321,10 @@ async fn run_cmd(global_args: &GlobalArgs, command: Commands) -> Result<()> {
         Commands::Tool(tool_args) => tool(global_args, tool_args).await?,
         Commands::Run(run_args) => run(global_args, run_args).await?,
         Commands::Fmt(fmt_args) => fmt(global_args, fmt_args).await?,
-        Commands::Doctest(doctest_args) => doctest(global_args, doctest_args).await?,
+        // `doctest` reports check failures through its exit code rather than as
+        // an error, so its findings are printed once and not re-rendered here.
+        Commands::Doctest(doctest_args) => return doctest(global_args, doctest_args).await,
     };
 
-    Ok(())
+    Ok(0)
 }

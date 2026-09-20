@@ -16,6 +16,7 @@ use std::ops::{Deref, DerefMut};
 use ruby_prism::{CommentType, Node};
 
 pub mod calls;
+pub(crate) mod visitor;
 
 /// A byte-offset-based line index over the source.
 ///
@@ -210,131 +211,213 @@ impl ParsedFile {
     }
 }
 
-/// Parses Ruby source and returns an owned index of definitions and
-/// diagnostics.
-pub fn parse(source: &[u8]) -> ParsedFile {
-    let result = ruby_prism::parse(source);
-    let lines = LineIndex::new(source);
+/// One parse of a Ruby source buffer, reusable by every consumer in this
+/// crate.
+///
+/// [`parse`], [`calls::parse_calls`] and [`calls::minitest_require`] each used
+/// to run their own [`ruby_prism::parse`], so a caller wanting two of them paid
+/// for two parses of the same bytes. Build one of these instead and ask it for
+/// each result.
+///
+/// Prism's tree borrows the source buffer, so this handle cannot be stored
+/// alongside owned bytes or held across an `.await`. Construct it in a scope
+/// that borrows the source, take the owned results you need, and drop it.
+pub struct ParsedSource<'src> {
+    result: ruby_prism::ParseResult<'src>,
+    source: &'src [u8],
+    lines: LineIndex,
+}
 
-    // Collect inline comments with their end line, in source order.
-    let mut comments_by_end_line: HashMap<u32, String> = HashMap::new();
-    let usable_comments = result
-        .comments()
-        .filter(|com| com.type_() == CommentType::InlineComment);
-    for comment in usable_comments {
-        let loc = comment.location();
-        let start = loc.start_offset();
-        let (end_line, _) = lines.line_col(loc.end_offset());
-        if is_standalone_comment(source, &lines, start) {
-            comments_by_end_line.insert(end_line, {
-                let text = String::from_utf8_lossy(comment.text());
-                let stripped = text.trim_start_matches('#');
-                stripped.strip_prefix(' ').unwrap_or(stripped).to_string()
-            });
+impl<'src> ParsedSource<'src> {
+    /// Parse `source` once.
+    pub fn new(source: &'src [u8]) -> Self {
+        Self {
+            result: ruby_prism::parse(source),
+            source,
+            lines: LineIndex::new(source),
         }
     }
 
-    // Walk the AST, collecting definitions.
-    let mut items = Vec::new();
-    let prog_node = result.node().as_program_node();
-    if let Some(program) = prog_node {
-        for statement in program.statements().body().iter() {
-            walk_statement(&statement, source, &lines, &mut items);
+    /// `true` when the source parsed without errors.
+    pub fn is_success(&self) -> bool {
+        self.result.errors().next().is_none()
+    }
+
+    /// Every definition in the source, in source order, with leading doc
+    /// comments attached.
+    pub fn items(&self) -> Vec<Item> {
+        let Some(program) = self.result.node().as_program_node() else {
+            return Vec::new();
+        };
+
+        let mut items = collect_items(&program, self.source, &self.lines);
+        self.attach_comments(&mut items);
+        items
+    }
+
+    /// Every method call in the source.
+    pub fn calls(&self) -> Vec<calls::CallSite> {
+        calls::collect_calls(self)
+    }
+
+    /// The first `require` of minitest, wherever it is nested.
+    pub fn minitest_require(&self) -> Option<calls::MinitestRequire> {
+        calls::find_minitest_require(self)
+    }
+
+    /// Parse errors, if any.
+    pub fn diagnostics(&self) -> Vec<Diagnostic> {
+        self.result
+            .errors()
+            .map(|diagnostic| {
+                let (line, column) = self.lines.line_col(diagnostic.location().start_offset());
+                Diagnostic {
+                    message: diagnostic.message().to_string(),
+                    line,
+                    column,
+                }
+            })
+            .collect()
+    }
+
+    /// The owned snapshot returned by [`parse`].
+    pub fn to_parsed_file(&self) -> ParsedFile {
+        ParsedFile {
+            items: self.items(),
+            diagnostics: self.diagnostics(),
         }
     }
 
-    // Attach leading comments to each item.
-    for item in &mut items {
-        let start_line = item.span.start_line;
-        let mut attached = Vec::new();
-        let mut cursor = start_line;
-        while cursor > 1 {
-            cursor -= 1;
-            match comments_by_end_line.get(&cursor) {
-                Some(text) => attached.insert(0, text.clone()),
-                None => break,
+    pub(crate) fn program(&self) -> Option<ruby_prism::ProgramNode<'_>> {
+        self.result.node().as_program_node()
+    }
+
+    pub(crate) fn source(&self) -> &'src [u8] {
+        self.source
+    }
+
+    pub(crate) fn lines(&self) -> &LineIndex {
+        &self.lines
+    }
+
+    /// Attach each item's contiguous run of leading `#` comment lines.
+    fn attach_comments(&self, items: &mut [Item]) {
+        let mut comments_by_end_line: HashMap<u32, String> = HashMap::new();
+        let usable_comments = self
+            .result
+            .comments()
+            .filter(|com| com.type_() == CommentType::InlineComment);
+        for comment in usable_comments {
+            let loc = comment.location();
+            let start = loc.start_offset();
+            let (end_line, _) = self.lines.line_col(loc.end_offset());
+            if is_standalone_comment(self.source, &self.lines, start) {
+                comments_by_end_line.insert(end_line, {
+                    let text = String::from_utf8_lossy(comment.text());
+                    let stripped = text.trim_start_matches('#');
+                    stripped.strip_prefix(' ').unwrap_or(stripped).to_string()
+                });
             }
         }
-        item.comments = attached;
-    }
 
-    // Surface diagnostics.
-    let mut diagnostics = Vec::new();
-    for diagnostic in result.errors() {
-        let loc = diagnostic.location();
-        let (line, column) = lines.line_col(loc.start_offset());
-        diagnostics.push(Diagnostic {
-            message: diagnostic.message().to_string(),
-            line,
-            column,
-        });
-    }
-
-    ParsedFile { items, diagnostics }
-}
-
-/// Recursively walks a statement, collecting `def`/`class`/`module` items.
-fn walk_statement(node: &Node<'_>, source: &[u8], lines: &LineIndex, items: &mut Vec<Item>) {
-    if let Some(def) = node.as_def_node() {
-        let start = def.def_keyword_loc().start_offset();
-        let end = def.location().end_offset();
-        let bytes: &[u8] = def.name().as_slice();
-        let name = String::from_utf8_lossy(bytes).into_owned();
-        items.push(Item::Def(DefItem {
-            common: CommonItem {
-                name: name.clone(),
-                full_path: name,
-                span: make_span(lines, start, end),
-                comments: Vec::new(),
-            },
-            singleton: def.receiver().is_some(),
-        }));
-    } else if let Some(class) = node.as_class_node() {
-        let start = class.class_keyword_loc().start_offset();
-        let end = class.location().end_offset();
-        let bytes: &[u8] = class.name().as_slice();
-        let name = String::from_utf8_lossy(bytes).into_owned();
-        let full_name = node_source_slice(source, &class.constant_path());
-        let superclass = class
-            .superclass()
-            .map(|node| node_source_slice(source, &node));
-        items.push(Item::Class(ClassItem {
-            common: CommonItem {
-                name,
-                full_path: full_name,
-                span: make_span(lines, start, end),
-                comments: Vec::new(),
-            },
-            superclass,
-        }));
-        if let Some(body) = class.body() {
-            walk_statements(&body, source, lines, items);
-        }
-    } else if let Some(module) = node.as_module_node() {
-        let start = module.module_keyword_loc().start_offset();
-        let end = module.location().end_offset();
-        let bytes: &[u8] = module.name().as_slice();
-        let name = String::from_utf8_lossy(bytes).into_owned();
-        let full_name = node_source_slice(source, &module.constant_path());
-        items.push(Item::Module(ModuleItem(CommonItem {
-            name,
-            full_path: full_name,
-            span: make_span(lines, start, end),
-            comments: Vec::new(),
-        })));
-        if let Some(body) = module.body() {
-            walk_statements(&body, source, lines, items);
+        for item in items {
+            let mut attached = Vec::new();
+            let mut cursor = item.span.start_line;
+            while cursor > 1 {
+                cursor -= 1;
+                match comments_by_end_line.get(&cursor) {
+                    Some(text) => attached.insert(0, text.clone()),
+                    None => break,
+                }
+            }
+            item.comments = attached;
         }
     }
 }
 
-/// Walks a body node (a `StatementsNode`) if it is one.
-fn walk_statements(node: &Node<'_>, source: &[u8], lines: &LineIndex, items: &mut Vec<Item>) {
-    if let Some(statements) = node.as_statements_node() {
-        for statement in statements.body().iter() {
-            walk_statement(&statement, source, lines, items);
-        }
-    }
+/// Parses Ruby source and returns an owned index of definitions and
+/// diagnostics.
+///
+/// Use [`ParsedSource`] directly when more than one kind of result is needed
+/// from the same bytes, so they share a single parse.
+pub fn parse(source: &[u8]) -> ParsedFile {
+    ParsedSource::new(source).to_parsed_file()
+}
+
+/// Collects every `def`/`class`/`module` in `program`, in source order.
+///
+/// Descends into `class` and `module` bodies only: definitions inside a `def`
+/// body are not members of the enclosing namespace.
+fn collect_items(
+    program: &ruby_prism::ProgramNode<'_>,
+    source: &[u8],
+    lines: &LineIndex,
+) -> Vec<Item> {
+    let mut items = Vec::new();
+
+    visitor::walk_program(
+        program,
+        source,
+        visitor::Scopes::DECLARATIVE,
+        &mut |node, namespace| {
+            if let Some(def) = node.as_def_node() {
+                let start = def.def_keyword_loc().start_offset();
+                let end = def.location().end_offset();
+                let bytes: &[u8] = def.name().as_slice();
+                let name = String::from_utf8_lossy(bytes).into_owned();
+                let singleton = def.receiver().is_some();
+                let full_path = if namespace.is_empty() {
+                    name.clone()
+                } else {
+                    // `Foo.bar` for a singleton method, `Foo#bar` for an instance one.
+                    let separator = if singleton { '.' } else { '#' };
+                    format!("{namespace}{separator}{name}")
+                };
+                items.push(Item::Def(DefItem {
+                    common: CommonItem {
+                        name,
+                        full_path,
+                        span: make_span(lines, start, end),
+                        comments: Vec::new(),
+                    },
+                    singleton,
+                }));
+            } else if let Some(class) = node.as_class_node() {
+                let start = class.class_keyword_loc().start_offset();
+                let end = class.location().end_offset();
+                let bytes: &[u8] = class.name().as_slice();
+                let name = String::from_utf8_lossy(bytes).into_owned();
+                let declared = node_source_slice(source, &class.constant_path());
+                items.push(Item::Class(ClassItem {
+                    common: CommonItem {
+                        name,
+                        full_path: visitor::qualify_constant(namespace, &declared),
+                        span: make_span(lines, start, end),
+                        comments: Vec::new(),
+                    },
+                    superclass: class
+                        .superclass()
+                        .map(|node| node_source_slice(source, &node)),
+                }));
+            } else if let Some(module) = node.as_module_node() {
+                let start = module.module_keyword_loc().start_offset();
+                let end = module.location().end_offset();
+                let bytes: &[u8] = module.name().as_slice();
+                let name = String::from_utf8_lossy(bytes).into_owned();
+                let declared = node_source_slice(source, &module.constant_path());
+                items.push(Item::Module(ModuleItem(CommonItem {
+                    name,
+                    full_path: visitor::qualify_constant(namespace, &declared),
+                    span: make_span(lines, start, end),
+                    comments: Vec::new(),
+                })));
+            }
+
+            visitor::Flow::Continue
+        },
+    );
+
+    items
 }
 
 fn make_span(lines: &LineIndex, start: usize, end: usize) -> Span {
