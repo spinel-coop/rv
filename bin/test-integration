@@ -5,9 +5,10 @@ RUBY_VERSION="3.4.7"
 cargo build --bin rv --bin rvx
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RV="$DIR/target/debug/rv"
+DOCTEST_FIXTURES="$DIR/crates/rv-doctest/tests/fixtures"
 
 cleanup() {
-    rm -rf fmt-test
+    rm -rf fmt-test doctest-test
     rm -f .ruby-version
 }
 trap cleanup EXIT
@@ -71,6 +72,90 @@ echo "PASS: $RUBY_VERSION no longer listed after uninstall"
 echo "=== rv run --ruby $RUBY_VERSION ruby (re-install after uninstall) ==="
 $RV run --ruby "$RUBY_VERSION" ruby -e 'puts "re-installed"' | grep -q "re-installed"
 echo "PASS: re-installs and runs after uninstall"
+
+echo "=== rv doctest (valid fenced example) ==="
+mkdir -p doctest-test
+echo "$RUBY_VERSION" > doctest-test/.ruby-version
+cp "$DOCTEST_FIXTURES/greeter.rb" doctest-test/
+(
+    cd doctest-test
+    out=$($RV doctest)
+    echo "  $out"
+    echo "$out" | grep -q "pass checks"
+)
+echo "PASS: rv doctest accepts a valid fenced example"
+
+echo "=== rv doctest (minitest assertion in fenced example) ==="
+cp "$DOCTEST_FIXTURES/adder.rb" doctest-test/
+(
+    cd doctest-test
+    out=$($RV doctest)
+    echo "  $out"
+    echo "$out" | grep -q "pass checks"
+)
+echo "PASS: rv doctest runs minitest assertions in fenced examples"
+
+echo "=== rv doctest (single file argument) ==="
+(
+    cd doctest-test
+    out=$($RV doctest greeter.rb)
+    echo "  $out"
+    echo "$out" | grep -q "in 1 file pass checks"
+)
+echo "PASS: rv doctest checks a single named file"
+
+echo "=== rv doctest --rbs (coverage summary) ==="
+mkdir -p doctest-test/sig
+cp "$DOCTEST_FIXTURES/sig/greeter.rbs" doctest-test/sig/
+(
+    cd doctest-test
+    out=$($RV doctest --rbs=stat greeter.rb)
+    echo "$out"
+    echo "$out" | grep -q "RBS coverage:"
+)
+echo "PASS: rv doctest --rbs prints an RBS coverage summary"
+
+echo "=== rv doctest (syntax error in fenced example) ==="
+cp "$DOCTEST_FIXTURES/broken.rb" doctest-test/
+(
+    cd doctest-test
+    if out=$($RV doctest broken.rb 2>&1); then
+        echo "$out"
+        echo "FAIL: rv doctest exited 0 despite a syntax error"
+        exit 1
+    fi
+    echo "$out" | grep -q "broken.rb"
+    echo "$out" | grep -q "syntax"
+)
+echo "PASS: rv doctest fails on a fenced example that does not parse"
+
+echo "=== rv doctest (failing minitest assertion) ==="
+cp "$DOCTEST_FIXTURES/wrong.rb" doctest-test/
+(
+    cd doctest-test
+    if out=$($RV doctest wrong.rb 2>&1); then
+        echo "$out"
+        echo "FAIL: rv doctest exited 0 despite a failing assertion"
+        exit 1
+    fi
+    echo "$out" | grep -q "wrong.rb"
+)
+echo "PASS: rv doctest fails on a failing minitest assertion"
+
+echo "=== rv doctest (unreadable path) ==="
+(
+    cd doctest-test
+    if out=$($RV doctest no-such-file.rb 2>&1); then
+        echo "$out"
+        echo "FAIL: rv doctest exited 0 for a nonexistent path"
+        exit 1
+    fi
+    echo "  $out"
+    echo "$out" | grep -q "no-such-file.rb"
+)
+echo "PASS: rv doctest fails on a path that cannot be read"
+
+rm -rf doctest-test
 
 [ -t 1 ] || exit 0
 
