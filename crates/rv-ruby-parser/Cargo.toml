@@ -1,0 +1,14 @@
+[package]
+name = "rv-ruby-parser"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ruby-prism = { workspace = true }
+
+[dev-dependencies]
+insta = { workspace = true }
+indoc = { workspace = true }
+
+[lints]
+workspace = true
