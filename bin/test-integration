@@ -5,6 +5,7 @@ RUBY_VERSION="3.4.7"
 cargo build --bin rv --bin rvx
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RV="$DIR/target/debug/rv"
+DOCTEST_FIXTURES="$DIR/crates/rv-doctest/tests/fixtures"
 
 cleanup() {
     rm -rf fmt-test doctest-test
@@ -75,20 +76,7 @@ echo "PASS: re-installs and runs after uninstall"
 echo "=== rv doctest (valid fenced example) ==="
 mkdir -p doctest-test
 echo "$RUBY_VERSION" > doctest-test/.ruby-version
-cat > doctest-test/greeter.rb <<'RUBY'
-# A greeter.
-class Greeter
-  # Greets someone by name.
-  #
-  # ```ruby
-  # greeter = Greeter.new
-  # puts greeter.greet("World")
-  # ```
-  def greet(name)
-    "Hello, #{name}!"
-  end
-end
-RUBY
+cp "$DOCTEST_FIXTURES/greeter.rb" doctest-test/
 (
     cd doctest-test
     out=$($RV doctest)
@@ -98,21 +86,7 @@ RUBY
 echo "PASS: rv doctest accepts a valid fenced example"
 
 echo "=== rv doctest (minitest assertion in fenced example) ==="
-cat > doctest-test/adder.rb <<'RUBY'
-# Adds numbers.
-class Adder
-  # Adds two numbers.
-  #
-  # ```ruby
-  # require "minitest/autorun"
-  # def add(a, b) = a + b
-  # assert_equal 3, add(1, 2)
-  # ```
-  def add(a, b)
-    a + b
-  end
-end
-RUBY
+cp "$DOCTEST_FIXTURES/adder.rb" doctest-test/
 (
     cd doctest-test
     out=$($RV doctest)
@@ -132,11 +106,7 @@ echo "PASS: rv doctest checks a single named file"
 
 echo "=== rv doctest --rbs (coverage summary) ==="
 mkdir -p doctest-test/sig
-cat > doctest-test/sig/greeter.rbs <<'RBS'
-class Greeter
-  def greet: (String name) -> String
-end
-RBS
+cp "$DOCTEST_FIXTURES/sig/greeter.rbs" doctest-test/sig/
 (
     cd doctest-test
     out=$($RV doctest --rbs=stat greeter.rb)
@@ -146,19 +116,7 @@ RBS
 echo "PASS: rv doctest --rbs prints an RBS coverage summary"
 
 echo "=== rv doctest (syntax error in fenced example) ==="
-cat > doctest-test/broken.rb <<'RUBY'
-# Has a broken example.
-class Broken
-  # Broken example.
-  #
-  # ```ruby
-  # def oops(
-  # ```
-  def oops
-    1
-  end
-end
-RUBY
+cp "$DOCTEST_FIXTURES/broken.rb" doctest-test/
 (
     cd doctest-test
     if out=$($RV doctest broken.rb 2>&1); then
@@ -172,21 +130,7 @@ RUBY
 echo "PASS: rv doctest fails on a fenced example that does not parse"
 
 echo "=== rv doctest (failing minitest assertion) ==="
-cat > doctest-test/wrong.rb <<'RUBY'
-# Has a wrong example.
-class Wrong
-  # Wrong example.
-  #
-  # ```ruby
-  # require "minitest/autorun"
-  # def add(a, b) = a + b
-  # assert_equal 99, add(1, 2)
-  # ```
-  def add(a, b)
-    a + b
-  end
-end
-RUBY
+cp "$DOCTEST_FIXTURES/wrong.rb" doctest-test/
 (
     cd doctest-test
     if out=$($RV doctest wrong.rb 2>&1); then
