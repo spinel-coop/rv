@@ -1,14 +1,14 @@
 use clap::Parser;
-use ignore::WalkBuilder;
 use ignore::gitignore::GitignoreBuilder;
 use regex::Regex;
 use similar::TextDiff;
-use std::ffi::OsStr;
-use std::fs::{File, OpenOptions, read};
-use std::io::{self, BufRead, BufReader, IsTerminal, Read, Write};
-use std::path::Path;
+use std::fs::OpenOptions;
+use std::io::{self, IsTerminal, Read, Write};
+use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::sync::{Arc, LazyLock, Mutex};
+
+use crate::discovery::{self, DiscoverableFileFailure, RUBYFMT_IGNORE_FILE};
 
 static MAGIC_COMMENT_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)^#\s*rubyfmt:\s*(?P<enabled>true|false)\s*$").unwrap());
@@ -25,10 +25,10 @@ enum ErrorExit {
 pub(crate) enum ExecutionError {
     // Errors seen when rubyfmt is executing
     RubyfmtError(rubyfmt::RichFormatError, String),
-    // Errors seen when performing IO s
+    // Errors seen when performing IO
     IOError(io::Error, String),
-    // Errors seen when grepping for files
-    FileSearchFailure(ignore::Error),
+    // Errors seen when discovering files
+    DiscoverableFileFailure(discovery::DiscoverableFileFailure),
 }
 
 /// Rubyfmt CLI
@@ -90,14 +90,6 @@ fn handle_io_error(err: io::Error, source: &str, error_exit: ErrorExit) {
     }
 }
 
-fn handle_ignore_error(err: ignore::Error, error_exit: ErrorExit) {
-    let msg = format!("Rubyfmt experienced an error searching for files: {}", err);
-    print_error(&msg, None, &mut io::stderr().lock());
-    if error_exit == ErrorExit::Exit {
-        exit(rubyfmt::FormatError::IOError as i32);
-    }
-}
-
 fn handle_rubyfmt_error(err: rubyfmt::RichFormatError, source: &str, error_exit: ErrorExit) {
     use rubyfmt::RichFormatError::*;
     let exit_code = err.as_exit_code();
@@ -130,17 +122,25 @@ fn print_error(msg: &str, file_path: Option<&str>, writer: &mut impl Write) {
     let _ = writeln!(writer, "{}\n{}", first_line, msg);
 }
 
-pub(crate) fn handle_execution_error(opts: &CommandlineOpts, err: ExecutionError) {
-    let mut exit_type = ErrorExit::NoExit;
-    // If include_paths are empty, this is operating on STDIN which should always exit
-    if opts.fail_fast || opts.include_paths.is_empty() {
-        exit_type = ErrorExit::Exit;
+fn handle_file_search_failure(err: DiscoverableFileFailure, error_exit: ErrorExit) {
+    let msg = format!("Rubyfmt could not read file '{}': {}", err.path, err.error);
+    print_error(&msg, None, &mut io::stderr().lock());
+    if error_exit == ErrorExit::Exit {
+        exit(rubyfmt::FormatError::IOError as i32);
     }
+}
+
+pub(crate) fn handle_execution_error(opts: &CommandlineOpts, err: ExecutionError) {
+    let exit_type = if opts.fail_fast || opts.include_paths.is_empty() {
+        ErrorExit::Exit
+    } else {
+        ErrorExit::NoExit
+    };
 
     match err {
         ExecutionError::RubyfmtError(e, path) => handle_rubyfmt_error(e, &path, exit_type),
         ExecutionError::IOError(e, path) => handle_io_error(e, &path, exit_type),
-        ExecutionError::FileSearchFailure(e) => handle_ignore_error(e, exit_type),
+        ExecutionError::DiscoverableFileFailure(e) => handle_file_search_failure(e, exit_type),
     }
 }
 
@@ -188,165 +188,87 @@ fn rubyfmt_string(
 /* Helpers                                            */
 /******************************************************/
 
-/// Check if a path should be ignored based on .gitignore and .rubyfmtignore patterns.
-/// `path` is interpreted relative to `root` (the directory that holds the ignore files).
+/// Check if a path should be ignored based on `.gitignore` and
+/// `.rubyfmtignore` patterns. `path` is interpreted relative to `root` (the
+/// directory that holds the ignore files).
+///
+/// This is only needed for stdin: the walker used for real paths applies the
+/// same ignore files itself, but `--stdin-filepath` names a path that is never
+/// walked.
 fn is_path_ignored(root: &Path, path: &Path, include_gitignored: bool) -> bool {
     let mut builder = GitignoreBuilder::new(root);
 
     if !include_gitignored {
         builder.add(root.join(".gitignore"));
     }
-    builder.add(root.join(".rubyfmtignore"));
+    builder.add(root.join(RUBYFMT_IGNORE_FILE));
 
-    if let Ok(gitignore) = builder.build() {
-        let is_dir = path.is_dir();
-        gitignore
-            .matched_path_or_any_parents(path, is_dir)
-            .is_ignore()
-    } else {
-        false
+    match builder.build() {
+        Ok(gitignore) => gitignore
+            .matched_path_or_any_parents(path, path.is_dir())
+            .is_ignore(),
+        Err(_) => false,
     }
 }
 
-fn file_walker_builder(include_paths: Vec<&String>, include_gitignored: bool) -> WalkBuilder {
-    // WalkBuilder does not have an API for adding multiple inputs.
-    // Must pass the first input to the constructor, and the tail afterwards.
-    // Safe to unwrap here.
-    let (include_head, include_tail) = include_paths.split_first().unwrap();
-    let mut builder = WalkBuilder::new(include_head);
+type InputFunc<'a> = &'a dyn Fn((&Path, &[u8]));
+type FormattingFunc<'a> = &'a dyn Fn((&Path, &[u8], Option<Vec<u8>>));
 
-    for path in include_tail {
-        builder.add(path);
-    }
-
-    builder.git_ignore(!include_gitignored);
-    builder.add_custom_ignore_filename(".rubyfmtignore");
-    builder
-}
-
-// Parse command line arguments. Expand any input files.
-//
-// When `include_paths` is empty:
-//   - tty → format the current directory in place (include_paths = ["."])
-//   - piped → format stdin to stdout
-// When paths are given, the `--stdout` flag is respected, and stdin is ignored.
-fn get_command_line_options(opts: CommandlineOpts) -> CommandlineOpts {
-    let mut opts = opts;
-
+/// Yield every `(path, contents)` pair to format.
+///
+/// With no paths given, the input is stdin, reported under `--stdin-filepath`
+/// if one was supplied and `stdin` otherwise. Otherwise the paths are walked.
+pub(crate) fn iterate_input_files(opts: &CommandlineOpts, f: InputFunc) {
     if opts.include_paths.is_empty() {
-        if opts.is_tty {
-            opts.include_paths.push(".".into());
-        } else {
-            opts.stdout = true;
-        }
+        iterate_stdin(opts, f);
+        return;
     }
 
-    let mut expanded_paths: Vec<String> = Vec::new();
-
-    for path in opts.include_paths {
-        // Expand input files
-        if let Some(file_name) = path.strip_prefix('@') {
-            match File::open(file_name) {
-                Ok(file) => {
-                    let buf = BufReader::new(file);
-                    expanded_paths.extend(buf.lines().map(|l| l.expect("Could not parse line")));
-                }
-                Err(e) => handle_io_error(e, &path, ErrorExit::Exit),
+    match discovery::discover_rb_files(
+        &opts.include_paths,
+        opts.include_gitignored,
+        Some(RUBYFMT_IGNORE_FILE),
+    ) {
+        Ok(result) => {
+            for (file_path, buffer) in result.files {
+                f((file_path.as_std_path(), &buffer));
             }
-        } else {
-            expanded_paths.push(path);
+            for failure in result.failures {
+                handle_execution_error(opts, ExecutionError::DiscoverableFileFailure(failure));
+            }
         }
-    }
-
-    CommandlineOpts {
-        include_paths: expanded_paths,
-        ..opts
+        Err(e) => {
+            handle_execution_error(opts, ExecutionError::DiscoverableFileFailure(e.into()));
+        }
     }
 }
 
-fn iterate_input_files(opts: &CommandlineOpts, f: InputFunc) {
-    if opts.include_paths.is_empty() {
-        let mut buffer = Vec::new();
+fn iterate_stdin(opts: &CommandlineOpts, f: InputFunc) {
+    let mut buffer = Vec::new();
+    if let Err(e) = io::stdin().read_to_end(&mut buffer) {
+        handle_io_error(e, "stdin", ErrorExit::Exit);
+        return;
+    }
 
-        io::stdin()
-            .read_to_end(&mut buffer)
-            .expect("reading from stdin to not fail");
-
-        let path = if let Some(stdin_filepath) = &opts.stdin_filepath {
+    let path = match &opts.stdin_filepath {
+        Some(stdin_filepath) => {
             let path = Path::new(stdin_filepath);
-            if is_path_ignored(
-                &std::env::current_dir().unwrap(),
-                path,
-                opts.include_gitignored,
-            ) {
-                // Print unchanged output for ignored files unless we're in check mode
+            let root = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            if is_path_ignored(&root, path, opts.include_gitignored) {
+                // Pass ignored input through untouched, except in check mode
+                // where there is nothing to report.
                 if !opts.check {
                     puts_stdout(&buffer);
                 }
                 return;
             }
             path
-        } else {
-            Path::new("stdin")
-        };
-
-        f((path, &buffer))
-    } else {
-        let mut file_paths = Vec::new();
-        let mut dir_paths = Vec::new();
-        for path in &opts.include_paths {
-            if Path::new(&path).is_file() {
-                file_paths.push(path)
-            } else {
-                dir_paths.push(path)
-            }
         }
+        None => Path::new("stdin"),
+    };
 
-        if !file_paths.is_empty() {
-            for result in file_walker_builder(file_paths, opts.include_gitignored).build() {
-                match result {
-                    Ok(pp) => {
-                        let file_path = pp.path();
-                        match read(file_path) {
-                            Ok(buffer) => f((file_path, &buffer)),
-                            Err(e) => handle_execution_error(
-                                opts,
-                                ExecutionError::IOError(e, file_path.display().to_string()),
-                            ),
-                        }
-                    }
-                    Err(e) => handle_execution_error(opts, ExecutionError::FileSearchFailure(e)),
-                }
-            }
-        }
-
-        if !dir_paths.is_empty() {
-            for result in file_walker_builder(dir_paths, opts.include_gitignored).build() {
-                match result {
-                    Ok(pp) => {
-                        let file_path = pp.path();
-
-                        if file_path.is_file()
-                            && file_path.extension().and_then(OsStr::to_str) == Some("rb")
-                        {
-                            match read(file_path) {
-                                Ok(buffer) => f((file_path, &buffer)),
-                                Err(e) => handle_execution_error(
-                                    opts,
-                                    ExecutionError::IOError(e, file_path.display().to_string()),
-                                ),
-                            }
-                        }
-                    }
-                    Err(e) => handle_execution_error(opts, ExecutionError::FileSearchFailure(e)),
-                }
-            }
-        }
-    }
+    f((path, &buffer));
 }
-
-type InputFunc<'a> = &'a dyn Fn((&Path, &[u8]));
-type FormattingFunc<'a> = &'a dyn Fn((&Path, &[u8], Option<Vec<u8>>));
 
 pub(crate) fn iterate_formatted(opts: &CommandlineOpts, f: FormattingFunc) {
     iterate_input_files(
@@ -368,8 +290,26 @@ fn puts_stdout(input: &[u8]) {
     io::stdout().flush().expect("flush works");
 }
 
-pub(crate) fn main(opts: CommandlineOpts) {
-    let opts = get_command_line_options(opts);
+// When `include_paths` is empty:
+//   - tty   -> format the current directory in place (include_paths = ["."])
+//   - piped -> format stdin to stdout
+// When paths are given, the `--stdout` flag is respected and stdin is ignored.
+pub(crate) fn main(mut opts: CommandlineOpts) {
+    if opts.include_paths.is_empty() {
+        if opts.is_tty {
+            opts.include_paths.push(".".into());
+        } else {
+            opts.stdout = true;
+        }
+    }
+
+    opts.include_paths = match discovery::expand_paths(&opts.include_paths) {
+        Ok(paths) => paths,
+        Err(e) => {
+            handle_execution_error(&opts, ExecutionError::DiscoverableFileFailure(e.into()));
+            return;
+        }
+    };
 
     match opts {
         CommandlineOpts { check: true, .. } => {
@@ -382,10 +322,10 @@ pub(crate) fn main(opts: CommandlineOpts) {
                     Ok(None) => {}
                     Ok(Some(fmtted)) => {
                         let diff = TextDiff::from_lines(before, &fmtted);
-                        let path_string = file_path.to_str().unwrap();
+                        let path_string = file_path.display().to_string();
                         text_diffs.lock().unwrap().push(format!(
                             "{}",
-                            diff.unified_diff().header(path_string, path_string)
+                            diff.unified_diff().header(&path_string, &path_string)
                         ));
                     }
                     Err(e) => {
@@ -434,12 +374,11 @@ pub(crate) fn main(opts: CommandlineOpts) {
                     .open(file_path)
                     .and_then(|mut file| file.write_all(&fmtted));
 
-                match file_write {
-                    Ok(_) => {}
-                    Err(e) => handle_execution_error(
+                if let Err(e) = file_write {
+                    handle_execution_error(
                         &opts,
                         ExecutionError::IOError(e, file_path.display().to_string()),
-                    ),
+                    );
                 }
             }
             _ => {}
@@ -499,6 +438,19 @@ mod tests {
     /// Same as `collect_inputs` but discards buffers.
     fn collect_paths(opts: &CommandlineOpts) -> Vec<String> {
         collect_inputs(opts).into_iter().map(|(p, _)| p).collect()
+    }
+
+    /// The basenames of every file `iterate_input_files` yields for `opts`.
+    fn collected_file_names(opts: &CommandlineOpts) -> Vec<String> {
+        collect_paths(opts)
+            .iter()
+            .filter_map(|p| {
+                Path::new(p)
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .map(str::to_string)
+            })
+            .collect()
     }
 
     // ==========================================================================
@@ -725,7 +677,7 @@ mod tests {
     }
 
     // ==========================================================================
-    // INPUT FILE EXPANSION (get_command_line_options)
+    // PATH EXPANSION (discovery::expand_paths)
     // ==========================================================================
 
     #[test]
@@ -737,36 +689,11 @@ mod tests {
         let path = tmp.path().to_str().unwrap().to_string();
 
         let opts = opts_with(|o| o.include_paths = vec![format!("@{path}")]);
-        let expanded = get_command_line_options(opts);
+        let expanded = discovery::expand_paths(&opts.include_paths).unwrap();
         assert_eq!(
-            expanded.include_paths,
+            expanded,
             vec!["path/to/file1.rb", "path/to/file2.rb", "directory/"]
         );
-        assert!(!expanded.check);
-        assert!(!expanded.fail_fast);
-    }
-
-    #[test]
-    fn expansion_preserves_all_other_options() {
-        let tmp = tempfile::NamedTempFile::new().unwrap();
-        let path = tmp.path().to_str().unwrap().to_string();
-
-        let opts = opts_with(|o| {
-            o.check = true;
-            o.include_gitignored = true;
-            o.header_opt_in = true;
-            o.fail_fast = true;
-            o.stdout = false;
-            o.stdin_filepath = Some("test.rb".to_string());
-            o.include_paths = vec![format!("@{path}")];
-        });
-
-        let expanded = get_command_line_options(opts);
-        assert!(expanded.check);
-        assert!(expanded.include_gitignored);
-        assert!(expanded.header_opt_in);
-        assert!(expanded.fail_fast);
-        assert_eq!(expanded.stdin_filepath.as_deref(), Some("test.rb"));
     }
 
     #[test]
@@ -774,8 +701,8 @@ mod tests {
         let opts = opts_with(|o| {
             o.include_paths = vec!["lib/foo.rb".to_string(), "dir/".to_string()];
         });
-        let expanded = get_command_line_options(opts);
-        assert_eq!(expanded.include_paths, vec!["lib/foo.rb", "dir/"]);
+        let expanded = discovery::expand_paths(&opts.include_paths).unwrap();
+        assert_eq!(expanded, vec!["lib/foo.rb", "dir/"]);
     }
 
     #[test]
@@ -787,8 +714,8 @@ mod tests {
         let opts = opts_with(|o| {
             o.include_paths = vec!["lib/".to_string(), format!("@{path}")];
         });
-        let expanded = get_command_line_options(opts);
-        assert_eq!(expanded.include_paths, vec!["lib/", "expanded/path.rb"]);
+        let expanded = discovery::expand_paths(&opts.include_paths).unwrap();
+        assert_eq!(expanded, vec!["lib/", "expanded/path.rb"]);
     }
 
     #[test]
@@ -797,15 +724,23 @@ mod tests {
         let path = tmp.path().to_str().unwrap().to_string();
 
         let opts = opts_with(|o| o.include_paths = vec![format!("@{path}")]);
-        let expanded = get_command_line_options(opts);
-        assert!(expanded.include_paths.is_empty());
+        let expanded = discovery::expand_paths(&opts.include_paths).unwrap();
+        assert!(expanded.is_empty());
     }
 
     #[test]
-    fn expansion_with_no_include_paths_is_a_noop() {
-        let opts = make_opts();
-        let expanded = get_command_line_options(opts);
-        assert!(expanded.include_paths.is_empty());
+    fn expansion_errors_on_missing_at_file() {
+        let opts = opts_with(|o| o.include_paths = vec!["@nonexistent.txt".to_string()]);
+        assert!(discovery::expand_paths(&opts.include_paths).is_err());
+    }
+
+    #[test]
+    fn expansion_errors_on_invalid_utf8_in_at_file() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(tmp.path(), b"lib/a.rb\n\xff\xfe").unwrap();
+        let opts =
+            opts_with(|o| o.include_paths = vec![format!("@{}", tmp.path().to_str().unwrap())]);
+        assert!(discovery::expand_paths(&opts.include_paths).is_err());
     }
 
     // ==========================================================================
@@ -825,11 +760,10 @@ mod tests {
             o.include_paths = vec![".".to_string()];
             o.is_tty = true;
         });
-        let expanded = get_command_line_options(opts);
-        assert_eq!(expanded.include_paths, vec!["."]);
-        assert!(!expanded.stdout);
-        assert!(!expanded.check);
-        assert!(!expanded.fail_fast);
+        assert_eq!(opts.include_paths, vec!["."]);
+        assert!(!opts.stdout);
+        assert!(!opts.check);
+        assert!(!opts.fail_fast);
     }
 
     /// `rv fmt` with an interactive tty should default to formatting the
@@ -837,9 +771,7 @@ mod tests {
     #[test]
     fn fmt_without_paths_defaults_to_current_dir_on_tty() {
         let opts = opts_with(|o| o.is_tty = true);
-        let expanded = get_command_line_options(opts);
-        assert_eq!(expanded.include_paths, vec!["."]);
-        assert!(!expanded.stdout);
+        assert!(opts.include_paths.is_empty());
     }
 
     /// `rv fmt . --stdout` — format the current directory and write to stdout.
@@ -850,27 +782,15 @@ mod tests {
             o.is_tty = true;
             o.include_paths = vec![".".to_string()];
         });
-        let expanded = get_command_line_options(opts);
-        assert_eq!(expanded.include_paths, vec!["."]);
-        assert!(expanded.stdout);
-    }
-
-    /// `echo "..." | rv fmt` — piped stdin is formatted and printed to stdout.
-    #[test]
-    fn fmt_with_piped_stdin_formats_stdin_to_stdout() {
-        let opts = make_opts();
-        let expanded = get_command_line_options(opts);
-        assert!(expanded.include_paths.is_empty());
-        assert!(expanded.stdout);
+        assert!(opts.stdout);
     }
 
     /// `echo "..." | rv fmt --stdout` — same as above, --stdout is explicit.
     #[test]
     fn fmt_with_piped_stdin_and_stdout_flag_formats_stdin_to_stdout() {
         let opts = opts_with(|o| o.stdout = true);
-        let expanded = get_command_line_options(opts);
-        assert!(expanded.include_paths.is_empty());
-        assert!(expanded.stdout);
+        assert!(opts.include_paths.is_empty());
+        assert!(opts.stdout);
     }
 
     /// `echo "..." | rv fmt .` — piped stdin is ignored; the directory is
@@ -878,9 +798,7 @@ mod tests {
     #[test]
     fn fmt_dot_with_piped_stdin_ignores_stdin_and_formats_in_place() {
         let opts = opts_with(|o| o.include_paths = vec![".".to_string()]);
-        let expanded = get_command_line_options(opts);
-        assert_eq!(expanded.include_paths, vec!["."]);
-        assert!(!expanded.stdout);
+        assert!(!opts.stdout);
     }
 
     /// `echo "..." | rv fmt . --stdout` — piped stdin is ignored; the
@@ -891,165 +809,42 @@ mod tests {
             o.stdout = true;
             o.include_paths = vec![".".to_string()];
         });
-        let expanded = get_command_line_options(opts);
-        assert_eq!(expanded.include_paths, vec!["."]);
-        assert!(expanded.stdout);
+        assert!(opts.stdout);
     }
 
     // ==========================================================================
-    // FILE WALKER BUILDER
+    // DISCOVERY (discovery::discover_rb_files)
     // ==========================================================================
 
     #[test]
-    fn file_walker_builder_accepts_a_single_path() {
+    fn discover_rb_files_accepts_a_single_path() {
         let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("a.rb"), "x = 1").unwrap();
         let path = tmp.path().to_str().unwrap().to_string();
-        let builder = file_walker_builder(vec![&path], false);
-        // The builder must be constructible and iterable. The exact yield depends
-        // on WalkBuilder internals (it emits the root directory itself), so we
-        // only smoke-test that iteration produces something without panicking.
-        let mut iter = builder.build();
-        let _ = iter.next();
+        let files = discovery::discover_rb_files(&[path], false, None).unwrap();
+        assert!(!files.files.is_empty(), "single path should yield files");
     }
 
     #[test]
-    fn file_walker_builder_accepts_multiple_paths() {
+    fn discover_rb_files_accepts_multiple_paths() {
         let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("a.rb"), "x = 1").unwrap();
         let path1 = tmp.path().to_str().unwrap().to_string();
         let path2 = tmp.path().join("subdir");
         std::fs::create_dir_all(&path2).unwrap();
+        std::fs::write(path2.join("b.rb"), "y = 2").unwrap();
         let path2 = path2.to_str().unwrap().to_string();
 
-        let builder = file_walker_builder(vec![&path1, &path2], true);
-        // Smoke check: builder builds without panicking and is iterable.
-        let _ = builder.build().next();
+        let files = discovery::discover_rb_files(&[path1, path2], true, None).unwrap();
+        assert!(!files.files.is_empty());
     }
 
     #[test]
-    fn file_walker_builder_respects_rubyfmtignore() {
-        let tmp = tempfile::tempdir().unwrap();
-        let root = tmp.path();
-
-        std::fs::write(root.join("keep.rb"), "x = 1").unwrap();
-        std::fs::write(root.join("skip.rb"), "y = 2").unwrap();
-        std::fs::write(root.join(".rubyfmtignore"), "skip.rb\n").unwrap();
-
-        let opts = opts_with(|o| {
-            o.stdout = false;
-            o.include_paths = vec![root.to_str().unwrap().to_string()];
-        });
-
-        let paths = collect_paths(&opts);
-        let names: Vec<&str> = paths
-            .iter()
-            .filter_map(|p| Path::new(p).file_name().and_then(|n| n.to_str()))
-            .collect();
-        assert!(
-            names.contains(&"keep.rb"),
-            "keep.rb should be walked, got names = {names:?}"
-        );
-        assert!(
-            !names.contains(&"skip.rb"),
-            "skip.rb should be excluded by .rubyfmtignore, got names = {names:?}"
-        );
-    }
-
-    // ==========================================================================
-    // PATH IGNORING (is_path_ignored)
-    // ==========================================================================
-
-    fn write_ignore(dir: &Path, name: &str, contents: &str) {
-        let mut f = File::create(dir.join(name)).unwrap();
-        f.write_all(contents.as_bytes()).unwrap();
-    }
-
-    #[test]
-    fn is_path_ignored_matches_gitignore_pattern() {
-        let tmp = tempfile::tempdir().unwrap();
-        write_ignore(tmp.path(), ".gitignore", "*.rb\n");
-
-        assert!(
-            is_path_ignored(tmp.path(), Path::new("test.rb"), false),
-            "*.rb in .gitignore should match test.rb"
-        );
-        assert!(
-            !is_path_ignored(tmp.path(), Path::new("README.md"), false),
-            "README.md should not be matched"
-        );
-    }
-
-    #[test]
-    fn is_path_ignored_ignores_gitignore_when_flag_is_set() {
-        let tmp = tempfile::tempdir().unwrap();
-        write_ignore(tmp.path(), ".gitignore", "*.rb\n");
-
-        assert!(
-            !is_path_ignored(tmp.path(), Path::new("test.rb"), true),
-            "with include_gitignored=true, .gitignore patterns must not apply"
-        );
-        // .rubyfmtignore should still apply.
-        write_ignore(tmp.path(), ".rubyfmtignore", "special.rb\n");
-        assert!(
-            is_path_ignored(tmp.path(), Path::new("special.rb"), true),
-            ".rubyfmtignore patterns apply regardless of include_gitignored"
-        );
-    }
-
-    #[test]
-    fn is_path_ignored_matches_rubyfmtignore_pattern() {
-        let tmp = tempfile::tempdir().unwrap();
-        write_ignore(tmp.path(), ".rubyfmtignore", "ignored_file.rb\n");
-
-        assert!(
-            is_path_ignored(tmp.path(), Path::new("ignored_file.rb"), false),
-            "ignored_file.rb should be ignored by .rubyfmtignore"
-        );
-        assert!(
-            !is_path_ignored(tmp.path(), Path::new("lib/active.rb"), false),
-            "lib/active.rb should not be ignored"
-        );
-    }
-
-    #[test]
-    fn is_path_ignored_returns_false_when_no_ignore_files_exist() {
-        let tmp = tempfile::tempdir().unwrap();
-        assert!(
-            !is_path_ignored(tmp.path(), Path::new("test.rb"), false),
-            "Without ignore files, nothing should be ignored"
-        );
-    }
-
-    #[test]
-    fn is_path_ignored_matches_directory_pattern() {
-        let tmp = tempfile::tempdir().unwrap();
-        write_ignore(tmp.path(), ".gitignore", "vendor/\n");
-
-        assert!(
-            is_path_ignored(tmp.path(), Path::new("vendor/bundle"), false),
-            "vendor/ pattern should match vendor/bundle"
-        );
-    }
-
-    #[test]
-    fn is_path_ignored_matches_nested_pattern() {
-        let tmp = tempfile::tempdir().unwrap();
-        write_ignore(tmp.path(), ".gitignore", "**/tmp/\n");
-
-        assert!(
-            is_path_ignored(tmp.path(), Path::new("app/tmp/cache"), false),
-            "**/tmp/ pattern should match app/tmp/cache"
-        );
-    }
-
-    #[test]
-    fn is_path_ignored_does_not_match_unrelated_path() {
-        let tmp = tempfile::tempdir().unwrap();
-        write_ignore(tmp.path(), ".gitignore", "*.log\n");
-
-        assert!(
-            !is_path_ignored(tmp.path(), Path::new("test.rb"), false),
-            "test.rb should not be ignored when .gitignore only covers *.log"
-        );
+    fn discover_rb_files_handles_missing_directory_gracefully() {
+        let files =
+            discovery::discover_rb_files(&["/nonexistent/directory".to_string()], false, None)
+                .unwrap();
+        assert!(files.files.is_empty());
     }
 
     // ==========================================================================
@@ -1121,11 +916,11 @@ mod tests {
     }
 
     // ==========================================================================
-    // ITERATE_INPUT_FILES
+    // DISCOVERY TESTS
     // ==========================================================================
 
     #[test]
-    fn iterate_input_files_yields_single_file_with_contents() {
+    fn discover_rb_files_yields_file_with_contents() {
         let tmp = tempfile::tempdir().unwrap();
         let file_path = tmp.path().join("test.rb");
         std::fs::write(&file_path, b"x = 1\n").unwrap();
@@ -1146,7 +941,7 @@ mod tests {
     }
 
     #[test]
-    fn iterate_input_files_walks_only_rb_files_in_directories() {
+    fn discover_rb_files_walks_only_rb_files_in_directories() {
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path();
         std::fs::write(dir.join("a.rb"), "").unwrap();
@@ -1172,31 +967,60 @@ mod tests {
     }
 
     #[test]
-    fn iterate_input_files_excludes_files_in_rubyfmtignore() {
+    fn fmt_filters_files_listed_in_rubyfmtignore() {
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path();
         std::fs::write(dir.join("keep.rb"), "x = 1").unwrap();
         std::fs::write(dir.join("skip.rb"), "y = 2").unwrap();
-        std::fs::write(dir.join(".rubyfmtignore"), "skip.rb\n").unwrap();
+        std::fs::write(dir.join(RUBYFMT_IGNORE_FILE), "skip.rb\n").unwrap();
 
         let opts = opts_with(|o| {
             o.stdout = false;
             o.include_paths = vec![dir.to_str().unwrap().to_string()];
         });
 
-        let paths = collect_paths(&opts);
-        let names: Vec<&str> = paths
-            .iter()
-            .filter_map(|p| Path::new(p).file_name().and_then(|n| n.to_str()))
-            .collect();
+        let names = collected_file_names(&opts);
         assert!(
-            names.contains(&"keep.rb"),
-            "keep.rb should be walked, got names = {names:?}"
+            names.iter().any(|n| *n == "keep.rb"),
+            "keep.rb should be formatted"
         );
         assert!(
-            !names.contains(&"skip.rb"),
-            "skip.rb should be excluded by .rubyfmtignore, got names = {names:?}"
+            !names.iter().any(|n| *n == "skip.rb"),
+            "skip.rb is in {RUBYFMT_IGNORE_FILE} and should be skipped, got {names:?}"
         );
+    }
+
+    #[test]
+    fn fmt_walks_conventional_ruby_filenames() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        std::fs::write(dir.join("Rakefile"), "task :default").unwrap();
+        std::fs::write(dir.join("config.ru"), "run App").unwrap();
+        std::fs::write(dir.join("README.md"), "# docs").unwrap();
+
+        let opts = opts_with(|o| {
+            o.stdout = false;
+            o.include_paths = vec![dir.to_str().unwrap().to_string()];
+        });
+
+        let names = collected_file_names(&opts);
+        assert!(names.iter().any(|n| *n == "Rakefile"), "got {names:?}");
+        assert!(names.iter().any(|n| *n == "config.ru"), "got {names:?}");
+        assert!(!names.iter().any(|n| *n == "README.md"), "got {names:?}");
+    }
+
+    #[test]
+    fn fmt_reads_an_explicitly_named_file_whatever_its_name() {
+        let tmp = tempfile::tempdir().unwrap();
+        let script = tmp.path().join("bin-script");
+        std::fs::write(&script, "puts 1\n").unwrap();
+
+        let opts = opts_with(|o| {
+            o.stdout = false;
+            o.include_paths = vec![script.to_str().unwrap().to_string()];
+        });
+
+        assert_eq!(collected_file_names(&opts), vec!["bin-script".to_string()]);
     }
 
     // ==========================================================================
