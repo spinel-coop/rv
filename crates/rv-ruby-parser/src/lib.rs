@@ -17,6 +17,7 @@ use ruby_prism::{CommentType, Node};
 
 pub mod calls;
 pub(crate) mod visitor;
+pub mod yard;
 
 /// A byte-offset-based line index over the source.
 ///
