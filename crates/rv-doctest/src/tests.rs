@@ -33,26 +33,25 @@ fn documented_def(doc: &str, codes: &[&str], body: &str) -> String {
     source
 }
 
-#[test]
-fn strict_fence_is_extracted() {
-    let source = documented_def(
+/// The `add(1, 2)` doctest example shared by extraction tests.
+fn add_example_doc() -> String {
+    documented_def(
         "Adds two numbers.",
         &["add(1, 2)"],
         "def add(a, b)\n  a + b\nend",
-    );
-    let snips = snippets(&source);
+    )
+}
+
+#[test]
+fn strict_fence_is_extracted() {
+    let snips = snippets(&add_example_doc());
     assert_eq!(snips.len(), 1);
     assert_snippet!(snips, 0, name: "add", kind: Def, code: "  add(1, 2)");
 }
 
 #[test]
 fn snippet_start_line_points_inside_fence() {
-    let source = documented_def(
-        "Adds two numbers.",
-        &["add(1, 2)"],
-        "def add(a, b)\n  a + b\nend",
-    );
-    let snips = snippets(&source);
+    let snips = snippets(&add_example_doc());
     assert_eq!(snips.len(), 1);
     assert_eq!(snips[0].start_line, 4);
 }
@@ -85,44 +84,37 @@ fn ruby_fence_is_case_insensitive() {
 }
 
 #[test]
-fn non_ruby_fence_is_not_extracted() {
-    let source = indoc! {"
-        # Example:
-        #
-        #   ```text
-        #   some output
-        #   ```
-    "};
-    assert!(snippets(source).is_empty());
-}
-
-#[test]
-fn unterminated_fence_is_ignored() {
-    let source = indoc! {"
-        # Example:
-        #
-        #   ```ruby
-        #   add(1, 2)
-        #
-        def add(a, b)
-          a + b
-        end
-    "};
-    assert!(snippets(source).is_empty());
-}
-
-#[test]
-fn prose_is_not_a_snippet() {
-    let source = indoc! {"
-        # Adds two numbers.
-        #
-        # Returns the sum.
-        #
-        def add(a, b)
-          a + b
-        end
-    "};
-    assert!(snippets(source).is_empty());
+fn unsnippetable_input_yields_nothing() {
+    for source in [
+        indoc! {"
+            # Example:
+            #
+            #   ```text
+            #   some output
+            #   ```
+        "},
+        indoc! {"
+            # Example:
+            #
+            #   ```ruby
+            #   add(1, 2)
+            #
+            def add(a, b)
+              a + b
+            end
+        "},
+        indoc! {"
+            # Adds two numbers.
+            #
+            # Returns the sum.
+            #
+            def add(a, b)
+              a + b
+            end
+        "},
+    ] {
+        assert!(snippets(source).is_empty());
+    }
 }
 
 #[test]
@@ -195,33 +187,18 @@ fn assertion_checker_applies_to_minitest() {
 }
 
 #[test]
-fn checker_dispatches_to_assert_for_minitest() {
-    let snips = snippets(indoc! {"
-        # Docs.
-        #
-        #   ```ruby
-        #   require \"minitest\"
-        #   ```
-        #
-        def foo = 1
-    "});
-    assert_eq!(snips.len(), 1);
-    assert!(assertion_applies_to(&snips[0].code));
-}
-
-#[test]
-fn checker_dispatches_to_syntax_for_non_minitest() {
-    let snips = snippets(indoc! {"
-        # Docs.
-        #
-        #   ```ruby
-        #   add(1, 2)
-        #   ```
-        #
-        def add(a, b) = a + b
-    "});
-    assert_eq!(snips.len(), 1);
-    assert!(!assertion_applies_to(&snips[0].code));
+fn checker_dispatches_by_minitest_presence() {
+    for (fence_code, item_body, expects_assertion) in [
+        (r#"require "minitest""#, "def foo = 1", true),
+        ("add(1, 2)", "def add(a, b) = a + b", false),
+    ] {
+        let source = format!(
+            "# Docs.\n#\n#   ```ruby\n#   {fence_code}\n#   ```\n#\n{item_body}\n"
+        );
+        let snips = snippets(&source);
+        assert_eq!(snips.len(), 1);
+        assert_eq!(assertion_applies_to(&snips[0].code), expects_assertion);
+    }
 }
 
 use rv_ruby::Ruby;
