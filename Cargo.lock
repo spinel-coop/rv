@@ -3303,6 +3303,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rv-ruby-parser"
+version = "0.1.0"
+dependencies = [
+ "indoc",
+ "insta",
+ "ruby-prism",
+]
+
+[[package]]
 name = "rv-version"
 version = "0.1.0"
 dependencies = [
