@@ -1,5 +1,13 @@
 # `rv` changelog
 
+## rv 0.7.1 (24 Sept, 2026)
+
+### Fixed
+
+  - remove jemalloc, accidentally added via rubyfmt
+
+Thank you to new contributor @jalcine!
+
 ## rv 0.7.0 (2 Sept, 2026)
 
 ### Added
