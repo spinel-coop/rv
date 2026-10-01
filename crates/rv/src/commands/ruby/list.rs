@@ -195,7 +195,7 @@ pub(crate) async fn list(
     // Create entries for output
     let entries: Vec<JsonRubyEntry> = rubies_map.into_values().flatten().collect();
 
-    let explanation = config.requested_ruby.explain(active_installed);
+    let explanation = format!("* {}", config.requested_ruby.explain(active_installed));
 
     print_entries(entries, format, no_color, &explanation)
 }

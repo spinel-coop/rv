@@ -1,5 +1,6 @@
 mod clean_install;
 mod common;
+mod doctor;
 mod ruby;
 mod run;
 mod shell;
