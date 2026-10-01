@@ -20,7 +20,7 @@ fn test_ruby_pin_basic_test() {
     let version_file = test.temp_root().join(".ruby-version");
     assert!(version_file.exists());
     let content = fs_err::read_to_string(&version_file).unwrap();
-    assert_eq!(content, format!("3.4.7\n"));
+    assert_eq!(content, "3.4.7\n".to_string());
 
     let show_pin = test.ruby_pin(&[]);
     show_pin.assert_success();
@@ -39,7 +39,7 @@ fn test_ruby_pin_basic_test() {
 
     assert!(version_file.exists());
     let content = fs_err::read_to_string(&version_file).unwrap();
-    assert_eq!(content, format!("3.2.0\n"));
+    assert_eq!(content, "3.2.0\n".to_string());
 
     let show_pin = test.ruby_pin(&[]);
     show_pin.assert_success();
@@ -107,7 +107,7 @@ fn test_pin_runs_with_tool_versions() {
     // Verify the file contains the second version
     assert!(tool_versions_file.exists());
     let content = fs_err::read_to_string(&tool_versions_file).unwrap();
-    assert_eq!(content, format!("ruby 3.4.0\n"));
+    assert_eq!(content, "ruby 3.4.0\n".to_string());
 
     // try with leading whitespace
     fs_err::write(&tool_versions_file, " ruby 3.0.0").unwrap();

@@ -151,7 +151,7 @@ pub(crate) async fn run(
     let gem_home = installed_tool.dir.clone();
     let ruby_version_path = installed_tool.dir.join(".ruby-version");
     if !ruby_version_path.exists() {
-        return Err(Error::NoRubyVersion)?;
+        Err(Error::NoRubyVersion)?;
     }
     let ruby_version: RubyRequest = fs::read_to_string(&ruby_version_path)
         .map_err(Error::CouldNotReadRubyVersion)?
