@@ -16,6 +16,10 @@ pub enum Error {
         dir: Utf8PathBuf,
         error: std::io::Error,
     },
+    #[error(
+        "Refusing to uninstall a unmanaged Ruby at {path:?}; only rv-managed Rubies can be uninstalled"
+    )]
+    UnmanagedRuby { path: Utf8PathBuf },
 }
 
 type Result<T> = miette::Result<T, Error>;
@@ -26,6 +30,15 @@ pub(crate) async fn uninstall(global_args: &GlobalArgs, request: RubyRequest) ->
 
     let ruby = config.current_ruby().ok_or(Error::NoMatchingRuby)?;
     let ruby_path = ruby.path;
+
+    if !config
+        .ruby_dirs
+        .iter()
+        .any(|rubydir| ruby_path.starts_with(rubydir))
+    {
+        return Err(Error::UnmanagedRuby { path: ruby_path });
+    }
+
     println!("Deleting {}", ruby_path.cyan());
 
     // Delete the dir at this Ruby version's path.

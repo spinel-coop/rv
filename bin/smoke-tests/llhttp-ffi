@@ -15,7 +15,7 @@ source "$(dirname "$0")/shared.sh"
 macos_docker_reexec
 
 setup_packages \
-    libffi-dev
+  libffi-dev
 
 setup_rv
 
@@ -28,6 +28,7 @@ cp "$REPO_ROOT/crates/rv-lockfile/tests/inputs/Gemfile.llhttp-ffi" "$TEST_DIR/Ge
 cp "$REPO_ROOT/crates/rv-lockfile/tests/inputs/Gemfile.llhttp-ffi.lock" "$TEST_DIR/Gemfile.lock"
 cd "$TEST_DIR"
 
+rv ruby install 4.0.6
 rv ci
 
 check_rv_ci_noop

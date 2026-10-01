@@ -26,6 +26,43 @@ fn test_clean_install_download_test_gem() {
     mock.assert();
 }
 
+#[cfg(unix)]
+#[test]
+fn test_clean_install_rejects_unmanaged_ruby() {
+    let mut test = RvTest::new();
+    let system_dir = test.temp_root().join("system");
+    let executable = test.create_system_ruby(&system_dir, "4.0.1");
+    test.env
+        .insert("PATH".into(), system_dir.join("bin").into());
+    let download = test
+        .mock_gem_download("test-gem-1.0.0.gem")
+        .expect(0)
+        .create();
+    let ruby_download = test.mock_ruby_download("4.0.1").expect(0).create();
+
+    for command in ["ci", "clean-install"] {
+        // Reject the Ruby even before checking for a lockfile.
+        let output = test.rv(&[command]);
+        output
+            .assert_failure()
+            .assert_stderr_contains("UnmanagedRuby");
+        output.assert_stderr_contains(system_dir.as_str());
+        output.assert_stderr_contains("ruby-4.0.1");
+    }
+
+    test.use_gemfile("../rv-lockfile/tests/inputs/Gemfile.testsource");
+    test.use_lockfile("../rv-lockfile/tests/inputs/Gemfile.testsource.lock");
+    test.replace_source("http://gems.example.com", &test.server_url());
+    test.ci(&[])
+        .assert_failure()
+        .assert_stderr_contains("UnmanagedRuby");
+    assert!(!test.current_dir().join("app").exists());
+    assert!(!system_dir.join("lib").exists());
+    assert!(executable.exists());
+    download.assert();
+    ruby_download.assert();
+}
+
 #[test]
 fn test_clean_install_input_validation() {
     let mut test = RvTest::new();
