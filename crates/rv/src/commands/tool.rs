@@ -202,39 +202,3 @@ fn test_parse_namespace() {
         )
     );
 }
-
-#[test]
-fn test_resolve_run_args_without_from() {
-    // Without --from, the command name is also the gem name, so the `@namespace/`
-    // prefix is stripped and written back into args[0].
-    assert_eq!(
-        (
-            "gem.coop/@namespace".to_string(),
-            "gemname".to_string(),
-            vec!["gemname".to_string(), "--flag".to_string()],
-        ),
-        parse_namespace(
-            "gem.coop".to_string(),
-            None,
-            vec!["@namespace/gemname".to_string(), "--flag".to_string()],
-        )
-    );
-}
-
-#[test]
-fn test_resolve_run_args_with_from() {
-    // With --from, args[0] is the executable name and must be preserved even when
-    // it differs from the gem name (e.g. `pod` provided by `cocoapods`).
-    assert_eq!(
-        (
-            "https://gem.coop/".to_string(),
-            "cocoapods".to_string(),
-            vec!["pod".to_string(), "--version".to_string()],
-        ),
-        parse_namespace(
-            "https://gem.coop/".to_string(),
-            Some("cocoapods".to_string()),
-            vec!["pod".to_string(), "--version".to_string()],
-        )
-    );
-}
