@@ -206,10 +206,7 @@ fn deindent(lines: &[String]) -> String {
         _ => return String::new(),
     };
 
-    let body: Vec<&str> = lines[first..=last]
-        .iter()
-        .map(String::as_str)
-        .collect();
+    let body: Vec<&str> = lines[first..=last].iter().map(String::as_str).collect();
 
     let indent = body
         .iter()
@@ -219,13 +216,7 @@ fn deindent(lines: &[String]) -> String {
         .unwrap_or(0);
 
     body.iter()
-        .map(|l| {
-            if l.len() >= indent {
-                &l[indent..]
-            } else {
-                l
-            }
-        })
+        .map(|l| if l.len() >= indent { &l[indent..] } else { l })
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -282,9 +273,7 @@ mod tests {
 
     #[test]
     fn param_with_keyword_splat() {
-        let doc = parse(&comments(&[
-            "@param [Hash] opts  Keyword options.",
-        ]));
+        let doc = parse(&comments(&["@param [Hash] opts  Keyword options."]));
         assert_eq!(doc.params[0].name, "opts");
     }
 
@@ -325,7 +314,10 @@ mod tests {
         ]));
         assert_eq!(doc.examples.len(), 1);
         assert_eq!(doc.examples[0].title.as_deref(), Some("Sum two numbers"));
-        assert_eq!(doc.examples[0].body, "result = add(1, 2)\nassert_equal 3, result");
+        assert_eq!(
+            doc.examples[0].body,
+            "result = add(1, 2)\nassert_equal 3, result"
+        );
     }
 
     #[test]
@@ -337,7 +329,10 @@ mod tests {
         ]));
         assert_eq!(doc.examples.len(), 1);
         assert!(doc.examples[0].title.is_none());
-        assert_eq!(doc.examples[0].body, "result = add(1, 2)\nassert_equal 3, result");
+        assert_eq!(
+            doc.examples[0].body,
+            "result = add(1, 2)\nassert_equal 3, result"
+        );
     }
 
     #[test]
@@ -378,12 +373,7 @@ mod tests {
 
     #[test]
     fn deindent_strips_leading_blank() {
-        let doc = parse(&comments(&[
-            "@example",
-            "",
-            "  add(1, 2)",
-            "",
-        ]));
+        let doc = parse(&comments(&["@example", "", "  add(1, 2)", ""]));
         assert_eq!(doc.examples[0].body, "add(1, 2)");
     }
 
@@ -429,9 +419,7 @@ mod tests {
 
     #[test]
     fn no_tags_description_only() {
-        let doc = parse(&comments(&[
-            "A simple greeting method.",
-        ]));
+        let doc = parse(&comments(&["A simple greeting method."]));
         assert!(!doc.has_tags);
         assert_eq!(doc.description.len(), 1);
     }
