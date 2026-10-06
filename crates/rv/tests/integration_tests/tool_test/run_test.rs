@@ -84,6 +84,37 @@ mod test {
     }
 
     #[test]
+    fn test_tool_run_with_from_flag() {
+        let mut test = RvTest::new();
+
+        let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
+        let ruby_mock = test.mock_ruby_download("4.0.0").create();
+        let info_endpoint_mock = test.mock_info_endpoint("cocoapods").create();
+        let tarball_mock = test.mock_gem_download("cocoapods-1.0.0.gem").create();
+
+        // `pod` is provided by the `cocoapods` gem, so `--from` must be honored and
+        // args[0] must remain the executable name (`pod`), not the gem name.
+        let output = test.tool_run(&["--from", "cocoapods", "pod"]);
+
+        let tool_home = "/tmp/home/.local/share/rv/tools/cocoapods@1.0.0";
+        let expected_info_message = format!(
+            "Installed {} version 1.0.0 to {}",
+            "cocoapods".cyan(),
+            tool_home.cyan()
+        );
+        output.assert_success();
+        output.assert_stdout_contains(&expected_info_message);
+
+        releases_mock.assert();
+        ruby_mock.assert();
+        info_endpoint_mock.assert();
+        tarball_mock.assert();
+
+        // Manually remove tool
+        rm_rf(test.data_dir().join("rv/tools/cocoapods@1.0.0")).unwrap();
+    }
+
+    #[test]
     fn test_tool_run_with_extra_gem() {
         let mut test = RvTest::new();
 
