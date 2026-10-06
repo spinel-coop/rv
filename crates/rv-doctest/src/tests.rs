@@ -192,9 +192,8 @@ fn checker_dispatches_by_minitest_presence() {
         (r#"require "minitest""#, "def foo = 1", true),
         ("add(1, 2)", "def add(a, b) = a + b", false),
     ] {
-        let source = format!(
-            "# Docs.\n#\n#   ```ruby\n#   {fence_code}\n#   ```\n#\n{item_body}\n"
-        );
+        let source =
+            format!("# Docs.\n#\n#   ```ruby\n#   {fence_code}\n#   ```\n#\n{item_body}\n");
         let snips = snippets(&source);
         assert_eq!(snips.len(), 1);
         assert_eq!(assertion_applies_to(&snips[0].code), expects_assertion);
