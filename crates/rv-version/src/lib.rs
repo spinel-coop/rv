@@ -370,7 +370,8 @@ impl Ord for Version {
             }
         }
 
-        Ordering::Equal
+        // Break natural-order ties using the same canonical segments as Eq.
+        self.canonical_segments().cmp(&other.canonical_segments())
     }
 }
 
@@ -440,6 +441,53 @@ mod tests {
         assert!(v("1.8.2") > v("1.8.2.a"));
         assert!(v("1.8.2.b") > v("1.8.2.a"));
         assert!(v("1.8.2.a10") > v("1.8.2.a9"));
+    }
+
+    #[test]
+    fn test_version_order_tiebreak_distinguishes_padded_string_segments() {
+        let unpadded = v("1.a1");
+        let padded = v("1.a01");
+
+        assert_ne!(unpadded, padded);
+        assert_eq!(unpadded.cmp(&padded), Ordering::Greater);
+        assert_eq!(padded.cmp(&unpadded), Ordering::Less);
+    }
+
+    #[test]
+    fn test_version_order_tiebreak_preserves_distinct_set_entries() {
+        let mut versions = std::collections::BTreeSet::new();
+        assert!(versions.insert(v("1.a1")));
+        assert!(versions.insert(v("1.a01")));
+        assert_eq!(versions.len(), 2);
+        assert!(versions.contains(&v("1.a1")));
+        assert!(versions.contains(&v("1.a01")));
+    }
+
+    #[test]
+    fn test_version_order_tiebreak_preserves_canonical_aliases() {
+        for (left, right) in [
+            ("1", "1.0.0"),
+            ("01.0", "1"),
+            ("1.a1", "1.0.0.a1.0.0"),
+            ("1.a01", "1.0.a01.0"),
+            ("1-rc1", "1.pre.rc1"),
+        ] {
+            let left = v(left);
+            let right = v(right);
+
+            assert_eq!(left, right);
+            assert_eq!(left.cmp(&right), Ordering::Equal);
+            assert_eq!(right.cmp(&left), Ordering::Equal);
+        }
+    }
+
+    #[test]
+    fn test_version_order_tiebreak_preserves_decisive_later_segments() {
+        let greater = v("1.a01.2");
+        let lesser = v("1.a1.1");
+
+        assert_eq!(greater.cmp(&lesser), Ordering::Greater);
+        assert_eq!(lesser.cmp(&greater), Ordering::Less);
     }
 
     #[test]
