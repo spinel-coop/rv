@@ -110,6 +110,68 @@ mod tests {
         VersionPlatform::from_str(input).unwrap()
     }
 
+    fn release_with_dependencies(version: &str, dependencies: &[(&str, &str)]) -> GemRelease {
+        GemRelease {
+            version_platform: vp(version),
+            deps: dependencies
+                .iter()
+                .map(|(name, requirement)| rv_gem_types::ProjectDependency {
+                    name: (*name).to_string(),
+                    requirement: Requirement::new(vec![(*requirement).to_string()]).unwrap(),
+                })
+                .collect(),
+            metadata: crate::gemserver::Metadata::default(),
+        }
+    }
+
+    fn unsatisfiable_self_dependency_registry() -> (
+        GemRelease,
+        HashMap<GemName, HashMap<VersionPlatform, GemRelease>>,
+    ) {
+        let root = release_with_dependencies("0", &[("child", ">= 0")]);
+        let child_zero = release_with_dependencies("0", &[("child", ">= 1")]);
+        let child_one = release_with_dependencies("1", &[("missing", "= 0")]);
+        let registry = HashMap::from([
+            ("root".to_string(), HashMap::from([(vp("0"), root.clone())])),
+            (
+                "child".to_string(),
+                HashMap::from([(vp("0"), child_zero), (vp("1"), child_one)]),
+            ),
+        ]);
+        (root, registry)
+    }
+
+    #[test]
+    #[ignore = "PubGrub 0.4.0 can omit a required package after a self-dependency conflict"]
+    fn solve_rejects_unsatisfiable_self_dependency() {
+        let (root, registry) = unsatisfiable_self_dependency_registry();
+        let result = solve("root".to_string(), root, registry);
+        assert!(result.is_err(), "unsound successful solution: {result:?}");
+    }
+
+    #[test]
+    #[ignore = "PubGrub 0.4.0 can omit a required package after a self-dependency conflict"]
+    fn solve_multiple_rejects_unsatisfiable_self_dependency() {
+        let (root, registry) = unsatisfiable_self_dependency_registry();
+        let result = solve_multiple(vec![("root".to_string(), root)], registry);
+        assert!(result.is_err(), "unsound successful solution: {result:?}");
+    }
+
+    #[test]
+    fn satisfied_self_dependency_preserves_transitive_dependencies() {
+        let root = release_with_dependencies("0", &[("child", ">= 0")]);
+        let child = release_with_dependencies("0", &[("child", "= 0"), ("leaf", "= 0")]);
+        let leaf = release_with_dependencies("0", &[]);
+        let registry = HashMap::from([
+            ("root".to_string(), HashMap::from([(vp("0"), root.clone())])),
+            ("child".to_string(), HashMap::from([(vp("0"), child)])),
+            ("leaf".to_string(), HashMap::from([(vp("0"), leaf)])),
+        ]);
+        let solution = solve("root".to_string(), root, registry).unwrap();
+        assert_eq!(solution.len(), 3);
+        assert!(solution.iter().any(|(tuple, _)| tuple.name == "leaf"));
+    }
+
     /// Tests that the conversion from RubyGems requirements to PubGrub ranges is correct.
     #[test]
     fn test_mapping() {
