@@ -69,6 +69,7 @@ pub enum RubyCommand {
             let install_specific = "rv ruby install 4.0.1";
             let install_dev = "rv ruby install dev";
             let width = install_latest.len();
+            // editorconfig-checker-disable
             formatdoc!(
                 r#"
                     {}
@@ -85,6 +86,7 @@ pub enum RubyCommand {
                 install_dev.cyan(),
                 install_default.cyan(),
             )
+            // editorconfig-checker-enable
         }
 
     )]

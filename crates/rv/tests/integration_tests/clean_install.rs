@@ -137,6 +137,7 @@ fn test_ci_respects_rv_setting_gem_home() {
     let temp_dir = Utf8TempDir::new().expect("Failed to create temporary directory");
 
     let install_path = temp_dir.path().as_str().replace('\\', "/");
+    // editorconfig-checker-disable
     let config_content = format!(
         r#"
         rv{{
@@ -145,6 +146,7 @@ fn test_ci_respects_rv_setting_gem_home() {
         "#,
         install_path
     );
+    // editorconfig-checker-enable
 
     std::fs::write(project_dir.join("rv.kdl"), config_content).expect("Failed to write config");
 
