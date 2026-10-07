@@ -158,6 +158,17 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "PubGrub 0.4.0 reproduces the same failure without rv version types"]
+    fn pubgrub_rejects_unsatisfiable_self_dependency() {
+        let mut provider = pubgrub::OfflineDependencyProvider::<&str, Ranges<u32>>::new();
+        provider.add_dependencies("root", 0u32, [("child", Ranges::full())]);
+        provider.add_dependencies("child", 0u32, [("child", Ranges::higher_than(1u32))]);
+        provider.add_dependencies("child", 1u32, [("missing", Ranges::singleton(0u32))]);
+        let result = pubgrub::resolve(&provider, "root", 0u32);
+        assert!(result.is_err(), "unsound successful solution: {result:?}");
+    }
+
+    #[test]
     fn satisfied_self_dependency_preserves_transitive_dependencies() {
         let root = release_with_dependencies("0", &[("child", ">= 0")]);
         let child = release_with_dependencies("0", &[("child", "= 0"), ("leaf", "= 0")]);
