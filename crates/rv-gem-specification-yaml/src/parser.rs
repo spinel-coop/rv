@@ -857,11 +857,13 @@ mod tests {
 
     #[test]
     fn test_simple_yaml_parsing() {
+        // editorconfig-checker-disable
         let yaml = r#"--- !ruby/object:Gem::Specification
 name: test-gem
 version: !ruby/object:Gem::Version
   version: 1.0.0
 "#;
+        // editorconfig-checker-enable
 
         let spec = parse(yaml).expect("Failed to parse simple YAML");
         assert_eq!(spec.name, "test-gem");
@@ -870,6 +872,7 @@ version: !ruby/object:Gem::Version
 
     #[test]
     fn test_yaml_with_authors() {
+        // editorconfig-checker-disable
         let yaml = r#"--- !ruby/object:Gem::Specification
 name: test-gem
 version: !ruby/object:Gem::Version
@@ -877,6 +880,7 @@ version: !ruby/object:Gem::Version
 authors:
 - Test Author
 "#;
+        // editorconfig-checker-enable
 
         let spec = parse(yaml).expect("Failed to parse YAML with authors");
         assert_eq!(spec.name, "test-gem");

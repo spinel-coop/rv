@@ -535,6 +535,7 @@ mod tests {
 
     #[test]
     fn basic_gem() {
+        // editorconfig-checker-disable
         let input = "\
 GEM
   remote: https://rubygems.org/
@@ -575,6 +576,7 @@ GEM
       sorbet-runtime
       yard
 ";
+        // editorconfig-checker-enable
         let mut input = LocatingSlice::new(input);
         let out = parse_gem.parse_next(&mut input).unwrap();
         assert_eq!(out.specs.len(), 16);
@@ -585,9 +587,11 @@ GEM
     #[test]
     fn basic_spec_dep() {
         for input in [
+            // editorconfig-checker-disable
             "      prism (~> 1.0)\n",
             "      sorbet-runtime\n",
             "      sorbet-runtime (>= 0.5.9204)\n",
+            // editorconfig-checker-enable
         ] {
             let original_input = input;
             let mut input = LocatingSlice::new(input);
@@ -607,6 +611,7 @@ GEM
     #[test]
     fn test_git_section() {
         for input in [
+            // editorconfig-checker-disable
             "GIT
   remote: git://github.com/libgit2/rugged.git
   revision: 34a492ec7c5165824f39d8027d73712b0346aac2
@@ -649,6 +654,7 @@ GEM
       nokogiri (>= 1.15.7, != 1.16.7, != 1.16.6, != 1.16.5, != 1.16.4, != 1.16.3, != 1.16.2, != 1.16.1, != 1.16.0.rc1, != 1.16.0)
       tilt (~> 2)
 ",
+            // editorconfig-checker-enable
         ] {
             let i = LocatingSlice::new(input);
             let git_section = parse_git_section.parse(i).unwrap();
@@ -658,21 +664,25 @@ GEM
 
     #[test]
     fn test_parse_path() {
+        // editorconfig-checker-disable
         let input = "\
 PATH
   remote: pathgem
   specs:
     pathgem (0.1.0)
 ";
+        // editorconfig-checker-enable
         let i = LocatingSlice::new(input);
         parse_path.parse(i).unwrap();
     }
 
     #[test]
     fn test_parse_ruby_version_inner() {
+        // editorconfig-checker-disable
         let input = "\
   ruby 3.3.1p55
 ";
+        // editorconfig-checker-enable
         let mut i = LocatingSlice::new(input);
         let version = parse_ruby_version_inner.parse_next(&mut i).unwrap();
         assert_eq!(version.major, 3);
@@ -684,9 +694,11 @@ PATH
 
     #[test]
     fn test_parse_ruby_version_inner_without_patchlevel() {
+        // editorconfig-checker-disable
         let input = "\
   ruby 4.0.0
 ";
+        // editorconfig-checker-enable
         let mut i = LocatingSlice::new(input);
         let version = parse_ruby_version_inner.parse_next(&mut i).unwrap();
         assert_eq!(version.major, 4);
@@ -698,9 +710,11 @@ PATH
 
     #[test]
     fn test_parse_ruby_version_inner_with_p0() {
+        // editorconfig-checker-disable
         let input = "\
   ruby 3.2.0p0
 ";
+        // editorconfig-checker-enable
         let mut i = LocatingSlice::new(input);
         let version = parse_ruby_version_inner.parse_next(&mut i).unwrap();
         assert_eq!(version.major, 3);
@@ -714,9 +728,11 @@ PATH
     fn test_parse_ruby_version_inner_preserves_preview() {
         // Real format from GitHub: "ruby 3.3.0.preview2" (dot, not dash)
         // https://github.com/akitaonrails/rinhabackend-rails-api/blob/main/Gemfile.lock
+        // editorconfig-checker-disable
         let input = "\
   ruby 3.3.0.preview2
 ";
+        // editorconfig-checker-enable
         let mut i = LocatingSlice::new(input);
         let version = parse_ruby_version_inner.parse_next(&mut i).unwrap();
         assert_eq!(version.major, 3);
@@ -730,9 +746,11 @@ PATH
     fn test_parse_ruby_version_inner_preserves_rc() {
         // Real format from GitHub: "ruby 3.3.0.rc1" (dot, not dash)
         // https://github.com/pbstriker38/is_ruby_dead/blob/main/Gemfile.lock
+        // editorconfig-checker-disable
         let input = "\
   ruby 3.3.0.rc1
 ";
+        // editorconfig-checker-enable
         let mut i = LocatingSlice::new(input);
         let version = parse_ruby_version_inner.parse_next(&mut i).unwrap();
         assert_eq!(version.major, 3);
@@ -744,12 +762,14 @@ PATH
 
     #[test]
     fn test_parse_section_header() {
+        // editorconfig-checker-disable
         let input = "\
 PATH
   remote: pathgem
   specs:
     pathgem (0.1.0)
 ";
+        // editorconfig-checker-enable
         let mut i = LocatingSlice::new(input);
         let actual = parse_section_header.parse_next(&mut i).unwrap();
         assert_eq!(actual, "PATH");

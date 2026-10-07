@@ -3,11 +3,13 @@ use rv_gem_specification_yaml::parse;
 
 #[test]
 fn test_malformed_wrong_root_tag() {
+    // editorconfig-checker-disable
     let malformed_yaml = r#"
 --- !ruby/object:Gem::Version
 name: test-gem
 version: 1.0.0
 "#;
+    // editorconfig-checker-enable
 
     let result = parse(malformed_yaml);
     assert!(result.is_err());
@@ -23,12 +25,14 @@ version: 1.0.0
 
 #[test]
 fn test_malformed_version_wrong_tag() {
+    // editorconfig-checker-disable
     let malformed_yaml = r#"
 --- !ruby/object:Gem::Specification
 name: test-gem
 version: !ruby/object:Gem::Requirement
   version: 1.0.0
 "#;
+    // editorconfig-checker-enable
 
     let result = parse(malformed_yaml);
     assert!(result.is_err());
@@ -44,12 +48,14 @@ version: !ruby/object:Gem::Requirement
 
 #[test]
 fn test_malformed_version_missing_version_field() {
+    // editorconfig-checker-disable
     let malformed_yaml = r#"
 --- !ruby/object:Gem::Specification
 name: test-gem
 version: !ruby/object:Gem::Version
   invalid_field: 1.0.0
 "#;
+    // editorconfig-checker-enable
 
     let result = parse(malformed_yaml);
     assert!(result.is_err());
@@ -58,12 +64,14 @@ version: !ruby/object:Gem::Version
 
 #[test]
 fn test_malformed_version_wrong_type() {
+    // editorconfig-checker-disable
     let malformed_yaml = r#"
 --- !ruby/object:Gem::Specification
 name: test-gem
 version: !ruby/object:Gem::Version
   version: 123
 "#;
+    // editorconfig-checker-enable
 
     let result = parse(malformed_yaml);
     // This might succeed but create an invalid version
@@ -75,6 +83,7 @@ version: !ruby/object:Gem::Version
 
 #[test]
 fn test_malformed_dependency_wrong_tag() {
+    // editorconfig-checker-disable
     let malformed_yaml = r#"
 --- !ruby/object:Gem::Specification
 name: test-gem
@@ -89,6 +98,7 @@ dependencies:
           - !ruby/object:Gem::Version
             version: 6.0
 "#;
+    // editorconfig-checker-enable
 
     let result = parse(malformed_yaml);
     // With strict tag validation, wrong tag for dependency causes parse error
@@ -98,6 +108,7 @@ dependencies:
 
 #[test]
 fn test_malformed_requirement_wrong_tag() {
+    // editorconfig-checker-disable
     let malformed_yaml = r#"
 --- !ruby/object:Gem::Specification
 name: test-gem
@@ -109,6 +120,7 @@ dependencies:
     requirement: !ruby/object:Gem::Version
       version: 6.0
 "#;
+    // editorconfig-checker-enable
 
     let result = parse(malformed_yaml);
     // With strict tag validation, wrong tag for requirement causes parse error
@@ -118,6 +130,7 @@ dependencies:
 
 #[test]
 fn test_malformed_requirement_missing_requirements_field() {
+    // editorconfig-checker-disable
     let malformed_yaml = r#"
 --- !ruby/object:Gem::Specification
 name: test-gem
@@ -129,6 +142,7 @@ dependencies:
     requirement: !ruby/object:Gem::Requirement
       invalid_field: something
 "#;
+    // editorconfig-checker-enable
 
     let result = parse(malformed_yaml);
     // Missing requirements field in requirement causes parse error
@@ -138,6 +152,7 @@ dependencies:
 
 #[test]
 fn test_malformed_requirement_invalid_constraints() {
+    // editorconfig-checker-disable
     let malformed_yaml = r#"
 --- !ruby/object:Gem::Specification
 name: test-gem
@@ -152,6 +167,7 @@ dependencies:
           - !ruby/object:Gem::Version
             version: 6.0
 "#;
+    // editorconfig-checker-enable
 
     let result = parse(malformed_yaml);
     assert_matches!(result, Err(_));
@@ -159,6 +175,7 @@ dependencies:
 
 #[test]
 fn test_malformed_requirement_incomplete_constraint() {
+    // editorconfig-checker-disable
     let malformed_yaml = r#"
 --- !ruby/object:Gem::Specification
 name: test-gem
@@ -171,6 +188,7 @@ dependencies:
       requirements:
         - - ">="
 "#;
+    // editorconfig-checker-enable
 
     let result = parse(malformed_yaml);
     // Incomplete constraint in requirement causes parse error
@@ -180,6 +198,7 @@ dependencies:
 
 #[test]
 fn test_malformed_dependency_missing_name() {
+    // editorconfig-checker-disable
     let malformed_yaml = r#"
 --- !ruby/object:Gem::Specification
 name: test-gem
@@ -193,6 +212,7 @@ dependencies:
           - !ruby/object:Gem::Version
             version: 6.0
 "#;
+    // editorconfig-checker-enable
 
     let result = parse(malformed_yaml);
     assert!(result.is_err());
@@ -201,12 +221,14 @@ dependencies:
 
 #[test]
 fn test_malformed_non_string_keys() {
+    // editorconfig-checker-disable
     let malformed_yaml = r#"
 --- !ruby/object:Gem::Specification
 123: test-gem
 version: !ruby/object:Gem::Version
   version: 1.0.0
 "#;
+    // editorconfig-checker-enable
 
     let result = parse(malformed_yaml);
     assert!(result.is_err());
@@ -225,11 +247,13 @@ fn test_malformed_empty_document() {
 
 #[test]
 fn test_malformed_non_mapping_root() {
+    // editorconfig-checker-disable
     let malformed_yaml = r#"
 --- !ruby/object:Gem::Specification
 - array_item
 - another_item
 "#;
+    // editorconfig-checker-enable
 
     let result = parse(malformed_yaml);
     assert!(result.is_err());
@@ -238,10 +262,12 @@ fn test_malformed_non_mapping_root() {
 
 #[test]
 fn test_malformed_missing_required_fields() {
+    // editorconfig-checker-disable
     let malformed_yaml = r#"
 --- !ruby/object:Gem::Specification
 description: "A gem without name or version"
 "#;
+    // editorconfig-checker-enable
 
     let result = parse(malformed_yaml);
     assert!(result.is_err());
@@ -250,6 +276,7 @@ description: "A gem without name or version"
 
 #[test]
 fn test_malformed_invalid_yaml_syntax() {
+    // editorconfig-checker-disable
     let malformed_yaml = r#"
 --- !ruby/object:Gem::Specification
 name: test-gem
@@ -257,6 +284,7 @@ version: !ruby/object:Gem::Version
   version: 1.0.0
   invalid: [unclosed array
 "#;
+    // editorconfig-checker-enable
 
     let result = parse(malformed_yaml);
     assert!(result.is_err());
@@ -265,6 +293,7 @@ version: !ruby/object:Gem::Version
 
 #[test]
 fn test_malformed_version_in_constraint_wrong_tag() {
+    // editorconfig-checker-disable
     let malformed_yaml = r#"
 --- !ruby/object:Gem::Specification
 name: test-gem
@@ -279,6 +308,7 @@ dependencies:
           - !ruby/object:Gem::Dependency
             name: should_be_version
 "#;
+    // editorconfig-checker-enable
 
     let result = parse(malformed_yaml);
     // Wrong tag for version in constraint causes parse error
@@ -288,6 +318,7 @@ dependencies:
 
 #[test]
 fn test_malformed_nested_structure_corruption() {
+    // editorconfig-checker-disable
     let malformed_yaml = r#"
 --- !ruby/object:Gem::Specification
 name: test-gem
@@ -299,6 +330,7 @@ dependencies:
     requirement: !ruby/object:Gem::Requirement
       requirements: "should_be_array_not_string"
 "#;
+    // editorconfig-checker-enable
 
     let result = parse(malformed_yaml);
     // String instead of array for requirements field causes parse error
@@ -308,6 +340,7 @@ dependencies:
 
 #[test]
 fn test_malformed_metadata_wrong_type() {
+    // editorconfig-checker-disable
     let malformed_yaml = r#"
 --- !ruby/object:Gem::Specification
 name: test-gem
@@ -315,6 +348,7 @@ version: !ruby/object:Gem::Version
   version: 1.0.0
 metadata: "should_be_mapping_not_string"
 "#;
+    // editorconfig-checker-enable
 
     let result = parse(malformed_yaml);
     // String instead of mapping for metadata causes parse error

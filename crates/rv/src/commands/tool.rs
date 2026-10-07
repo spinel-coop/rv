@@ -23,7 +23,7 @@ pub struct InstallArgs {
     #[arg()]
     gem: String,
     /// What gem server to use.
-    #[arg(long, default_value = "https://gem.coop/")]
+    #[arg(long, default_value = "https://gem.coop")]
     gem_server: String,
     /// If true, and the tool is already installed, reinstall it.
     /// Otherwise, skip installing if the tool was already installed.
@@ -59,7 +59,7 @@ pub enum ToolCommand {
         #[arg(long = "from")]
         gem: Option<String>,
         /// What gem server to use, if the tool needs to be installed.
-        #[arg(long, default_value = "https://gem.coop/")]
+        #[arg(long, default_value = "https://gem.coop")]
         gem_server: String,
         /// By default, if the tool isn't installed, rv will install it.
         /// If this flag is given, rv will exit with an error instead of installing.
@@ -95,7 +95,7 @@ type Result<T> = miette::Result<T, Error>;
 pub(crate) async fn tool(global_args: &GlobalArgs, tool_args: ToolArgs) -> Result<()> {
     match tool_args.command {
         ToolCommand::Install(args) => {
-            let (gem_server, gem) = parse_namespace(args.gem_server, args.gem);
+            let (gem_server, gem) = split_namespace(args.gem_server, args.gem);
             install::install(global_args, gem, gem_server, args.force)
                 .await
                 .map(|_| ())?
@@ -107,13 +107,9 @@ pub(crate) async fn tool(global_args: &GlobalArgs, tool_args: ToolArgs) -> Resul
             gem_server,
             no_install,
             with,
-            mut args,
+            args,
         } => {
-            let gem = gem
-                .or(args.first().cloned())
-                .expect("gem or first arg is required");
-            let (gem_server, gem) = parse_namespace(gem_server, gem);
-            args[0] = gem.clone();
+            let (gem_server, gem, args) = parse_namespace(gem_server, gem, args);
             run::run(global_args, Some(gem), gem_server, no_install, with, args).await?
         }
         ToolCommand::Dir => dir::dir(global_args)?,
@@ -122,7 +118,34 @@ pub(crate) async fn tool(global_args: &GlobalArgs, tool_args: ToolArgs) -> Resul
     Ok(())
 }
 
-fn parse_namespace(gem_server: String, gem: String) -> (String, String) {
+// Normalize the gem server URL, the gem name, and the command to run.
+// When BIN, return URL, BIN, [BIN, ...]
+// When BIN --from GEM, return URL, GEM, [BIN, ...]
+// When @NS/BIN, return URL/@NS, BIN, [BIN, ...]
+// When @NS/BIN --from GEM, return URL/@NS, GEM, [BIN, ...]
+// When BIN --from @NS/GEM, return URL/@NS, GEM, [BIN, ...]
+fn parse_namespace(
+    gem_server: String,
+    gem: Option<String>,
+    mut args: Vec<String>,
+) -> (String, String, Vec<String>) {
+    let gem_given = gem.is_some();
+    let gem = gem
+        .or_else(|| args.first().cloned())
+        .expect("gem or first arg is required");
+    let gem_server = gem_server.trim_end_matches("/").to_string();
+    let (gem_server, gem) = split_namespace(gem_server, gem);
+    // Without `--from`, the command name is also the gem name, so write the
+    // namespace-stripped gem name back into args[0].
+    // With `--from`, args[0] is the executable name and must be preserved even
+    // when it differs from the gem name (e.g. `pod` provided by `cocoapods`).
+    if !gem_given {
+        args[0] = gem.clone();
+    }
+    (gem_server, gem, args)
+}
+
+fn split_namespace(gem_server: String, gem: String) -> (String, String) {
     if gem.starts_with('@')
         && let Some((namespace, inner_gem)) = gem.split_once('/')
     {
@@ -152,48 +175,117 @@ pub struct Installed {
 }
 
 #[test]
-fn test_parse_namespace() {
+fn test_split_namespace() {
     assert_eq!(
         ("https://gem.coop".to_string(), "indirect".to_string()),
-        parse_namespace("https://gem.coop".to_string(), "indirect".to_string())
+        split_namespace("https://gem.coop".to_string(), "indirect".to_string())
     );
     assert_eq!(
         ("gem.coop/@namespace".to_string(), "gemname".to_string()),
-        parse_namespace("gem.coop".to_string(), "@namespace/gemname".to_string())
+        split_namespace("gem.coop".to_string(), "@namespace/gemname".to_string())
     );
     assert_eq!(
         ("gem.coop".to_string(), "gemname@latest".to_string()),
-        parse_namespace("gem.coop".to_string(), "gemname@latest".to_string())
+        split_namespace("gem.coop".to_string(), "gemname@latest".to_string())
     );
     assert_eq!(
         ("gem.coop".to_string(), "gem/name".to_string()),
-        parse_namespace("gem.coop".to_string(), "gem/name".to_string())
+        split_namespace("gem.coop".to_string(), "gem/name".to_string())
     );
 
     assert_eq!(
         ("gem.coop".to_string(), "@gemname".to_string()),
-        parse_namespace("gem.coop".to_string(), "@gemname".to_string())
+        split_namespace("gem.coop".to_string(), "@gemname".to_string())
     );
     assert_eq!(
         ("gem.coop/@".to_string(), "gemname".to_string()),
-        parse_namespace("gem.coop".to_string(), "@/gemname".to_string())
+        split_namespace("gem.coop".to_string(), "@/gemname".to_string())
     );
     assert_eq!(
         ("gem.coop/@namespace".to_string(), "gem/name".to_string()),
-        parse_namespace("gem.coop".to_string(), "@namespace/gem/name".to_string())
+        split_namespace("gem.coop".to_string(), "@namespace/gem/name".to_string())
     );
     assert_eq!(
         ("".to_string(), "".to_string()),
-        parse_namespace("".to_string(), "".to_string())
+        split_namespace("".to_string(), "".to_string())
     );
     assert_eq!(
         (
             "gem.coop/@namespace".to_string(),
             "gemname@1.2.3".to_string()
         ),
-        parse_namespace(
+        split_namespace(
             "gem.coop".to_string(),
             "@namespace/gemname@1.2.3".to_string()
+        )
+    );
+}
+
+#[test]
+fn test_parse_namespace_without_from() {
+    assert_eq!(
+        (
+            "https://gem.coop/@indirect".to_string(),
+            "card".to_string(),
+            vec!["card".to_string(), "--flag".to_string()],
+        ),
+        parse_namespace(
+            "https://gem.coop".to_string(),
+            None,
+            vec!["@indirect/card".to_string(), "--flag".to_string()],
+        )
+    );
+}
+
+#[test]
+fn test_parse_namespace_without_from_strips_namespace() {
+    // Without --from, a namespaced command like `@namespace/gemname` turns
+    // into `server/@namespace`, gem `gemname`, and command `gemname`.
+    assert_eq!(
+        (
+            "gem.coop/@namespace".to_string(),
+            "gemname".to_string(),
+            vec!["gemname".to_string(), "--flag".to_string()],
+        ),
+        parse_namespace(
+            "gem.coop".to_string(),
+            None,
+            vec!["@namespace/gemname".to_string(), "--flag".to_string()],
+        )
+    );
+}
+
+#[test]
+fn test_parse_namespace_with_from() {
+    // With --from, args[0] is the executable name and must be preserved even when
+    // it differs from the gem name (e.g. `pod` provided by `cocoapods`).
+    assert_eq!(
+        (
+            "https://gem.coop".to_string(),
+            "cocoapods".to_string(),
+            vec!["pod".to_string(), "--version".to_string()],
+        ),
+        parse_namespace(
+            "https://gem.coop".to_string(),
+            Some("cocoapods".to_string()),
+            vec!["pod".to_string(), "--version".to_string()],
+        )
+    );
+}
+
+#[test]
+fn test_parse_namespace_with_from_and_namespace() {
+    // The namespace comes from --from, while args[0] keeps the executable name.
+    assert_eq!(
+        (
+            "gem.coop/@namespace".to_string(),
+            "cocoapods".to_string(),
+            vec!["pod".to_string(), "--version".to_string()],
+        ),
+        parse_namespace(
+            "gem.coop".to_string(),
+            Some("@namespace/cocoapods".to_string()),
+            vec!["pod".to_string(), "--version".to_string()],
         )
     );
 }

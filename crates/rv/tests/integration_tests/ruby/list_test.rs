@@ -91,6 +91,7 @@ fn test_ruby_list_multiple_matching_rubies() {
     mock.assert();
     output.assert_success();
     assert!(output.stderr().is_empty());
+    // editorconfig-checker-disable
     assert_snapshot!(output.normalized_stdout(), @r#"
     [
       {
@@ -137,10 +138,12 @@ fn test_ruby_list_multiple_matching_rubies() {
       }
     ]
     "#);
+    // editorconfig-checker-enable
 
     test.create_ruby_dir("3.2.0");
     let output = test.ruby_list(&["--no-color", "--format", "json"]);
     output.assert_success();
+    // editorconfig-checker-disable
     assert_snapshot!(output.normalized_stdout(), @r#"
     [
       {
@@ -201,6 +204,7 @@ fn test_ruby_list_multiple_matching_rubies() {
       }
     ]
     "#);
+    // editorconfig-checker-enable
 
     test.env.insert(
         "PATH".into(),
@@ -209,6 +213,7 @@ fn test_ruby_list_multiple_matching_rubies() {
 
     let output = test.ruby_list(&["--no-color", "--format", "json"]);
     output.assert_success();
+    // editorconfig-checker-disable
     assert_snapshot!(output.normalized_stdout(), @r#"
     [
       {
@@ -269,6 +274,7 @@ fn test_ruby_list_multiple_matching_rubies() {
       }
     ]
     "#);
+    // editorconfig-checker-enable
 }
 
 #[test]

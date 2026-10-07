@@ -220,11 +220,13 @@ mod tests {
         std::fs::create_dir_all(&config_dir).unwrap();
         let config_file = config_dir.join("rv.kdl");
 
+        // editorconfig-checker-disable
         let config_content = r#"
 rv{
   install-path "/home/path"
 }
 "#;
+        // editorconfig-checker-enable
 
         std::fs::write(&config_file, config_content).expect("Failed to write config");
 
