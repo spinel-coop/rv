@@ -12,7 +12,7 @@ use winnow::{
 use rv_gem_types::requirement::{ComparisonOperator, Requirement, VersionConstraint};
 use rv_gem_types::{Platform, ProjectDependency, ReleaseTuple};
 use rv_ruby::version::RubyVersion;
-use rv_version::{Version, VersionSegment};
+use rv_version::Version;
 
 const GIT: &str = "GIT";
 const GEM: &str = "GEM";
@@ -324,24 +324,9 @@ fn parse_ruby_version_inner<'i>(i: &mut Input<'i>) -> Res<RubyVersion> {
 }
 
 fn parse_version<'i>(i: &mut Input<'i>) -> Res<Version> {
-    let segments = peek(parse_segments).parse_next(i)?;
-    let version = take_while(1.., |c: char| c.is_alphanumeric() || c == '.')
-        .parse_next(i)?
-        .to_string();
-
-    Ok(Version { version, segments })
-}
-
-fn parse_segments<'i>(i: &mut Input<'i>) -> Res<Vec<VersionSegment>> {
-    // [0-9]+
-    let major = parse_num.parse_next(i)?;
-    let mut segments = vec![VersionSegment::Number(major)];
-
-    // (?>\.[0-9a-zA-Z]+)*
-    let other_segments: Vec<_> = repeat(0.., preceded('.', parse_alphanum)).parse_next(i)?;
-    segments.extend(other_segments.iter().map(|s| VersionSegment::new(s)));
-
-    Ok(segments)
+    take_while(1.., |c: char| c.is_alphanumeric() || c == '.')
+        .try_map(Version::new)
+        .parse_next(i)
 }
 
 fn parse_release_tuple<'i>(i: &mut Input<'i>) -> Res<ReleaseTuple> {
@@ -388,10 +373,6 @@ fn parse_num(i: &mut Input<'_>) -> Res<u32> {
     take_while(1.., |c: char| c.is_ascii_digit())
         .try_map(|digits: &str| digits.parse::<u32>())
         .parse_next(i)
-}
-
-fn parse_alphanum<'i>(i: &mut Input<'i>) -> Res<&'i str> {
-    take_while(1.., |c: char| c.is_alphanumeric()).parse_next(i)
 }
 
 fn parse_git_section<'i>(i: &mut Input<'i>) -> Res<GitSection<'i>> {
