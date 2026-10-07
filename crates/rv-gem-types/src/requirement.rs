@@ -64,7 +64,7 @@ impl From<Requirement> for Ranges<VersionPlatform> {
 }
 
 // Defaults to ">= 0"
-#[derive(Default, Clone, Ord, PartialOrd, Serialize, Deserialize)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct VersionConstraint {
     pub operator: ComparisonOperator,
     pub version: Version,
@@ -304,6 +304,21 @@ impl PartialEq for VersionConstraint {
 
 impl Eq for VersionConstraint {}
 
+impl Ord for VersionConstraint {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.operator
+            .cmp(&other.operator)
+            .then_with(|| self.version.cmp(&other.version))
+            .then_with(|| self.version.version.cmp(&other.version.version))
+    }
+}
+
+impl PartialOrd for VersionConstraint {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl Hash for VersionConstraint {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.operator.hash(state);
@@ -360,6 +375,8 @@ impl FromStr for Requirement {
 
 #[cfg(test)]
 mod tests {
+    use std::{cmp::Ordering, collections::BTreeSet};
+
     use super::*;
     use rv_ruby::version::RubyVersion;
 
@@ -450,6 +467,54 @@ mod tests {
         assert!(req("~> 1.0.0").satisfied_by(&v("1.0.1")));
         assert!(req("~> 1.0.0").satisfied_by(&v("1")));
         assert!(!req("~> 1.0.0").satisfied_by(&v("1.1")));
+    }
+
+    #[test]
+    fn test_constraint_order_preserves_version_spelling() {
+        for operator in [
+            ComparisonOperator::Equal,
+            ComparisonOperator::NotEqual,
+            ComparisonOperator::GreaterThan,
+            ComparisonOperator::GreaterThanOrEqual,
+            ComparisonOperator::LessThan,
+            ComparisonOperator::LessThanOrEqual,
+            ComparisonOperator::Pessimistic,
+        ] {
+            for (lower, higher) in [("1", "1.0"), ("1.0", "1.00"), ("01.0", "1.0")] {
+                let a = VersionConstraint::new(operator.clone(), v(lower));
+                let b = VersionConstraint::new(operator.clone(), v(higher));
+                assert_ne!(a, b);
+                assert_eq!(a.cmp(&b), Ordering::Less);
+                assert_eq!(b.cmp(&a), Ordering::Greater);
+                assert_eq!(a.partial_cmp(&b), Some(Ordering::Less));
+            }
+
+            let a = VersionConstraint::new(operator.clone(), v("2"));
+            let b = VersionConstraint::new(operator, v("10"));
+            assert_eq!(a.cmp(&b), Ordering::Less);
+        }
+    }
+
+    #[test]
+    fn test_pessimistic_precision_survives_ordered_sets() {
+        let broad = req("~> 1.0");
+        let narrow = req("~> 1.0.0");
+        assert_ne!(broad, narrow);
+        assert!(broad.satisfied_by(&v("1.1")));
+        assert!(!narrow.satisfied_by(&v("1.1")));
+
+        let mut ordered = BTreeSet::new();
+        assert!(ordered.insert(broad.clone()));
+        assert!(ordered.insert(narrow.clone()));
+        assert_eq!(ordered.len(), 2);
+        assert_eq!(ordered.get(&broad), Some(&broad));
+        assert_eq!(ordered.get(&narrow), Some(&narrow));
+
+        let bulk = [broad.clone(), narrow.clone(), broad, narrow]
+            .into_iter()
+            .collect::<BTreeSet<_>>();
+        assert_eq!(bulk.len(), 2);
+        assert_eq!(bulk, ordered);
     }
 
     #[test]
