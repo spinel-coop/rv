@@ -449,45 +449,6 @@ mod tests {
     }
 
     #[test]
-    fn test_numeric_run_ordering_is_transitive() {
-        let a = v("1.a9");
-        let b = v("1.a10");
-        let c = v("1.a4294967296");
-
-        assert!(a < b);
-        assert!(b < c);
-        assert!(a < c);
-    }
-
-    #[test]
-    fn test_numeric_run_ordering_across_u32_boundary() {
-        for (lower, higher) in [
-            ("1.a4294967294", "1.a4294967295"),
-            ("1.a4294967295", "1.a4294967296"),
-            ("1.a9999999999", "1.a10000000000"),
-            ("1.a4294967296", "1.a42949672960"),
-            ("1.a0009", "1.a4294967296"),
-        ] {
-            assert!(v(lower) < v(higher), "{lower} should precede {higher}");
-            assert!(v(higher) > v(lower), "{higher} should follow {lower}");
-        }
-    }
-
-    #[test]
-    fn test_numeric_run_padding_preserves_later_comparisons() {
-        for (lower, higher) in [
-            ("1.a0004294967296a", "1.a4294967296b"),
-            ("1.a4294967296a", "1.a0004294967296b"),
-            ("1.a000a", "1.a0b"),
-            ("1.a0a", "1.a000b"),
-            ("1.a4294967296b9", "1.a0004294967296b10"),
-        ] {
-            assert!(v(lower) < v(higher), "{lower} should precede {higher}");
-            assert!(v(higher) > v(lower), "{higher} should follow {lower}");
-        }
-    }
-
-    #[test]
     fn test_prerelease_detection() {
         assert!(v("1.2.0.a").is_prerelease());
         assert!(v("2.9.b").is_prerelease());
@@ -668,6 +629,45 @@ mod tests {
                 actual_higher, expected_higher,
                 "wrong upper bound for test {test_index}: input {input}, got {actual_higher}, expected {expected_higher}"
             );
+        }
+    }
+
+    #[test]
+    fn test_numeric_run_ordering_is_transitive() {
+        let a = v("1.a9");
+        let b = v("1.a10");
+        let c = v("1.a4294967296");
+
+        assert!(a < b);
+        assert!(b < c);
+        assert!(a < c);
+    }
+
+    #[test]
+    fn test_numeric_run_ordering_across_u32_boundary() {
+        for (lower, higher) in [
+            ("1.a4294967294", "1.a4294967295"),
+            ("1.a4294967295", "1.a4294967296"),
+            ("1.a9999999999", "1.a10000000000"),
+            ("1.a4294967296", "1.a42949672960"),
+            ("1.a0009", "1.a4294967296"),
+        ] {
+            assert!(v(lower) < v(higher), "{lower} should precede {higher}");
+            assert!(v(higher) > v(lower), "{higher} should follow {lower}");
+        }
+    }
+
+    #[test]
+    fn test_numeric_run_padding_preserves_later_comparisons() {
+        for (lower, higher) in [
+            ("1.a0004294967296a", "1.a4294967296b"),
+            ("1.a4294967296a", "1.a0004294967296b"),
+            ("1.a000a", "1.a0b"),
+            ("1.a0a", "1.a000b"),
+            ("1.a4294967296b9", "1.a0004294967296b10"),
+        ] {
+            assert!(v(lower) < v(higher), "{lower} should precede {higher}");
+            assert!(v(higher) > v(lower), "{higher} should follow {lower}");
         }
     }
 
