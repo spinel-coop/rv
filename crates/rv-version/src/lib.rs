@@ -349,15 +349,21 @@ impl Ord for Version {
                     let b_parts = Self::split_alphanumeric(b);
 
                     for (a_part, b_part) in a_parts.iter().zip(b_parts.iter()) {
-                        match (a_part.parse::<u32>(), b_part.parse::<u32>()) {
-                            (Ok(num_a), Ok(num_b)) => match num_a.cmp(&num_b) {
-                                Ordering::Equal => continue,
-                                other => return other,
-                            },
-                            _ => match a_part.cmp(b_part) {
-                                Ordering::Equal => continue,
-                                other => return other,
-                            },
+                        let ordering = if a_part.bytes().all(|ch| ch.is_ascii_digit())
+                            && b_part.bytes().all(|ch| ch.is_ascii_digit())
+                        {
+                            let a_digits = a_part.trim_start_matches('0');
+                            let b_digits = b_part.trim_start_matches('0');
+                            a_digits
+                                .len()
+                                .cmp(&b_digits.len())
+                                .then_with(|| a_digits.cmp(b_digits))
+                        } else {
+                            a_part.cmp(b_part)
+                        };
+                        match ordering {
+                            Ordering::Equal => continue,
+                            other => return other,
                         }
                     }
 
@@ -440,6 +446,45 @@ mod tests {
         assert!(v("1.8.2") > v("1.8.2.a"));
         assert!(v("1.8.2.b") > v("1.8.2.a"));
         assert!(v("1.8.2.a10") > v("1.8.2.a9"));
+    }
+
+    #[test]
+    fn test_numeric_run_ordering_is_transitive() {
+        let a = v("1.a9");
+        let b = v("1.a10");
+        let c = v("1.a4294967296");
+
+        assert!(a < b);
+        assert!(b < c);
+        assert!(a < c);
+    }
+
+    #[test]
+    fn test_numeric_run_ordering_across_u32_boundary() {
+        for (lower, higher) in [
+            ("1.a4294967294", "1.a4294967295"),
+            ("1.a4294967295", "1.a4294967296"),
+            ("1.a9999999999", "1.a10000000000"),
+            ("1.a4294967296", "1.a42949672960"),
+            ("1.a0009", "1.a4294967296"),
+        ] {
+            assert!(v(lower) < v(higher), "{lower} should precede {higher}");
+            assert!(v(higher) > v(lower), "{higher} should follow {lower}");
+        }
+    }
+
+    #[test]
+    fn test_numeric_run_padding_preserves_later_comparisons() {
+        for (lower, higher) in [
+            ("1.a0004294967296a", "1.a4294967296b"),
+            ("1.a4294967296a", "1.a0004294967296b"),
+            ("1.a000a", "1.a0b"),
+            ("1.a0a", "1.a000b"),
+            ("1.a4294967296b9", "1.a0004294967296b10"),
+        ] {
+            assert!(v(lower) < v(higher), "{lower} should precede {higher}");
+            assert!(v(higher) > v(lower), "{higher} should follow {lower}");
+        }
     }
 
     #[test]
