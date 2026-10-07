@@ -371,7 +371,9 @@ impl Ord for Version {
         }
 
         // Break natural-order ties using the same canonical segments as Eq.
-        self.canonical_segments().cmp(&other.canonical_segments())
+        let (self_segments, _) = self.canonical_segments_iter();
+        let (other_segments, _) = other.canonical_segments_iter();
+        self_segments.cmp(other_segments)
     }
 }
 
