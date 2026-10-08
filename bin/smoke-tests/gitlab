@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Smoke test for GitLab - https://github.com/gitlabhq/gitlabhq
 
-source "$(dirname "$0")/shared.sh"
+   source "$(dirname "$0")/shared.sh"
 
 macos_docker_reexec
 
