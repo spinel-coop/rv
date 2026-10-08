@@ -257,35 +257,6 @@ impl Version {
         }
     }
 
-    fn split_alphanumeric(s: &str) -> Vec<&str> {
-        let mut parts = Vec::new();
-        let mut current_low = 0;
-        let mut current_high = 0;
-        let mut last_was_digit = false;
-
-        for ch in s.chars() {
-            let is_digit = ch.is_ascii_digit();
-
-            let current = &s[current_low..current_high];
-            if !current.is_empty() && last_was_digit != is_digit {
-                parts.push(current);
-                current_low = current_high;
-                current_high = current_low + 1;
-            } else {
-                current_high += 1;
-            }
-
-            last_was_digit = is_digit;
-        }
-
-        let current = &s[current_low..current_high];
-        if !current.is_empty() {
-            parts.push(current);
-        }
-
-        parts
-    }
-
     /// Give the lower and upper bound for ~> on this version.
     /// The range is >= the first element of this tuple,
     /// and < the second element of this tuple.
@@ -349,31 +320,10 @@ impl Ord for Version {
                 },
                 (VersionSegment::Number(_), VersionSegment::String(_)) => return Ordering::Greater,
                 (VersionSegment::String(_), VersionSegment::Number(_)) => return Ordering::Less,
-                (VersionSegment::String(a), VersionSegment::String(b)) => {
-                    // Handle mixed alphanumeric comparison like "a10" vs "a9"
-                    // TODO: there should be no mixed alphanumeric segments
-                    let a_parts = Self::split_alphanumeric(a);
-                    let b_parts = Self::split_alphanumeric(b);
-
-                    for (a_part, b_part) in a_parts.iter().zip(b_parts.iter()) {
-                        match (a_part.parse::<u32>(), b_part.parse::<u32>()) {
-                            (Ok(num_a), Ok(num_b)) => match num_a.cmp(&num_b) {
-                                Ordering::Equal => continue,
-                                other => return other,
-                            },
-                            _ => match a_part.cmp(b_part) {
-                                Ordering::Equal => continue,
-                                other => return other,
-                            },
-                        }
-                    }
-
-                    // If all parts are equal, compare length
-                    match a_parts.len().cmp(&b_parts.len()) {
-                        Ordering::Equal => continue,
-                        other => return other,
-                    }
-                }
+                (VersionSegment::String(a), VersionSegment::String(b)) => match a.cmp(b) {
+                    Ordering::Equal => continue,
+                    other => return other,
+                },
             }
         }
 
