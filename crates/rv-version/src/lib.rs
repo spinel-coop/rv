@@ -134,6 +134,13 @@ impl Version {
                         });
                     };
 
+                    if let Some(previous_ch) = current_segment.chars().last()
+                        && (previous_ch.is_alphabetic() ^ ch.is_alphabetic())
+                    {
+                        segments.push(VersionSegment::new(&current_segment));
+                        current_segment.clear();
+                    }
+
                     current_segment.push(ch);
                 }
             }
@@ -532,7 +539,8 @@ mod tests {
                 &ZERO,
                 &VersionSegment::Number(1),
                 &VersionSegment::String("pre".to_string()),
-                &VersionSegment::String("rc1".to_string()),
+                &VersionSegment::String("rc".to_string()),
+                &VersionSegment::Number(1),
             ]
         );
         assert_eq!(
@@ -616,6 +624,8 @@ mod tests {
 
         assert_eq!(Ordering::Less, v("5.a").cmp(&v("5.0.0.rc2")));
         assert_eq!(Ordering::Greater, v("5.x").cmp(&v("5.0.0.rc2")));
+
+        assert_eq!(Ordering::Equal, v("1.a1").cmp(&v("1.a01")));
     }
 
     #[test]
