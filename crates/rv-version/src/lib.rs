@@ -216,9 +216,9 @@ impl Version {
     pub fn bump(&self) -> Version {
         let mut segments = self.segments.clone();
 
-        // Remove all trailing string segments (prerelease parts)
-        while segments.last().is_some_and(|s| s.is_string()) {
-            segments.pop();
+        // Remove the entire prerelease, including any numeric components.
+        if let Some(index) = segments.iter().position(|s| s.is_string()) {
+            segments.truncate(index);
         }
 
         // If there's more than one segment left, remove the last one
@@ -570,6 +570,24 @@ mod tests {
         assert_eq!(v("5.2.4.a10").bump(), v("5.3"));
         assert_eq!(v("5.0.0").bump(), v("5.1"));
         assert_eq!(v("5").bump(), v("6"));
+    }
+
+    #[test]
+    fn test_version_bump_discards_all_prerelease_components() {
+        for (input, expected) in [
+            ("0.a.0", "1"),
+            ("1.4.a.1", "2"),
+            ("1.4.a.0", "2"),
+            ("1.4.2.a.1", "1.5"),
+            ("1.4.a.1.b", "2"),
+        ] {
+            let original = v(input);
+            let expected = v(expected);
+            assert_eq!(original.bump(), expected);
+            let (lower, upper) = original.pessimistic_range();
+            assert_eq!(lower, original);
+            assert_eq!(upper, expected);
+        }
     }
 
     #[test]
