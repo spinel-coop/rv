@@ -325,7 +325,7 @@ impl VersionConstraint {
             ComparisonOperator::LessThan => version < &self.version,
             ComparisonOperator::LessThanOrEqual => version <= &self.version,
             ComparisonOperator::Pessimistic => {
-                version >= &self.version && version < &self.version.bump()
+                version >= &self.version && version.release() < self.version.bump()
             }
         }
     }
@@ -472,6 +472,36 @@ mod tests {
             ComparisonOperator::GreaterThanOrEqual
         );
         assert_eq!(req.constraints[0].version, v("0"));
+    }
+
+    #[test]
+    fn test_pessimistic_matching_rejects_next_release_prereleases() {
+        for (requirement, upper) in [
+            ("~> 0", "1"),
+            ("~> 1.0", "2"),
+            ("~> 1.0.0", "1.1"),
+            ("~> 1.0.a", "2"),
+        ] {
+            let requirement = req(requirement);
+            for suffix in ["a", "A", "0a"] {
+                let candidate = v(&format!("{upper}.{suffix}"));
+                assert!(!requirement.satisfied_by(&candidate));
+                assert!(!requirement.matches(&candidate, true));
+            }
+        }
+    }
+
+    #[test]
+    fn test_pessimistic_matching_keeps_prereleases_inside_the_range() {
+        for (requirement, candidate) in [("~> 1.0", "1.1.a"), ("~> 1.0.0", "1.0.1.a")] {
+            let requirement = req(requirement);
+            let candidate = v(candidate);
+            assert!(requirement.satisfied_by(&candidate));
+            assert!(requirement.matches(&candidate, true));
+            assert!(!requirement.matches(&candidate, false));
+        }
+
+        assert!(req("~> 1.0.a").matches(&v("1.1.a"), false));
     }
 
     #[test]
