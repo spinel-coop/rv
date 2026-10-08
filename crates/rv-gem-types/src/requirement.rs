@@ -560,6 +560,35 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Known bug: pessimistic ranges admit digit-led prereleases of the excluded upper release"]
+    fn test_pessimistic_range_excludes_next_release_numeric_prerelease() {
+        let candidate = v("1.0a");
+        assert!(candidate.is_prerelease());
+        assert_eq!(candidate.release(), v("1"));
+
+        // ~> 0 requires a release below 1, so this candidate must be excluded
+        // regardless of platform.
+        let ranges = Ranges::<VersionPlatform>::from(req("~> 0"));
+        let memberships = [
+            Platform::Ruby,
+            Platform::new("x86_64-linux").unwrap(),
+            Platform::new("arm64-darwin").unwrap(),
+            Platform::Current,
+        ]
+        .map(|platform| {
+            let member = ranges.contains(&VersionPlatform {
+                version: candidate.clone(),
+                platform: platform.clone(),
+            });
+            (platform, member)
+        });
+        assert!(
+            memberships.iter().all(|(_, member)| !member),
+            "{memberships:?}"
+        );
+    }
+
+    #[test]
     fn test_select_ruby_version_for_prereleases() {
         let constraints = vec![VersionConstraint {
             operator: ComparisonOperator::LessThan,
