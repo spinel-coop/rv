@@ -3,6 +3,7 @@ pub mod env;
 pub mod init;
 
 use crate::GlobalArgs;
+use camino::Utf8Path;
 use clap::{Args, Subcommand};
 use serde::Serialize;
 
@@ -40,6 +41,21 @@ pub enum Shell {
     Nu,
     #[clap(name = "powershell")]
     PowerShell,
+}
+
+impl Shell {
+    /// The shell named by a path like `/bin/zsh` or `C:\Program Files\PowerShell\pwsh.exe`,
+    /// if it is one rv can generate integration for.
+    pub fn from_path(path: &Utf8Path) -> Option<Self> {
+        match path.file_stem()? {
+            "zsh" => Some(Self::Zsh),
+            "bash" => Some(Self::Bash),
+            "fish" => Some(Self::Fish),
+            "nu" | "nushell" => Some(Self::Nu),
+            "pwsh" | "powershell" => Some(Self::PowerShell),
+            _ => None,
+        }
+    }
 }
 
 impl std::fmt::Display for Shell {
