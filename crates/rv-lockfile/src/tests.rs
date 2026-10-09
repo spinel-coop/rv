@@ -234,3 +234,18 @@ fn test_spec_count_multiple_platforms() {
     assert_eq!(lockfile.spec_count(), 7);
     assert_eq!(lockfile.gem_spec_count(), 7);
 }
+
+#[test]
+fn test_invalid_versions_are_rejected() {
+    let malformed_version_separators = ["0.", "0..", "0..1"];
+    let mixed_first_version_segment = ["0a", "1alpha.2"];
+
+    for version in malformed_version_separators
+        .iter()
+        .chain(mixed_first_version_segment.iter())
+    {
+        assert!(rv_version::Version::new(version).is_err());
+        assert!(crate::parse(&format!("BUNDLED WITH\n   {version}\n")).is_err());
+        assert!(crate::parse(&format!("GEM\n  specs:\n    example ({version})\n")).is_err());
+    }
+}
