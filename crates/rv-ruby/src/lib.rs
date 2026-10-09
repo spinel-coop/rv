@@ -171,6 +171,32 @@ impl Ruby {
         Ok(ruby)
     }
 
+    /// Create a new Ruby instance from a Ruby executable path directly.
+    ///
+    /// Used for things like system Rubies (e.g. `/usr/bin/ruby`) where there is no `bin/`
+    /// layout under a parent directory. The Ruby is marked as not managed.
+    #[instrument(skip(executable_path), fields(executable = %executable_path.as_str()), level = "trace")
+]
+    pub fn from_executable_path(executable_path: Utf8PathBuf) -> Result<Self, RubyError> {
+        if let Ok(false) = executable_path.try_exists() {
+            return Err(RubyError::NoRubyExecutable);
+        }
+
+        let symlink_source = find_symlink_target(&executable_path);
+        let mut exec_ruby = extract_ruby_info(&executable_path)?;
+
+        exec_ruby.path = executable_path
+            .parent()
+            .and_then(|p| p.parent())
+            .unwrap_or_else(|| executable_path.parent().unwrap_or(&executable_path))
+            .to_path_buf();
+
+        exec_ruby.managed = false;
+        exec_ruby.symlink = symlink_source;
+
+        Ok(exec_ruby)
+    }
+
     /// Check if this Ruby installation is valid
     pub fn is_valid(&self) -> bool {
         find_ruby_executable(&self.path).is_some()
@@ -683,5 +709,83 @@ mod tests {
         assert_eq!(&info["prism"], "+PRISM ");
         assert_eq!(&info["arch"], "arm64");
         assert_eq!(&info["os"], "darwin23");
+    }
+
+    #[test]
+    fn from_executable_path_returns_no_ruby_executable_for_missing_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let missing = Utf8PathBuf::try_from(tmp.path().join("nope")).unwrap();
+        assert!(matches!(
+            Ruby::from_executable_path(missing),
+            Err(RubyError::NoRubyExecutable),
+        ));
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn from_executable_path_marks_ruby_as_unmanaged() {
+        // exec at `<tmp>/bin/ruby` → `from_executable_path` derives
+        // `path=<tmp>` (parent.parent()) so `is_valid()` checks
+        // `<tmp>/bin/ruby` and returns true.
+        let tmp = tempfile::tempdir().unwrap();
+        let bin = tmp.path().join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let exec = bin.join("ruby");
+        write_mock_ruby_shim(&exec, "3.0.1");
+
+        let exec_path = Utf8PathBuf::try_from(exec).unwrap();
+        let ruby =
+            Ruby::from_executable_path(exec_path).expect("from_executable_path should succeed");
+        assert!(!ruby.managed, "managed should be false for system ruby");
+        assert_eq!(
+            ruby.path.as_std_path(),
+            tmp.path(),
+            "path should be parent.parent() of exec",
+        );
+        assert!(
+            ruby.is_valid(),
+            "is_valid should be true when <path>/bin/<exec> exists",
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn from_executable_path_captures_symlink_target() {
+        let tmp = tempfile::tempdir().unwrap();
+        let bin = tmp.path().join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let target = bin.join("ruby_target");
+        write_mock_ruby_shim(&target, "3.0.1");
+        let link = bin.join("ruby");
+        std::os::unix::fs::symlink(&target, &link).unwrap();
+
+        let exec = Utf8PathBuf::try_from(link).unwrap();
+        let ruby = Ruby::from_executable_path(exec).expect("should succeed");
+        assert!(ruby.symlink.is_some(), "symlink target should be captured",);
+    }
+
+    /// Writes a shell script that mimics a Ruby executable by emitting the
+    /// metadata stream expected by [`extract_ruby_info`]. Duplicated in
+    /// `crates/rv/src/config/test_support.rs` due to crate boundary — keep
+    /// in sync.
+    #[cfg(not(windows))]
+    fn write_mock_ruby_shim(exec: &std::path::Path, version: &str) {
+        let script = format!(
+            "#!/bin/bash\n\
+             echo \"ruby\"\n\
+             echo \"{version}\"\n\
+             echo \"aarch64-darwin23\"\n\
+             echo \"aarch64\"\n\
+             echo \"darwin23\"\n\
+             echo \"\"\n"
+        );
+        std::fs::write(exec, script).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(exec).unwrap().permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(exec, perms).unwrap();
+        }
     }
 }

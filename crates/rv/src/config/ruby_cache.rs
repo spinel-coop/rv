@@ -94,6 +94,16 @@ impl Config {
     where
         F: Fn(&str) -> bool,
     {
+        self.discover_installed_rubies_matching(&predicate)
+    }
+
+    /// Internal: scan managed `ruby_dirs` with a predicate on the directory name.
+    /// Kept separate from [`Self::discover_rubies_matching`] so that `rubies_with_filter`
+    /// can compose it with system-ruby discovery.
+    pub fn discover_installed_rubies_matching<F>(&self, predicate: &F) -> Vec<Ruby>
+    where
+        F: Fn(&str) -> bool,
+    {
         // Collect all potential Ruby paths first
         let ruby_paths: Vec<_> = self
             .ruby_dirs
@@ -109,7 +119,7 @@ impl Config {
                             .ok()
                             .map(|entry| entry.path().to_path_buf())
                             .filter(|path| path.is_dir())
-                            .filter(|path| path.file_name().is_some_and(&predicate))
+                            .filter(|path| path.file_name().is_some_and(predicate))
                     })
             })
             .collect();
