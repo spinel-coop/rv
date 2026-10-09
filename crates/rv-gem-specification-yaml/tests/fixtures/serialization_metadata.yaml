@@ -1,0 +1,15 @@
+--- !ruby/object:Gem::Specification
+name: metadata-example
+version: !ruby/object:Gem::Version
+  version: "1.0"
+summary: Metadata preservation example
+date: "2026-10-07"
+autorequire: metadata_example
+extra_rdoc_files:
+- README.md
+- CHANGELOG.md
+rdoc_options:
+- --main
+- README.md
+test_files:
+- test/example_test.rb
