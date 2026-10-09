@@ -12,6 +12,17 @@ pub enum VersionError {
     FirstSegmentIsPre { version: String },
     #[error("Versions must be entirely ASCII alphanumeric characters")]
     NoAsciiAlphanumeric,
+    #[error(transparent)]
+    NumericSegmentTooHigh(#[from] crate::VersionSegmentError),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum VersionSegmentError {
+    #[error(
+        "{segment} is too high, highest accepted numeric version is {}",
+        u32::MAX
+    )]
+    NumericSegmentTooHigh { segment: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -22,11 +33,15 @@ pub enum VersionSegment {
 }
 
 impl VersionSegment {
-    pub fn new(segment: &str) -> Self {
-        if let Ok(num) = segment.parse::<u32>() {
-            Self::Number(num)
-        } else {
-            Self::String(segment.to_string())
+    pub fn new(segment: &str) -> Result<Self, VersionSegmentError> {
+        match segment.parse::<u32>() {
+            Ok(num) => Ok(Self::Number(num)),
+            Err(err) if *err.kind() == std::num::IntErrorKind::PosOverflow => {
+                Err(VersionSegmentError::NumericSegmentTooHigh {
+                    segment: segment.to_string(),
+                })
+            }
+            Err(_) => Ok(Self::String(segment.to_string())),
         }
     }
 
@@ -97,7 +112,7 @@ impl Version {
                         });
                     }
 
-                    segments.push(VersionSegment::new(&current_segment));
+                    segments.push(VersionSegment::new(&current_segment)?);
                     current_segment.clear();
                 }
                 '-' => {
@@ -107,7 +122,7 @@ impl Version {
                         });
                     }
 
-                    segments.push(VersionSegment::new(&current_segment));
+                    segments.push(VersionSegment::new(&current_segment)?);
                     current_segment.clear();
 
                     // Dash indicates prerelease, add "pre" marker
@@ -137,7 +152,7 @@ impl Version {
                     if let Some(previous_ch) = current_segment.chars().last()
                         && (previous_ch.is_alphabetic() ^ ch.is_alphabetic())
                     {
-                        segments.push(VersionSegment::new(&current_segment));
+                        segments.push(VersionSegment::new(&current_segment)?);
                         current_segment.clear();
                     }
 
@@ -152,7 +167,7 @@ impl Version {
             });
         }
 
-        segments.push(VersionSegment::new(&current_segment));
+        segments.push(VersionSegment::new(&current_segment)?);
 
         if segments.is_empty() {
             segments.push(ZERO);
@@ -383,6 +398,15 @@ mod tests {
             Version::new("2.3422222.222.222222222.22222.ads0as.dasd0.ddd2222.2.qd3e.").is_err()
         );
         assert!(Version::new(".0.0.pre").is_err());
+    }
+
+    #[test]
+    fn test_version_limits() {
+        let max = u32::MAX;
+        assert!(Version::new(max.to_string()).is_ok());
+
+        let too_high = u32::MAX.to_string().parse::<u64>().unwrap() + 1;
+        assert!(Version::new(too_high.to_string()).is_err());
     }
 
     #[test]
