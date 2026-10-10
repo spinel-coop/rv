@@ -25,7 +25,7 @@ impl Ord for RubyVersion {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         use std::cmp::Ordering;
 
-        if self.major != other.major {
+        let version_order = if self.major != other.major {
             self.major.cmp(&other.major)
         } else if self.minor != other.minor {
             self.minor.cmp(&other.minor)
@@ -40,7 +40,11 @@ impl Ord for RubyVersion {
                 (Some(_prerelease), None) => Ordering::Less,
                 (prerelease, other_prerelease) => prerelease.cmp(other_prerelease),
             }
-        }
+        };
+
+        version_order
+            .then_with(|| self.engine.cmp(&other.engine))
+            .then_with(|| self.patchlevel.cmp(&other.patchlevel))
     }
 }
 
@@ -213,6 +217,61 @@ impl std::fmt::Display for RubyVersion {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_ordering_distinguishes_engines() {
+        let ruby: RubyVersion = "ruby-3.2.0".parse().unwrap();
+        let jruby: RubyVersion = "jruby-3.2.0".parse().unwrap();
+        let unknown = RubyVersion {
+            engine: RubyEngine::Unknown("ruby".into()),
+            ..ruby.clone()
+        };
+
+        assert_ne!(ruby, jruby);
+        assert_ne!(ruby, unknown);
+        assert!(ruby < jruby);
+        assert!(jruby < unknown);
+        assert!(ruby < unknown);
+        let versions = std::collections::BTreeSet::from([ruby, jruby, unknown]);
+        assert_eq!(versions.len(), 3);
+    }
+
+    #[test]
+    fn test_ordering_distinguishes_patchlevels() {
+        let original: RubyVersion = "ruby-3.2.0".parse().unwrap();
+        let patched = RubyVersion {
+            patchlevel: Some(0),
+            ..original.clone()
+        };
+        let later_patch = RubyVersion {
+            patchlevel: Some(1),
+            ..original.clone()
+        };
+
+        assert_ne!(original, patched);
+        assert!(original < patched);
+        assert!(patched < later_patch);
+        let versions = std::collections::BTreeSet::from([original, patched, later_patch]);
+        assert_eq!(versions.len(), 3);
+    }
+
+    #[test]
+    fn test_ordering_preserves_decisive_version_components() {
+        for (greater, lesser) in [
+            ("ruby-3.2.0", "jruby-3.1.9"),
+            ("ruby-3.2.0.1", "jruby-3.2.0.0"),
+            ("ruby-3.2.0", "jruby-3.2.0-rc1"),
+            ("ruby-3.2.0-rc2", "jruby-3.2.0-rc1"),
+        ] {
+            let greater: RubyVersion = greater.parse().unwrap();
+            let mut lesser: RubyVersion = lesser.parse().unwrap();
+            lesser.patchlevel = Some(u32::MAX);
+
+            assert!(greater > lesser);
+            assert!(lesser < greater);
+        }
+    }
+
     #[test]
     fn test_parsing_supported_ruby_versions() {
         use std::str::FromStr as _;
