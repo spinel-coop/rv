@@ -1,5 +1,5 @@
 use sha1::{Digest as _, Sha1};
-use sha2::{Digest as _, Sha256, Sha512};
+use sha2::{Sha256, Sha512};
 use std::collections::HashMap;
 
 use crate::error::ChecksumErrorKind;
