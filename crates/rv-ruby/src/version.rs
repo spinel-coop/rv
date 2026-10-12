@@ -25,6 +25,11 @@ impl Ord for RubyVersion {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         use std::cmp::Ordering;
 
+        let engine_order = self.engine.cmp(&other.engine);
+        if engine_order != Ordering::Equal {
+            return engine_order;
+        }
+
         let version_order = if self.major != other.major {
             self.major.cmp(&other.major)
         } else if self.minor != other.minor {
@@ -42,9 +47,7 @@ impl Ord for RubyVersion {
             }
         };
 
-        version_order
-            .then_with(|| self.engine.cmp(&other.engine))
-            .then_with(|| self.patchlevel.cmp(&other.patchlevel))
+        version_order.then_with(|| self.patchlevel.cmp(&other.patchlevel))
     }
 }
 
@@ -237,6 +240,15 @@ mod tests {
     }
 
     #[test]
+    fn test_ordering_groups_engines_before_versions() {
+        let ruby: RubyVersion = "ruby-9.9.9".parse().unwrap();
+        let jruby: RubyVersion = "jruby-1.0.0".parse().unwrap();
+        assert!(ruby.engine < jruby.engine);
+        assert!(ruby < jruby);
+        assert!(jruby > ruby);
+    }
+
+    #[test]
     fn test_ordering_distinguishes_patchlevels() {
         let original: RubyVersion = "ruby-3.2.0".parse().unwrap();
         let patched = RubyVersion {
@@ -258,10 +270,10 @@ mod tests {
     #[test]
     fn test_ordering_preserves_decisive_version_components() {
         for (greater, lesser) in [
-            ("ruby-3.2.0", "jruby-3.1.9"),
-            ("ruby-3.2.0.1", "jruby-3.2.0.0"),
-            ("ruby-3.2.0", "jruby-3.2.0-rc1"),
-            ("ruby-3.2.0-rc2", "jruby-3.2.0-rc1"),
+            ("ruby-3.2.0", "ruby-3.1.9"),
+            ("ruby-3.2.0.1", "ruby-3.2.0.0"),
+            ("ruby-3.2.0", "ruby-3.2.0-rc1"),
+            ("ruby-3.2.0-rc2", "ruby-3.2.0-rc1"),
         ] {
             let greater: RubyVersion = greater.parse().unwrap();
             let mut lesser: RubyVersion = lesser.parse().unwrap();
