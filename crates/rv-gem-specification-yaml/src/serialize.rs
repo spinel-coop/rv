@@ -28,10 +28,18 @@ fn specification_to_yaml_node(spec: &Specification) -> Result<Yaml<'static>> {
     insert_version_field(&mut mapping, "version", &spec.version);
     insert_string_field(&mut mapping, "platform", &spec.platform.to_string());
     insert_optional_string_array_field(&mut mapping, "authors", &spec.authors);
-    insert_null_field(&mut mapping, "autorequire");
+    if let Some(autorequire) = &spec.autorequire {
+        insert_string_field(&mut mapping, "autorequire", autorequire);
+    } else {
+        insert_null_field(&mut mapping, "autorequire");
+    }
     insert_string_field(&mut mapping, "bindir", &spec.bindir);
     insert_empty_array_field(&mut mapping, "cert_chain");
-    insert_null_field(&mut mapping, "date");
+    if spec.date.is_empty() {
+        insert_null_field(&mut mapping, "date");
+    } else {
+        insert_string_field(&mut mapping, "date", &spec.date);
+    }
     insert_dependencies_field(&mut mapping, "dependencies", &spec.dependencies);
 
     if let Some(description) = &spec.description {
@@ -41,7 +49,7 @@ fn specification_to_yaml_node(spec: &Specification) -> Result<Yaml<'static>> {
     insert_optional_string_array_field(&mut mapping, "email", &spec.email);
     insert_string_array_field(&mut mapping, "executables", &spec.executables);
     insert_string_array_field(&mut mapping, "extensions", &spec.extensions);
-    insert_empty_array_field(&mut mapping, "extra_rdoc_files");
+    insert_string_array_field(&mut mapping, "extra_rdoc_files", &spec.extra_rdoc_files);
     insert_string_array_field(&mut mapping, "files", &spec.files);
 
     if let Some(homepage) = &spec.homepage {
@@ -55,7 +63,7 @@ fn specification_to_yaml_node(spec: &Specification) -> Result<Yaml<'static>> {
     } else {
         insert_null_field(&mut mapping, "post_install_message");
     }
-    insert_empty_array_field(&mut mapping, "rdoc_options");
+    insert_string_array_field(&mut mapping, "rdoc_options", &spec.rdoc_options);
     insert_string_array_field(&mut mapping, "require_paths", &spec.require_paths);
     insert_requirement_field(
         &mut mapping,
@@ -76,7 +84,7 @@ fn specification_to_yaml_node(spec: &Specification) -> Result<Yaml<'static>> {
         spec.specification_version,
     );
     insert_string_field(&mut mapping, "summary", &spec.summary);
-    insert_empty_array_field(&mut mapping, "test_files");
+    insert_string_array_field(&mut mapping, "test_files", &spec.test_files);
 
     // Create tagged YAML node for Gem::Specification
     let tag = Tag {
