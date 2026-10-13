@@ -1,0 +1,30 @@
+--- !ruby/object:Gem::Specification
+name: "null"
+version: !ruby/object:Gem::Version
+  version: "1.0"
+summary: "true"
+description: "null"
+homepage: "false"
+post_install_message: "123"
+authors:
+- ~
+- "null"
+- "true"
+email:
+- "123"
+files:
+- "null"
+- "true"
+- "123"
+metadata:
+  "null": "true"
+  "123": "null"
+dependencies:
+- !ruby/object:Gem::Dependency
+  name: "true"
+  type: :runtime
+  requirement: !ruby/object:Gem::Requirement
+    requirements:
+    - - ">="
+      - !ruby/object:Gem::Version
+        version: "0"

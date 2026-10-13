@@ -98,9 +98,13 @@ fn specification_to_yaml_node(spec: &Specification) -> Result<Yaml<'static>> {
     ))
 }
 
+fn yaml_string(value: String) -> Yaml<'static> {
+    Yaml::Value(saphyr::Scalar::String(value.into()))
+}
+
 fn insert_string_field(mapping: &mut saphyr::Mapping<'static>, key: &str, value: &str) {
     let key_yaml = Yaml::scalar_from_string(key.to_string());
-    let value_yaml = Yaml::scalar_from_string(value.to_string());
+    let value_yaml = yaml_string(value.to_string());
     mapping.insert(key_yaml, value_yaml);
 }
 
@@ -118,10 +122,7 @@ fn insert_null_field(mapping: &mut saphyr::Mapping<'static>, key: &str) {
 
 fn insert_string_array_field(mapping: &mut saphyr::Mapping<'static>, key: &str, values: &[String]) {
     let key_yaml = Yaml::scalar_from_string(key.to_string());
-    let array_items: Vec<Yaml> = values
-        .iter()
-        .map(|s| Yaml::scalar_from_string(s.clone()))
-        .collect();
+    let array_items: Vec<Yaml> = values.iter().map(|s| yaml_string(s.clone())).collect();
     let value_yaml = Yaml::Sequence(array_items);
     mapping.insert(key_yaml, value_yaml);
 }
@@ -135,7 +136,7 @@ fn insert_optional_string_array_field(
     let array_items: Vec<Yaml> = values
         .iter()
         .map(|opt_s| match opt_s {
-            Some(s) => Yaml::scalar_from_string(s.clone()),
+            Some(s) => yaml_string(s.clone()),
             None => Yaml::Value(saphyr::Scalar::Null),
         })
         .collect();
@@ -222,7 +223,7 @@ fn dependency_to_yaml_node(dependency: &Dependency) -> Yaml<'static> {
     let mut dep_mapping = saphyr::Mapping::new();
 
     let name_key = Yaml::scalar_from_string("name".to_string());
-    let name_value = Yaml::scalar_from_string(dependency.name.clone());
+    let name_value = yaml_string(dependency.name.clone());
     dep_mapping.insert(name_key, name_value);
 
     let requirement_key = Yaml::scalar_from_string("requirement".to_string());
@@ -260,8 +261,8 @@ fn insert_metadata_field(
     let mut metadata_mapping = saphyr::Mapping::new();
 
     for (meta_key, meta_value) in metadata {
-        let meta_key_yaml = Yaml::scalar_from_string(meta_key.clone());
-        let meta_value_yaml = Yaml::scalar_from_string(meta_value.clone());
+        let meta_key_yaml = yaml_string(meta_key.clone());
+        let meta_value_yaml = yaml_string(meta_value.clone());
         metadata_mapping.insert(meta_key_yaml, meta_value_yaml);
     }
 
