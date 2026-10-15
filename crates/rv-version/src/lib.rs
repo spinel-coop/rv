@@ -12,6 +12,19 @@ pub enum VersionError {
     FirstSegmentIsPre { version: String },
     #[error("Versions must be entirely ASCII alphanumeric characters")]
     NoAsciiAlphanumeric,
+    #[error(transparent)]
+    NumberTooBig(#[from] crate::VersionSegmentError),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum VersionSegmentError {
+    #[error("Non digit found while parsing a numeric segment")]
+    InvalidDigit,
+    #[error(
+        "{number} is too big, highest accepted numeric version is {}",
+        u32::MAX
+    )]
+    NumberTooBig { number: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -22,11 +35,11 @@ pub enum VersionSegment {
 }
 
 impl VersionSegment {
-    pub fn new(segment: &str) -> Self {
-        if let Ok(num) = segment.parse::<u32>() {
-            Self::Number(num)
-        } else {
-            Self::String(segment.to_string())
+    pub fn new(segment: &str) -> Result<Self, VersionSegmentError> {
+        match Self::parse_u32(segment) {
+            Ok(num) => Ok(Self::Number(num)),
+            Err(VersionSegmentError::InvalidDigit) => Ok(Self::String(segment.to_string())),
+            Err(err) => Err(err),
         }
     }
 
@@ -47,6 +60,43 @@ impl VersionSegment {
             Self::Number(n) => *self = Self::Number(*n + 1),
             Self::String(_) => {}
         }
+    }
+
+    /// NOTE: This is mostly copied from uv: https://github.com/astral-sh/uv/blob/f3e56e16e0302e26ea456cb51b676b35958572a0/crates/uv-pep440/src/version.rs#L2895-L2929
+    ///
+    /// Parses a u32 number from the given slice of ASCII digit characters.
+    ///
+    /// If any byte in the given slice is not [0-9], then this returns an error.
+    /// Similarly, if the number parsed does not fit into a `u32`, then this
+    /// returns an error.
+    ///
+    /// # Motivation
+    ///
+    /// We hand-write this for a couple reasons. Firstly, the standard library's
+    /// `FromStr` impl for parsing integers requires UTF-8 validation first. We
+    /// don't need that for version parsing since we stay in the realm of ASCII.
+    /// Secondly, std's version is a little more flexible because it supports
+    /// signed integers. So for example, it permits a leading `+` before the actual
+    /// integer. We don't need that for version parsing.
+    fn parse_u32(segment: &str) -> Result<u32, VersionSegmentError> {
+        let mut n: u32 = 0;
+
+        for byte in segment.bytes() {
+            let digit = match byte.checked_sub(b'0') {
+                None => return Err(VersionSegmentError::InvalidDigit),
+                Some(digit) if digit > 9 => return Err(VersionSegmentError::InvalidDigit),
+                Some(digit) => u32::from(digit),
+            };
+
+            n = n
+                .checked_mul(10)
+                .and_then(|n| n.checked_add(digit))
+                .ok_or_else(|| VersionSegmentError::NumberTooBig {
+                    number: segment.to_string(),
+                })?;
+        }
+
+        Ok(n)
     }
 }
 
@@ -97,7 +147,7 @@ impl Version {
                         });
                     }
 
-                    segments.push(VersionSegment::new(&current_segment));
+                    segments.push(VersionSegment::new(&current_segment)?);
                     current_segment.clear();
                 }
                 '-' => {
@@ -107,7 +157,7 @@ impl Version {
                         });
                     }
 
-                    segments.push(VersionSegment::new(&current_segment));
+                    segments.push(VersionSegment::new(&current_segment)?);
                     current_segment.clear();
 
                     // Dash indicates prerelease, add "pre" marker
@@ -137,7 +187,7 @@ impl Version {
                     if let Some(previous_ch) = current_segment.chars().last()
                         && (previous_ch.is_alphabetic() ^ ch.is_alphabetic())
                     {
-                        segments.push(VersionSegment::new(&current_segment));
+                        segments.push(VersionSegment::new(&current_segment)?);
                         current_segment.clear();
                     }
 
@@ -152,7 +202,7 @@ impl Version {
             });
         }
 
-        segments.push(VersionSegment::new(&current_segment));
+        segments.push(VersionSegment::new(&current_segment)?);
 
         if segments.is_empty() {
             segments.push(ZERO);
@@ -383,6 +433,15 @@ mod tests {
             Version::new("2.3422222.222.222222222.22222.ads0as.dasd0.ddd2222.2.qd3e.").is_err()
         );
         assert!(Version::new(".0.0.pre").is_err());
+    }
+
+    #[test]
+    fn test_version_limits() {
+        let max = u32::MAX;
+        assert!(Version::new(max.to_string()).is_ok());
+
+        let too_high = u32::MAX.to_string().parse::<u64>().unwrap() + 1;
+        assert!(Version::new(too_high.to_string()).is_err());
     }
 
     #[test]
