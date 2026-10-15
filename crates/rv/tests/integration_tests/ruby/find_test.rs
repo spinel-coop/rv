@@ -71,10 +71,10 @@ fn test_ruby_find_dot_ruby_version_empty() {
     test.create_ruby_dir("ruby-3.3.5");
     test.create_ruby_dir("ruby-3.4.5");
     let find = test.ruby_find(&[]);
-    find.assert_failure();
-    assert_eq!(
-        find.normalized_stderr(),
-        "Error: RubyError(FindError(ConfigError(RequestError(EmptyInput))))\n"
+    find.assert_success();
+    assert!(
+        find.normalized_stderr()
+            .contains("Please provide a ruby version or remove the file."),
     );
 }
 
