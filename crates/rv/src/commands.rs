@@ -1,5 +1,6 @@
 pub mod cache;
 pub mod clean_install;
+pub mod doctor;
 pub mod fmt;
 pub mod ruby;
 pub mod run;

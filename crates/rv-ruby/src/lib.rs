@@ -21,7 +21,7 @@ use crate::version::RubyVersion;
 /// On Windows, checks `ruby.exe` (standard RubyInstaller2), then `ruby.cmd` (batch wrapper),
 /// then `ruby.bat` (JRuby, which ships no `ruby.exe`).
 /// On Unix systems (macOS, Linux), it's just `ruby`.
-fn ruby_executable_names() -> &'static [&'static str] {
+pub fn ruby_executable_names() -> &'static [&'static str] {
     if cfg!(windows) {
         &["ruby.exe", "ruby.cmd", "ruby.bat"]
     } else {
