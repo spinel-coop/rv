@@ -19,27 +19,21 @@ pub(crate) enum Flow {
 /// Which nested scopes a walk descends into.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Scopes {
-    pub(crate) classes: bool,
-    pub(crate) modules: bool,
-    pub(crate) defs: bool,
-    pub(crate) singleton_classes: bool,
+    pub classes: bool,
+    pub modules: bool,
+    pub defs: bool,
+    pub singleton_classes: bool,
 }
 
 impl Scopes {
-    /// `class` and `module` bodies only.
-    ///
-    /// These execute where they are written, and are where nested definitions
-    /// live. A `def` body is skipped: it does not run until the method is
-    /// called, and the definitions inside it are not namespace members.
-    pub(crate) const DECLARATIVE: Self = Self {
+    pub const DECLARATIVE: Self = Self {
         classes: true,
         modules: true,
         defs: false,
         singleton_classes: false,
     };
 
-    /// Every body that can hold statements, including `def` and `class << self`.
-    pub(crate) const ALL: Self = Self {
+    pub const ALL: Self = Self {
         classes: true,
         modules: true,
         defs: true,
@@ -82,6 +76,18 @@ impl Namespace {
     fn pop(&mut self) {
         self.0.pop();
     }
+}
+
+/// Helper to push a namespace segment, run a closure, and pop on exit.
+/// Ensures pop() runs even if the closure panics (via Drop on scope exit).
+fn with_namespace_segment<F, R>(namespace: &mut Namespace, segment: &str, f: F) -> R
+where
+    F: FnOnce(&mut Namespace) -> R,
+{
+    namespace.push(segment);
+    let result = f(namespace);
+    namespace.pop();
+    result
 }
 
 /// Walk every statement in `program`, outermost first.
@@ -228,13 +234,12 @@ where
     };
 
     if let Some(segment) = segment {
-        namespace.push(segment);
+        with_namespace_segment(namespace, segment, |ns| {
+            walk_statements(&statements, source, scopes, ns, visit)
+        })
+    } else {
+        walk_statements(&statements, source, scopes, namespace, visit)
     }
-    let flow = walk_statements(&statements, source, scopes, namespace, visit);
-    if segment.is_some() {
-        namespace.pop();
-    }
-    flow
 }
 
 #[cfg(test)]
