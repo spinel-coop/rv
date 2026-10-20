@@ -336,15 +336,6 @@ impl<'src> ParsedSource<'src> {
     }
 }
 
-/// Parses Ruby source and returns an owned index of definitions and
-/// diagnostics.
-///
-/// Use [`ParsedSource`] directly when more than one kind of result is needed
-/// from the same bytes, so they share a single parse.
-pub fn parse(source: &[u8]) -> ParsedFile {
-    ParsedSource::new(source).to_parsed_file()
-}
-
 /// Collects every `def`/`class`/`module` in `program`, in source order.
 ///
 /// Descends into `class` and `module` bodies only: definitions inside a `def`
