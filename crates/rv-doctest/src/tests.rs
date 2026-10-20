@@ -4,7 +4,7 @@ use rv_ruby_parser::ItemKind;
 use rv_ruby_parser::parse;
 
 fn snippets(source: &str) -> Vec<Snippet> {
-    extract(&parse(source.as_bytes()))
+    extract(&parse(source.as_bytes()).unwrap())
 }
 
 macro_rules! assert_snippet {
