@@ -1,4 +1,4 @@
-use super::{Diagnostic, Item, ItemKind, ParsedFile, parse};
+use super::{Diagnostic, Item, ItemKind, ParsedFile, ParsedSource};
 use indoc::indoc;
 
 /// The fully-qualified path of every item, in source order.
@@ -49,7 +49,7 @@ macro_rules! comment_case {
     ($name:ident, $source:expr, [$($item:expr),* $(,)?]) => {
         #[test]
         fn $name() {
-            let parsed = parse($source.as_bytes());
+            let parsed = ParsedSource::new($source.as_bytes()).to_parsed_file();
             assert!(parsed.is_success(), "parsing failed for case '{}'", stringify!($name));
             assert_items(&parsed, &[$($item),*]);
         }
@@ -229,7 +229,10 @@ fn comments_without_definition_are_ignored() {
 
             # nor this one
         "};
-    let parsed = parse(source.as_bytes());
+    let parsed = {
+        let source = source.as_bytes();
+        ParsedSource::new(source).to_parsed_file()
+    };
 
     assert!(
         parsed.items.is_empty(),
@@ -252,7 +255,10 @@ fn superclass_detection() {
             end
         "};
     // editorconfig-checker-enable
-    let parsed = parse(source.as_bytes());
+    let parsed = {
+        let source = source.as_bytes();
+        ParsedSource::new(source).to_parsed_file()
+    };
 
     assert_eq!(
         find_item_kind_of(&parsed.items, ItemKind::Class, "Foo").superclass(),
@@ -274,7 +280,10 @@ fn superclass_detection() {
 #[test]
 fn invalid_source_surfaces_errors() {
     let source = "def foo(\n";
-    let parsed = parse(source.as_bytes());
+    let parsed = {
+        let source = source.as_bytes();
+        ParsedSource::new(source).to_parsed_file()
+    };
 
     assert!(!parsed.is_success(), "expected the source to fail parsing");
     assert_eq!(
@@ -304,7 +313,10 @@ fn invalid_source_surfaces_errors() {
 #[test]
 fn comment_with_indentation_preserves_leading_spaces() {
     let source = "#     indented code\ndef foo\nend\n";
-    let parsed = parse(source.as_bytes());
+    let parsed = {
+        let source = source.as_bytes();
+        ParsedSource::new(source).to_parsed_file()
+    };
     assert!(parsed.is_success());
     let item = find_item_kind_of(&parsed.items, ItemKind::Def, "foo");
     // After Phase 1 transform: strip '#', then strip exactly ONE space.
@@ -417,7 +429,10 @@ fn full_path_qualifies_definitions_by_their_enclosing_namespace() {
         end
     "};
     // editorconfig-checker-enable
-    let parsed = parse(source.as_bytes());
+    let parsed = {
+        let source = source.as_bytes();
+        ParsedSource::new(source).to_parsed_file()
+    };
     let paths = full_paths(&parsed.items);
 
     assert_eq!(
@@ -433,7 +448,7 @@ fn full_path_qualifies_definitions_by_their_enclosing_namespace() {
 
 #[test]
 fn full_path_of_a_top_level_definition_is_its_own_name() {
-    let parsed = parse(b"def add(a, b)\nend\n");
+    let parsed = ParsedSource::new(b"def add(a, b)\nend\n").to_parsed_file();
     assert_eq!(parsed.items[0].full_path, "add");
 }
 
@@ -447,7 +462,10 @@ fn full_path_of_a_compact_namespace_is_not_double_qualified() {
         end
     "};
     // editorconfig-checker-enable
-    let parsed = parse(source.as_bytes());
+    let parsed = {
+        let source = source.as_bytes();
+        ParsedSource::new(source).to_parsed_file()
+    };
     let paths = full_paths(&parsed.items);
 
     assert_eq!(paths, vec!["Foo::Bar", "Foo::Bar#baz"]);
