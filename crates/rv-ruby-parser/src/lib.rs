@@ -14,6 +14,7 @@ use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 
 use ruby_prism::{CommentType, Node};
+const MAX_SOURCE_BYTES: usize = 16 * 1024; // ~16 KB cap
 
 pub mod calls;
 pub(crate) mod visitor;
@@ -206,12 +207,19 @@ impl Item {
     }
 }
 
-/// An owned version of `ruby_prism`'s parse diagnostic.
+/// An owned version of `ruby-prism`'s parse diagnostic.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Diagnostic {
     pub message: String,
     pub line: u32,
     pub column: u32,
+}
+
+/// The kind of error encountered while parsing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParseError {
+    /// The source exceeds the allowed size limit.
+    SourceTooLarge,
 }
 
 /// The result of parsing a Ruby source file.
@@ -370,13 +378,14 @@ impl<'src> ParsedSource<'src> {
 ///
 /// Use [`ParsedSource`] directly when more than one kind of result is needed
 /// from the same bytes, so they share a single parse.
-pub fn parse(source: &[u8]) -> ParsedFile {
-    ParsedSource::new(source).to_parsed_file()
+pub fn parse(source: &[u8]) -> Result<ParsedFile, ParseError> {
+    // Cap input size at ~16 KB to prevent DoS via large inputs
+    if source.len() > MAX_SOURCE_BYTES {
+        return Err(ParseError::SourceTooLarge);
+    }
+    Ok(ParsedSource::new(source).to_parsed_file())
 }
 
-/// Collects every `def`/`class`/`module` in `program`, in source order.
-///
-/// Descends into `class` and `module` bodies only: definitions inside a `def`
 /// body are not members of the enclosing namespace.
 fn collect_items(
     program: &ruby_prism::ProgramNode<'_>,

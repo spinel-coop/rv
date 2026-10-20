@@ -116,18 +116,27 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
     let parsed: Vec<ParsedSourceFile> = discovery_result
         .files
         .into_par_iter()
-        .map(|(path, source)| {
-            let parsed = rv_ruby_parser::parse(&source);
-            // One parse per snippet, shared by the syntax, assertion, and RBS
-            // checkers.
-            let snippets = extract_analyzed(&parsed);
-            ParsedSourceFile {
-                path: path.to_string(),
-                diagnostics: parsed.diagnostics,
-                snippets,
-            }
-        })
-        .collect();
+            .map(|(path, source)| {
+                // Cap input size at ~16 KB to prevent DoS via large inputs
+                let parsed = rv_ruby_parser::parse(&source);
+                // One parse per snippet, shared by the syntax, assertion, and RBS
+                // checkers.
+                let parsed = match parsed {
+                    Ok(p) => p,
+                    Err(_) => {
+                        // Skip files that exceed the size limit; they're not valid doctests.
+                        return None;
+                    }
+                };
+                let snippets = extract_analyzed(&parsed);
+                Some(ParsedSourceFile {
+                    path: path.to_string(),
+                    diagnostics: parsed.diagnostics,
+                    snippets,
+                })
+            })
+            .filter_map(|x| x)
+            .collect();
 
     // Counted from the parse itself, so the totals are right whether or not
     // Ruby is available to run the snippets.
