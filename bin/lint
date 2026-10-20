@@ -7,7 +7,7 @@ cargo clippy --all-targets --all-features "$@" -- -D warnings
 if [ $# -gt 0 ] && [ "$1" = "--fix" ]; then
     cargo fmt --all
     if command -v editorconfig-checker >/dev/null 2>&1; then
-        editorconfig-checker --fix
+        editorconfig-checker --fix 2>&1
     else
         echo "editorconfig-checker not found. Run bin/setup or: brew install editorconfig-checker" >&2
         exit 1
@@ -15,7 +15,7 @@ if [ $# -gt 0 ] && [ "$1" = "--fix" ]; then
 else
     cargo fmt --all -- --check
     if command -v editorconfig-checker >/dev/null 2>&1; then
-        editorconfig-checker
+        editorconfig-checker 2>&1
     else
         echo "editorconfig-checker not found. Run bin/setup or: brew install editorconfig-checker" >&2
         exit 1
