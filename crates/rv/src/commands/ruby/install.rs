@@ -527,7 +527,7 @@ fn extract_zip(
 
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i)?;
-        let path = entry.name().replace('\\', "/"); // Normalize Windows path separators
+        let path = entry.name()?.replace('\\', "/"); // Normalize Windows path separators
 
         if path.contains("..") {
             return Err(Error::DirectoryTraversalError(path));
