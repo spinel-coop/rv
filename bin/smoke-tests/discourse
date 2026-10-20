@@ -21,6 +21,9 @@ setup_rv
 [[ -d discourse ]] || git clone --depth 1 https://github.com/discourse/discourse.git
 cd discourse
 
+# Fix broken raindrops gemspec: File.read('README') fails when working dir differs from gemspec dir
+sed -i '/s\.description = File\.read(.README.).*$/d' ~/.local/share/rv/rubies/ruby-3.4.7/lib/ruby/gems/3.4.0/bundler/gems/raindrops-d2ef03efc235/raindrops.gemspec || true
+
 rv ci
 
 check_rv_ci_noop
