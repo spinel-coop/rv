@@ -47,14 +47,6 @@ pub(crate) fn collect_calls(parsed: &ParsedSource<'_>) -> Vec<CallSite> {
     calls
 }
 
-/// Extracts every method call from `source`.
-///
-/// Parses `source`; build a [`ParsedSource`] instead when other results are
-/// wanted from the same bytes.
-pub fn parse_calls(source: &[u8]) -> Vec<CallSite> {
-    collect_calls(&ParsedSource::new(source))
-}
-
 /// A `require` of minitest found in a snippet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MinitestRequire {
