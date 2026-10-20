@@ -195,7 +195,14 @@ jobs:
       - name: Add rv to PATH
         run: chmod +x ~/bin/rv && echo "$HOME/bin" >> "$GITHUB_PATH"
 
+      - name: Clear rv cache
+        run: |
+          rm -rf "$HOME/.cache/rv" "$HOME/.local/share/rv"
+          mkdir -p "$HOME/.cache/rv" "$HOME/.local/share/rv"
+          echo "RV_NO_CACHE=1" >> "$GITHUB_ENV"
+
       - name: rv clean-install for ${{ matrix.project }}
         run: bin/smoke-tests/${{ matrix.project }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RV_NO_CACHE: "1"
