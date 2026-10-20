@@ -3334,7 +3334,7 @@ dependencies = [
  "pretty_assertions",
  "rv-gem-types",
  "saphyr",
- "saphyr-parser",
+ "saphyr-parser 0.0.11",
  "thiserror",
  "winnow 1.0.4",
 ]
@@ -3444,7 +3444,17 @@ dependencies = [
  "encoding_rs 0.7.2",
  "hashlink 0.12.2",
  "ordered-float",
- "saphyr-parser",
+ "saphyr-parser 0.1.2",
+ "thiserror",
+]
+
+[[package]]
+name = "saphyr-parser"
+version = "0.0.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ebfd783fcf1b3f6bafd557be0e1427ec54f826f513c3cdd749f9844484df2a13"
+dependencies = [
+ "arraydeque",
  "thiserror",
 ]
 
