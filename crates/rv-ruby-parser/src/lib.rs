@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 
 use ruby_prism::{CommentType, Node};
-const MAX_SOURCE_BYTES: usize = 16 * 1024; // ~16 KB cap
+const MAX_SOURCE_BYTES: usize = 8 * 1024;
 
 pub mod calls;
 pub(crate) mod visitor;
@@ -379,7 +379,7 @@ impl<'src> ParsedSource<'src> {
 /// Use [`ParsedSource`] directly when more than one kind of result is needed
 /// from the same bytes, so they share a single parse.
 pub fn parse(source: &[u8]) -> Result<ParsedFile, ParseError> {
-    // Cap input size at ~16 KB to prevent DoS via large inputs
+    // Cap input size to prevent DoS via large inputs
     if source.len() > MAX_SOURCE_BYTES {
         return Err(ParseError::SourceTooLarge);
     }
