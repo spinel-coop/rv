@@ -55,7 +55,7 @@ reqwest = { version = "0.13.5", default-features = false, features = [
   "http2",
 ] }
 ruby-prism = "1.9"
-saphyr = "0.1.0"
+saphyr = "0.0.11"
 saphyr-parser = "0.0.11"
 seahash = "4.1.0"
 serde = "1.0.219"
