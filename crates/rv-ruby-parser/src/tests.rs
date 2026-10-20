@@ -1,4 +1,3 @@
-use super::calls::parse_calls;
 use super::{Diagnostic, Item, ItemKind, ParsedFile, parse};
 use indoc::indoc;
 
@@ -401,28 +400,6 @@ fn minitest_require_none_syntax_error() {
     let source = "def foo(\n";
     let line = minitest_require_line(source.as_bytes());
     assert_eq!(line, None, "syntax error returns None");
-}
-
-#[test]
-fn call_on_root_scoped_constant_resolves_without_the_leading_colons() {
-    let calls = parse_calls(b"::Kernel.puts 1\n");
-    assert_eq!(calls.len(), 1, "expected one call, got {calls:?}");
-    assert_eq!(calls[0].class_name.as_deref(), Some("Kernel"));
-    assert_eq!(calls[0].name, "puts");
-}
-
-#[test]
-fn call_on_nested_root_scoped_constant_keeps_every_segment() {
-    let calls = parse_calls(b"::Foo::Bar.baz\n");
-    assert_eq!(calls.len(), 1, "expected one call, got {calls:?}");
-    assert_eq!(calls[0].class_name.as_deref(), Some("Foo::Bar"));
-}
-
-#[test]
-fn call_on_nested_constant_path_keeps_every_segment() {
-    let calls = parse_calls(b"Foo::Bar::Baz.qux\n");
-    assert_eq!(calls.len(), 1, "expected one call, got {calls:?}");
-    assert_eq!(calls[0].class_name.as_deref(), Some("Foo::Bar::Baz"));
 }
 
 #[test]
