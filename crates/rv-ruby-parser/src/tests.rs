@@ -121,6 +121,7 @@ comment_case!(
 
 comment_case!(
     nested_class_containing_def,
+    // editorconfig-checker-disable
     indoc! {"
             # outer docs
             class Outer
@@ -129,6 +130,7 @@ comment_case!(
               end
             end
         "},
+    // editorconfig-checker-enable
     [
         ExpectedItem {
             kind: ItemKind::Class,
@@ -147,6 +149,7 @@ comment_case!(
 
 comment_case!(
     class_with_documented_static_method,
+    // editorconfig-checker-disable
     indoc! {"
             # Foo docs
             class Foo
@@ -159,6 +162,7 @@ comment_case!(
               end
             end
         "},
+    // editorconfig-checker-enable
     [
         ExpectedItem {
             kind: ItemKind::Class,
@@ -183,6 +187,7 @@ comment_case!(
 
 comment_case!(
     module_with_multiple_documented_methods,
+    // editorconfig-checker-disable
     indoc! {"
             # Utils docs
             module Utils
@@ -195,6 +200,7 @@ comment_case!(
               end
             end
         "},
+    // editorconfig-checker-enable
     [
         ExpectedItem {
             kind: ItemKind::Module,
@@ -235,6 +241,7 @@ fn comments_without_definition_are_ignored() {
 
 #[test]
 fn superclass_detection() {
+    // editorconfig-checker-disable
     let source = indoc! {"
             class Foo < Bar
             end
@@ -245,6 +252,7 @@ fn superclass_detection() {
             class Plain
             end
         "};
+    // editorconfig-checker-enable
     let parsed = parse(source.as_bytes());
 
     assert_eq!(
@@ -347,6 +355,7 @@ fn minitest_require_with_subpath() {
 
 #[test]
 fn minitest_require_in_class() {
+    // editorconfig-checker-disable
     let source = indoc! {"
         class Foo
           require 'minitest'
@@ -354,12 +363,14 @@ fn minitest_require_in_class() {
           end
         end
     "};
+    // editorconfig-checker-enable
     let line = minitest_require_line(source.as_bytes());
     assert_eq!(line, Some(2), "found require on line 2");
 }
 
 #[test]
 fn minitest_require_after_other_code() {
+    // editorconfig-checker-disable
     let source = indoc! {"
         def foo
           1
@@ -368,16 +379,19 @@ fn minitest_require_after_other_code() {
         def bar
         end
     "};
+    // editorconfig-checker-enable
     let line = minitest_require_line(source.as_bytes());
     assert_eq!(line, Some(4), "found require on line 4");
 }
 
 #[test]
 fn no_minitest_require() {
+    // editorconfig-checker-disable
     let source = indoc! {"
         require 'json'
         require 'rails'
     "};
+    // editorconfig-checker-enable
     let line = minitest_require_line(source.as_bytes());
     assert_eq!(line, None, "no minitest require found");
 }
@@ -413,6 +427,7 @@ fn call_on_nested_constant_path_keeps_every_segment() {
 
 #[test]
 fn full_path_qualifies_definitions_by_their_enclosing_namespace() {
+    // editorconfig-checker-disable
     let source = indoc! {"
         module Math
           class Calculator
@@ -424,6 +439,7 @@ fn full_path_qualifies_definitions_by_their_enclosing_namespace() {
           end
         end
     "};
+    // editorconfig-checker-enable
     let parsed = parse(source.as_bytes());
     let paths = full_paths(&parsed.items);
 
@@ -446,12 +462,14 @@ fn full_path_of_a_top_level_definition_is_its_own_name() {
 
 #[test]
 fn full_path_of_a_compact_namespace_is_not_double_qualified() {
+    // editorconfig-checker-disable
     let source = indoc! {"
         module Foo::Bar
           def baz
           end
         end
     "};
+    // editorconfig-checker-enable
     let parsed = parse(source.as_bytes());
     let paths = full_paths(&parsed.items);
 
@@ -462,12 +480,14 @@ fn full_path_of_a_compact_namespace_is_not_double_qualified() {
 fn minitest_require_in_def_body_is_not_detected() {
     // A `def` body does not run until the method is called, so the require
     // cannot be relied on having happened at the enclosing statement's end.
+    // editorconfig-checker-disable
     let source = indoc! {"
         def setup_env
           require 'minitest/autorun'
         end
         setup_env
     "};
+    // editorconfig-checker-enable
     assert_eq!(minitest_require_line(source.as_bytes()), None);
 }
 
@@ -475,12 +495,14 @@ fn minitest_require_in_def_body_is_not_detected() {
 fn minitest_require_reports_the_enclosing_top_level_statement() {
     use super::calls::minitest_require;
 
+    // editorconfig-checker-disable
     let source = indoc! {"
         class Helper
           require 'minitest/autorun'
         end
         assert_equal 1, 1
     "};
+    // editorconfig-checker-enable
     let found = minitest_require(source.as_bytes()).expect("require found");
     assert_eq!(found.require_line, 2, "the require itself is on line 2");
     assert_eq!(
@@ -502,6 +524,7 @@ fn minitest_require_at_top_level_is_its_own_statement() {
 fn parsed_source_serves_every_consumer_from_one_parse() {
     use super::ParsedSource;
 
+    // editorconfig-checker-disable
     let source = indoc! {"
         require 'minitest/autorun'
 
@@ -511,6 +534,7 @@ fn parsed_source_serves_every_consumer_from_one_parse() {
           end
         end
     "};
+    // editorconfig-checker-enable
 
     let parsed = ParsedSource::new(source.as_bytes());
 
