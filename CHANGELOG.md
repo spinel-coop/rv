@@ -1,10 +1,30 @@
 # `rv` changelog
 
+## rv 0.7.2 (24 Sept, 2026)
+
+### Security
+
+- bump TLS related crates (root key exposure response) [#820](https://github.com/spinel-coop/rv/pull/820)
+- fix zip warning / Update 'zip' (RUSTSEC-2026-0367) [#819](https://github.com/spinel-coop/rv/pull/819)
+
+### Fixed
+
+- reject huge version numbers to prevent DoS [#817](https://github.com/spinel-coop/rv/pull/817)
+- fix rustls warning [#818](https://github.com/spinel-coop/rv/pull/818)
+- fix YAML string scalar handling [#812](https://github.com/spinel-coop/rv/pull/812)
+- fix YAML metadata roundtrip [#811](https://github.com/spinel-coop/rv/pull/811)
+- fix lockfile version coherence [#809](https://github.com/spinel-coop/rv/pull/809)
+- fix version segment prerelease parsing [#816](https://github.com/spinel-coop/rv/pull/816)
+- fix requirement pessimistic prerelease handling [#814](https://github.com/spinel-coop/rv/pull/814)
+- fix version bump prerelease logic [#813](https://github.com/spinel-coop/rv/pull/813)
+- fix rvx-from namespace parsing [#804](https://github.com/spinel-coop/rv/pull/804)
+- install to `~/.local/bin` instead of `~/.cargo/bin` [#797](https://github.com/spinel-coop/rv/pull/797)
+
 ## rv 0.7.1 (24 Sept, 2026)
 
 ### Fixed
 
-  - remove jemalloc, accidentally added via rubyfmt
+- remove jemalloc, accidentally added via rubyfmt
 
 Thank you to new contributor @jalcine!
 
