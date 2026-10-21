@@ -727,10 +727,10 @@ fn install_git_repo(
 
                 match rv_gem_specification_yaml::parse(&yaml_contents) {
                     Ok(parsed) => parsed,
-                    Err(_) => cache_gemspec_path(config, &repo.path, path, cached_gemspec_path)?,
+                    Err(_) => cache_gemspec_path(config, &dest_dir, path, cached_gemspec_path)?,
                 }
             } else {
-                cache_gemspec_path(config, &repo.path, path, cached_gemspec_path)?
+                cache_gemspec_path(config, &dest_dir, path, cached_gemspec_path)?
             };
 
             git_specs.push(dep_gemspec.clone());
@@ -837,7 +837,6 @@ fn download_git_repo<'i>(
     // Success! Save the paths of all the repos we just cloned.
     Ok(DownloadedGitRepo {
         source: git_source.clone(),
-        path: git_repo_dir,
     })
 }
 
@@ -1257,7 +1256,6 @@ struct DownloadedRubygems<'i> {
 #[derive(Debug)]
 struct DownloadedGitRepo<'i> {
     source: GitSection<'i>,
-    path: Utf8PathBuf,
 }
 
 impl<'i> DownloadedGitRepo<'i> {
