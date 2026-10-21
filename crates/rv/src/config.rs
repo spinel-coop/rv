@@ -29,6 +29,57 @@ pub mod github;
 mod ruby_cache;
 mod ruby_fetcher;
 pub mod rv_settings;
+mod system_ruby;
+
+#[cfg(all(test, not(windows)))]
+pub(crate) mod test_support {
+    use std::collections::HashMap;
+
+    use rv_ruby::EnvProvider;
+
+    #[derive(Default)]
+    pub struct FakeEnv {
+        vars: HashMap<String, String>,
+    }
+
+    impl FakeEnv {
+        pub fn new() -> Self {
+            Self::default()
+        }
+
+        pub fn with(mut self, key: &str, value: &str) -> Self {
+            self.vars.insert(key.to_string(), value.to_string());
+            self
+        }
+    }
+
+    impl EnvProvider for FakeEnv {
+        fn get_var(&self, key: &str) -> Option<String> {
+            self.vars.get(key).cloned()
+        }
+    }
+
+    /// Writes a mock ruby at `<dir>/bin/ruby` that emits the metadata
+    /// expected by `extract_ruby_info`. Used by `system_ruby` tests.
+    pub fn make_mock_ruby_shim(dir: &std::path::Path) -> std::path::PathBuf {
+        use std::fs;
+        let bin = dir.join("bin");
+        fs::create_dir_all(&bin).unwrap();
+        let exec = bin.join("ruby");
+        let script = "\
+#!/bin/bash
+ echo \"ruby\"\n echo \"3.0.1\"\n echo \"aarch64-darwin23\"\n echo \"aarch64\"\n echo \"darwin23\"\n echo \"\"\n";
+        fs::write(&exec, script).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(&exec).unwrap().permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&exec, perms).unwrap();
+        }
+        exec
+    }
+}
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
@@ -178,6 +229,9 @@ impl Config {
         let root = Utf8PathBuf::from(temp_dir.path().to_str().unwrap());
         let ruby_dir = root.join("rubies");
         fs::create_dir_all(&ruby_dir).unwrap();
+        // `TempDir` deletes the directory on drop. Persist it for the
+        // lifetime of the test process — the OS temp cleaner will reclaim it.
+        std::mem::forget(temp_dir);
 
         Self {
             ruby_dirs: indexset![ruby_dir],
@@ -192,7 +246,24 @@ impl Config {
 
     #[instrument(skip_all, level = "trace")]
     pub fn rubies(&self) -> Vec<Ruby> {
-        self.discover_installed_rubies()
+        let mut rubies = self.discover_installed_rubies();
+        rubies.extend(self.discover_system_rubies());
+        rubies.sort();
+        rubies
+    }
+
+    /// Like [`Self::rubies`], but applies `predicate` to the version string of
+    /// each candidate. Used by [`Self::highest_ruby_matching`] for version
+    /// pinning and `uninstall`. Includes system Rubies so the uninstall
+    /// safety check (#762) can fire.
+    fn rubies_with_filter<F>(&self, predicate: F) -> Vec<Ruby>
+    where
+        F: Fn(&str) -> bool + Clone,
+    {
+        let mut rubies = self.discover_installed_rubies_matching(&predicate);
+        rubies.extend(self.discover_system_rubies_filtered(&predicate));
+        rubies.sort();
+        rubies
     }
 
     pub async fn remote_rubies(&self) -> Vec<RemoteRuby> {
@@ -351,7 +422,7 @@ impl Config {
     }
 
     fn highest_ruby_matching(&self, request: &RubyRequest) -> Option<Ruby> {
-        self.discover_rubies_matching(|dir_name| {
+        self.rubies_with_filter(|dir_name| {
             if dir_name == "ruby-dev" {
                 request.is_dev()
             } else {
