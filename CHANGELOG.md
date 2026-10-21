@@ -19,6 +19,7 @@
 - fix version bump prerelease logic [#813](https://github.com/spinel-coop/rv/pull/813)
 - fix rvx-from namespace parsing [#804](https://github.com/spinel-coop/rv/pull/804)
 - install to `~/.local/bin` instead of `~/.cargo/bin` [#797](https://github.com/spinel-coop/rv/pull/797)
+- correct how we handle gems that shell out to git [#823](https://github.com/spinel-coop/rv/pull/823)
 
 ## rv 0.7.1 (24 Sept, 2026)
 
