@@ -3,5 +3,8 @@ source: crates/rv/tests/integration_tests/shell/init_test.rs
 expression: output.normalized_stdout()
 ---
 $env.config.hooks.pre_execution = ($env.config.hooks.pre_execution? | default [] | append {||
-    ^"/tmp/bin/rv" shell env nu | from json | load-env
+    let rv_env = ^"/tmp/bin/rv" shell env nu | from json
+    let unset = $rv_env | transpose name value | where value == null | get name
+    hide-env --ignore-errors ...$unset
+    $rv_env | reject ...$unset | load-env
 })
