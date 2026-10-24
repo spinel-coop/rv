@@ -85,7 +85,11 @@ pub(crate) async fn install(
         },
     };
 
-    if config.is_requested_ruby_installed_in_dir(&install_dir) && !force {
+    // A dev build is never the same twice, so it is always fetched again
+    if version != "dev"
+        && config.is_ruby_installed_in_dir(&install_dir, &install_dir_name(&engine, &version))
+        && !force
+    {
         println!("Version already installed. If you want to overwrite it, use '--force'.");
 
         return Ok(());

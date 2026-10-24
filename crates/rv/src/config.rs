@@ -261,10 +261,11 @@ impl Config {
         }
     }
 
-    pub fn is_requested_ruby_installed_in_dir(&self, install_root: &Utf8Path) -> bool {
-        let requested_ruby_name = self.ruby_request().to_string();
-
-        let install_path = install_root.join(requested_ruby_name);
+    /// Whether `dir_name` under `install_root` holds a valid Ruby. The name is the one the
+    /// resolved version installs to, not the request: `3.4` or no request at all names no
+    /// directory, and asking for those would find nothing every time.
+    pub fn is_ruby_installed_in_dir(&self, install_root: &Utf8Path, dir_name: &str) -> bool {
+        let install_path = install_root.join(dir_name);
 
         let managed = self.ruby_dirs.first().is_some_and(|d| *d == *install_root);
 
