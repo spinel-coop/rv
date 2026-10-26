@@ -281,7 +281,15 @@ impl CacheBucket {
 
     /// Return an iterator over all cache buckets.
     pub fn iter() -> impl Iterator<Item = Self> {
-        [Self::Ruby, Self::Gem].iter().copied()
+        [
+            Self::Ruby,
+            Self::Gem,
+            Self::Git,
+            Self::Gemspec,
+            Self::GemDeps,
+        ]
+        .iter()
+        .copied()
     }
 }
 
@@ -336,8 +344,12 @@ mod tests {
     #[test]
     fn test_cache_bucket_iteration() {
         let buckets: Vec<_> = CacheBucket::iter().collect();
-        assert_eq!(buckets.len(), 2);
+        assert_eq!(buckets.len(), 5);
         assert!(buckets.contains(&CacheBucket::Ruby));
+        assert!(buckets.contains(&CacheBucket::Gem));
+        assert!(buckets.contains(&CacheBucket::Git));
+        assert!(buckets.contains(&CacheBucket::Gemspec));
+        assert!(buckets.contains(&CacheBucket::GemDeps));
     }
 
     #[test]
