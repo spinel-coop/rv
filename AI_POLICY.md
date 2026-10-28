@@ -4,9 +4,9 @@ If you wish to use an AI tool for assistance, please respect the policy below.
 
 ## Policy
 
-- As a contributor, you are always the author and fully accountable for your contributions.
-- You must carefully read and review all LLM-generated code or text before asking maintainers to review it. This includes PR descriptions, where we want to hear your personal voice rather than an unfiltered AI summary.
-- You should be transparent and make note if your contribution contains substantial amounts of tool-generated content.
+- As a contributor, you are always the author and fully accountable for your contributions. That means the author of all commits in your PR should be you, rather than attributed to an AI agent.
+- You must carefully read and review all LLM-generated code or text before asking maintainers to review it. This includes PR descriptions, where we want to hear your personal voice rather than an unfiltered AI summary. That means, at the very least, removing footers like "Generated with Claude Code", but also removing the default verbosity of LLMs and explaining things concisely in your own words.
+- We do appreciate transparency about the amount of tool-generated content included in your contribution.
 - You should be confident that your contribution is high enough quality to merit a maintainer's time for review. You should be able to answer questions about your work during review.
 - You are responsible for ensuring you have the legal right to make your contribution under our license, and that your contribution does not violate the intellectual property rights of any third party.
 
