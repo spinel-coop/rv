@@ -793,6 +793,32 @@ impl RvTest {
         )
     }
 
+    /// Create a mock system ruby shim at `<dir>/bin/<exec_name>`.
+    ///
+    /// Used in integration tests to simulate a `/usr/bin/ruby`-style system
+    /// installation that should be discovered via PATH but never uninstalled
+    /// by `rv`. Placing it under `bin/` ensures `Ruby::from_executable_path`
+    /// derives `path=<dir>` so `is_valid()` (which checks `<path>/bin/<exec>`)
+    /// passes.
+    pub fn create_system_ruby(&self, dir: &Utf8Path, version: &str) -> Utf8PathBuf {
+        let bin_subdir = dir.join("bin");
+        std::fs::create_dir_all(&bin_subdir).expect("Failed to create system bin subdir");
+
+        let exec = bin_subdir.join(self.ruby_executable_name());
+        let mock_script = self.ruby_mock_script("ruby", version);
+        std::fs::write(&exec, mock_script).expect("Failed to write system ruby shim");
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&exec).unwrap().permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&exec, perms).unwrap();
+        }
+
+        exec
+    }
+
     /// Create a mock tool executable (e.g., `irb`, `gem`) in a Ruby directory's bin/.
     /// On Unix, creates a shell script. On Windows, creates a .cmd batch file.
     pub fn create_tool_in_ruby_dir(&self, ruby_dir: &Utf8Path, tool_name: &str) {

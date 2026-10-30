@@ -161,6 +161,9 @@ pub enum UnpackError {
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
+    #[error("Refusing to use system Ruby at {path} ({version}); rv ci requires an rv-managed Ruby")]
+    #[diagnostic(help("Run `rv ruby install {version}` to install a managed Ruby, then retry."))]
+    UnmanagedRuby { path: Utf8PathBuf, version: String },
     #[error(transparent)]
     Infallible(#[from] std::convert::Infallible),
     #[error("Needed to install Ruby but couldn't: {0}")]
@@ -243,6 +246,12 @@ pub(crate) async fn ci(global_args: &GlobalArgs, args: CleanInstallArgs) -> Resu
     let ruby = config
         .current_ruby()
         .expect("Ruby should be installed after the check above");
+    if !ruby.managed {
+        return Err(Error::UnmanagedRuby {
+            path: ruby.path,
+            version: ruby.version.to_string(),
+        });
+    }
     let extensions_scope = ruby.extensions_scope();
     let lockfile_path = find_lockfile_path(&args.gemfile)?;
     let install_path = config.gem_home(&ruby);
@@ -301,6 +310,12 @@ pub(crate) async fn install_tool_lockfile(
     let ruby = config
         .current_ruby()
         .expect("Ruby should be installed after the check above");
+    if !ruby.managed {
+        return Err(Error::UnmanagedRuby {
+            path: ruby.path,
+            version: ruby.version.to_string(),
+        });
+    }
     let extensions_scope = ruby.extensions_scope();
     let inner_args = CiInnerArgs {
         max_concurrent_requests: 10,
