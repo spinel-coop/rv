@@ -78,16 +78,23 @@ pub(crate) fn env(global_args: &GlobalArgs, shell: Shell) -> Result<()> {
 
 fn nu_env(unset: Vec<&str>, set: Vec<(&str, String)>) -> serde_json::Value {
     // Map from environment variable names to their new values.
-    // In nushell, empty JSON object means "unset this var."
+    // `null` means "unset this var": `load-env` can't unset one, so the hook
+    // hides these with `hide-env`. Nushell keeps PATH as a list, so it's
+    // sent as one.
     let mut env_changes = serde_json::Map::with_capacity(set.len() + unset.len());
     for var in unset {
-        env_changes.insert(
-            var.to_owned(),
-            serde_json::Value::Object(Default::default()),
-        );
+        env_changes.insert(var.to_owned(), serde_json::Value::Null);
     }
     for (var, val) in set {
-        env_changes.insert(var.to_owned(), serde_json::Value::String(val));
+        let val = match var {
+            // An empty PATH has no entries, rather than one empty one.
+            "PATH" if val.is_empty() => serde_json::Value::Array(Vec::new()),
+            "PATH" => std::env::split_paths(&val)
+                .map(|p| serde_json::Value::String(p.to_string_lossy().into_owned()))
+                .collect(),
+            _ => serde_json::Value::String(val),
+        };
+        env_changes.insert(var.to_owned(), val);
     }
     serde_json::Value::Object(env_changes)
 }
@@ -114,8 +121,9 @@ mod tests {
     #[test]
     fn nushell_env_serializes_changes() {
         let unset = vec!["RUBY_ROOT", "GEM_PATH"];
+        let path = std::env::join_paths(["/tmp/bin", "/usr/bin"]).unwrap();
         let set = vec![
-            ("PATH", "/tmp/bin".to_owned()),
+            ("PATH", path.into_string().unwrap()),
             ("RUBY_ROOT", "/new/ruby".to_owned()),
         ];
 
@@ -123,8 +131,8 @@ mod tests {
 
         let expected = json!({
             "RUBY_ROOT": "/new/ruby",
-            "GEM_PATH": {},
-            "PATH": "/tmp/bin",
+            "GEM_PATH": null,
+            "PATH": ["/tmp/bin", "/usr/bin"],
         });
 
         assert_eq!(env_json, expected);
