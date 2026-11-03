@@ -70,14 +70,21 @@ pub fn init(shell: Shell) -> Result<()> {
             let current_exe = powershell_escape(current_exe.as_str());
             // PowerShell doesn't have a preexec hook, so we use the prompt function
             // which runs after each command (before displaying the next prompt).
-            // This pattern matches Python's virtualenv activate.ps1.
+            // This pattern matches Python's virtualenv activate.ps1. Running rv there
+            // overwrites $? and $LASTEXITCODE, so they are restored for the original
+            // prompt, which may show them; PowerShell can't set $? directly, but an
+            // ignored error makes it false.
             printdoc! {"
                 if (Test-Path Function:\\__rv_original_prompt) {{
                     Remove-Item Function:\\__rv_original_prompt
                 }}
                 Copy-Item Function:\\prompt Function:\\__rv_original_prompt
                 function global:prompt {{
+                    $rvStatus = $global:?
+                    $rvExitCode = Get-Variable LASTEXITCODE -Scope Global -ErrorAction Ignore -ValueOnly
                     & '{current_exe}' shell env powershell | Out-String | Invoke-Expression
+                    $global:LASTEXITCODE = $rvExitCode
+                    if (-not $rvStatus) {{ Write-Error '' -ErrorAction Ignore }}
                     __rv_original_prompt
                 }}
                 & '{current_exe}' shell env powershell | Out-String | Invoke-Expression

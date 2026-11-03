@@ -7,7 +7,11 @@ if (Test-Path Function:\__rv_original_prompt) {
 }
 Copy-Item Function:\prompt Function:\__rv_original_prompt
 function global:prompt {
+    $rvStatus = $global:?
+    $rvExitCode = Get-Variable LASTEXITCODE -Scope Global -ErrorAction Ignore -ValueOnly
     & '/tmp/bin/rv' shell env powershell | Out-String | Invoke-Expression
+    $global:LASTEXITCODE = $rvExitCode
+    if (-not $rvStatus) { Write-Error '' -ErrorAction Ignore }
     __rv_original_prompt
 }
 & '/tmp/bin/rv' shell env powershell | Out-String | Invoke-Expression
