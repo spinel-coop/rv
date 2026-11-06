@@ -17,7 +17,7 @@ fn test_ruby_install_no_specific_version() {
     mock.assert();
     output.assert_success();
     output
-        .assert_stdout_contains("Installed Ruby version 3.4.5 to /tmp/home/.local/share/rv/rubies");
+        .assert_stderr_contains("Installed Ruby version 3.4.5 to /tmp/home/.local/share/rv/rubies");
 
     let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("3.4.5"));
     let tarball_path = cache_dir
@@ -44,7 +44,7 @@ fn test_ruby_install_incomplete_request() {
     output.assert_success();
 
     output
-        .assert_stdout_contains("Installed Ruby version 4.0.0 to /tmp/home/.local/share/rv/rubies");
+        .assert_stderr_contains("Installed Ruby version 4.0.0 to /tmp/home/.local/share/rv/rubies");
 
     let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("4.0.0"));
     let tarball_path = cache_dir
@@ -286,7 +286,7 @@ fn test_ruby_install_cached_file_reused() {
     let output2 = test.rv(&["ruby", "install", "3.4.5", "--force"]);
     output2.assert_success();
 
-    output2.assert_stdout_contains("already exists, skipping download");
+    output2.assert_stderr_contains("already exists, skipping download");
 
     mock.assert();
 }
@@ -307,7 +307,7 @@ fn test_ruby_install_skips_existing_version_and_suggests_force_flag() {
     let output2 = test.rv(&["ruby", "install", "3.4.5"]);
     output2.assert_success();
 
-    output2.assert_stdout_contains("If you want to overwrite it, use '--force'.");
+    output2.assert_stderr_contains("If you want to overwrite it, use '--force'.");
 
     mock.assert();
 }
@@ -410,7 +410,7 @@ fn test_ruby_install_with_latest() {
     mock.assert();
     output.assert_success();
     output
-        .assert_stdout_contains("Installed Ruby version 4.0.1 to /tmp/home/.local/share/rv/rubies");
+        .assert_stderr_contains("Installed Ruby version 4.0.1 to /tmp/home/.local/share/rv/rubies");
 
     let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("4.0.1"));
     let tarball_path = cache_dir
@@ -433,7 +433,7 @@ fn test_ruby_install_with_dev() {
     redirect_mock.assert();
     download_mock.assert();
     output.assert_success();
-    output.assert_stdout_contains("Installed ruby-dev to /tmp/home/.local/share/rv/rubies");
+    output.assert_stderr_contains("Installed ruby-dev to /tmp/home/.local/share/rv/rubies");
 
     let cache_key = rv_cache::cache_digest(test.ruby_dev_tarball_redirect_url());
     let tarball_path = cache_dir
@@ -455,7 +455,7 @@ fn test_jruby_install() {
 
     jruby_mock.assert();
     output.assert_success();
-    output.assert_stdout_contains(
+    output.assert_stderr_contains(
         "Installed jruby version 10.1.1.0 to /tmp/home/.local/share/rv/rubies",
     );
 
@@ -549,7 +549,7 @@ fn test_jruby_install_resolves_incomplete_request() {
     jruby_mock.assert();
     mock.assert();
     output.assert_success();
-    output.assert_stdout_contains("Installed jruby version 9.4.15.0");
+    output.assert_stderr_contains("Installed jruby version 9.4.15.0");
 
     assert!(
         test.rubies_dir()
@@ -573,7 +573,7 @@ fn test_ruby_install_is_unaffected_by_jruby_support() {
 
     ruby_mock.assert();
     output.assert_success();
-    output.assert_stdout_contains("Installed Ruby version 3.4.5");
+    output.assert_stderr_contains("Installed Ruby version 3.4.5");
 
     assert!(test.rubies_dir().join("ruby-3.4.5").exists());
 }

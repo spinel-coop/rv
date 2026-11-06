@@ -1,4 +1,4 @@
-use anstream::println;
+use anstream::eprintln;
 use bytesize::ByteSize;
 use camino::{Utf8Path, Utf8PathBuf};
 use core::panic;
@@ -86,7 +86,7 @@ pub(crate) async fn install(
     };
 
     if config.is_requested_ruby_installed_in_dir(&install_dir) && !force {
-        println!("Version already installed. If you want to overwrite it, use '--force'.");
+        eprintln!("Version already installed. If you want to overwrite it, use '--force'.");
 
         return Ok(());
     }
@@ -107,7 +107,7 @@ pub(crate) async fn install(
         format!("{engine} version {}", version.cyan())
     };
 
-    println!("Installed {installed_version} to {}", install_dir.cyan());
+    eprintln!("Installed {installed_version} to {}", install_dir.cyan());
 
     Ok(())
 }
@@ -149,7 +149,7 @@ async fn download_tarball(
     }
 
     if valid_archive_exists(&archive_path) {
-        println!(
+        eprintln!(
             "Archive {} already exists, skipping download.",
             archive_path.cyan()
         );

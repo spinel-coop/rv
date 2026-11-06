@@ -122,7 +122,7 @@ fn test_clean_install_respects_ruby() {
     output.assert_success();
     mock.assert();
     output
-        .assert_stdout_contains("Installed Ruby version 3.4.8 to /tmp/home/.local/share/rv/rubies");
+        .assert_stderr_contains("Installed Ruby version 3.4.8 to /tmp/home/.local/share/rv/rubies");
 }
 
 #[test]
@@ -160,7 +160,7 @@ fn test_ci_respects_rv_setting_gem_home() {
 
     let output = test.ci(&[]);
     output.assert_success();
-    output.assert_stdout_contains(&format!("1 gems installed to {}/ruby/4.0.0", install_path));
+    output.assert_stderr_contains(&format!("1 gems installed to {}/ruby/4.0.0", install_path));
     mock.assert();
 }
 
@@ -186,7 +186,7 @@ fn test_clean_install_ignores_ruby_requests_outside_of_the_current_project() {
     ruby_mock.assert();
     mock.assert();
     output
-        .assert_stdout_contains("Installed Ruby version 4.0.1 to /tmp/home/.local/share/rv/rubies");
+        .assert_stderr_contains("Installed Ruby version 4.0.1 to /tmp/home/.local/share/rv/rubies");
 }
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
@@ -264,7 +264,7 @@ fn test_clean_install_native_and_generic_reinstall() {
     let output = test.ci(&[]);
 
     output.assert_success();
-    output.assert_stdout_contains(
+    output.assert_stderr_contains(
         "1 gem already installed in /tmp/app/ruby/4.0.0, skipping installation",
     );
 }
