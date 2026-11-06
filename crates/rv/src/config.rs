@@ -47,11 +47,9 @@ pub enum Error {
     RvSettingsError(#[from] RvSettingsError),
     #[error(transparent)]
     BundlerSettingsError(#[from] BundlerSettingsError),
-    #[error("no matching ruby version found")]
-    NoMatchingRuby,
-    #[error(
-        "No available Ruby matched the Ruby requirements. The requirements were {requirement:?}"
-    )]
+    #[error("no ruby matching {requested} is available to download")]
+    NoMatchingRuby { requested: RequestedRuby },
+    #[error("No available Ruby matched the Ruby requirements. The requirements were {requirement}")]
     NoRubyMatchingRequirement { requirement: Requirement },
 }
 
@@ -118,6 +116,29 @@ impl RequestedRuby {
                 let installed_or_available = if installed { "installed" } else { "available" };
                 format!("* Default version is the latest {installed_or_available}")
             }
+        }
+    }
+
+    /// What to say when no installed Ruby satisfies this request.
+    pub fn no_installed_match(&self) -> String {
+        match self {
+            Self::Global => "no ruby is installed".to_string(),
+            requested => format!("no installed ruby matches {requested}"),
+        }
+    }
+}
+
+impl std::fmt::Display for RequestedRuby {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Explicit(request) => write!(f, "{request}"),
+            Self::Project((request, source)) => {
+                write!(f, "{request} (from {})", rv_dirs::relativize(source.path()))
+            }
+            Self::User((request, source)) => {
+                write!(f, "{request} (from {})", rv_dirs::unexpand(source.path()))
+            }
+            Self::Global => write!(f, "the latest"),
         }
     }
 }
@@ -214,7 +235,9 @@ impl Config {
 
             let matched_ruby = requested_range
                 .find_match_in(&remote_rubies)
-                .ok_or(Error::NoMatchingRuby)?;
+                .ok_or_else(|| Error::NoMatchingRuby {
+                    requested: self.requested_ruby.clone(),
+                })?;
 
             Ok(matched_ruby.version)
         }
