@@ -1,4 +1,4 @@
-use anstream::println;
+use anstream::eprintln;
 use camino::Utf8PathBuf;
 use owo_colors::OwoColorize;
 use rv_ruby::request::RubyRequest;
@@ -26,7 +26,7 @@ pub(crate) async fn uninstall(global_args: &GlobalArgs, request: RubyRequest) ->
 
     let ruby = config.current_ruby().ok_or(Error::NoMatchingRuby)?;
     let ruby_path = ruby.path;
-    println!("Deleting {}", ruby_path.cyan());
+    eprintln!("Deleting {}", ruby_path.cyan());
 
     // Delete the dir at this Ruby version's path.
     fs_err::remove_dir_all(&ruby_path).map_err(|error| Error::IoError {

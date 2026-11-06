@@ -47,7 +47,7 @@ fn test_ruby_uninstall_matching_request() {
     let uninstall = test.ruby_uninstall(&["3.3.5"]);
     uninstall.assert_success();
     assert_eq!(
-        uninstall.normalized_stdout(),
+        uninstall.normalized_stderr(),
         "Deleting /tmp/home/.local/share/rv/rubies/ruby-3.3.5\n"
     );
 }
