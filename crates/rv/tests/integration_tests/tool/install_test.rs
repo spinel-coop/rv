@@ -206,7 +206,7 @@ fn test_tool_install_package_data_tar_gz_with_trailing_garbage() {
     // Unpacks fine, but fails to install because it has no executables
     assert_eq!(
         output.normalized_stderr(),
-        "Error: ToolError(ToolInstallError(NoMatchingExecutable(\"alba\")))\n"
+        "Error: The gem alba cannot be installed as a tool because it provides no executables\n"
     );
 
     releases_mock.assert();

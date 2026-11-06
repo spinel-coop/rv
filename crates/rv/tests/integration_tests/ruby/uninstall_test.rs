@@ -13,7 +13,7 @@ fn test_ruby_uninstall_no_rubies() {
     uninstall.assert_failure();
     assert_eq!(
         uninstall.normalized_stderr(),
-        "Error: RubyError(UninstallError(NoMatchingRuby))\n"
+        "Error: no matching ruby version found\n"
     );
 }
 
@@ -36,7 +36,7 @@ fn test_ruby_uninstall_no_matching_rubies() {
     uninstall.assert_failure();
     assert_eq!(
         uninstall.normalized_stderr(),
-        "Error: RubyError(UninstallError(NoMatchingRuby))\n"
+        "Error: no matching ruby version found\n"
     );
 }
 

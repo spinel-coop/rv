@@ -213,7 +213,12 @@ async fn main() {
         if is_tty {
             eprintln!("{:?}", Report::new(err));
         } else {
-            eprintln!("Error: {:?}", err);
+            eprintln!("Error: {err}");
+            let mut source = std::error::Error::source(&err);
+            while let Some(cause) = source {
+                eprintln!("  Caused by: {cause}");
+                source = cause.source();
+            }
         }
         std::process::exit(1);
     }

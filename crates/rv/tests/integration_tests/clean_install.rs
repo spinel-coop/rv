@@ -37,7 +37,7 @@ fn test_clean_install_input_validation() {
     output.assert_failure();
     assert_eq!(
         output.normalized_stderr(),
-        "Error: CiError(MissingImplicitLockfile)\n",
+        "Error: A Gemfile.lock file was not found\n",
     );
 
     // Test using only a lockfile works
@@ -91,7 +91,7 @@ fn test_clean_install_input_validation() {
     output.assert_failure();
     assert_eq!(
         output.normalized_stderr(),
-        "Error: CiError(MissingGemfile(\"Gemfile.missing\"))\n",
+        "Error: Gemfile \"Gemfile.missing\" does not exist\n",
     );
 
     // Test passing an invalid gemfile gives a nice error
@@ -99,7 +99,7 @@ fn test_clean_install_input_validation() {
     output.assert_failure();
     assert_eq!(
         output.normalized_stderr(),
-        "Error: CiError(InvalidGemfilePath(\"/\"))\n",
+        "Error: The gemfile path must be inside a directory with a parent, but it wasn't. Path was /\n",
     );
 }
 
