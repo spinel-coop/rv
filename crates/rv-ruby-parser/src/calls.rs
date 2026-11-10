@@ -111,21 +111,6 @@ pub(crate) fn find_minitest_require(parsed: &ParsedSource<'_>) -> Option<Minites
     None
 }
 
-/// Finds the first `require 'minitest*'` / `require "minitest*"` in `source`,
-/// wherever it is nested, along with the top-level statement that contains it.
-///
-/// Parses `source`; build a [`ParsedSource`] instead when other results are
-/// wanted from the same bytes.
-pub fn minitest_require(source: &[u8]) -> Option<MinitestRequire> {
-    find_minitest_require(&ParsedSource::new(source))
-}
-
-/// Returns the 1-based line number for the first `require 'minitest*'` or
-/// `require "minitest*"` call found.
-pub fn minitest_require_line(source: &[u8]) -> Option<usize> {
-    minitest_require(source).map(|found| found.require_line)
-}
-
 fn get_first_string_arg(call: &ruby_prism::CallNode<'_>) -> Option<String> {
     let args = call.arguments()?;
     for arg in args.arguments().iter() {

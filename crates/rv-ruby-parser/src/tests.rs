@@ -49,7 +49,9 @@ macro_rules! comment_case {
     ($name:ident, $source:expr, [$($item:expr),* $(,)?]) => {
         #[test]
         fn $name() {
-            let parsed = ParsedSource::new($source.as_bytes()).to_parsed_file();
+            let parsed = ParsedSource::new($source.as_bytes())
+                .expect("test fixture is under the size cap")
+                .to_parsed_file();
             assert!(parsed.is_success(), "parsing failed for case '{}'", stringify!($name));
             assert_items(&parsed, &[$($item),*]);
         }
@@ -231,7 +233,9 @@ fn comments_without_definition_are_ignored() {
         "};
     let parsed = {
         let source = source.as_bytes();
-        ParsedSource::new(source).to_parsed_file()
+        ParsedSource::new(source)
+            .expect("test fixture is under the size cap")
+            .to_parsed_file()
     };
 
     assert!(
@@ -257,7 +261,9 @@ fn superclass_detection() {
     // editorconfig-checker-enable
     let parsed = {
         let source = source.as_bytes();
-        ParsedSource::new(source).to_parsed_file()
+        ParsedSource::new(source)
+            .expect("test fixture is under the size cap")
+            .to_parsed_file()
     };
 
     assert_eq!(
@@ -282,7 +288,9 @@ fn invalid_source_surfaces_errors() {
     let source = "def foo(\n";
     let parsed = {
         let source = source.as_bytes();
-        ParsedSource::new(source).to_parsed_file()
+        ParsedSource::new(source)
+            .expect("test fixture is under the size cap")
+            .to_parsed_file()
     };
 
     assert!(!parsed.is_success(), "expected the source to fail parsing");
@@ -315,7 +323,9 @@ fn comment_with_indentation_preserves_leading_spaces() {
     let source = "#     indented code\ndef foo\nend\n";
     let parsed = {
         let source = source.as_bytes();
-        ParsedSource::new(source).to_parsed_file()
+        ParsedSource::new(source)
+            .expect("test fixture is under the size cap")
+            .to_parsed_file()
     };
     assert!(parsed.is_success());
     let item = find_item_kind_of(&parsed.items, ItemKind::Def, "foo");
@@ -329,7 +339,17 @@ fn comment_with_indentation_preserves_leading_spaces() {
     );
 }
 
-use super::calls::minitest_require_line;
+/// The line of the first minitest `require`, through the [`ParsedSource`] API.
+fn minitest_require_line(source: &[u8]) -> Option<usize> {
+    minitest_require(source).map(|found| found.require_line)
+}
+
+/// The first minitest `require`, through the [`ParsedSource`] API.
+fn minitest_require(source: &[u8]) -> Option<super::calls::MinitestRequire> {
+    ParsedSource::new(source)
+        .expect("test fixture is under the size cap")
+        .minitest_require()
+}
 
 #[test]
 fn minitest_require_single_quotes() {
@@ -431,7 +451,9 @@ fn full_path_qualifies_definitions_by_their_enclosing_namespace() {
     // editorconfig-checker-enable
     let parsed = {
         let source = source.as_bytes();
-        ParsedSource::new(source).to_parsed_file()
+        ParsedSource::new(source)
+            .expect("test fixture is under the size cap")
+            .to_parsed_file()
     };
     let paths = full_paths(&parsed.items);
 
@@ -448,7 +470,9 @@ fn full_path_qualifies_definitions_by_their_enclosing_namespace() {
 
 #[test]
 fn full_path_of_a_top_level_definition_is_its_own_name() {
-    let parsed = ParsedSource::new(b"def add(a, b)\nend\n").to_parsed_file();
+    let parsed = ParsedSource::new(b"def add(a, b)\nend\n")
+        .expect("test fixture is under the size cap")
+        .to_parsed_file();
     assert_eq!(parsed.items[0].full_path, "add");
 }
 
@@ -464,7 +488,9 @@ fn full_path_of_a_compact_namespace_is_not_double_qualified() {
     // editorconfig-checker-enable
     let parsed = {
         let source = source.as_bytes();
-        ParsedSource::new(source).to_parsed_file()
+        ParsedSource::new(source)
+            .expect("test fixture is under the size cap")
+            .to_parsed_file()
     };
     let paths = full_paths(&parsed.items);
 
@@ -488,8 +514,6 @@ fn minitest_require_in_def_body_is_not_detected() {
 
 #[test]
 fn minitest_require_reports_the_enclosing_top_level_statement() {
-    use super::calls::minitest_require;
-
     // editorconfig-checker-disable
     let source = indoc! {"
         class Helper
@@ -508,8 +532,6 @@ fn minitest_require_reports_the_enclosing_top_level_statement() {
 
 #[test]
 fn minitest_require_at_top_level_is_its_own_statement() {
-    use super::calls::minitest_require;
-
     let found = minitest_require(b"require 'minitest'\nassert_equal 1, 1\n").expect("found");
     assert_eq!(found.require_line, 1);
     assert_eq!(found.top_level_end_line, 1);
@@ -531,7 +553,7 @@ fn parsed_source_serves_every_consumer_from_one_parse() {
     "};
     // editorconfig-checker-enable
 
-    let parsed = ParsedSource::new(source.as_bytes());
+    let parsed = ParsedSource::new(source.as_bytes()).expect("test fixture is under the size cap");
 
     assert!(parsed.is_success());
     assert!(parsed.diagnostics().is_empty());
@@ -555,9 +577,22 @@ fn parsed_source_serves_every_consumer_from_one_parse() {
 fn parsed_source_reports_diagnostics_for_broken_source() {
     use super::ParsedSource;
 
-    let parsed = ParsedSource::new(b"def broken(\n");
+    let parsed = ParsedSource::new(b"def broken(\n").expect("test fixture is under the size cap");
     assert!(!parsed.is_success());
     assert!(!parsed.diagnostics().is_empty());
     assert!(parsed.calls().is_empty(), "no calls from a broken parse");
     assert_eq!(parsed.minitest_require(), None);
+}
+
+#[test]
+fn parsed_source_rejects_source_over_the_size_cap() {
+    use super::{MAX_SOURCE_BYTES, ParsedSource};
+
+    let oversized = vec![b'a'; MAX_SOURCE_BYTES + 1];
+    let err = match ParsedSource::new(&oversized) {
+        Ok(_) => panic!("oversized source is rejected"),
+        Err(err) => err,
+    };
+    assert_eq!(err, crate::ParseError::SourceTooLarge);
+    assert!(!err.to_string().is_empty());
 }
