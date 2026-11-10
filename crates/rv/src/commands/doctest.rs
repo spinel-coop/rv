@@ -111,27 +111,54 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         path: String,
         diagnostics: Vec<Diagnostic>,
         snippets: Vec<(rv_doctest::Snippet, rv_doctest::SnippetAnalysis)>,
+        skipped: Vec<rv_doctest::SkippedSnippet>,
     }
 
-    let parsed: Vec<ParsedSourceFile> = discovery_result
+    /// One file's outcome: parsed, or rejected by the parser's size cap.
+    enum Discovered {
+        Parsed(ParsedSourceFile),
+        Skipped {
+            path: String,
+            error: rv_ruby_parser::ParseError,
+        },
+    }
+
+    let discovered: Vec<Discovered> = discovery_result
         .files
         .into_par_iter()
         .map(|(path, source)| {
-            let parsed = rv_ruby_parser::parse(&source);
+            let path = path.to_string();
+            let parsed = match rv_ruby_parser::ParsedSource::new(&source) {
+                Ok(parsed) => parsed,
+                Err(error) => return Discovered::Skipped { path, error },
+            };
+            let file = parsed.to_parsed_file();
             // One parse per snippet, shared by the syntax, assertion, and RBS
             // checkers.
-            let snippets = extract_analyzed(&parsed);
-            ParsedSourceFile {
-                path: path.to_string(),
-                diagnostics: parsed.diagnostics,
+            let (snippets, skipped) = extract_analyzed(&file);
+            Discovered::Parsed(ParsedSourceFile {
+                path,
+                diagnostics: file.diagnostics,
                 snippets,
-            }
+                skipped,
+            })
         })
         .collect();
+
+    let mut parsed: Vec<ParsedSourceFile> = Vec::new();
+    let mut skipped_files: Vec<(String, rv_ruby_parser::ParseError)> = Vec::new();
+    for outcome in discovered {
+        match outcome {
+            Discovered::Parsed(file) => parsed.push(file),
+            Discovered::Skipped { path, error } => skipped_files.push((path, error)),
+        }
+    }
 
     // Counted from the parse itself, so the totals are right whether or not
     // Ruby is available to run the snippets.
     let total_snippets: usize = parsed.iter().map(|pf| pf.snippets.len()).sum();
+    let skipped_snippets: usize = parsed.iter().map(|pf| pf.skipped.len()).sum();
+    let skipped_total = skipped_files.len() + skipped_snippets;
     let total_files_with_snippets = parsed.iter().filter(|pf| !pf.snippets.is_empty()).count();
 
     // Prism already reported any parse error in the file. Re-checking with
@@ -242,9 +269,15 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         } else {
             "files"
         };
-        println!(
-            "All {total_snippets} fenced Ruby codeblocks in {total_files_with_snippets} {file_word} pass checks."
-        );
+        if skipped_total == 0 {
+            println!(
+                "All {total_snippets} fenced Ruby codeblocks in {total_files_with_snippets} {file_word} pass checks."
+            );
+        } else {
+            println!(
+                "All {total_snippets} checked fenced Ruby codeblocks in {total_files_with_snippets} {file_word} pass checks, {skipped_total} skipped as too large to parse."
+            );
+        }
     } else {
         for (path, msg) in &syntax_failures {
             println!("{}: syntax error: {}", path, msg);
@@ -252,6 +285,18 @@ pub(crate) async fn doctest(global_args: &GlobalArgs, opts: DoctestArgs) -> Resu
         for (path, failure) in &failures {
             println!("{}:{}: {}", path, failure.line, failure.message);
             println!("{}", failure.snippet.code);
+        }
+    }
+
+    for (path, error) in &skipped_files {
+        println!("{}: skipped: {}", path, error);
+    }
+    for pf in &parsed {
+        for skipped in &pf.skipped {
+            println!(
+                "{}:{}: skipped snippet: {}",
+                pf.path, skipped.snippet.start_line, skipped.error
+            );
         }
     }
 
