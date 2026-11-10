@@ -15,6 +15,12 @@ use std::ops::{Deref, DerefMut};
 
 use ruby_prism::{CommentType, Node};
 
+/// Upper bound on the size of a buffer [`ParsedSource::new`] accepts.
+///
+/// Parsing allocates an AST proportional to the input, so oversized buffers are
+/// rejected before `ruby_prism` runs.
+const MAX_SOURCE_BYTES: usize = 32 * 1024;
+
 pub mod calls;
 pub(crate) mod visitor;
 pub mod yard;
@@ -196,6 +202,23 @@ pub struct Diagnostic {
     pub column: u32,
 }
 
+/// The kind of error [`ParsedSource::new`] can return.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParseError {
+    /// The source is larger than the crate's source size cap.
+    SourceTooLarge,
+}
+
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::SourceTooLarge => write!(f, "source is too large to parse"),
+        }
+    }
+}
+
+impl std::error::Error for ParseError {}
+
 /// The result of parsing a Ruby source file.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ParsedFile {
@@ -231,12 +254,20 @@ pub struct ParsedSource<'src> {
 
 impl<'src> ParsedSource<'src> {
     /// Parse `source` once.
-    pub fn new(source: &'src [u8]) -> Self {
-        Self {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ParseError::SourceTooLarge`] when `source` is longer than the
+    /// crate's source size cap.
+    pub fn new(source: &'src [u8]) -> Result<Self, ParseError> {
+        if source.len() > MAX_SOURCE_BYTES {
+            return Err(ParseError::SourceTooLarge);
+        }
+        Ok(Self {
             result: ruby_prism::parse(source),
             source,
             lines: LineIndex::new(source),
-        }
+        })
     }
 
     /// `true` when the source parsed without errors.
