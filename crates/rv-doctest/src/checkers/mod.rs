@@ -3,7 +3,7 @@
 use tokio::io::AsyncWriteExt;
 
 use rv_ruby::Ruby;
-use rv_ruby_parser::calls::{MinitestRequire, minitest_require};
+use rv_ruby_parser::calls::MinitestRequire;
 
 use crate::CheckError;
 
@@ -12,14 +12,6 @@ const MINITEST_FRAME: [&str; 3] = [
     "class << self; attr_accessor :assertions; end",
     "self.assertions = 0",
 ];
-
-/// `true` when `code` is an assertion example rather than a plain snippet.
-///
-/// Parses `code`; prefer [`crate::SnippetAnalysis::is_assertion`] when the
-/// snippet has already been analyzed.
-pub fn assertion_applies_to(code: &str) -> bool {
-    minitest_require(code.as_bytes()).is_some()
-}
 
 /// Insert the assertion preamble into `code`, given where its minitest
 /// `require` was found.
@@ -118,11 +110,13 @@ pub mod rbs;
 mod tests {
     use super::*;
     use indoc::indoc;
+    use rv_ruby_parser::ParsedSource;
 
     /// Inject the frame the way `check_snippets` does: locate the require,
     /// then hand it to the injector.
     fn inject(code: &str) -> String {
-        match minitest_require(code.as_bytes()) {
+        let parsed = ParsedSource::new(code.as_bytes()).expect("test snippet is under the cap");
+        match parsed.minitest_require() {
             Some(found) => inject_assertion_frame(code, found),
             None => code.to_string(),
         }
@@ -185,14 +179,12 @@ mod tests {
             setup_env
         "};
 
-        assert!(!assertion_applies_to(code));
         assert_eq!(inject(code), code);
     }
 
     #[test]
     fn code_without_minitest_is_left_alone() {
         let code = "1 + 1\n";
-        assert!(!assertion_applies_to(code));
         assert_eq!(inject(code), code);
     }
 }

@@ -1,10 +1,12 @@
-use crate::{Snippet, assertion_applies_to, assertion_check, extract, syntax_check};
+use crate::{Snippet, assertion_check, extract, syntax_check};
 use indoc::indoc;
 use rv_ruby_parser::ItemKind;
-use rv_ruby_parser::parse;
 
 fn snippets(source: &str) -> Vec<Snippet> {
-    extract(&parse(source.as_bytes()))
+    let parsed = rv_ruby_parser::ParsedSource::new(source.as_bytes())
+        .expect("test fixture is under the size cap")
+        .to_parsed_file();
+    extract(&parsed)
 }
 
 macro_rules! assert_snippet {
@@ -177,13 +179,19 @@ fn items_without_comments_yield_no_snippets() {
 
 #[test]
 fn assertion_checker_applies_to_minitest() {
-    assert!(assertion_applies_to("require \"minitest\"\n"));
-    assert!(assertion_applies_to("require 'minitest/autorun'\n"));
-    assert!(assertion_applies_to(
-        "require \"minitest\"\nrequire \"minitest/autorun\"\n"
-    ));
-    assert!(!assertion_applies_to("require \"test/unit\"\n"));
-    assert!(!assertion_applies_to("1 + 1\n"));
+    for code in [
+        "require \"minitest\"\n",
+        "require 'minitest/autorun'\n",
+        "require \"minitest\"\nrequire \"minitest/autorun\"\n",
+    ] {
+        let analysis = crate::SnippetAnalysis::of(code).expect("test snippet is under the cap");
+        assert!(analysis.is_assertion(), "{code:?} should be an assertion");
+    }
+
+    for code in ["require \"test/unit\"\n", "1 + 1\n"] {
+        let analysis = crate::SnippetAnalysis::of(code).expect("test snippet is under the cap");
+        assert!(!analysis.is_assertion(), "{code:?} is not an assertion");
+    }
 }
 
 #[test]
@@ -196,7 +204,9 @@ fn checker_dispatches_by_minitest_presence() {
             format!("# Docs.\n#\n#   ```ruby\n#   {fence_code}\n#   ```\n#\n{item_body}\n");
         let snips = snippets(&source);
         assert_eq!(snips.len(), 1);
-        assert_eq!(assertion_applies_to(&snips[0].code), expects_assertion);
+        let analysis =
+            crate::SnippetAnalysis::of(&snips[0].code).expect("test snippet is under the cap");
+        assert_eq!(analysis.is_assertion(), expects_assertion);
     }
 }
 
@@ -218,7 +228,7 @@ fn test_ruby() -> Option<Ruby> {
 
 /// Run `code` as an assertion example the way `check_snippets` does.
 async fn run_assertion(ruby: Ruby, code: &str) -> Result<(), crate::CheckError> {
-    let analysis = crate::SnippetAnalysis::of(code);
+    let analysis = crate::SnippetAnalysis::of(code)?;
     let minitest = analysis.minitest.expect("code requires minitest");
     assertion_check(ruby, code, minitest).await
 }
@@ -272,7 +282,8 @@ async fn syntax_check_fails_invalid_code() {
 
 #[test]
 fn snippet_analysis_answers_both_checkers_from_one_parse() {
-    let analysis = crate::SnippetAnalysis::of("require \"minitest\"\nassert_equal 2, 1 + 1\n");
+    let analysis = crate::SnippetAnalysis::of("require \"minitest\"\nassert_equal 2, 1 + 1\n")
+        .expect("test snippet is under the cap");
 
     assert!(analysis.is_assertion(), "minitest require should be found");
     assert_eq!(analysis.minitest.map(|m| m.require_line), Some(1));
@@ -283,7 +294,8 @@ fn snippet_analysis_answers_both_checkers_from_one_parse() {
 
 #[test]
 fn snippet_analysis_of_a_plain_snippet_is_not_an_assertion() {
-    let analysis = crate::SnippetAnalysis::of("Foo.bar(1)\n");
+    let analysis =
+        crate::SnippetAnalysis::of("Foo.bar(1)\n").expect("test snippet is under the cap");
 
     assert!(!analysis.is_assertion());
     assert_eq!(analysis.minitest, None);
@@ -304,10 +316,24 @@ fn extract_analyzed_pairs_each_snippet_with_its_analysis() {
         end
     "};
 
-    let analyzed = crate::extract_analyzed(&parse(source.as_bytes()));
+    let parsed = rv_ruby_parser::ParsedSource::new(source.as_bytes())
+        .expect("test fixture is under the size cap")
+        .to_parsed_file();
+    let (analyzed, skipped) = crate::extract_analyzed(&parsed);
+    assert!(skipped.is_empty(), "no snippet should be skipped");
     assert_eq!(analyzed.len(), 1);
 
     let (snippet, analysis) = &analyzed[0];
     assert_eq!(snippet.item_name, "add");
     assert!(analysis.is_assertion(), "snippet requires minitest");
+}
+
+#[test]
+fn snippet_analysis_rejects_code_over_the_parser_size_cap() {
+    let code = format!("1 + 1\n{}", "# padding\n".repeat(8 * 1024));
+    let error = match crate::SnippetAnalysis::of(&code) {
+        Ok(_) => panic!("oversized snippet is rejected"),
+        Err(error) => error,
+    };
+    assert_eq!(error, rv_ruby_parser::ParseError::SourceTooLarge);
 }

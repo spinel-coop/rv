@@ -7,8 +7,8 @@ use rv_ruby_parser::ItemKind;
 
 mod checkers;
 
-pub use checkers::{assertion_applies_to, assertion_check, syntax_check};
-#[derive(Clone, PartialEq, Eq)]
+pub use checkers::{assertion_check, syntax_check};
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Snippet {
     pub item_name: String,
     pub item_kind: ItemKind,
@@ -39,6 +39,8 @@ pub enum CheckError {
     Assertion { stdout: String, stderr: String },
     #[error("RBS error: {0}")]
     Rbs(String),
+    #[error("parse error: {0}")]
+    Parse(#[from] rv_ruby_parser::ParseError),
 }
 
 /// Extracts snippets from Ruby documentation comments.
@@ -109,12 +111,17 @@ pub struct SnippetAnalysis {
 
 impl SnippetAnalysis {
     /// Parse `code` once and collect everything the checkers need.
-    pub fn of(code: &str) -> Self {
-        let parsed = rv_ruby_parser::ParsedSource::new(code.as_bytes());
-        Self {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`rv_ruby_parser::ParseError::SourceTooLarge`] when `code`
+    /// exceeds the parser's source size cap.
+    pub fn of(code: &str) -> Result<Self, rv_ruby_parser::ParseError> {
+        let parsed = rv_ruby_parser::ParsedSource::new(code.as_bytes())?;
+        Ok(Self {
             calls: parsed.calls(),
             minitest: parsed.minitest_require(),
-        }
+        })
     }
 
     /// `true` when the snippet should be run rather than only syntax-checked.
@@ -123,16 +130,31 @@ impl SnippetAnalysis {
     }
 }
 
+/// A snippet the parser refused before any checker ran on it.
+#[derive(Debug, Clone)]
+pub struct SkippedSnippet {
+    pub snippet: Snippet,
+    pub error: rv_ruby_parser::ParseError,
+}
+
 /// Extracts snippets and analyzes each one, so every checker shares a single
 /// parse per snippet.
-pub fn extract_analyzed(parsed: &rv_ruby_parser::ParsedFile) -> Vec<(Snippet, SnippetAnalysis)> {
-    extract(parsed)
-        .into_iter()
-        .map(|snippet| {
-            let analysis = SnippetAnalysis::of(&snippet.code);
-            (snippet, analysis)
-        })
-        .collect()
+///
+/// Snippets the parser rejects are returned separately instead of being
+/// dropped, so the caller can report them.
+#[allow(clippy::type_complexity)]
+pub fn extract_analyzed(
+    parsed: &rv_ruby_parser::ParsedFile,
+) -> (Vec<(Snippet, SnippetAnalysis)>, Vec<SkippedSnippet>) {
+    let mut analyzed = Vec::new();
+    let mut skipped = Vec::new();
+    for snippet in extract(parsed) {
+        match SnippetAnalysis::of(&snippet.code) {
+            Ok(analysis) => analyzed.push((snippet, analysis)),
+            Err(error) => skipped.push(SkippedSnippet { snippet, error }),
+        }
+    }
+    (analyzed, skipped)
 }
 
 /// Checks multiple snippets, collecting all failures.

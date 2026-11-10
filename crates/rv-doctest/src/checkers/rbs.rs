@@ -10,7 +10,7 @@ use ruby_rbs::node::{MethodDefinitionNode, Node, NodeList, TypeNameNode, parse};
 
 use crate::{CheckError, Snippet};
 use rv_ruby_parser::calls::CallSite;
-use rv_ruby_parser::calls::parse_calls as parse_calls_ast;
+use rv_ruby_parser::{ParseError, ParsedSource};
 
 /// Result of an arity check.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -479,8 +479,14 @@ pub(crate) fn resolve_class(call: &CallSite, snippet: &Snippet) -> Option<String
     }
 }
 
-pub fn parse_calls(source: &[u8]) -> Vec<CallSite> {
-    parse_calls_ast(source)
+/// Every method call in `source`, in source order.
+///
+/// # Errors
+///
+/// Returns [`ParseError::SourceTooLarge`] when `source` exceeds the parser's
+/// source size cap.
+pub fn parse_calls(source: &[u8]) -> Result<Vec<CallSite>, ParseError> {
+    Ok(ParsedSource::new(source)?.calls())
 }
 
 #[cfg(test)]
@@ -524,7 +530,7 @@ mod tests {
     ) -> CheckReport {
         let checker = RbsChecker::new(env);
         let snippet = snippet_of(code, parent_path, start_line);
-        let calls = parse_calls_ast(snippet.code.as_bytes());
+        let calls = parse_calls(snippet.code.as_bytes()).expect("test snippet is under the cap");
         checker.check(&snippet, &calls, "lib.rb")
     }
 
