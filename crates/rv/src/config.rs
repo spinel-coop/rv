@@ -15,6 +15,7 @@ use tracing::{debug, error, instrument};
 
 use rv_ruby::{
     RemoteRuby, Ruby,
+    engine::RubyEngine,
     request::{RequestError, RubyRequest, Source},
     version::RubyVersion,
 };
@@ -228,12 +229,26 @@ impl Config {
         &self,
         requirement: &Requirement,
     ) -> Result<RubyVersion> {
-        let installed_rubies = self.rubies();
+        // A gem's `required_ruby_version` is checked against `RUBY_VERSION`, which is the
+        // CRuby language version. Other engines (e.g. JRuby 10.x) have their own unrelated
+        // version numbers, so comparing them against the requirement is meaningless and
+        // would e.g. pick `jruby-10.1.3.0` over `ruby-4.0.9` for `>= 3.0`. Only consider
+        // CRuby here.
+        let installed_rubies: Vec<_> = self
+            .rubies()
+            .into_iter()
+            .filter(|ruby| ruby.version.engine == RubyEngine::Ruby)
+            .collect();
 
         match requirement.find_match_in(&installed_rubies, false) {
             Some(local_ruby) => Ok(local_ruby.version),
             None => {
-                let remote_rubies = &self.remote_rubies().await;
+                let remote_rubies: &Vec<_> = &self
+                    .remote_rubies()
+                    .await
+                    .into_iter()
+                    .filter(|ruby| ruby.version.engine == RubyEngine::Ruby)
+                    .collect();
 
                 match requirement
                     .find_match_in(remote_rubies, false)

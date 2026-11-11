@@ -214,3 +214,34 @@ fn test_tool_install_package_data_tar_gz_with_trailing_garbage() {
     info_endpoint_mock.assert();
     tarball_mock.assert();
 }
+
+/// Regression test for https://github.com/spinel-coop/rv/issues/844.
+/// A gem's `required_ruby_version` refers to the CRuby language version, so
+/// an installed JRuby (whose own version, e.g. 10.x, is numerically higher)
+/// must not be chosen to build the tool environment.
+#[test]
+fn test_tool_install_ignores_non_cruby_engines() {
+    let mut test = RvTest::new();
+
+    test.create_ruby_dir("jruby-10.1.3.0");
+
+    let releases_mock = test.mock_releases_all_platforms(["4.0.0"].to_vec());
+    let ruby_mock = test.mock_ruby_download("4.0.0").create();
+    let info_endpoint_mock = test.mock_info_endpoint("indirect").create();
+    let tarball_mock = test.mock_gem_download("indirect-1.2.0.gem").create();
+
+    let output = test.tool_install(&["indirect"]);
+    output.assert_success();
+
+    releases_mock.assert();
+    ruby_mock.assert();
+    info_endpoint_mock.assert();
+    tarball_mock.assert();
+
+    let pinned = fs::read_to_string(
+        test.data_dir()
+            .join("rv/tools/indirect@1.2.0/.ruby-version"),
+    )
+    .unwrap();
+    assert_eq!(pinned.trim(), "ruby-4.0.0");
+}
