@@ -91,6 +91,8 @@ pub struct CommonItem {
     pub span: Span,
     /// The leading doc comments attached to this definition.
     pub comments: Vec<String>,
+    /// Parsed YARD documentation from the attached comments, if any.
+    pub yard_doc: Option<yard::YardDoc>,
 }
 
 /// A `class` definition.
@@ -190,6 +192,22 @@ impl Item {
         match self {
             Item::Class(class) => class.superclass.as_deref(),
             _ => None,
+        }
+    }
+
+    pub fn yard_doc(&self) -> Option<&yard::YardDoc> {
+        match self {
+            Item::Class(class) => class.common.yard_doc.as_ref(),
+            Item::Module(module) => module.0.yard_doc.as_ref(),
+            Item::Def(def) => def.common.yard_doc.as_ref(),
+        }
+    }
+
+    pub fn comments(&self) -> &Vec<String> {
+        match self {
+            Item::Class(class) => &class.common.comments,
+            Item::Module(module) => &module.0.comments,
+            Item::Def(def) => &def.common.comments,
         }
     }
 }
@@ -362,7 +380,18 @@ impl<'src> ParsedSource<'src> {
                     None => break,
                 }
             }
+            let yard_doc = if attached.is_empty() {
+                None
+            } else {
+                Some(yard::parse(&attached))
+            };
             item.comments = attached;
+            // Set yard_doc on the CommonItem via deref
+            match item {
+                Item::Class(class) => class.common.yard_doc = yard_doc,
+                Item::Module(module) => module.0.yard_doc = yard_doc,
+                Item::Def(def) => def.common.yard_doc = yard_doc,
+            }
         }
     }
 }
@@ -402,6 +431,7 @@ fn collect_items(
                         full_path,
                         span: make_span(lines, start, end),
                         comments: Vec::new(),
+                        yard_doc: None,
                     },
                     singleton,
                 }));
@@ -417,6 +447,7 @@ fn collect_items(
                         full_path: visitor::qualify_constant(namespace, &declared),
                         span: make_span(lines, start, end),
                         comments: Vec::new(),
+                        yard_doc: None,
                     },
                     superclass: class
                         .superclass()
@@ -433,6 +464,7 @@ fn collect_items(
                     full_path: visitor::qualify_constant(namespace, &declared),
                     span: make_span(lines, start, end),
                     comments: Vec::new(),
+                    yard_doc: None,
                 })));
             }
 
