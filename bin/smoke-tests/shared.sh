@@ -48,9 +48,9 @@ setup_rv() {
     fi
 }
 
-# Run `rv ci` and make sure it was a noop by checking its output
+# Run `rv ci` and make sure it was a noop by checking its output on either stream
 check_rv_ci_noop() {
-    rv ci > output.txt
+    rv ci > output.txt 2>&1
     grep -v "gems installed to" output.txt || (cat output.txt && exit 1)
     grep "gems already installed in" output.txt || (cat output.txt && exit 1)
 }

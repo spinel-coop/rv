@@ -1,3 +1,4 @@
+use anstream::eprintln;
 use bytes::Bytes;
 use camino::Utf8Path;
 use camino::Utf8PathBuf;
@@ -351,7 +352,7 @@ async fn ci_inner_work(
                 format!("{already_installed} gems")
             };
 
-            println!(
+            eprintln!(
                 "{n_gems} already installed in {install_path}, skipping installation. Use --force if you want to install these gems again.",
             );
         }
@@ -407,8 +408,8 @@ async fn ci_inner_work(
 
     let (cached_count, network_count) = stats.counts();
 
-    println!("{} gems installed to {}:", total_gems, install_path);
-    println!(
+    eprintln!("{} gems installed to {}:", total_gems, install_path);
+    eprintln!(
         " - {} fetching {} gems from gem servers ({} cached, {} downloaded), {} from git repos, {} from local paths",
         format_duration(fetch_elapsed),
         gem_count,
@@ -417,20 +418,20 @@ async fn ci_inner_work(
         git_count,
         path_count,
     );
-    println!(
+    eprintln!(
         " - {} unpacking {} gems from gem servers",
         format_duration(install_elapsed),
         gem_count,
     );
     if gems_compiled.total > 0 {
-        println!(
+        eprintln!(
             " - {} compiling {} native extensions ({} cached)",
             format_duration(compile_elapsed),
             gems_compiled.total,
             gems_compiled.cached,
         );
     }
-    println!(" - {} total", format_duration(total_elapsed));
+    eprintln!(" - {} total", format_duration(total_elapsed));
 
     Ok(InstallStats {
         executables_installed,
@@ -1282,7 +1283,7 @@ impl<'i> DownloadedRubygems<'i> {
             Err(error) => {
                 // Print out nice Miette reports
                 if matches!(error, UnpackError::YamlParsing(_)) {
-                    println!("{error:?}");
+                    eprintln!("{error:?}");
                 };
 
                 Err(Error::UnpackError(error))

@@ -987,6 +987,12 @@ impl RvOutput {
             output = output.replace('\\', "/");
         }
 
+        // Remove test root from paths, as in normalized_stdout.
+        output = output.replace(&self.test_root, "/tmp");
+        if cfg!(windows) {
+            output = output.replace(&self.test_root.replace('\\', "/"), "/tmp");
+        }
+
         // Normalize the binary name: clap uses argv[0] which is `rv.exe` on Windows
         if cfg!(windows) {
             output = output.replace("rv.exe", "rv");

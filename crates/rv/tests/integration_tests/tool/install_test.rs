@@ -1,7 +1,6 @@
 use fs_err as fs;
 
 use crate::common::{RvOutput, RvTest};
-use owo_colors::OwoColorize;
 use rv_cache::rm_rf;
 
 impl RvTest {
@@ -29,13 +28,9 @@ fn test_tool_install_twice() {
     output.assert_success();
 
     let tool_home = "/tmp/home/.local/share/rv/tools/indirect@1.2.0";
-    let expected_info_message = format!(
-        "Installed {} version 1.2.0 to {}",
-        "indirect".cyan(),
-        tool_home.cyan()
-    );
+    let expected_info_message = format!("Installed {} version 1.2.0 to {}", "indirect", tool_home);
 
-    output.assert_stdout_contains(&expected_info_message);
+    output.assert_stderr_contains(&expected_info_message);
 
     releases_mock.assert();
     ruby_mock.assert();
@@ -49,7 +44,7 @@ fn test_tool_install_twice() {
     let output = test.tool_install(&["indirect"]);
     output.assert_success();
 
-    output.assert_stdout_contains(&expected_info_message);
+    output.assert_stderr_contains(&expected_info_message);
 }
 
 #[test]
@@ -67,13 +62,9 @@ fn test_tool_install_with_server_with_path_no_trailing_slash() {
     output.assert_success();
 
     let tool_home = "/tmp/home/.local/share/rv/tools/indirect@1.2.0";
-    let expected_info_message = format!(
-        "Installed {} version 1.2.0 to {}",
-        "indirect".cyan(),
-        tool_home.cyan()
-    );
+    let expected_info_message = format!("Installed {} version 1.2.0 to {}", "indirect", tool_home);
 
-    output.assert_stdout_contains(&expected_info_message);
+    output.assert_stderr_contains(&expected_info_message);
 
     releases_mock.assert();
     ruby_mock.assert();
@@ -87,7 +78,7 @@ fn test_tool_install_with_server_with_path_no_trailing_slash() {
     let output = test.tool_install(&["indirect"]);
     output.assert_success();
 
-    output.assert_stdout_contains(&expected_info_message);
+    output.assert_stderr_contains(&expected_info_message);
 }
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
@@ -114,11 +105,10 @@ fn test_tool_install_resolves_platform_specific_gems() {
     let tool_home = "/tmp/home/.local/share/rv/tools/nokogiri@1.19.0-arm64-darwin";
     let expected_info_message = format!(
         "Installed {} version 1.19.0-arm64-darwin to {}",
-        "nokogiri".cyan(),
-        tool_home.cyan()
+        "nokogiri", tool_home
     );
 
-    output.assert_stdout_contains(&expected_info_message);
+    output.assert_stderr_contains(&expected_info_message);
 
     releases_mock.assert();
     ruby_mock.assert();
@@ -145,13 +135,9 @@ fn test_tool_install_non_latest_version() {
     output.assert_success();
 
     let tool_home = "/tmp/home/.local/share/rv/tools/indirect@1.1.0";
-    let expected_info_message = format!(
-        "Installed {} version 1.1.0 to {}",
-        "indirect".cyan(),
-        tool_home.cyan()
-    );
+    let expected_info_message = format!("Installed {} version 1.1.0 to {}", "indirect", tool_home);
 
-    output.assert_stdout_contains(&expected_info_message);
+    output.assert_stderr_contains(&expected_info_message);
 
     releases_mock.assert();
     ruby_mock.assert();
@@ -204,9 +190,8 @@ fn test_tool_install_package_data_tar_gz_with_trailing_garbage() {
     output.assert_failure();
 
     // Unpacks fine, but fails to install because it has no executables
-    assert_eq!(
-        output.normalized_stderr(),
-        "Error: ToolError(ToolInstallError(NoMatchingExecutable(\"alba\")))\n"
+    output.assert_stderr_contains(
+        "Error: ToolError(ToolInstallError(NoMatchingExecutable(\"alba\")))\n",
     );
 
     releases_mock.assert();

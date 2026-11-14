@@ -143,6 +143,19 @@ fn test_run_ruby_simple_no_install() {
 }
 
 #[test]
+fn test_run_ruby_install_keeps_stdout_for_the_command() {
+    let mut test = RvTest::new();
+    let ruby_mock = test.mock_ruby_download("3.4.5").create();
+
+    let output = test.run_ruby(Some("3.4.5"), false, &["-e", "'puts \"Hello\"'"]);
+
+    ruby_mock.assert();
+    output.assert_success();
+    output.assert_stderr_contains("Installed Ruby version 3.4.5");
+    assert!(!output.normalized_stdout().contains("Installed"));
+}
+
+#[test]
 fn test_run_ruby_invalid_version() {
     let test = RvTest::new();
     let output = test.run_ruby(

@@ -1,4 +1,4 @@
-use anstream::println;
+use anstream::{eprintln, println};
 use bytesize::ByteSize;
 use clap::{Args, Subcommand};
 use owo_colors::OwoColorize;
@@ -55,7 +55,7 @@ fn cache_clean(config: &Config) -> Result<()> {
     }
     let removal = config.cache.clear(Box::new(Reporter {}))?;
     let num_bytes_cleaned = ByteSize::b(removal.bytes).display().iec_short();
-    println!(
+    eprintln!(
         "Removed {} directories, totalling {}",
         removal.dirs.cyan(),
         num_bytes_cleaned.cyan()
@@ -66,7 +66,7 @@ fn cache_clean(config: &Config) -> Result<()> {
 fn cache_prune(config: &Config) -> Result<()> {
     let removal = config.cache.prune()?;
     let num_bytes_cleaned = ByteSize::b(removal.bytes).display().iec_short();
-    println!(
+    eprintln!(
         "Removed {} directories, totalling {}",
         removal.dirs.cyan(),
         num_bytes_cleaned.cyan()

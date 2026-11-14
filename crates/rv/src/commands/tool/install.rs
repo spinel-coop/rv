@@ -1,5 +1,6 @@
 use std::fs;
 
+use anstream::eprintln;
 use camino::Utf8PathBuf;
 use owo_colors::OwoColorize;
 use reqwest::StatusCode;
@@ -134,7 +135,7 @@ pub(crate) async fn install(
         if force {
             debug!("Reinstalling tool");
         } else {
-            println!(
+            eprintln!(
                 "{} {} already installed at {}",
                 gem_name.cyan(),
                 target_version,
@@ -191,7 +192,7 @@ pub(crate) async fn install(
                 fs::remove_dir_all(install_path).unwrap();
                 return Err(Error::NoMatchingExecutable(gem_name.clone()));
             } else {
-                println!("Installed tool executables: {executables_installed:?}");
+                eprintln!("Installed tool executables: {executables_installed:?}");
             }
         }
         Err(error) => {
@@ -202,7 +203,7 @@ pub(crate) async fn install(
     let pin_path = install_path.join(".ruby-version");
     fs::write(&pin_path, format!("{ruby_to_use}\n")).map_err(Error::CouldNotPinRubyVersion)?;
     debug!("Pinned dir {} to {}", pin_path, ruby_to_use);
-    println!(
+    eprintln!(
         "Installed {} version {} to {}",
         gem_name.cyan(),
         target_version,

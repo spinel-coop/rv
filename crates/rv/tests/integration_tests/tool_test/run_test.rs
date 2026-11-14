@@ -11,7 +11,6 @@ impl RvTest {
 }
 
 mod test {
-    use owo_colors::OwoColorize as _;
     use rv_cache::rm_rf;
 
     use crate::RvTest;
@@ -28,13 +27,11 @@ mod test {
         let output = test.tool_run(&["indirect"]);
 
         let tool_home = "/tmp/home/.local/share/rv/tools/indirect@1.2.0";
-        let expected_info_message = format!(
-            "Installed {} version 1.2.0 to {}",
-            "indirect".cyan(),
-            tool_home.cyan()
-        );
+        let expected_info_message =
+            format!("Installed {} version 1.2.0 to {}", "indirect", tool_home);
         output.assert_success();
-        output.assert_stdout_contains(&expected_info_message);
+        output.assert_stderr_contains(&expected_info_message);
+        assert!(!output.normalized_stdout().contains("Installed"));
 
         releases_mock.assert();
         ruby_mock.assert();
@@ -66,13 +63,10 @@ mod test {
         ]);
 
         let tool_home = "/tmp/home/.local/share/rv/tools/indirect@1.2.0";
-        let expected_info_message = format!(
-            "Installed {} version 1.2.0 to {}",
-            "indirect".cyan(),
-            tool_home.cyan()
-        );
+        let expected_info_message =
+            format!("Installed {} version 1.2.0 to {}", "indirect", tool_home);
         output.assert_success();
-        output.assert_stdout_contains(&expected_info_message);
+        output.assert_stderr_contains(&expected_info_message);
 
         releases_mock.assert();
         ruby_mock.assert();
@@ -97,13 +91,10 @@ mod test {
         let output = test.tool_run(&["--from", "cocoapods", "pod"]);
 
         let tool_home = "/tmp/home/.local/share/rv/tools/cocoapods@1.0.0";
-        let expected_info_message = format!(
-            "Installed {} version 1.0.0 to {}",
-            "cocoapods".cyan(),
-            tool_home.cyan()
-        );
+        let expected_info_message =
+            format!("Installed {} version 1.0.0 to {}", "cocoapods", tool_home);
         output.assert_success();
-        output.assert_stdout_contains(&expected_info_message);
+        output.assert_stderr_contains(&expected_info_message);
 
         releases_mock.assert();
         ruby_mock.assert();
@@ -128,13 +119,10 @@ mod test {
         let output = test.tool_run(&["-w", "racc", "indirect"]);
 
         let tool_home = "/tmp/home/.local/share/rv/tools/indirect@1.2.0";
-        let expected_info_message = format!(
-            "Installed {} version 1.2.0 to {}",
-            "indirect".cyan(),
-            tool_home.cyan()
-        );
+        let expected_info_message =
+            format!("Installed {} version 1.2.0 to {}", "indirect", tool_home);
         output.assert_success();
-        output.assert_stdout_contains(&expected_info_message);
+        output.assert_stderr_contains(&expected_info_message);
 
         releases_mock.assert();
         ruby_mock.assert();
@@ -163,13 +151,10 @@ mod test {
         let output = test.tool_run(&["--with", "racc", "--with", "second-with", "indirect"]);
 
         let tool_home = "/tmp/home/.local/share/rv/tools/indirect@1.2.0";
-        let expected_info_message = format!(
-            "Installed {} version 1.2.0 to {}",
-            "indirect".cyan(),
-            tool_home.cyan()
-        );
+        let expected_info_message =
+            format!("Installed {} version 1.2.0 to {}", "indirect", tool_home);
         output.assert_success();
-        output.assert_stdout_contains(&expected_info_message);
+        output.assert_stderr_contains(&expected_info_message);
 
         releases_mock.assert();
         ruby_mock.assert();
@@ -198,13 +183,10 @@ mod test {
         let output = test.tool_run(&["--with", "racc@1.8.1", "indirect"]);
 
         let tool_home = "/tmp/home/.local/share/rv/tools/indirect@1.2.0";
-        let expected_info_message = format!(
-            "Installed {} version 1.2.0 to {}",
-            "indirect".cyan(),
-            tool_home.cyan()
-        );
+        let expected_info_message =
+            format!("Installed {} version 1.2.0 to {}", "indirect", tool_home);
         output.assert_success();
-        output.assert_stdout_contains(&expected_info_message);
+        output.assert_stderr_contains(&expected_info_message);
 
         releases_mock.assert();
         ruby_mock.assert();
