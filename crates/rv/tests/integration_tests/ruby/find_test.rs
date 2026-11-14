@@ -11,10 +11,7 @@ fn test_ruby_find_no_rubies() {
     let test = RvTest::new();
     let find = test.ruby_find(&[]);
     find.assert_failure();
-    assert_eq!(
-        find.normalized_stderr(),
-        "Error: RubyError(FindError(NoMatchingRuby))\n"
-    );
+    assert_eq!(find.normalized_stderr(), "Error: no ruby is installed\n");
 }
 
 #[test]
@@ -25,7 +22,7 @@ fn test_ruby_find_no_matching_rubies() {
     find.assert_failure();
     assert_eq!(
         find.normalized_stderr(),
-        "Error: RubyError(FindError(NoMatchingRuby))\n"
+        "Error: no installed ruby matches ruby-3.4.5\n"
     );
 }
 
@@ -72,9 +69,19 @@ fn test_ruby_find_dot_ruby_version_empty() {
     test.create_ruby_dir("ruby-3.4.5");
     let find = test.ruby_find(&[]);
     find.assert_failure();
+    assert_eq!(find.normalized_stderr(), "Error: Empty input\n");
+}
+
+#[test]
+fn test_ruby_find_dot_ruby_version_not_installed() {
+    let test = RvTest::new();
+    std::fs::write(test.temp_root().join(".ruby-version"), "3.4.5\n").unwrap();
+    test.create_ruby_dir("ruby-3.3.5");
+    let find = test.ruby_find(&[]);
+    find.assert_failure();
     assert_eq!(
         find.normalized_stderr(),
-        "Error: RubyError(FindError(ConfigError(RequestError(EmptyInput))))\n"
+        "Error: no installed ruby matches ruby-3.4.5 (from .ruby-version)\n"
     );
 }
 

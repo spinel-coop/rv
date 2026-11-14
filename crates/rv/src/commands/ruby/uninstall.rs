@@ -7,8 +7,10 @@ use crate::{GlobalArgs, config::Config};
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
-    #[error("no matching ruby version found")]
-    NoMatchingRuby,
+    #[error("{}", .requested.no_installed_match())]
+    NoMatchingRuby {
+        requested: crate::config::RequestedRuby,
+    },
     #[error(transparent)]
     ConfigError(#[from] crate::config::Error),
     #[error("Could not delete dir {dir}: {error}")]
@@ -24,7 +26,9 @@ type Result<T> = miette::Result<T, Error>;
 pub(crate) async fn uninstall(global_args: &GlobalArgs, request: RubyRequest) -> Result<()> {
     let config = Config::new(global_args, Some(request))?;
 
-    let ruby = config.current_ruby().ok_or(Error::NoMatchingRuby)?;
+    let ruby = config.current_ruby().ok_or_else(|| Error::NoMatchingRuby {
+        requested: config.requested_ruby.clone(),
+    })?;
     let ruby_path = ruby.path;
     println!("Deleting {}", ruby_path.cyan());
 

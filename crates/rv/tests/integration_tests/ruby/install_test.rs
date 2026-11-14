@@ -154,7 +154,7 @@ fn test_ruby_install_from_tarball_with_files_falling_outside_root() {
     ]);
 
     output.assert_failure();
-    output.assert_stderr_contains("DirectoryTraversalError");
+    output.assert_stderr_contains("Paths including .. are not allowed inside archives");
 
     let owned_path = test.rubies_dir().join("owned");
     assert!(
@@ -183,7 +183,7 @@ fn test_ruby_install_from_zip_with_files_falling_outside_root() {
     ]);
 
     output.assert_failure();
-    output.assert_stderr_contains("DirectoryTraversalError");
+    output.assert_stderr_contains("Paths including .. are not allowed inside archives");
 
     let owned_path = test.rubies_dir().join("owned");
     assert!(

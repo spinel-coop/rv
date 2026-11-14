@@ -15,8 +15,10 @@ pub enum Error {
     CouldNotRead { file: String, e: std::io::Error },
     #[error(transparent)]
     IoError(#[from] std::io::Error),
-    #[error("no matching ruby version found")]
-    NoMatchingRuby,
+    #[error("{}", .requested.no_installed_match())]
+    NoMatchingRuby {
+        requested: crate::config::RequestedRuby,
+    },
     #[error(transparent)]
     ConfigError(#[from] crate::config::Error),
     #[error(transparent)]
@@ -161,7 +163,16 @@ pub(crate) async fn run_command(
             tarball_path,
             false,
         )
-        .await?
+        .await
+        .map_err(|error| match error {
+            // install sees only the request, so say where it came from
+            crate::commands::ruby::install::Error::NoMatchingRuby { .. } => {
+                crate::commands::ruby::install::Error::NoMatchingRuby {
+                    requested: config.requested_ruby.clone(),
+                }
+            }
+            error => error,
+        })?
     };
 
     let cmd = prepare_command(invocation, config, args, Default::default())?;
@@ -176,7 +187,9 @@ fn prepare_command(
     args: Vec<String>,
     cwd: Option<&Utf8Path>,
 ) -> Result<Command> {
-    let ruby = config.current_ruby().ok_or(Error::NoMatchingRuby)?;
+    let ruby = config.current_ruby().ok_or_else(|| Error::NoMatchingRuby {
+        requested: config.requested_ruby.clone(),
+    })?;
     let ((unset, set), executable_path) = match invocation.program {
         Program::Ruby => (config.env_for(Some(&ruby))?.split(), ruby.executable_path()),
         Program::Tool {

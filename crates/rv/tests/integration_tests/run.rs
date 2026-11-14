@@ -372,7 +372,7 @@ puts RUBY_VERSION
     let output = test.script_run_no_install(&script);
 
     output.assert_failure();
-    output.assert_stderr_contains("NoMatchingRuby");
+    output.assert_stderr_contains("Error: no installed ruby matches ruby-3.4");
 }
 
 #[cfg(unix)]

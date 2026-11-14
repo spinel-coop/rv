@@ -34,8 +34,10 @@ pub enum Error {
     ZipError(#[from] zip::result::ZipError),
     #[error(transparent)]
     SevenZipError(#[from] sevenz_rust2::Error),
-    #[error("no matching ruby version found")]
-    NoMatchingRuby,
+    #[error("no ruby matching {requested} is available to download")]
+    NoMatchingRuby {
+        requested: crate::config::RequestedRuby,
+    },
     #[error("Download from URL {url} failed with status code {status}. Response body was {body}")]
     DownloadFailed {
         url: String,
@@ -305,7 +307,9 @@ async fn download_ruby_archive(
     if !response.status().is_success() {
         let status = response.status();
         if status == StatusCode::NOT_FOUND {
-            return Err(Error::NoMatchingRuby);
+            return Err(Error::NoMatchingRuby {
+                requested: config.requested_ruby.clone(),
+            });
         }
         let body = response
             .text()
