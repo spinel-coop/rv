@@ -57,12 +57,11 @@ pub fn init(shell: Shell) -> Result<()> {
                 .replace('\\', "\\\\")
                 .replace('\'', "\\'");
             printdoc! {"
-                $env.config = ($env.config | upsert hooks.pre_execution {{
-                    [
-                        {{||
-                            \"{current_exe}\" shell env nu | from json | load-env
-                        }}
-                    ]
+                $env.config.hooks.pre_execution = ($env.config.hooks.pre_execution? | default [] | append {{||
+                    let rv_env = ^\"{current_exe}\" shell env nu | from json
+                    let unset = $rv_env | transpose name value | where value == null | get name
+                    hide-env --ignore-errors ...$unset
+                    $rv_env | reject ...$unset | load-env
                 }})
             "};
         }
