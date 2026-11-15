@@ -313,6 +313,31 @@ fn test_ruby_install_skips_existing_version_and_suggests_force_flag() {
 }
 
 #[test]
+fn test_ruby_install_skips_existing_version_resolved_from_request() {
+    for request in [None, Some("3")] {
+        let mut test = RvTest::new();
+
+        let mock = test.mock_ruby_download("3.4.5").create();
+        let _releases = test.mock_releases(["3.4.5"].to_vec());
+
+        let _cache_dir = test.enable_cache();
+
+        let mut args = vec!["ruby", "install"];
+        args.extend(request);
+
+        let output1 = test.rv(&args);
+        output1.assert_success();
+
+        // The request resolves to 3.4.5, which is in place: nothing is extracted over it again
+        let output2 = test.rv(&args);
+        output2.assert_success();
+        output2.assert_stdout_contains("Version already installed.");
+
+        mock.assert();
+    }
+}
+
+#[test]
 fn test_ruby_install_invalid_url() {
     let mut test = RvTest::new();
 
