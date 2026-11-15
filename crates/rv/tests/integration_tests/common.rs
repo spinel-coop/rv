@@ -142,6 +142,8 @@ impl RvTest {
         let mut cmd = self.command(shell.name);
         cmd.arg(shell.startup_flag);
         cmd.env("TERM", "xterm-256color").env_remove("RV_TEST_EXE");
+        // fish 4.1+ waits for terminal replies this pty never sends; older fish ignores this
+        cmd.env("fish_features", "no-query-term");
 
         let pty_session = rexpect::spawn_with_options(
             cmd,

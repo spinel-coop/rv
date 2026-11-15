@@ -48,7 +48,8 @@ fn test_switch_rubies_fish() -> Result<(), Box<dyn std::error::Error>> {
     let shell = Shell {
         name: "fish",
         startup_flag: "--no-config",
-        prompt_setter: "function fish_prompt; echo 'PEXPECT>'; end",
+        // stripping fish 4's escapes before the prompt also eats the next letter
+        prompt_setter: "function fish_prompt; echo 'xPEXPECT>'; end",
     };
 
     switch_rubies(shell)
