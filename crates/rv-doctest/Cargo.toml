@@ -1,0 +1,27 @@
+[package]
+name = "rv-doctest"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+glob = { workspace = true }
+rv-ruby = { workspace = true }
+rv-ruby-parser = { workspace = true }
+ruby-rbs = "0.3"
+tempfile = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = [
+  "fs",
+  "process",
+  "io-util",
+  "sync",
+  "rt",
+] }
+
+[dev-dependencies]
+camino = { workspace = true }
+indoc = { workspace = true }
+tokio = { workspace = true, features = ["macros"] }
+
+[lints]
+workspace = true
