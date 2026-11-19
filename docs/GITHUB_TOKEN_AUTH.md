@@ -8,10 +8,13 @@ rv now supports authenticated GitHub API requests to avoid rate limiting issues 
 
 rv automatically checks for GitHub tokens in the following order:
 
-1. **`GITHUB_TOKEN`** - Automatically available in GitHub Actions workflows
-2. **`GH_TOKEN`** - Used by GitHub CLI and can be set manually
+1. **`RV_GITHUB_TOKEN`** - rv-specific override, takes precedence over everything else
+2. **`GITHUB_TOKEN`** - Automatically available in GitHub Actions workflows
+3. **`GH_TOKEN`** - Used by GitHub CLI and can be set manually
 
-If either token is found, rv will use it for authenticated requests. If no token is found, rv falls back to unauthenticated requests (which are subject to GitHub's stricter rate limits).
+If any token is found, rv will use it for authenticated requests. If no token is
+found, rv falls back to unauthenticated requests (which are subject to GitHub's
+stricter rate limits).
 
 ## Where Authentication is Used
 
@@ -63,6 +66,8 @@ rv ruby install 3.4
 You can create a personal access token and use it:
 
 ```bash
+export RV_GITHUB_TOKEN="your_token_here"
+# or
 export GITHUB_TOKEN="your_token_here"
 # or
 export GH_TOKEN="your_token_here"
@@ -108,6 +113,7 @@ If you're still seeing rate limiting errors:
 
 1. **Verify token is set**:
    ```bash
+   echo $RV_GITHUB_TOKEN
    echo $GITHUB_TOKEN
    echo $GH_TOKEN
    ```
@@ -154,7 +160,7 @@ The authentication is implemented in two places in the rv codebase:
 2. **`ruby/install.rs`**: Adds authentication when downloading Ruby tarballs from GitHub
 
 Both implementations:
-- Check `GITHUB_TOKEN` first, then `GH_TOKEN`
+- Check `RV_GITHUB_TOKEN`, then `GITHUB_TOKEN`, then `GH_TOKEN`
 - Only add authentication for GitHub URLs
 - Use the `Bearer` token scheme
 - Log whether authentication is being used
