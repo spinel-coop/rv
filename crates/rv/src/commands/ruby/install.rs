@@ -350,18 +350,22 @@ async fn download_ruby_archive(
 
 async fn fetch_url(url: &str, redirects: bool) -> Result<reqwest::Response> {
     // Build the request with optional GitHub authentication
-    let client = if !redirects {
-        reqwest::Client::builder()
-            .redirect(reqwest::redirect::Policy::none())
-            .build()?
+    let redirect_policy = if redirects {
+        reqwest::redirect::Policy::default()
     } else {
-        reqwest::Client::new()
+        reqwest::redirect::Policy::none()
     };
+
+    let client = reqwest::Client::builder()
+        .user_agent(crate::config::github::GITHUB_USER_AGENT)
+        .redirect(redirect_policy)
+        .build()?;
 
     let mut request_builder = client.get(url);
 
     // Add GitHub token authentication if available and URL is from GitHub
-    // Check GITHUB_TOKEN first (GitHub Actions), then GH_TOKEN (GitHub CLI/general use)
+    // Check RV_GITHUB_TOKEN first (rv-specific override), then GITHUB_TOKEN
+    // (GitHub Actions), then GH_TOKEN (GitHub CLI/general use).
     if crate::config::github::is_github_url(url) {
         if let Some(token) = crate::config::github::github_token() {
             debug!("Using authenticated GitHub request for archive download");
