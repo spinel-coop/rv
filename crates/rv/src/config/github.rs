@@ -7,6 +7,9 @@
 /// See: <https://docs.github.com/en/rest/overview/api-versions>
 pub const GITHUB_API_VERSION: &str = "2022-11-28";
 
+/// User-Agent sent on requests to GitHub, including the rv version.
+pub const GITHUB_USER_AGENT: &str = concat!("rv/", env!("CARGO_PKG_VERSION"));
+
 /// Environment variables that may hold a GitHub token, highest priority first.
 ///
 /// `RV_GITHUB_TOKEN` is rv-specific and overrides the others; `GITHUB_TOKEN` is
@@ -37,17 +40,25 @@ pub fn github_api_get(
     client: &reqwest::Client,
     url: impl reqwest::IntoUrl,
 ) -> reqwest::RequestBuilder {
+    github_api_get_with_token(client, url, github_token().as_deref())
+}
+
+fn github_api_get_with_token(
+    client: &reqwest::Client,
+    url: impl reqwest::IntoUrl,
+    token: Option<&str>,
+) -> reqwest::RequestBuilder {
     use tracing::debug;
 
     let mut builder = client
         .get(url)
-        .header("User-Agent", "rv-cli")
+        .header("User-Agent", GITHUB_USER_AGENT)
         .header("Accept", "application/vnd.github+json")
         .header("X-GitHub-Api-Version", GITHUB_API_VERSION);
 
-    if let Some(token) = github_token() {
+    if let Some(token) = token {
         debug!("Using authenticated GitHub API request");
-        builder = builder.header("Authorization", format!("Bearer {}", token));
+        builder = builder.bearer_auth(token);
     } else {
         debug!("No GitHub token found, using unauthenticated API request");
     }
@@ -146,6 +157,47 @@ mod tests {
             token_from(&[("RV_GITHUB_TOKEN", "  rv_token_value\n")]),
             Some("rv_token_value".to_string())
         );
+    }
+
+    fn api_request_headers(token: Option<&str>) -> reqwest::header::HeaderMap {
+        github_api_get_with_token(
+            &reqwest::Client::new(),
+            "https://api.github.com/repos/spinel-coop/rv-ruby/releases/latest",
+            token,
+        )
+        .build()
+        .expect("request should build")
+        .headers()
+        .clone()
+    }
+
+    #[test]
+    fn test_github_api_get_sends_bearer_token() {
+        let headers = api_request_headers(Some("secret-token"));
+        assert_eq!(
+            headers[reqwest::header::AUTHORIZATION],
+            "Bearer secret-token"
+        );
+    }
+
+    #[test]
+    fn test_github_api_get_omits_authorization_without_token() {
+        let headers = api_request_headers(None);
+        assert!(!headers.contains_key(reqwest::header::AUTHORIZATION));
+    }
+
+    #[test]
+    fn test_github_api_get_sets_standard_headers() {
+        let headers = api_request_headers(None);
+        assert_eq!(
+            headers[reqwest::header::USER_AGENT],
+            format!("rv/{}", env!("CARGO_PKG_VERSION"))
+        );
+        assert_eq!(
+            headers[reqwest::header::ACCEPT],
+            "application/vnd.github+json"
+        );
+        assert_eq!(headers["x-github-api-version"], GITHUB_API_VERSION);
     }
 
     #[test]
