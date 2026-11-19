@@ -7,16 +7,28 @@
 /// See: <https://docs.github.com/en/rest/overview/api-versions>
 pub const GITHUB_API_VERSION: &str = "2022-11-28";
 
+/// Environment variables that may hold a GitHub token, highest priority first.
+///
+/// `RV_GITHUB_TOKEN` is rv-specific and overrides the others; `GITHUB_TOKEN` is
+/// provided automatically in GitHub Actions; `GH_TOKEN` is used by the GitHub CLI.
+const GITHUB_TOKEN_ENV_VARS: [&str; 3] = ["RV_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"];
+
 /// Retrieves a GitHub authentication token from environment variables.
 ///
-/// Checks `GITHUB_TOKEN` first (automatically available in GitHub Actions),
-/// then falls back to `GH_TOKEN` (used by GitHub CLI and for general use).
+/// Checks `RV_GITHUB_TOKEN`, then `GITHUB_TOKEN`, then `GH_TOKEN`, and returns the
+/// first non-empty value with surrounding whitespace trimmed.
 ///
-/// Returns `None` if neither environment variable is set.
+/// Returns `None` if no token is configured.
 pub fn github_token() -> Option<String> {
-    std::env::var("GITHUB_TOKEN")
-        .ok()
-        .or_else(|| std::env::var("GH_TOKEN").ok())
+    github_token_from(|name| std::env::var(name).ok())
+}
+
+fn github_token_from(lookup: impl Fn(&str) -> Option<String>) -> Option<String> {
+    GITHUB_TOKEN_ENV_VARS.iter().find_map(|name| {
+        lookup(name)
+            .map(|token| token.trim().to_owned())
+            .filter(|token| !token.is_empty())
+    })
 }
 
 /// Builds a `reqwest::RequestBuilder` for a GitHub API endpoint with standard headers
@@ -64,42 +76,76 @@ mod tests {
         assert!(GITHUB_API_VERSION.chars().nth(7) == Some('-'));
     }
 
+    fn token_from(vars: &[(&str, &str)]) -> Option<String> {
+        github_token_from(|name| {
+            vars.iter()
+                .find(|(key, _)| *key == name)
+                .map(|(_, value)| (*value).to_owned())
+        })
+    }
+
+    #[test]
+    fn test_github_token_prefers_rv_github_token() {
+        assert_eq!(
+            token_from(&[
+                ("RV_GITHUB_TOKEN", "rv_token_value"),
+                ("GITHUB_TOKEN", "github_token_value"),
+                ("GH_TOKEN", "gh_token_value"),
+            ]),
+            Some("rv_token_value".to_string())
+        );
+    }
+
     #[test]
     fn test_github_token_prefers_github_token_over_gh_token() {
-        unsafe {
-            std::env::set_var("GH_TOKEN", "gh_token_value");
-            assert_eq!(github_token(), Some("gh_token_value".to_string()));
-            std::env::set_var("GITHUB_TOKEN", "github_token_value");
-            assert_eq!(github_token(), Some("github_token_value".to_string()));
-        }
+        assert_eq!(
+            token_from(&[
+                ("GITHUB_TOKEN", "github_token_value"),
+                ("GH_TOKEN", "gh_token_value"),
+            ]),
+            Some("github_token_value".to_string())
+        );
     }
 
     #[test]
     fn test_github_token_falls_back_to_gh_token() {
-        unsafe {
-            std::env::remove_var("GITHUB_TOKEN");
-            assert_eq!(github_token(), None);
-            std::env::set_var("GH_TOKEN", "gh_token_value");
-            assert_eq!(github_token(), Some("gh_token_value".to_string()));
-        }
+        assert_eq!(
+            token_from(&[("GH_TOKEN", "gh_token_value")]),
+            Some("gh_token_value".to_string())
+        );
     }
 
     #[test]
-    fn test_github_token_returns_none_when_neither_set() {
-        unsafe {
-            std::env::remove_var("GITHUB_TOKEN");
-            std::env::remove_var("GH_TOKEN");
-            assert_eq!(github_token(), None);
-        }
+    fn test_github_token_returns_none_when_unset() {
+        assert_eq!(token_from(&[]), None);
     }
 
     #[test]
-    fn test_github_token_uses_github_token_when_gh_token_not_set() {
-        unsafe {
-            std::env::set_var("GITHUB_TOKEN", "only_github_token");
-            std::env::remove_var("GH_TOKEN");
-            assert_eq!(github_token(), Some("only_github_token".to_string()));
-        }
+    fn test_github_token_skips_empty_values() {
+        assert_eq!(
+            token_from(&[
+                ("RV_GITHUB_TOKEN", ""),
+                ("GITHUB_TOKEN", "   "),
+                ("GH_TOKEN", "gh_token_value"),
+            ]),
+            Some("gh_token_value".to_string())
+        );
+        assert_eq!(
+            token_from(&[
+                ("RV_GITHUB_TOKEN", ""),
+                ("GITHUB_TOKEN", ""),
+                ("GH_TOKEN", ""),
+            ]),
+            None
+        );
+    }
+
+    #[test]
+    fn test_github_token_trims_whitespace() {
+        assert_eq!(
+            token_from(&[("RV_GITHUB_TOKEN", "  rv_token_value\n")]),
+            Some("rv_token_value".to_string())
+        );
     }
 
     #[test]
