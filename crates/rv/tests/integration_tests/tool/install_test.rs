@@ -52,6 +52,27 @@ fn test_tool_install_twice() {
     output.assert_stdout_contains(&expected_info_message);
 }
 
+#[cfg(unix)]
+#[test]
+fn test_tool_install_rejects_unmanaged_ruby() {
+    let mut test = RvTest::new();
+    let system_dir = test.temp_root().join("system");
+    test.create_system_ruby(&system_dir, "4.0.1");
+    test.env
+        .insert("PATH".into(), system_dir.join("bin").into());
+    let info = test.mock_info_endpoint("indirect").create();
+    let download = test
+        .mock_gem_download("indirect-1.2.0.gem")
+        .expect(0)
+        .create();
+
+    test.tool_install(&["indirect"])
+        .assert_failure()
+        .assert_stderr_contains("UnmanagedRuby");
+    info.assert();
+    download.assert();
+}
+
 #[test]
 fn test_tool_install_with_server_with_path_no_trailing_slash() {
     let mut test = RvTest::namespaced("@indirect".to_string());
