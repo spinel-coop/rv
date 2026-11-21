@@ -333,6 +333,119 @@ fn test_ruby_install_checks_a_ruby_picked_from_the_index_against_its_entry() {
 }
 
 #[test]
+fn test_ruby_install_records_which_build_it_installed() {
+    let mut test = RvTest::new();
+
+    let tarball_content = test.create_mock_tarball("3.4.5");
+    let ruby_mock = test.mock_ruby_download("3.4.5").create();
+
+    test.rv(&["ruby", "install", "3.4.5"]).assert_success();
+    ruby_mock.assert();
+
+    let marker = fs::read_to_string(test.rubies_dir().join("ruby-3.4.5").join(".rv-build"))
+        .expect("the installed ruby should have a build marker");
+    let marker: serde_json::Value = serde_json::from_str(&marker).unwrap();
+
+    assert_eq!(marker["build"], MOCK_BUILD);
+    assert_eq!(marker["sha256"], sha256(&tarball_content));
+    assert_eq!(marker["url"], test.ruby_tarball_url("3.4.5"));
+    assert!(marker["installed_at"].is_string());
+}
+
+#[test]
+fn test_ruby_install_records_the_build_of_a_ruby_picked_from_the_index() {
+    let mut test = RvTest::new();
+
+    let _mock = test.mock_releases(["3.4.5"].to_vec());
+    let _ruby_mock = test.mock_ruby_download("3.4.5").create();
+
+    test.rv(&["ruby", "install", "3.4"]).assert_success();
+
+    let marker = fs::read_to_string(test.rubies_dir().join("ruby-3.4.5").join(".rv-build"))
+        .expect("the installed ruby should have a build marker");
+    let marker: serde_json::Value = serde_json::from_str(&marker).unwrap();
+
+    assert_eq!(marker["build"], MOCK_BUILD);
+}
+
+#[test]
+fn test_ruby_install_from_tarball_records_no_build() {
+    let mut test = RvTest::new();
+
+    let tarball_content = test.create_mock_tarball("3.4.5");
+    let tarball_file = test.mock_tarball_on_disk("3.4.5", tarball_content);
+
+    let output = test.rv(&[
+        "ruby",
+        "install",
+        "--tarball-path",
+        tarball_file.as_str(),
+        "3.4.5",
+    ]);
+    output.assert_success();
+
+    assert!(test.rubies_dir().join("ruby-3.4.5").exists());
+    assert!(
+        !test
+            .rubies_dir()
+            .join("ruby-3.4.5")
+            .join(".rv-build")
+            .exists()
+    );
+}
+
+#[test]
+fn test_ruby_install_says_when_a_newer_build_is_available() {
+    let mut test = RvTest::new();
+
+    let _ruby_mock = test.mock_ruby_download("3.4.5").create();
+    test.rv(&["ruby", "install", "3.4.5"]).assert_success();
+
+    // Pretend the ruby was installed from a build that has been replaced since.
+    let marker_path = test.rubies_dir().join("ruby-3.4.5").join(".rv-build");
+    let marker = fs::read_to_string(&marker_path).unwrap();
+    fs::write(&marker_path, marker.replace(MOCK_BUILD, "20260101")).unwrap();
+
+    let download_path = test.ruby_tarball_download_path("3.4.5");
+    let head_mock = test
+        .mock_request("HEAD", download_path.as_str())
+        .with_status(200)
+        .with_header("x-rv-build", MOCK_BUILD)
+        .create();
+
+    let output = test.rv(&["ruby", "install", "3.4.5"]);
+
+    head_mock.assert();
+    output.assert_success();
+    output.assert_stdout_contains("If you want to overwrite it, use '--force'.");
+    output.assert_stdout_contains(&format!(
+        "Build 20260101 is installed, and build {MOCK_BUILD} is available."
+    ));
+}
+
+#[test]
+fn test_ruby_install_says_nothing_more_when_the_installed_build_is_the_newest() {
+    let mut test = RvTest::new();
+
+    let _ruby_mock = test.mock_ruby_download("3.4.5").create();
+    test.rv(&["ruby", "install", "3.4.5"]).assert_success();
+
+    let download_path = test.ruby_tarball_download_path("3.4.5");
+    let head_mock = test
+        .mock_request("HEAD", download_path.as_str())
+        .with_status(200)
+        .with_header("x-rv-build", MOCK_BUILD)
+        .create();
+
+    let output = test.rv(&["ruby", "install", "3.4.5"]);
+
+    head_mock.assert();
+    output.assert_success();
+    output.assert_stdout_contains("If you want to overwrite it, use '--force'.");
+    assert!(!output.stdout().contains("is available"));
+}
+
+#[test]
 fn test_ruby_install_cached_file_reused() {
     let mut test = RvTest::new();
 
