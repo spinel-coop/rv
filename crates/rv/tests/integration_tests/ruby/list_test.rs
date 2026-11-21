@@ -1,4 +1,4 @@
-use crate::common::{RvOutput, RvTest};
+use crate::common::{MOCK_BUILD, RvOutput, RvTest};
 use insta::assert_snapshot;
 use rv_platform::HostPlatform;
 
@@ -459,4 +459,79 @@ fn test_ruby_list_all_platforms_find_rubies() {
             platform,
         );
     }
+}
+
+#[test]
+fn test_ruby_list_shows_the_build_of_an_available_ruby() {
+    let mut test = RvTest::new();
+
+    let mock = test.mock_releases(["3.4.5"].to_vec());
+    let output = test.ruby_list(&["--no-color"]);
+
+    mock.assert();
+    output.assert_success();
+    output.assert_stdout_contains(&format!("3.4.5 (build {MOCK_BUILD})"));
+}
+
+#[test]
+fn test_ruby_list_points_out_an_installed_ruby_with_a_newer_build() {
+    let mut test = RvTest::new();
+    let ruby_dir = test.create_ruby_dir("ruby-3.4.5");
+    std::fs::write(
+        ruby_dir.join(".rv-build"),
+        r#"{"build":"20260101","url":"https://rv.dev/ruby/3.4.5/macos-aarch64","installed_at":"2026-01-02T03:04:05Z"}"#,
+    )
+    .unwrap();
+
+    let mock = test.mock_releases(["3.4.5"].to_vec());
+    let output = test.ruby_list(&["--no-color"]);
+
+    mock.assert();
+    output.assert_success();
+    output.assert_stdout_contains(&format!("(build {MOCK_BUILD} available)"));
+
+    let output = test.ruby_list(&["--format", "json"]);
+    let rubies: serde_json::Value = serde_json::from_str(&output.stdout()).unwrap();
+
+    assert_eq!(rubies[0]["build"], "20260101");
+    assert_eq!(rubies[0]["newer_build"], MOCK_BUILD);
+}
+
+#[test]
+fn test_ruby_list_says_nothing_about_an_installed_ruby_on_the_newest_build() {
+    let mut test = RvTest::new();
+    let ruby_dir = test.create_ruby_dir("ruby-3.4.5");
+    std::fs::write(
+        ruby_dir.join(".rv-build"),
+        format!(
+            r#"{{"build":"{MOCK_BUILD}","url":"https://rv.dev/ruby/3.4.5/macos-aarch64","installed_at":"2026-10-15T03:04:05Z"}}"#
+        ),
+    )
+    .unwrap();
+
+    let _mock = test.mock_releases(["3.4.5"].to_vec());
+    let output = test.ruby_list(&["--no-color"]);
+
+    output.assert_success();
+    assert!(!output.stdout().contains("available)"));
+
+    let output = test.ruby_list(&["--format", "json"]);
+    let rubies: serde_json::Value = serde_json::from_str(&output.stdout()).unwrap();
+
+    assert_eq!(rubies[0]["build"], MOCK_BUILD);
+    assert!(rubies[0].get("newer_build").is_none());
+}
+
+#[test]
+fn test_ruby_list_says_nothing_about_the_build_of_a_ruby_without_a_marker() {
+    let mut test = RvTest::new();
+    test.create_ruby_dir("ruby-3.4.5");
+
+    let _mock = test.mock_releases(["3.4.5"].to_vec());
+    let output = test.ruby_list(&["--format", "json"]);
+    let rubies: serde_json::Value = serde_json::from_str(&output.stdout()).unwrap();
+
+    output.assert_success();
+    assert!(rubies[0].get("build").is_none());
+    assert!(rubies[0].get("newer_build").is_none());
 }
