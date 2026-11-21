@@ -1,4 +1,4 @@
-use crate::common::{MOCK_BUILD, RvTest};
+use crate::common::{MOCK_BUILD, RvTest, sha256};
 use std::fs;
 
 #[test]
@@ -269,6 +269,67 @@ fn test_ruby_install_interrupted_download_cleanup() {
         "No temp file should remain at {} after failure",
         temp_path,
     );
+}
+
+#[test]
+fn test_ruby_install_rejects_a_download_with_the_wrong_checksum() {
+    let mut test = RvTest::new();
+
+    let download_path = test.ruby_tarball_download_path("3.4.5");
+    let tarball_content = test.create_mock_tarball("3.4.5");
+    let ruby_mock = test
+        .mock_request("GET", download_path.as_str())
+        .with_status(200)
+        .with_header("content-type", "application/gzip")
+        .with_header("x-rv-build", MOCK_BUILD)
+        .with_header("x-rv-sha256", &sha256(b"some other archive"))
+        .with_body(&tarball_content)
+        .create();
+
+    let cache_dir = test.enable_cache();
+
+    let output = test.rv(&["ruby", "install", "3.4.5"]);
+
+    ruby_mock.assert();
+    output.assert_failure();
+    output.assert_stderr_contains("ChecksumMismatch");
+    output.assert_stderr_contains(&sha256(&tarball_content));
+
+    let cache_key = test.ruby_tarball_cache_key("3.4.5");
+    let tarballs = cache_dir.join("ruby-v0").join("tarballs");
+    assert!(
+        !tarballs.join(format!("{cache_key}.tar.gz")).exists(),
+        "A damaged tarball should not be cached"
+    );
+    assert!(
+        !tarballs.join(format!("{cache_key}.tar.gz.tmp")).exists(),
+        "No temp file should remain after a checksum mismatch"
+    );
+    assert!(
+        !test.rubies_dir().join("ruby-3.4.5").exists(),
+        "A damaged tarball should not be installed"
+    );
+}
+
+#[test]
+fn test_ruby_install_checks_a_ruby_picked_from_the_index_against_its_entry() {
+    let mut test = RvTest::new();
+
+    // The index lists the checksum of the usual mock tarball, and this isn't it.
+    let _mock = test.mock_releases(["3.4.5"].to_vec());
+    let download_path = test.ruby_tarball_download_path("3.4.5");
+    let ruby_mock = test
+        .mock_request("GET", download_path.as_str())
+        .with_status(200)
+        .with_header("content-type", "application/gzip")
+        .with_body("not the tarball in the index")
+        .create();
+
+    let output = test.rv(&["ruby", "install", "3.4"]);
+
+    ruby_mock.assert();
+    output.assert_failure();
+    output.assert_stderr_contains("ChecksumMismatch");
 }
 
 #[test]

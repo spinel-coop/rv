@@ -6,6 +6,7 @@ use futures_util::StreamExt;
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
 use reqwest::StatusCode;
+use sha2::{Digest as _, Sha256};
 use std::borrow::Cow;
 use std::io::Read as _;
 use std::path::{Component, PathBuf};
@@ -42,6 +43,14 @@ pub enum Error {
         url: String,
         status: reqwest::StatusCode,
         body: String,
+    },
+    #[error(
+        "The archive downloaded from {url} is damaged: its SHA-256 checksum is {actual}, but it should be {expected}"
+    )]
+    ChecksumMismatch {
+        url: String,
+        expected: String,
+        actual: String,
     },
     #[error("Paths including .. are not allowed inside archives, but found {0}")]
     DirectoryTraversalError(String),
@@ -167,7 +176,7 @@ async fn download_tarball(
         }
     }
 
-    download_ruby_archive(config, &url, build, version, progress, ext).await
+    download_ruby_archive(config, &url, remote, version, progress, ext).await
 }
 
 /// Does a usable archive already exist at this path?
@@ -218,23 +227,28 @@ fn temp_archive_path(config: &Config, url: impl AsRef<str>, ext: &str) -> Utf8Pa
 
 /// Write the file from this HTTP `response` to the given `path`.
 /// While the stream is being handled, it'll be written to the given `temp_path`.
-/// Then once the download finishes, the file will be renamed to `path`.
+/// Then once the download finishes, the file will be renamed to `path`,
+/// unless it doesn't have the `sha256` checksum it is expected to.
 async fn write_to_filesystem(
     response: reqwest::Response,
     temp_path: &Utf8Path,
     path: &Utf8Path,
+    sha256: Option<&str>,
     total_size: u64,
     progress: &WorkProgress,
     span: &tracing::Span,
 ) -> Result<()> {
+    let url = response.url().to_string();
     let mut file = tokio::fs::File::create(&temp_path).await?;
     let mut stream = response.bytes_stream();
     let mut downloaded: u64 = 0;
+    let mut hasher = Sha256::new();
 
     while let Some(chunk) = stream.next().await {
         let chunk = chunk?;
         let chunk_len = chunk.len() as u64;
         file.write_all(&chunk).await?;
+        hasher.update(&chunk);
 
         downloaded += chunk_len;
         progress.complete_many(chunk_len);
@@ -251,18 +265,36 @@ async fn write_to_filesystem(
         }
     }
     file.sync_all().await?;
+
+    // This catches a download that was cut short or corrupted on the way. It is no defence
+    // against a server that lies, which could lie about the checksum as well.
+    match sha256 {
+        Some(expected) => {
+            let actual = hex::encode(hasher.finalize());
+            if !actual.eq_ignore_ascii_case(expected) {
+                return Err(Error::ChecksumMismatch {
+                    url,
+                    expected: expected.to_owned(),
+                    actual,
+                });
+            }
+        }
+        None => debug!("No checksum is known for {url}, so the download was not verified"),
+    }
+
     tokio::fs::rename(temp_path, path).await?;
     Ok(())
 }
 
 /// Downloads `url` into the archive cache and returns where it was put.
 ///
-/// `build` is known when the URL came from the index. An alias names its build in the
-/// `x-rv-build` header instead, and the cache may turn out to have that build already.
+/// The build and checksum are known when the URL came from the index, as `remote`. An alias
+/// names them in the `x-rv-build` and `x-rv-sha256` headers instead, and the cache may turn
+/// out to have that build already.
 async fn download_ruby_archive(
     config: &Config,
     url: &str,
-    build: Option<String>,
+    remote: Option<&RemoteRuby>,
     version: &str,
     progress: &WorkProgress,
     ext: &str,
@@ -286,9 +318,13 @@ async fn download_ruby_archive(
         });
     }
 
-    let build = build
-        .or_else(|| header(&response, "x-rv-build"))
-        .unwrap_or_default();
+    let (build, sha256) = match remote {
+        Some(remote) => (remote.build.clone(), Some(remote.sha256.clone())),
+        None => (
+            header(&response, "x-rv-build").unwrap_or_default(),
+            header(&response, "x-rv-sha256"),
+        ),
+    };
     let archive_path = archive_cache_path(config, url, &build, ext);
     if valid_archive_exists(&archive_path) {
         println!(
@@ -314,6 +350,7 @@ async fn download_ruby_archive(
         response,
         &temp_path,
         &archive_path,
+        sha256.as_deref(),
         total_size,
         progress,
         &span,

@@ -311,9 +311,15 @@ impl RvTest {
         filename: &str,
     ) -> serde_json::Value {
         let platform = platforms.first().copied().unwrap_or_default();
-        let url = match engine {
-            "ruby" => format!("{}/ruby/{version}/{platform}", self.server_url()),
-            _ => format!("{}/ruby/{engine}/{version}/{platform}", self.server_url()),
+        let (url, content) = match engine {
+            "ruby" => (
+                format!("{}/ruby/{version}/{platform}", self.server_url()),
+                self.create_mock_tarball(version),
+            ),
+            _ => (
+                format!("{}/ruby/{engine}/{version}/{platform}", self.server_url()),
+                self.create_mock_jruby_tarball(version),
+            ),
         };
 
         serde_json::json!({
@@ -323,8 +329,8 @@ impl RvTest {
             "platforms": platforms,
             "filename": filename,
             "url": url,
-            "size": 1024,
-            "sha256": "0".repeat(64),
+            "size": content.len(),
+            "sha256": sha256(&content),
         })
     }
 
@@ -388,6 +394,7 @@ impl RvTest {
             .with_status(200)
             .with_header("content-type", "application/gzip")
             .with_header("x-rv-build", MOCK_BUILD)
+            .with_header("x-rv-sha256", &sha256(content))
             .with_body(content)
     }
 
@@ -819,6 +826,11 @@ impl RvTest {
     fn make_platform_suffix(&self) -> String {
         HostPlatform::MacosAarch64.ruby_arch_str().to_string()
     }
+}
+
+pub fn sha256(content: &[u8]) -> String {
+    use sha2::Digest as _;
+    hex::encode(sha2::Sha256::digest(content))
 }
 
 #[cfg(unix)]
