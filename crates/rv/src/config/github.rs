@@ -1,11 +1,7 @@
 //! GitHub API utilities for rv.
 //!
-//! This module provides shared functionality for interacting with GitHub's API,
+//! This module provides shared functionality for downloading from GitHub,
 //! including authentication token retrieval.
-
-/// The recommended GitHub API version header value.
-/// See: <https://docs.github.com/en/rest/overview/api-versions>
-pub const GITHUB_API_VERSION: &str = "2022-11-28";
 
 /// Retrieves a GitHub authentication token from environment variables.
 ///
@@ -17,30 +13,6 @@ pub fn github_token() -> Option<String> {
     std::env::var("GITHUB_TOKEN")
         .ok()
         .or_else(|| std::env::var("GH_TOKEN").ok())
-}
-
-/// Builds a `reqwest::RequestBuilder` for a GitHub API endpoint with standard headers
-/// and optional authentication.
-pub fn github_api_get(
-    client: &reqwest::Client,
-    url: impl reqwest::IntoUrl,
-) -> reqwest::RequestBuilder {
-    use tracing::debug;
-
-    let mut builder = client
-        .get(url)
-        .header("User-Agent", "rv-cli")
-        .header("Accept", "application/vnd.github+json")
-        .header("X-GitHub-Api-Version", GITHUB_API_VERSION);
-
-    if let Some(token) = github_token() {
-        debug!("Using authenticated GitHub API request");
-        builder = builder.header("Authorization", format!("Bearer {}", token));
-    } else {
-        debug!("No GitHub token found, using unauthenticated API request");
-    }
-
-    builder
 }
 
 /// Checks if the URL is a GitHub URL by parsing the host.
@@ -55,14 +27,6 @@ pub fn is_github_url(url: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_github_api_version_is_valid() {
-        // Ensure the API version follows the expected format (YYYY-MM-DD)
-        assert_eq!(GITHUB_API_VERSION.len(), 10);
-        assert!(GITHUB_API_VERSION.chars().nth(4) == Some('-'));
-        assert!(GITHUB_API_VERSION.chars().nth(7) == Some('-'));
-    }
 
     #[test]
     fn test_github_token_prefers_github_token_over_gh_token() {

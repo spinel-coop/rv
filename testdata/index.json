@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "generated_at": "2026-10-22T09:30:00Z",
+  "rubies": [
+    {
+      "engine": "ruby",
+      "version": "3.4.11",
+      "build": "20261014",
+      "platforms": ["arm64_sonoma"],
+      "filename": "ruby-3.4.11.arm64_sonoma.tar.gz",
+      "url": "https://rv.dev/ruby/3.4.11/20261014/ruby-3.4.11.arm64_sonoma.tar.gz",
+      "size": 36656127,
+      "sha256": "5f1c3d0a9b7e4c2d8a6f0e1b3c5d7f9a2b4c6e8f0a1c3e5d7b9f1a3c5e7d9b0f"
+    },
+    {
+      "engine": "ruby",
+      "version": "3.4.11",
+      "build": "20261014-2",
+      "platforms": ["arm64_linux"],
+      "filename": "ruby-3.4.11.arm64_linux.tar.gz",
+      "url": "https://rv.dev/ruby/3.4.11/20261014-2/ruby-3.4.11.arm64_linux.tar.gz",
+      "size": 41209856,
+      "sha256": "0b9d7e5c3a1f9d7b5e3c1a0f8e6c4b2a9f7d5b3c1e0a8f6d4c2b0e9a7c5d3f1b"
+    },
+    {
+      "engine": "ruby",
+      "version": "3.4.11",
+      "build": "20261018",
+      "platforms": ["x64"],
+      "filename": "rubyinstaller-3.4.11-1-x64.7z",
+      "url": "https://rv.dev/ruby/3.4.11/20261018/rubyinstaller-3.4.11-1-x64.7z",
+      "size": 17742012,
+      "sha256": "c2e4a6081b3d5f7092a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8",
+      "upstream": {
+        "url": "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-3.4.11-1/rubyinstaller-3.4.11-1-x64.7z",
+        "sha256": "c2e4a6081b3d5f7092a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8",
+        "released_at": "2026-10-18"
+      }
+    },
+    {
+      "engine": "ruby",
+      "version": "4.1.0-preview1",
+      "build": "20261022",
+      "platforms": ["arm64_sonoma"],
+      "filename": "ruby-4.1.0-preview1.arm64_sonoma.tar.gz",
+      "url": "https://rv.dev/ruby/4.1.0-preview1/20261022/ruby-4.1.0-preview1.arm64_sonoma.tar.gz",
+      "size": 38112904,
+      "sha256": "9a8b7c6d5e4f30211203f4e5d6c7b8a99a8b7c6d5e4f30211203f4e5d6c7b8a9"
+    },
+    {
+      "engine": "ruby",
+      "version": "dev",
+      "build": "20261120",
+      "platforms": ["arm64_sonoma"],
+      "filename": "ruby-dev.arm64_sonoma.tar.gz",
+      "url": "https://rv.dev/ruby/dev/20261120/ruby-dev.arm64_sonoma.tar.gz",
+      "size": 39004417,
+      "sha256": "1d3f5b7092c4e6a8d0f2b4c6e8a0c2e4f6b8d0a2c4e6f8b0d2a4c6e8f0b2d4a6"
+    },
+    {
+      "engine": "jruby",
+      "version": "10.1.2.0",
+      "build": "20261015",
+      "platforms": [
+        "arm64_sonoma", "ventura", "x86_64_linux", "arm64_linux",
+        "x86_64_linux_musl", "arm64_linux_musl"
+      ],
+      "filename": "jruby-bin-10.1.2.0.tar.gz",
+      "url": "https://rv.dev/ruby/jruby/10.1.2.0/20261015/jruby-bin-10.1.2.0.tar.gz",
+      "size": 48067935,
+      "sha256": "7e5c3a1f9d7b5e3c1a0f8e6c4b2a9f7d5b3c1e0a8f6d4c2b0e9a7c5d3f1b0b9d",
+      "upstream": {
+        "url": "https://github.com/jruby/jruby/releases/download/10.1.2.0/jruby-bin-10.1.2.0.tar.gz",
+        "sha256": "7e5c3a1f9d7b5e3c1a0f8e6c4b2a9f7d5b3c1e0a8f6d4c2b0e9a7c5d3f1b0b9d",
+        "released_at": "2026-10-15"
+      }
+    },
+    {
+      "engine": "jruby",
+      "version": "10.1.2.0",
+      "build": "20261015",
+      "platforms": ["x64", "arm"],
+      "filename": "jruby-bin-10.1.2.0.zip",
+      "url": "https://rv.dev/ruby/jruby/10.1.2.0/20261015/jruby-bin-10.1.2.0.zip",
+      "size": 51873204,
+      "sha256": "4c2b0e9a7c5d3f1b0b9d7e5c3a1f9d7b5e3c1a0f8e6c4b2a9f7d5b3c1e0a8f6d",
+      "upstream": {
+        "url": "https://github.com/jruby/jruby/releases/download/10.1.2.0/jruby-bin-10.1.2.0.zip",
+        "sha256": "4c2b0e9a7c5d3f1b0b9d7e5c3a1f9d7b5e3c1a0f8e6c4b2a9f7d5b3c1e0a8f6d",
+        "released_at": "2026-10-15"
+      }
+    }
+  ]
+}

@@ -332,6 +332,10 @@ mod tests {
             version,
             arch: "aarch64".into(),
             os: "macos".into(),
+            build: "20261014".into(),
+            url: format!("https://rv.dev/ruby/{version_str}"),
+            size: 1024,
+            sha256: "0".repeat(64),
         }
     }
 
