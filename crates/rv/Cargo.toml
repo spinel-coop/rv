@@ -65,6 +65,7 @@ bytes = "1.11.0"
 saphyr.workspace = true
 sevenz-rust2.workspace = true
 sha2.workspace = true
+time = { workspace = true }
 hex = "0.4.3"
 indoc.workspace = true
 camino-tempfile = "1.4.1"
