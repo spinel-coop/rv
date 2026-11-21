@@ -11,35 +11,26 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 
 use rv_platform::HostPlatform;
-use rv_ruby::{Asset, Release, RemoteRuby, request::RequestError, version::ParseVersionError};
+use rv_ruby::{
+    Index, IndexEntry, RemoteRuby,
+    engine::RubyEngine,
+    request::RequestError,
+    version::{ParseVersionError, RubyVersion},
+};
 
-// Use GitHub's TTL, but don't re-check more than every 60 seconds.
+// Use the server's TTL, but don't re-check more than every 60 seconds.
 const MINIMUM_CACHE_TTL: Duration = Duration::from_secs(60);
 
-static ARCH_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"ruby-[\d\.a-z-]+\.(?P<arch>[a-zA-Z0-9_]+)\.(?:tar\.gz|7z)").unwrap());
+const INDEX_CACHE_FILE: &str = "index.json";
 
 static PARSE_MAX_AGE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"max-age=(\d+)").unwrap());
 
-/// Regex for parsing RubyInstaller2 asset filenames.
-///
-/// Captures: group 1 = Ruby version, group 2 = revision number, group 3 = architecture.
-/// Example: `rubyinstaller-3.4.8-1-x64.7z` → version=`3.4.8`, revision=`1`, arch=`x64`.
-static RUBYINSTALLER_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^rubyinstaller-(.+)-(\d+)-(x64|x86|arm)\.7z$").unwrap());
-
-/// Parses JRuby asset filenames: `jruby-bin-10.1.1.0.tar.gz` → version=`10.1.1.0`.
-static JRUBY_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^jruby-bin-(?P<version>[\d\.]+)\.tar\.gz$").unwrap());
-
-const JRUBY_CACHE_FILE: &str = "jruby.json";
-
-// Updated struct to hold ETag and calculated expiry time
+// Holds the index along with its ETag and calculated expiry time
 #[derive(Serialize, Deserialize, Debug)]
-struct CachedRelease {
+struct CachedIndex {
     expires_at: SystemTime,
     etag: Option<String>,
-    release: Release,
+    index: Index,
 }
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -50,8 +41,8 @@ pub enum Error {
     Io(#[from] std::io::Error),
     #[error(transparent)]
     Request(#[from] RequestError),
-    #[error("Failed to fetch available ruby versions from GitHub")]
-    GithubRequest(#[from] reqwest::Error),
+    #[error("Failed to fetch available ruby versions from rv.dev")]
+    IndexRequest(#[from] reqwest::Error),
     #[error(transparent)]
     ParseVersion(#[from] ParseVersionError),
 }
@@ -61,15 +52,14 @@ type Result<T> = miette::Result<T, Error>;
 impl Config {
     /// Discover all remotely available Ruby versions with caching.
     ///
-    /// On Windows, fetches from `oneclick/rubyinstaller2` (one release per Ruby version).
-    /// On other platforms, fetches from `spinel-coop/rv-ruby` (all versions in one release).
+    /// Every engine and platform is listed in one index at rv.dev/ruby. This returns
+    /// the rubies in it that run on the host.
     pub async fn discover_remote_rubies(&self) -> Vec<RemoteRuby> {
         if self.offline {
             debug!("OFFLINE: skipping remote ruby fetch");
             return vec![];
         }
 
-        // Detect host first — this decides which release source to query.
         let host = match HostPlatform::current() {
             Ok(h) => h,
             Err(e) => {
@@ -78,109 +68,77 @@ impl Config {
             }
         };
 
-        // Different repos, so fetch concurrently. Each is ETag-cached separately.
-        let cruby = async {
-            let ((fetch_result, url), cache_file) = if host.is_windows() {
-                (
-                    fetch_rubyinstaller2_rubies(&self.cache).await,
-                    "rubyinstaller2.json",
-                )
-            } else {
-                (
-                    fetch_available_rubies(&self.cache).await,
-                    "available_rubies.json",
-                )
-            };
-
-            match fetch_result {
-                Ok(release) => release,
-                Err(e) => {
-                    warn!("Could not fetch available Ruby versions: {}", e);
-                    stale_cache_fallback(&self.cache, cache_file, &url)
-                }
+        let url = index_url();
+        let index = match fetch_index(&self.cache, &url).await {
+            Ok(index) => index,
+            Err(e) => {
+                warn!("Could not fetch available Ruby versions: {}", e);
+                stale_cache_fallback(&self.cache, &url)
             }
         };
 
-        let jruby = async {
-            let (fetch_result, url) = fetch_jruby_rubies(&self.cache).await;
-
-            match fetch_result {
-                Ok(release) => release,
-                Err(e) => {
-                    warn!("Could not fetch available JRuby versions: {}", e);
-                    stale_cache_fallback(&self.cache, JRUBY_CACHE_FILE, &url)
-                }
-            }
-        };
-
-        let (release, jruby_release) = tokio::join!(cruby, jruby);
-
-        let desired_os = host.os();
-        let desired_arch = host.arch();
-
-        let mut rubies: Vec<RemoteRuby> = release
-            .assets
-            .iter()
-            .filter_map(|asset| ruby_from_asset(asset).ok())
-            .filter(|ruby| ruby.os == desired_os && ruby.arch == desired_arch)
-            .collect();
-
-        // JRuby's archives are universal, so there is no platform to filter on.
-        rubies.extend(
-            jruby_release
-                .assets
-                .iter()
-                .filter_map(|asset| jruby_from_asset(asset, &host).ok()),
-        );
-
-        rubies.sort();
+        let rubies = rubies_for(&index, &host);
 
         debug!(
             "Found {} available rubies for platform {}/{}",
             rubies.len(),
-            desired_os,
-            desired_arch
+            host.os(),
+            host.arch()
         );
 
         rubies
     }
+
+    /// What the index says about one version on this host, going by the copy on disk.
+    ///
+    /// Never makes a request. An index that is past its expiry is ignored, because the
+    /// build it lists may have been replaced since.
+    pub fn cached_index_entry(&self, engine: &RubyEngine, version: &str) -> Option<IndexEntry> {
+        let host = HostPlatform::current().ok()?;
+        let cache_entry = self.cache.entry(
+            rv_cache::CacheBucket::Ruby,
+            "releases",
+            cache_key_for(&index_url()),
+        );
+        let content = fs::read_to_string(cache_entry.path()).ok()?;
+        let cached: CachedIndex = serde_json::from_str(&content).ok()?;
+        if SystemTime::now() >= cached.expires_at {
+            return None;
+        }
+
+        entry_for(&cached.index, engine, version, &host).cloned()
+    }
 }
 
-fn cache_key_for(url: &str, cache_file: &str) -> String {
-    rv_cache::cache_digest(format!("{}-{}", url, cache_file))
+fn cache_key_for(url: &str) -> String {
+    rv_cache::cache_digest(format!("{}-{}", url, INDEX_CACHE_FILE))
 }
 
-fn url_for(env_var: &str, default_url: &str) -> String {
-    std::env::var(env_var).unwrap_or_else(|_| default_url.to_string())
+fn index_url() -> String {
+    std::env::var("RV_LIST_URL").unwrap_or_else(|_| "https://rv.dev/ruby/v1/index.json".to_string())
 }
 
-/// Fetches a GitHub releases endpoint with ETag/TTL caching.
-///
-/// The `transform` closure converts the raw JSON response body into a `Release`.
-/// For rv-ruby this is identity (response is already a single `Release`).
-/// For RubyInstaller2 this combines a `Vec<Release>` into one synthetic `Release`.
-async fn fetch_cached_github_release(
-    cache: &rv_cache::Cache,
-    cache_file: &str,
-    env_var: &str,
-    url: &str,
-    transform: impl FnOnce(bytes::Bytes) -> Result<Release>,
-) -> Result<Release> {
+fn empty_index() -> Index {
+    Index {
+        schema: 1,
+        generated_at: String::new(),
+        rubies: Vec::new(),
+    }
+}
+
+/// Fetches the index with ETag/TTL caching.
+async fn fetch_index(cache: &rv_cache::Cache, url: &str) -> Result<Index> {
     let client = reqwest::Client::new();
 
     if url == "-" {
-        debug!("{env_var} is '-', returning empty list without network request.");
-        return Ok(Release {
-            name: "Empty release".to_owned(),
-            assets: Vec::new(),
-        });
+        debug!("RV_LIST_URL is '-', returning empty list without network request.");
+        return Ok(empty_index());
     }
 
-    let cache_key = cache_key_for(url, cache_file);
-    let cache_entry = cache.entry(rv_cache::CacheBucket::Ruby, "releases", cache_key);
+    let cache_entry = cache.entry(rv_cache::CacheBucket::Ruby, "releases", cache_key_for(url));
 
     // 1. Try to read from the disk cache.
-    let cached_data: Option<CachedRelease> =
+    let cached_data: Option<CachedIndex> =
         if let Ok(content) = fs::read_to_string(cache_entry.path()) {
             serde_json::from_str(&content).ok()
         } else {
@@ -190,15 +148,17 @@ async fn fetch_cached_github_release(
     // 2. If we have fresh cached data, use it immediately.
     if let Some(cache) = &cached_data {
         if SystemTime::now() < cache.expires_at {
-            debug!("Using cached release data from {cache_file}.");
-            return Ok(cache.release.clone());
+            debug!("Using cached index from {INDEX_CACHE_FILE}.");
+            return Ok(cache.index.clone());
         }
-        debug!("Cache {cache_file} is stale, re-validating with server.");
+        debug!("Cache {INDEX_CACHE_FILE} is stale, re-validating with server.");
     }
 
     // 3. Cache is stale or missing.
     let etag = cached_data.as_ref().and_then(|c| c.etag.clone());
-    let mut request_builder = super::github::github_api_get(&client, url);
+    let mut request_builder = client
+        .get(url)
+        .header("User-Agent", format!("rv-{}", env!("CARGO_PKG_VERSION")));
 
     if let Some(etag) = &etag {
         debug!("Using ETag for conditional request: {}", etag);
@@ -209,7 +169,7 @@ async fn fetch_cached_github_release(
 
     match response.status() {
         reqwest::StatusCode::NOT_MODIFIED => {
-            debug!("Server confirmed {cache_file} is unchanged (304).");
+            debug!("Server confirmed {INDEX_CACHE_FILE} is unchanged (304).");
             let mut stale_cache =
                 cached_data.ok_or_else(|| io::Error::other("304 response without prior cache"))?;
 
@@ -222,10 +182,10 @@ async fn fetch_cached_github_release(
 
             stale_cache.expires_at = SystemTime::now() + max_age.max(MINIMUM_CACHE_TTL);
             fs::write(cache_entry.path(), serde_json::to_string(&stale_cache)?)?;
-            Ok(stale_cache.release)
+            Ok(stale_cache.index)
         }
         reqwest::StatusCode::OK => {
-            debug!("Received fresh data for {cache_file} (200 OK).");
+            debug!("Received fresh data for {INDEX_CACHE_FILE} (200 OK).");
             let headers = response.headers().clone();
             let new_etag = headers
                 .get("ETag")
@@ -239,12 +199,12 @@ async fn fetch_cached_github_release(
                 .unwrap_or(Duration::from_secs(60));
 
             let body = response.bytes().await?;
-            let release = transform(body)?;
+            let index: Index = serde_json::from_slice(&body)?;
 
-            let new_cache_entry = CachedRelease {
+            let new_cache_entry = CachedIndex {
                 expires_at: SystemTime::now() + max_age.max(MINIMUM_CACHE_TTL),
                 etag: new_etag,
-                release: release.clone(),
+                index: index.clone(),
             };
 
             if let Some(parent) = cache_entry.path().parent() {
@@ -252,180 +212,25 @@ async fn fetch_cached_github_release(
             }
             fs::write(cache_entry.path(), serde_json::to_string(&new_cache_entry)?)?;
 
-            Ok(release)
+            Ok(index)
         }
         status => {
-            warn!("Failed to fetch {cache_file} from {url}, status: {status}");
+            warn!("Failed to fetch {INDEX_CACHE_FILE} from {url}, status: {status}");
             Err(response.error_for_status().unwrap_err().into())
         }
     }
 }
 
-/// Fetches available rubies from rv-ruby (macOS/Linux).
-async fn fetch_available_rubies(cache: &rv_cache::Cache) -> (Result<Release>, String) {
-    let env_var = "RV_LIST_URL";
-    let default_url = "https://api.github.com/repos/spinel-coop/rv-ruby/releases/latest";
-    let url = url_for(env_var, default_url);
-    let release =
-        fetch_cached_github_release(cache, "available_rubies.json", env_var, &url, |body| {
-            Ok(serde_json::from_slice(&body)?)
-        })
-        .await;
-    (release, url)
-}
-
-/// Fetches available rubies from RubyInstaller2 (Windows).
-async fn fetch_rubyinstaller2_rubies(cache: &rv_cache::Cache) -> (Result<Release>, String) {
-    let env_var = "RV_WINDOWS_LIST_URL";
-    let default_url = "https://api.github.com/repos/oneclick/rubyinstaller2/releases?per_page=100";
-    let url = url_for(env_var, default_url);
-    let release =
-        fetch_cached_github_release(cache, "rubyinstaller2.json", env_var, &url, |body| {
-            let releases: Vec<Release> = serde_json::from_slice(&body)?;
-            Ok(combine_rubyinstaller2_releases(releases))
-        })
-        .await;
-    (release, url)
-}
-
-/// Fetches available JRuby versions from JRuby's own GitHub releases.
-async fn fetch_jruby_rubies(cache: &rv_cache::Cache) -> (Result<Release>, String) {
-    let env_var = "RV_JRUBY_LIST_URL";
-    let default_url = "https://api.github.com/repos/jruby/jruby/releases?per_page=100";
-    let url = url_for(env_var, default_url);
-    let release = fetch_cached_github_release(cache, JRUBY_CACHE_FILE, env_var, &url, |body| {
-        let releases: Vec<Release> = serde_json::from_slice(&body)?;
-        Ok(combine_jruby_releases(releases))
-    })
-    .await;
-    (release, url)
-}
-
-/// Normalizes JRuby's one-release-per-version format into a single synthetic Release,
-/// keeping only the binary tarballs and deduplicating by version.
-fn combine_jruby_releases(releases: Vec<Release>) -> Release {
-    use std::collections::HashMap;
-
-    let mut best: HashMap<String, Asset> = HashMap::new();
-
-    for release in &releases {
-        for asset in &release.assets {
-            if let Some(caps) = JRUBY_REGEX.captures(&asset.name) {
-                best.entry(caps["version"].to_string())
-                    .or_insert_with(|| asset.clone());
-            }
-        }
-    }
-
-    let mut assets: Vec<Asset> = best.into_values().collect();
-    assets.sort_by(|a, b| a.name.cmp(&b.name));
-
-    Release {
-        name: "jruby-combined".to_string(),
-        assets,
-    }
-}
-
-/// Creates a Rubies info struct from a JRuby release asset. Archives are universal,
-/// so the entry takes the host's os/arch rather than anything from the filename.
-fn jruby_from_asset(asset: &Asset, host: &HostPlatform) -> Result<RemoteRuby> {
-    let caps = JRUBY_REGEX
-        .captures(&asset.name)
-        .ok_or_else(|| io::Error::other(format!("not a jruby asset: {}", asset.name)))?;
-
-    let version: rv_ruby::version::RubyVersion = format!("jruby-{}", &caps["version"]).parse()?;
-
-    let os = host.os();
-    let arch = host.arch();
-
-    Ok(RemoteRuby {
-        key: format!("{version}-{os}-{arch}"),
-        version,
-        arch: arch.to_string(),
-        os: os.to_string(),
-    })
-}
-
 /// Falls back to a stale cache file when a fresh fetch fails.
-fn stale_cache_fallback(cache: &rv_cache::Cache, cache_file: &str, url: &str) -> Release {
-    let cache_key = cache_key_for(url, cache_file);
-    let cache_entry = cache.entry(rv_cache::CacheBucket::Ruby, "releases", cache_key);
+fn stale_cache_fallback(cache: &rv_cache::Cache, url: &str) -> Index {
+    let cache_entry = cache.entry(rv_cache::CacheBucket::Ruby, "releases", cache_key_for(url));
     if let Ok(content) = fs::read_to_string(cache_entry.path())
-        && let Ok(cached_data) = serde_json::from_str::<CachedRelease>(&content)
+        && let Ok(cached_data) = serde_json::from_str::<CachedIndex>(&content)
     {
         warn!("Displaying stale list of available rubies from cache.");
-        cached_data.release
+        cached_data.index
     } else {
-        Release {
-            name: "Empty".to_owned(),
-            assets: Vec::new(),
-        }
-    }
-}
-
-/// Normalizes RubyInstaller2's multi-release format into a single synthetic Release.
-///
-/// RubyInstaller2 has one GitHub release per Ruby version, each with assets like
-/// `rubyinstaller-3.4.8-1-x64.7z`. This function:
-/// 1. Filters to `x64` and `arm` assets (32-bit not supported)
-/// 2. Normalizes names: `rubyinstaller-3.4.8-1-x64.7z` → `ruby-3.4.8.x64.7z`
-/// 3. Deduplicates by (version, arch), keeping the highest revision number
-/// 4. Returns a single Release with all normalized assets
-///
-/// The normalized names are designed to match the existing `ARCH_REGEX`, so
-/// `ruby_from_asset()` and the platform filtering pipeline work unchanged.
-fn combine_rubyinstaller2_releases(releases: Vec<Release>) -> Release {
-    use std::collections::HashMap;
-
-    // Key: (version, arch), Value: (revision, normalized Asset)
-    let mut best: HashMap<(String, String), (u32, Asset)> = HashMap::new();
-
-    for release in &releases {
-        for asset in &release.assets {
-            // Skip devkit installers (e.g., "rubyinstaller-devkit-3.4.4-1-x64.exe").
-            // The regex's `.7z$` anchor already excludes `.exe` files, but this
-            // guards against any future devkit `.7z` assets.
-            if asset.name.starts_with("rubyinstaller-devkit-") {
-                continue;
-            }
-
-            if let Some(caps) = RUBYINSTALLER_REGEX.captures(&asset.name) {
-                let version = &caps[1];
-                let revision: u32 = caps[2].parse().unwrap_or(0);
-                let arch = &caps[3];
-
-                // Skip x86 (32-bit). We support x64 and arm.
-                if arch == "x86" {
-                    continue;
-                }
-
-                let key = (version.to_string(), arch.to_string());
-                let normalized_name = format!("ruby-{version}.{arch}.7z");
-                let normalized_asset = Asset {
-                    name: normalized_name,
-                    browser_download_url: asset.browser_download_url.clone(),
-                };
-
-                match best.entry(key) {
-                    std::collections::hash_map::Entry::Vacant(e) => {
-                        e.insert((revision, normalized_asset));
-                    }
-                    std::collections::hash_map::Entry::Occupied(mut e) => {
-                        if revision > e.get().0 {
-                            e.insert((revision, normalized_asset));
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    let mut assets: Vec<Asset> = best.into_values().map(|(_, asset)| asset).collect();
-    assets.sort_by(|a, b| a.name.cmp(&b.name));
-
-    Release {
-        name: "rubyinstaller2-combined".to_string(),
-        assets,
+        empty_index()
     }
 }
 
@@ -438,39 +243,70 @@ fn parse_max_age(header: &str) -> Option<Duration> {
         .map(Duration::from_secs)
 }
 
-/// Creates a Rubies info struct from a release asset
-fn ruby_from_asset(asset: &Asset) -> Result<RemoteRuby> {
-    let caps = ARCH_REGEX.captures(&asset.name);
-    let arch_match = caps.as_ref().and_then(|c| c.name("arch"));
-    let arch_str = arch_match.map_or("unknown", |m| m.as_str());
+/// The rubies in the index that run on `host`, oldest first.
+fn rubies_for(index: &Index, host: &HostPlatform) -> Vec<RemoteRuby> {
+    let platform = host.index_str();
 
-    let (os, arch) = match HostPlatform::from_ruby_arch_str(arch_str) {
-        Ok(hp) => (hp.os(), hp.arch()),
-        Err(_) => ("unknown", "unknown"),
-    };
+    let mut rubies: Vec<RemoteRuby> = index
+        .rubies
+        .iter()
+        .filter(|entry| entry.platforms.iter().any(|p| p == platform))
+        .filter_map(|entry| ruby_from_entry(entry, host).ok())
+        .collect();
+    rubies.sort();
+    rubies
+}
 
-    // Use the regex match position to slice off the `.arch.ext` suffix,
-    // rather than iterating over a list of known suffixes.
-    let version_str = match arch_match {
-        Some(m) => &asset.name[..m.start() - 1],
-        None => asset.name.as_str(),
-    };
-    let version: rv_ruby::version::RubyVersion = version_str.parse()?;
-    let display_name = version.to_string();
+/// The index's entry for an exact version on `host`. `dev` counts as a version here.
+fn entry_for<'a>(
+    index: &'a Index,
+    engine: &RubyEngine,
+    version: &str,
+    host: &HostPlatform,
+) -> Option<&'a IndexEntry> {
+    let platform = host.index_str();
+
+    index.rubies.iter().find(|entry| {
+        entry.engine == *engine
+            && entry.version == version
+            && entry.platforms.iter().any(|p| p == platform)
+    })
+}
+
+/// Creates a Rubies info struct from an index entry that runs on `host`.
+///
+/// Fails for an entry without a version number, which is how `dev` is listed.
+fn ruby_from_entry(entry: &IndexEntry, host: &HostPlatform) -> Result<RemoteRuby> {
+    let version: RubyVersion = format!("{}-{}", entry.engine, entry.version).parse()?;
+    let (os, arch) = (host.os(), host.arch());
 
     Ok(RemoteRuby {
-        key: format!("{display_name}-{os}-{arch}"),
+        key: format!("{version}-{os}-{arch}"),
         version,
         arch: arch.to_string(),
         os: os.to_string(),
+        build: entry.build.clone(),
+        url: entry.url.clone(),
+        size: entry.size,
+        sha256: entry.sha256.clone(),
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rv_ruby::version::RubyVersion;
-    use std::str::FromStr;
+
+    fn index() -> Index {
+        let json = fs_err::read_to_string("../../testdata/index.json").unwrap();
+        serde_json::from_str(&json).unwrap()
+    }
+
+    fn versions_for(host: HostPlatform) -> Vec<String> {
+        rubies_for(&index(), &host)
+            .iter()
+            .map(|ruby| ruby.version.to_string())
+            .collect()
+    }
 
     #[test]
     fn test_parse_cache_header() {
@@ -481,296 +317,146 @@ mod tests {
     }
 
     #[test]
-    fn test_deser_release() {
-        let jtxt = fs_err::read_to_string("../../testdata/api.json").unwrap();
-        let release: Release = serde_json::from_str(&jtxt).unwrap();
-        let actual = ruby_from_asset(&release.assets[0]).unwrap();
+    fn test_deser_index() {
+        insta::assert_debug_snapshot!(index());
+    }
+
+    #[test]
+    fn test_ruby_from_entry() {
+        let index = index();
+        let actual = ruby_from_entry(&index.rubies[1], &HostPlatform::LinuxAarch64).unwrap();
         let expected = RemoteRuby {
-            key: "ruby-3.3.0-linux-aarch64".to_owned(),
+            key: "ruby-3.4.11-linux-aarch64".to_owned(),
             version: RubyVersion {
                 engine: rv_ruby::engine::RubyEngine::Ruby,
                 major: 3,
-                minor: 3,
-                patch: 0,
+                minor: 4,
+                patch: 11,
                 patchlevel: None,
                 tiny: None,
                 prerelease: None,
             },
             arch: "aarch64".to_owned(),
             os: "linux".to_owned(),
+            build: "20261014-2".to_owned(),
+            url: "https://rv.dev/ruby/3.4.11/20261014-2/ruby-3.4.11.linux-aarch64.tar.gz"
+                .to_owned(),
+            size: 41209856,
+            sha256: "0b9d7e5c3a1f9d7b5e3c1a0f8e6c4b2a9f7d5b3c1e0a8f6d4c2b0e9a7c5d3f1b".to_owned(),
         };
         assert_eq!(actual, expected);
     }
 
     #[test]
-    fn test_ruby_from_asset_all_platforms() {
-        let cases = [
-            ("ruby-3.3.0.arm64_sonoma.tar.gz", "macos", "aarch64"),
-            ("ruby-3.3.0.ventura.tar.gz", "macos", "x86_64"),
-            ("ruby-3.4.1.sequoia.tar.gz", "macos", "x86_64"),
-            ("ruby-3.3.0.x86_64_linux.tar.gz", "linux", "x86_64"),
-            ("ruby-3.3.0.arm64_linux.tar.gz", "linux", "aarch64"),
-            ("ruby-3.3.0.x64.7z", "windows", "x86_64"),
-            ("ruby-3.4.8.arm.7z", "windows", "aarch64"),
-        ];
-        for (filename, expected_os, expected_arch) in cases {
-            let asset = Asset {
-                name: filename.to_owned(),
-                browser_download_url: format!("https://example.com/{filename}"),
-            };
-            let ruby = ruby_from_asset(&asset).unwrap();
-            assert_eq!(ruby.os, expected_os, "Wrong OS for {filename}");
-            assert_eq!(ruby.arch, expected_arch, "Wrong arch for {filename}");
-            assert_eq!(ruby.version.major, 3, "Wrong major version for {filename}");
-        }
-    }
-
-    #[test]
-    fn test_ruby_from_asset_unknown_arch() {
-        let asset = Asset {
-            name: "ruby-3.3.0.sparc_solaris.tar.gz".to_owned(),
-            browser_download_url: "https://example.com/ruby-3.3.0.sparc_solaris.tar.gz".to_owned(),
-        };
-        let ruby = ruby_from_asset(&asset).unwrap();
-        assert_eq!(ruby.os, "unknown");
-        assert_eq!(ruby.arch, "unknown");
-        assert_eq!(ruby.version.major, 3);
-    }
-
-    fn make_asset(name: &str) -> Asset {
-        Asset {
-            name: name.to_string(),
-            browser_download_url: format!("https://github.com/download/{name}"),
-        }
-    }
-
-    fn make_release(name: &str, asset_names: &[&str]) -> Release {
-        Release {
-            name: name.to_string(),
-            assets: asset_names.iter().map(|n| make_asset(n)).collect(),
-        }
-    }
-
-    #[test]
-    fn test_combine_rubyinstaller2_releases_basic() {
-        let releases = vec![make_release(
-            "RubyInstaller-3.4.4-1",
-            &[
-                "rubyinstaller-3.4.4-1-x64.7z",
-                "rubyinstaller-3.4.4-1-arm.7z",         // arm → kept
-                "rubyinstaller-3.4.4-1-x64.exe",        // exe → skipped by regex
-                "rubyinstaller-3.4.4-1-x64.7z.asc",     // .asc → skipped by regex
-                "rubyinstaller-3.4.4-1-x86.7z",         // x86 → skipped
-                "rubyinstaller-devkit-3.4.4-1-x64.exe", // devkit → skipped
-            ],
-        )];
-
-        let result = combine_rubyinstaller2_releases(releases);
-        assert_eq!(result.assets.len(), 2);
-        let names: Vec<&str> = result.assets.iter().map(|a| a.name.as_str()).collect();
-        assert!(names.contains(&"ruby-3.4.4.x64.7z"));
-        assert!(names.contains(&"ruby-3.4.4.arm.7z"));
-    }
-
-    #[test]
-    fn test_combine_rubyinstaller2_releases_dedup_highest_revision() {
-        let releases = vec![
-            make_release("RubyInstaller-3.3.0-2", &["rubyinstaller-3.3.0-2-x64.7z"]),
-            make_release("RubyInstaller-3.3.0-1", &["rubyinstaller-3.3.0-1-x64.7z"]),
-        ];
-
-        let result = combine_rubyinstaller2_releases(releases);
-        assert_eq!(result.assets.len(), 1);
-        // Should keep revision 2, not revision 1
-        assert!(
-            result.assets[0]
-                .browser_download_url
-                .contains("rubyinstaller-3.3.0-2-x64.7z")
-        );
-    }
-
-    #[test]
-    fn test_combine_rubyinstaller2_releases_multiple_versions() {
-        let releases = vec![
-            make_release(
-                "RubyInstaller-3.4.4-1",
-                &[
-                    "rubyinstaller-3.4.4-1-x64.7z",
-                    "rubyinstaller-3.4.4-1-arm.7z",
-                ],
-            ),
-            make_release("RubyInstaller-3.3.7-1", &["rubyinstaller-3.3.7-1-x64.7z"]),
-            make_release("RubyInstaller-3.2.8-1", &["rubyinstaller-3.2.8-1-x64.7z"]),
-        ];
-
-        let result = combine_rubyinstaller2_releases(releases);
-        assert_eq!(result.assets.len(), 4);
-        // Assets are sorted by name
-        let names: Vec<&str> = result.assets.iter().map(|a| a.name.as_str()).collect();
+    fn test_rubies_for_lists_what_runs_on_the_host() {
         assert_eq!(
-            names,
+            versions_for(HostPlatform::MacosAarch64),
+            ["ruby-3.4.11", "ruby-4.1.0-preview1", "jruby-10.1.2.0"]
+        );
+        assert_eq!(
+            versions_for(HostPlatform::LinuxAarch64),
+            ["ruby-3.4.11", "jruby-10.1.2.0"]
+        );
+        assert_eq!(versions_for(HostPlatform::LinuxX86_64), ["jruby-10.1.2.0"]);
+    }
+
+    #[test]
+    fn test_rubies_for_windows_come_from_the_same_index() {
+        let rubies = rubies_for(&index(), &HostPlatform::WindowsX86_64);
+        let urls: Vec<&str> = rubies.iter().map(|ruby| ruby.url.as_str()).collect();
+
+        assert_eq!(
+            urls,
             [
-                "ruby-3.2.8.x64.7z",
-                "ruby-3.3.7.x64.7z",
-                "ruby-3.4.4.arm.7z",
-                "ruby-3.4.4.x64.7z",
+                "https://rv.dev/ruby/3.4.11/20261018/rubyinstaller-3.4.11-1-x64.7z",
+                "https://rv.dev/ruby/jruby/10.1.2.0/20261015/jruby-bin-10.1.2.0.zip",
             ]
         );
     }
 
     #[test]
-    fn test_combine_rubyinstaller2_releases_skips_devkit() {
-        let releases = vec![make_release(
-            "RubyInstaller-3.4.4-1",
-            &[
-                "rubyinstaller-devkit-3.4.4-1-x64.7z", // hypothetical devkit .7z
-                "rubyinstaller-3.4.4-1-x64.7z",
-            ],
-        )];
-
-        let result = combine_rubyinstaller2_releases(releases);
-        assert_eq!(result.assets.len(), 1);
-        assert_eq!(result.assets[0].name, "ruby-3.4.4.x64.7z");
-    }
-
-    #[test]
-    fn test_normalized_rubyinstaller_asset_matches_arch_regex() {
-        // End-to-end: RubyInstaller2 asset → normalized → ARCH_REGEX → ruby_from_asset
-        let releases = vec![make_release(
-            "RubyInstaller-3.4.8-1",
-            &[
-                "rubyinstaller-3.4.8-1-x64.7z",
-                "rubyinstaller-3.4.8-1-arm.7z",
-            ],
-        )];
-
-        let combined = combine_rubyinstaller2_releases(releases);
-        assert_eq!(combined.assets.len(), 2);
-
-        // Both normalized asset names should be parseable by our pipeline
-        let x64_asset = combined
-            .assets
-            .iter()
-            .find(|a| a.name == "ruby-3.4.8.x64.7z")
-            .unwrap();
-        let ruby = ruby_from_asset(x64_asset).unwrap();
-        assert_eq!(ruby.version.major, 3);
-        assert_eq!(ruby.version.minor, 4);
-        assert_eq!(ruby.version.patch, 8);
-        assert_eq!(ruby.os, "windows");
-        assert_eq!(ruby.arch, "x86_64");
-
-        let arm_asset = combined
-            .assets
-            .iter()
-            .find(|a| a.name == "ruby-3.4.8.arm.7z")
-            .unwrap();
-        let ruby = ruby_from_asset(arm_asset).unwrap();
-        assert_eq!(ruby.version.major, 3);
-        assert_eq!(ruby.version.minor, 4);
-        assert_eq!(ruby.version.patch, 8);
-        assert_eq!(ruby.os, "windows");
-        assert_eq!(ruby.arch, "aarch64");
-    }
-
-    #[test]
-    fn test_combine_jruby_releases_keeps_only_binary_tarballs() {
-        let releases = vec![make_release(
-            "JRuby 10.1.1.0",
-            &[
-                "jruby-bin-10.1.1.0.tar.gz", // the only one we want
-                "jruby-bin-10.1.1.0.zip",
-                "jruby-src-10.1.1.0.tar.gz",
-                "jruby-complete-10.1.1.0.jar",
-                "jruby-jars-10.1.1.0.gem",
-                "jruby_windows_x64_10_1_1_0.exe",
-            ],
-        )];
-
-        let result = combine_jruby_releases(releases);
-        let names: Vec<&str> = result.assets.iter().map(|a| a.name.as_str()).collect();
-        assert_eq!(names, ["jruby-bin-10.1.1.0.tar.gz"]);
-    }
-
-    #[test]
-    fn test_combine_jruby_releases_across_versions() {
-        let releases = vec![
-            make_release("JRuby 10.1.1.0", &["jruby-bin-10.1.1.0.tar.gz"]),
-            make_release("JRuby 9.4.15.0", &["jruby-bin-9.4.15.0.tar.gz"]),
-            make_release("JRuby 9.4.12.1", &["jruby-bin-9.4.12.1.tar.gz"]),
+    fn test_universal_archive_is_one_entry_for_every_platform_it_lists() {
+        let hosts = [
+            HostPlatform::MacosAarch64,
+            HostPlatform::MacosX86_64,
+            HostPlatform::LinuxX86_64,
+            HostPlatform::LinuxAarch64,
         ];
-
-        let result = combine_jruby_releases(releases);
-        assert_eq!(result.assets.len(), 3);
-        assert_eq!(result.name, "jruby-combined");
-    }
-
-    #[test]
-    fn test_combine_jruby_releases_empty() {
-        let result = combine_jruby_releases(vec![]);
-        assert_eq!(result.assets.len(), 0);
-    }
-
-    #[test]
-    fn test_jruby_from_asset_is_universal() {
-        let asset = make_asset("jruby-bin-10.1.1.0.tar.gz");
-
-        let cases = [
-            ("aarch64-apple-darwin", "macos", "aarch64"),
-            ("x86_64-unknown-linux-gnu", "linux", "x86_64"),
-            ("x86_64-pc-windows-msvc", "windows", "x86_64"),
-        ];
-
-        for (triple, expected_os, expected_arch) in cases {
-            let host = HostPlatform::from_target_triple(triple).unwrap();
-            let ruby = jruby_from_asset(&asset, &host).unwrap();
-
-            assert_eq!(
-                ruby.version,
-                RubyVersion::from_str("jruby-10.1.1.0").unwrap()
-            );
-            assert_eq!(ruby.os, expected_os, "wrong os for {triple}");
-            assert_eq!(ruby.arch, expected_arch, "wrong arch for {triple}");
-            assert_eq!(
-                ruby.key,
-                format!("jruby-10.1.1.0-{expected_os}-{expected_arch}")
-            );
+        for host in hosts {
+            let rubies = rubies_for(&index(), &host);
+            let jruby = rubies.last().unwrap();
+            assert_eq!(jruby.version.to_string(), "jruby-10.1.2.0");
+            assert_eq!(jruby.os, host.os());
+            assert_eq!(jruby.arch, host.arch());
+            assert!(jruby.url.ends_with("jruby-bin-10.1.2.0.tar.gz"));
         }
     }
 
     #[test]
-    fn test_jruby_from_asset_parses_four_segment_versions() {
-        let host = HostPlatform::from_target_triple("aarch64-apple-darwin").unwrap();
-        let asset = make_asset("jruby-bin-9.4.12.1.tar.gz");
+    fn test_entry_for_finds_an_exact_version_for_the_host() {
+        let index = index();
+        let entry = |engine, version, host| {
+            entry_for(&index, &engine, version, &host).map(|entry| entry.filename.as_str())
+        };
 
-        let ruby = jruby_from_asset(&asset, &host).unwrap();
-        assert_eq!(ruby.version.engine, rv_ruby::engine::RubyEngine::JRuby);
-        assert_eq!(ruby.version.major, 9);
-        assert_eq!(ruby.version.minor, 4);
-        assert_eq!(ruby.version.patch, 12);
-        assert_eq!(ruby.version.tiny, Some(1));
+        assert_eq!(
+            entry(RubyEngine::Ruby, "3.4.11", HostPlatform::LinuxAarch64),
+            Some("ruby-3.4.11.linux-aarch64.tar.gz")
+        );
+        assert_eq!(
+            entry(RubyEngine::Ruby, "3.4.11", HostPlatform::WindowsX86_64),
+            Some("rubyinstaller-3.4.11-1-x64.7z")
+        );
+        assert_eq!(
+            entry(RubyEngine::Ruby, "dev", HostPlatform::MacosAarch64),
+            Some("ruby-dev.macos-aarch64.tar.gz")
+        );
+        assert_eq!(
+            entry(RubyEngine::JRuby, "10.1.2.0", HostPlatform::WindowsAarch64),
+            Some("jruby-bin-10.1.2.0.zip")
+        );
     }
 
     #[test]
-    fn test_jruby_from_asset_rejects_non_jruby_assets() {
-        let host = HostPlatform::from_target_triple("aarch64-apple-darwin").unwrap();
+    fn test_entry_for_needs_the_engine_version_and_platform_to_match() {
+        let index = index();
+        let entry = |engine, version, host| entry_for(&index, &engine, version, &host);
 
-        for name in [
-            "ruby-3.4.1.arm64_sonoma.tar.gz",
-            "jruby-src-10.1.1.0.tar.gz",
-            "jruby-complete-10.1.1.0.jar",
-        ] {
-            assert!(
-                jruby_from_asset(&make_asset(name), &host).is_err(),
-                "{name} should not parse as a JRuby install archive"
-            );
-        }
+        assert_eq!(
+            entry(RubyEngine::Ruby, "3.4.11", HostPlatform::LinuxX86_64),
+            None
+        );
+        assert_eq!(
+            entry(RubyEngine::Ruby, "3.4", HostPlatform::MacosAarch64),
+            None
+        );
+        assert_eq!(
+            entry(RubyEngine::JRuby, "3.4.11", HostPlatform::MacosAarch64),
+            None
+        );
+        assert_eq!(
+            entry(RubyEngine::Ruby, "dev", HostPlatform::WindowsX86_64),
+            None
+        );
     }
 
     #[test]
-    fn test_combine_rubyinstaller2_releases_empty() {
-        let result = combine_rubyinstaller2_releases(vec![]);
-        assert_eq!(result.assets.len(), 0);
-        assert_eq!(result.name, "rubyinstaller2-combined");
+    fn test_dev_has_no_version_and_is_not_listed() {
+        let index = index();
+        let dev = index.rubies.iter().find(|e| e.version == "dev").unwrap();
+
+        assert!(ruby_from_entry(dev, &HostPlatform::MacosAarch64).is_err());
+    }
+
+    #[test]
+    fn test_entries_for_an_unknown_platform_are_ignored() {
+        let mut index = index();
+        index.rubies[0].platforms = vec!["sparc_solaris".to_owned()];
+
+        let versions: Vec<String> = rubies_for(&index, &HostPlatform::MacosAarch64)
+            .iter()
+            .map(|ruby| ruby.version.to_string())
+            .collect();
+        assert_eq!(versions, ["ruby-4.1.0-preview1", "jruby-10.1.2.0"]);
     }
 }

@@ -6,6 +6,7 @@ use futures_util::StreamExt;
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize;
 use reqwest::StatusCode;
+use sha2::{Digest as _, Sha256};
 use std::borrow::Cow;
 use std::io::Read as _;
 use std::path::{Component, PathBuf};
@@ -16,6 +17,7 @@ use tracing_indicatif::span_ext::IndicatifSpanExt;
 use rv_platform::HostPlatform;
 use rv_ruby::engine::RubyEngine;
 use rv_ruby::request::RubyRequest;
+use rv_ruby::{IndexEntry, RemoteRuby};
 
 use crate::progress::WorkProgress;
 use crate::{GlobalArgs, config::Config};
@@ -42,8 +44,14 @@ pub enum Error {
         status: reqwest::StatusCode,
         body: String,
     },
-    #[error("Could not get latest ruby-dev release")]
-    GetLatestDevReleaseFailed,
+    #[error(
+        "The archive downloaded from {url} is damaged: its SHA-256 checksum is {actual}, but it should be {expected}"
+    )]
+    ChecksumMismatch {
+        url: String,
+        expected: String,
+        actual: String,
+    },
     #[error("Paths including .. are not allowed inside archives, but found {0}")]
     DirectoryTraversalError(String),
     #[error(transparent)]
@@ -51,6 +59,33 @@ pub enum Error {
 }
 
 type Result<T> = miette::Result<T, Error>;
+
+/// What the index says about the archive to download.
+struct Listing {
+    url: String,
+    build: String,
+    sha256: String,
+}
+
+impl From<RemoteRuby> for Listing {
+    fn from(ruby: RemoteRuby) -> Self {
+        Self {
+            url: ruby.url,
+            build: ruby.build,
+            sha256: ruby.sha256,
+        }
+    }
+}
+
+impl From<IndexEntry> for Listing {
+    fn from(entry: IndexEntry) -> Self {
+        Self {
+            url: entry.url,
+            build: entry.build,
+            sha256: entry.sha256,
+        }
+    }
+}
 
 pub(crate) async fn install(
     global_args: &GlobalArgs,
@@ -67,13 +102,21 @@ pub(crate) async fn install(
 
     let request = config.ruby_request();
 
-    let (engine, version) = match request {
-        RubyRequest::Dev => (RubyEngine::Ruby, "dev".to_string()),
+    let (engine, version, remote) = match request {
+        RubyRequest::Dev => (RubyEngine::Ruby, "dev".to_string(), None),
         RubyRequest::Released(_) => {
-            let matched = config.find_matching_remote_ruby().await?;
-            (matched.engine.clone(), matched.number())
+            let (matched, remote) = config.find_matching_remote_ruby_with_details().await?;
+            (matched.engine.clone(), matched.number(), remote)
         }
     };
+
+    // An exact version wasn't looked up in the index, but a copy of the index that we
+    // already have may list it. Otherwise the alias for the version finds its newest build.
+    let listing = remote.map(Listing::from).or_else(|| {
+        config
+            .cached_index_entry(&engine, &version)
+            .map(Listing::from)
+    });
 
     warn_if_jvm_missing(&engine);
 
@@ -94,7 +137,7 @@ pub(crate) async fn install(
     let archive_path = if let Some(path) = tarball_path {
         path
     } else {
-        download_tarball(config, &engine, &version, &progress).await?
+        download_tarball(config, &engine, &version, listing.as_ref(), &progress).await?
     };
 
     extract_ruby_archive(&archive_path, &install_dir, &engine, &version)?;
@@ -128,36 +171,46 @@ fn warn_if_jvm_missing(engine: &RubyEngine) {
 }
 
 // downloads a remote ruby archive (tarball or zip)
+/// Downloads the archive for a ruby, unless the cache already has it, and returns its path.
+///
+/// `listing` is what the index says about this ruby. Without it, the dateless alias for the
+/// version serves its newest build in a single request.
 async fn download_tarball(
     config: &Config,
     engine: &RubyEngine,
     version: &str,
+    listing: Option<&Listing>,
     progress: &WorkProgress,
 ) -> Result<Utf8PathBuf> {
     let host = HostPlatform::current()?;
     let ext = archive_ext_for(engine, &host);
-    let mut url = ruby_url(engine, version, &host);
 
-    if version == "dev" && !host.is_windows() {
-        url = find_latest_ruby_dev_url(&url).await?;
-    }
-    let archive_path = archive_cache_path(config, &url, ext);
+    let (url, build) = match listing {
+        Some(listing) => (listing.url.clone(), Some(listing.build.clone())),
+        None => (alias_url(engine, version, &host), None),
+    };
 
-    let cache_dir = archive_path.parent().unwrap();
+    let cache_dir = config
+        .cache
+        .shard(rv_cache::CacheBucket::Ruby, "tarballs")
+        .into_path_buf();
     if !cache_dir.exists() {
-        fs_err::create_dir_all(cache_dir)?;
+        fs_err::create_dir_all(&cache_dir)?;
     }
 
-    if valid_archive_exists(&archive_path) {
-        println!(
-            "Archive {} already exists, skipping download.",
-            archive_path.cyan()
-        );
-    } else {
-        download_ruby_archive(config, &url, &archive_path, version, progress, ext).await?;
+    // An alias doesn't say which build it serves until we ask for it.
+    if let Some(build) = &build {
+        let archive_path = archive_cache_path(config, &url, build, ext);
+        if valid_archive_exists(&archive_path) {
+            println!(
+                "Archive {} already exists, skipping download.",
+                archive_path.cyan()
+            );
+            return Ok(archive_path);
+        }
     }
 
-    Ok(archive_path)
+    download_ruby_archive(config, &url, listing, version, progress, ext).await
 }
 
 /// Does a usable archive already exist at this path?
@@ -174,67 +227,22 @@ fn archive_ext_for(engine: &RubyEngine, host: &HostPlatform) -> &'static str {
     }
 }
 
-fn ruby_url(engine: &RubyEngine, version: &str, host: &HostPlatform) -> String {
-    let download_base = std::env::var("RV_INSTALL_URL")
-        .unwrap_or_else(|_| download_base_for(engine, version, host));
-    let download_path = download_path_for(engine, version, host);
+/// The URL that serves the newest build of a ruby for `host`, whichever build that is.
+fn alias_url(engine: &RubyEngine, version: &str, host: &HostPlatform) -> String {
+    let base = std::env::var("RV_INSTALL_URL").unwrap_or_else(|_| "https://rv.dev/ruby".to_owned());
+    let platform = host.index_str();
 
-    format!("{download_base}/{download_path}")
-}
-
-fn download_base_for(engine: &RubyEngine, version: &str, host: &HostPlatform) -> String {
+    // CRuby sits at the root, and every other engine in a directory of its own.
     match engine {
-        RubyEngine::JRuby => "https://github.com/jruby/jruby/releases/download".to_owned(),
-        _ if host.is_windows() => {
-            "https://github.com/oneclick/rubyinstaller2/releases/download".to_owned()
-        }
-        _ if version == "dev" => {
-            "https://github.com/spinel-coop/rv-ruby-dev/releases/latest/download".to_owned()
-        }
-        _ => "https://github.com/spinel-coop/rv-ruby/releases/latest/download".to_owned(),
+        RubyEngine::Ruby => format!("{base}/{version}/{platform}"),
+        _ => format!("{base}/{engine}/{version}/{platform}"),
     }
 }
 
-fn download_path_for(engine: &RubyEngine, version: &str, host: &HostPlatform) -> String {
-    let arch = host.ruby_arch_str();
-    let ext = archive_ext_for(engine, host);
-
-    // JRuby archives are universal, so the path carries no arch.
-    if *engine == RubyEngine::JRuby {
-        return format!("{version}/jruby-bin-{version}.{ext}");
-    }
-
-    if host.is_windows() {
-        if version == "dev" {
-            // Dev builds use the rubyinstaller-head release (no revision number)
-            format!("rubyinstaller-head/rubyinstaller-head-{arch}.{ext}")
-        } else {
-            format!("RubyInstaller-{version}-1/rubyinstaller-{version}-1-{arch}.{ext}")
-        }
-    } else {
-        format!("ruby-{version}.{arch}.{ext}")
-    }
-}
-
-async fn find_latest_ruby_dev_url(url: &str) -> Result<String> {
-    let redirects = false;
-    let response = fetch_url(url, redirects).await?;
-
-    if response.status() == StatusCode::FOUND {
-        Ok(response
-            .headers()
-            .get(reqwest::header::LOCATION)
-            .expect("a redirect response should have a location header")
-            .to_str()
-            .expect("location header should be a valid UTF-8 string")
-            .to_string())
-    } else {
-        Err(Error::GetLatestDevReleaseFailed)
-    }
-}
-
-fn archive_cache_path(config: &Config, url: impl AsRef<str>, ext: &str) -> Utf8PathBuf {
-    let cache_key = rv_cache::cache_digest(url.as_ref());
+/// Where an archive is kept in the cache. The build is part of the key because an alias
+/// URL stays the same when a ruby is rebuilt.
+fn archive_cache_path(config: &Config, url: &str, build: &str, ext: &str) -> Utf8PathBuf {
+    let cache_key = rv_cache::cache_digest(format!("{url}{build}"));
     config
         .cache
         .shard(rv_cache::CacheBucket::Ruby, "tarballs")
@@ -253,23 +261,28 @@ fn temp_archive_path(config: &Config, url: impl AsRef<str>, ext: &str) -> Utf8Pa
 
 /// Write the file from this HTTP `response` to the given `path`.
 /// While the stream is being handled, it'll be written to the given `temp_path`.
-/// Then once the download finishes, the file will be renamed to `path`.
+/// Then once the download finishes, the file will be renamed to `path`,
+/// unless it doesn't have the `sha256` checksum it is expected to.
 async fn write_to_filesystem(
     response: reqwest::Response,
     temp_path: &Utf8Path,
     path: &Utf8Path,
+    sha256: Option<&str>,
     total_size: u64,
     progress: &WorkProgress,
     span: &tracing::Span,
 ) -> Result<()> {
+    let url = response.url().to_string();
     let mut file = tokio::fs::File::create(&temp_path).await?;
     let mut stream = response.bytes_stream();
     let mut downloaded: u64 = 0;
+    let mut hasher = Sha256::new();
 
     while let Some(chunk) = stream.next().await {
         let chunk = chunk?;
         let chunk_len = chunk.len() as u64;
         file.write_all(&chunk).await?;
+        hasher.update(&chunk);
 
         downloaded += chunk_len;
         progress.complete_many(chunk_len);
@@ -286,21 +299,42 @@ async fn write_to_filesystem(
         }
     }
     file.sync_all().await?;
+
+    // This catches a download that was cut short or corrupted on the way. It is no defence
+    // against a server that lies, which could lie about the checksum as well.
+    match sha256 {
+        Some(expected) => {
+            let actual = hex::encode(hasher.finalize());
+            if !actual.eq_ignore_ascii_case(expected) {
+                return Err(Error::ChecksumMismatch {
+                    url,
+                    expected: expected.to_owned(),
+                    actual,
+                });
+            }
+        }
+        None => debug!("No checksum is known for {url}, so the download was not verified"),
+    }
+
     tokio::fs::rename(temp_path, path).await?;
     Ok(())
 }
 
+/// Downloads `url` into the archive cache and returns where it was put.
+///
+/// The build and checksum are known when the URL came from the index, as `listing`. An alias
+/// names them in the `x-rv-build` and `x-rv-sha256` headers instead, and the cache may turn
+/// out to have that build already.
 async fn download_ruby_archive(
     config: &Config,
     url: &str,
-    archive_path: &Utf8PathBuf,
+    listing: Option<&Listing>,
     version: &str,
     progress: &WorkProgress,
     ext: &str,
-) -> Result<()> {
+) -> Result<Utf8PathBuf> {
     debug!("Downloading archive from {url}");
-    let redirects = true;
-    let response = fetch_url(url, redirects).await?;
+    let response = reqwest::Client::new().get(url).send().await?;
 
     if !response.status().is_success() {
         let status = response.status();
@@ -318,6 +352,22 @@ async fn download_ruby_archive(
         });
     }
 
+    let (build, sha256) = match listing {
+        Some(listing) => (listing.build.clone(), Some(listing.sha256.clone())),
+        None => (
+            header(&response, "x-rv-build").unwrap_or_default(),
+            header(&response, "x-rv-sha256"),
+        ),
+    };
+    let archive_path = archive_cache_path(config, url, &build, ext);
+    if valid_archive_exists(&archive_path) {
+        println!(
+            "Archive {} already exists, skipping download.",
+            archive_path.cyan()
+        );
+        return Ok(archive_path);
+    }
+
     // Get Content-Length for progress tracking
     let total_size = response.content_length().unwrap_or(0);
 
@@ -333,7 +383,8 @@ async fn download_ruby_archive(
     if let Err(e) = write_to_filesystem(
         response,
         &temp_path,
-        archive_path,
+        &archive_path,
+        sha256.as_deref(),
         total_size,
         progress,
         &span,
@@ -345,33 +396,12 @@ async fn download_ruby_archive(
         return Err(e);
     }
 
-    Ok(())
+    Ok(archive_path)
 }
 
-async fn fetch_url(url: &str, redirects: bool) -> Result<reqwest::Response> {
-    // Build the request with optional GitHub authentication
-    let client = if !redirects {
-        reqwest::Client::builder()
-            .redirect(reqwest::redirect::Policy::none())
-            .build()?
-    } else {
-        reqwest::Client::new()
-    };
-
-    let mut request_builder = client.get(url);
-
-    // Add GitHub token authentication if available and URL is from GitHub
-    // Check GITHUB_TOKEN first (GitHub Actions), then GH_TOKEN (GitHub CLI/general use)
-    if crate::config::github::is_github_url(url) {
-        if let Some(token) = crate::config::github::github_token() {
-            debug!("Using authenticated GitHub request for archive download");
-            request_builder = request_builder.header("Authorization", format!("Bearer {}", token));
-        } else {
-            debug!("No GitHub token found, using unauthenticated request for archive download");
-        }
-    }
-
-    Ok(request_builder.send().await?)
+fn header(response: &reqwest::Response, name: &str) -> Option<String> {
+    let value = response.headers().get(name)?.to_str().ok()?;
+    Some(value.to_owned())
 }
 
 /// Names the directory an install lands in, from the resolved version.
@@ -607,89 +637,51 @@ mod tests {
     use std::io::Write as _;
 
     #[test]
-    fn test_ruby_url_unix() {
+    fn test_alias_url_unix() {
         let host = HostPlatform::from_target_triple("aarch64-apple-darwin").unwrap();
-        let url = ruby_url(&RubyEngine::Ruby, "3.4.1", &host);
+        let url = alias_url(&RubyEngine::Ruby, "3.4.1", &host);
 
-        assert_eq!(
-            url,
-            "https://github.com/spinel-coop/rv-ruby/releases/latest/download/ruby-3.4.1.arm64_sonoma.tar.gz"
-        );
+        assert_eq!(url, "https://rv.dev/ruby/3.4.1/macos-aarch64");
     }
 
     #[test]
-    fn test_ruby_url_windows() {
+    fn test_alias_url_windows() {
         let host = HostPlatform::from_target_triple("x86_64-pc-windows-msvc").unwrap();
-        let url = ruby_url(&RubyEngine::Ruby, "3.4.1", &host);
+        let url = alias_url(&RubyEngine::Ruby, "3.4.1", &host);
 
-        assert_eq!(
-            url,
-            "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-3.4.1-1/rubyinstaller-3.4.1-1-x64.7z"
-        );
+        assert_eq!(url, "https://rv.dev/ruby/3.4.1/windows-x86_64");
     }
 
     #[test]
-    fn test_ruby_url_windows_arm64() {
+    fn test_alias_url_windows_arm64() {
         let host = HostPlatform::from_target_triple("aarch64-pc-windows-msvc").unwrap();
-        let url = ruby_url(&RubyEngine::Ruby, "3.4.1", &host);
+        let url = alias_url(&RubyEngine::Ruby, "3.4.1", &host);
 
-        assert_eq!(
-            url,
-            "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-3.4.1-1/rubyinstaller-3.4.1-1-arm.7z"
-        );
+        assert_eq!(url, "https://rv.dev/ruby/3.4.1/windows-aarch64");
     }
 
     #[test]
-    fn test_ruby_url_unix_dev() {
+    fn test_alias_url_prerelease() {
         let host = HostPlatform::from_target_triple("aarch64-apple-darwin").unwrap();
-        let url = ruby_url(&RubyEngine::Ruby, "dev", &host);
+        let url = alias_url(&RubyEngine::Ruby, "4.1.0-preview1", &host);
 
-        assert_eq!(
-            url,
-            "https://github.com/spinel-coop/rv-ruby-dev/releases/latest/download/ruby-dev.arm64_sonoma.tar.gz"
-        );
+        assert_eq!(url, "https://rv.dev/ruby/4.1.0-preview1/macos-aarch64");
     }
 
     #[test]
-    fn test_ruby_url_windows_dev() {
-        let host = HostPlatform::from_target_triple("x86_64-pc-windows-msvc").unwrap();
-        let url = ruby_url(&RubyEngine::Ruby, "dev", &host);
+    fn test_alias_url_dev() {
+        let host = HostPlatform::from_target_triple("x86_64-unknown-linux-musl").unwrap();
+        let url = alias_url(&RubyEngine::Ruby, "dev", &host);
 
-        assert_eq!(
-            url,
-            "https://github.com/oneclick/rubyinstaller2/releases/download/rubyinstaller-head/rubyinstaller-head-x64.7z"
-        );
+        assert_eq!(url, "https://rv.dev/ruby/dev/linux-musl-x86_64");
     }
 
     #[test]
-    fn test_jruby_url_is_universal_across_unix_platforms() {
-        // One archive for every platform, so the URL must not vary with host arch.
-        for triple in [
-            "aarch64-apple-darwin",
-            "x86_64-apple-darwin",
-            "x86_64-unknown-linux-gnu",
-            "aarch64-unknown-linux-musl",
-        ] {
-            let host = HostPlatform::from_target_triple(triple).unwrap();
-            let url = ruby_url(&RubyEngine::JRuby, "10.1.1.0", &host);
+    fn test_alias_url_puts_other_engines_in_their_own_directory() {
+        let host = HostPlatform::from_target_triple("x86_64-apple-darwin").unwrap();
+        let url = alias_url(&RubyEngine::JRuby, "10.1.1.0", &host);
 
-            assert_eq!(
-                url,
-                "https://github.com/jruby/jruby/releases/download/10.1.1.0/jruby-bin-10.1.1.0.tar.gz",
-                "wrong JRuby url for {triple}"
-            );
-        }
-    }
-
-    #[test]
-    fn test_jruby_url_windows_uses_zip() {
-        let host = HostPlatform::from_target_triple("x86_64-pc-windows-msvc").unwrap();
-        let url = ruby_url(&RubyEngine::JRuby, "9.4.15.0", &host);
-
-        assert_eq!(
-            url,
-            "https://github.com/jruby/jruby/releases/download/9.4.15.0/jruby-bin-9.4.15.0.zip"
-        );
+        assert_eq!(url, "https://rv.dev/ruby/jruby/10.1.1.0/macos-x86_64");
     }
 
     #[test]

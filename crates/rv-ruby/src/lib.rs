@@ -15,6 +15,7 @@ use std::env::{
 use std::process::Command;
 use tracing::instrument;
 
+use crate::engine::RubyEngine;
 use crate::version::RubyVersion;
 
 /// Returns the possible Ruby executable names for the current platform, in priority order.
@@ -55,16 +56,43 @@ static RUBY_DESCRIPTION_REGEX: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"ruby (?<version>[^ ]+) \((?<date>\d\d\d\d-\d\d-\d\d)(?<time>T\d\d:\d\d:\d\dZ)? (?<source>\S+) (?<revision>[0-9a-f]+)\) (?<zjit>\+ZJIT )?(?<yjit>\+YJIT )?(?<prism>\+PRISM )?\[(?<arch>\w+)-(?<os>\w+)\]").unwrap()
 });
 
+/// The rubies published at <https://rv.dev/ruby>, as listed by its `v1/index.json`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Release {
-    pub name: String,
-    pub assets: Vec<Asset>,
+pub struct Index {
+    pub schema: u32,
+    pub generated_at: String,
+    pub rubies: Vec<IndexEntry>,
+}
+
+/// One archive in the index: the newest build of a ruby, for the platforms it runs on.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct IndexEntry {
+    pub engine: RubyEngine,
+
+    /// Not a [`RubyVersion`], because the daily build of Ruby's master branch is listed as `dev`.
+    pub version: String,
+
+    /// When this archive was built, like `20261014`. A ruby is rebuilt without its version changing.
+    pub build: String,
+
+    /// Values of `HostPlatform::index_str()`, like `macos-aarch64`. A universal archive lists several.
+    pub platforms: Vec<String>,
+
+    pub filename: String,
+    pub url: String,
+    pub size: u64,
+    pub sha256: String,
+
+    /// Where the archive came from, for rubies that we mirror rather than build.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub upstream: Option<Upstream>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Asset {
-    pub name: String,
-    pub browser_download_url: String,
+pub struct Upstream {
+    pub url: String,
+    pub sha256: String,
+    pub released_at: String,
 }
 
 pub trait Versioned {
@@ -84,6 +112,22 @@ pub struct RemoteRuby {
 
     /// Operating system (macos, linux, windows, etc.)
     pub os: String,
+
+    /// When the archive was built, like `20261014`
+    #[serde(skip_serializing)]
+    pub build: String,
+
+    /// Where to download the archive from
+    #[serde(skip_serializing)]
+    pub url: String,
+
+    /// Size of the archive, in bytes
+    #[serde(skip_serializing)]
+    pub size: u64,
+
+    /// SHA-256 checksum of the archive
+    #[serde(skip_serializing)]
+    pub sha256: String,
 }
 
 impl Versioned for RemoteRuby {

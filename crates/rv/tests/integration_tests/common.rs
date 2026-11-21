@@ -5,6 +5,9 @@ use rv_platform::HostPlatform;
 use std::{collections::HashMap, process::Command};
 use tar::Builder;
 
+/// The build that every mocked ruby claims to be.
+pub const MOCK_BUILD: &str = "20261014";
+
 #[cfg(unix)]
 pub struct Shell {
     pub name: &'static str,
@@ -16,8 +19,12 @@ pub struct RvTest {
     pub temp_dir: Utf8TempDir,
     pub cwd: Utf8PathBuf,
     pub env: HashMap<String, String>,
-    // For mocking the releases json from Github API
+    // For mocking the rv.dev/ruby index, and the downloads it points to
     pub server: mockito::ServerGuard,
+    /// Every ruby the index has been mocked with so far.
+    index_entries: Vec<serde_json::Value>,
+    /// How many times the index has been mocked.
+    index_mocks: usize,
     /// The platform the subprocess sees via `RV_TEST_PLATFORM`.
     pub platform: HostPlatform,
     /// Namespace in the server to pull gems from
@@ -38,6 +45,8 @@ impl RvTest {
             temp_dir,
             env: HashMap::new(),
             server: mockito::Server::new(),
+            index_entries: Vec::new(),
+            index_mocks: 0,
             platform,
             namespace: Some(name),
         };
@@ -60,6 +69,8 @@ impl RvTest {
             temp_dir,
             env: HashMap::new(),
             server: mockito::Server::new(),
+            index_entries: Vec::new(),
+            index_mocks: 0,
             platform,
             namespace: None,
         };
@@ -189,170 +200,164 @@ impl RvTest {
         cmd
     }
 
-    /// Mocks the /releases API endpoint. Returns the mock handle
+    /// Mocks the rv.dev/ruby index. Returns the mock handle
     /// so that tests can optionally assert it was called.
     ///
-    /// Assets use the archive suffix for `self.platform`, so the mocked
+    /// The rubies are listed for `self.platform`, so the mocked
     /// response matches whatever platform the subprocess is configured for.
     pub fn mock_releases(&mut self, versions: Vec<&str>) -> Mock {
         self.mock_releases_for_platform(versions, self.platform)
     }
 
-    /// Mocks the /releases API endpoint with assets for a specific platform.
+    /// Mocks the index with rubies for a specific platform.
     pub fn mock_releases_for_platform(
         &mut self,
         versions: Vec<&str>,
         platform: HostPlatform,
     ) -> Mock {
-        use indoc::formatdoc;
-
-        let suffix = platform.archive_suffix();
-        let assets = versions
+        let entries = versions
             .into_iter()
-            .map(|v| {
-                formatdoc!(
-                    r#"
-            {{
-                "name": "ruby-{v}{suffix}",
-                "browser_download_url": "http://..."
-            }}"#
-                )
-            })
-            .collect::<Vec<_>>()
-            .join(",\n    ");
+            .map(|v| self.ruby_index_entry(v, platform))
+            .collect();
 
-        let body = formatdoc!(
-            r#"
-            {{
-                "name": "latest",
-                "assets": [{assets}]
-            }}"#
-        );
-
-        self.mock_request("GET", "repos/spinel-coop/rv-ruby/releases/latest")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(body)
-            .create()
+        self.mock_index(entries)
     }
 
-    /// Mocks JRuby's /releases API endpoint. Takes no platform: archives are universal.
+    /// Mocks the index with JRuby versions. Takes no platform: archives are universal,
+    /// with a tarball for every platform but Windows, which gets a zip.
     pub fn mock_jruby_releases(&mut self, versions: Vec<&str>) -> Mock {
-        use indoc::formatdoc;
+        let (windows, unix): (Vec<_>, Vec<_>) = HostPlatform::all()
+            .iter()
+            .partition(|platform| platform.is_windows());
+        let platforms = |platforms: &[&HostPlatform]| -> Vec<&str> {
+            platforms.iter().map(|hp| hp.index_str()).collect()
+        };
 
-        let releases = versions
+        let entries = versions
             .into_iter()
-            .map(|v| {
-                formatdoc!(
-                    r#"
-            {{
-                "name": "JRuby {v}",
-                "assets": [
-                    {{
-                        "name": "jruby-bin-{v}.tar.gz",
-                        "browser_download_url": "http://..."
-                    }},
-                    {{
-                        "name": "jruby-src-{v}.tar.gz",
-                        "browser_download_url": "http://..."
-                    }}
+            .flat_map(|v| {
+                [
+                    self.index_entry(
+                        "jruby",
+                        v,
+                        platforms(&unix),
+                        &format!("jruby-bin-{v}.tar.gz"),
+                    ),
+                    self.index_entry(
+                        "jruby",
+                        v,
+                        platforms(&windows),
+                        &format!("jruby-bin-{v}.zip"),
+                    ),
                 ]
-            }}"#
-                )
             })
-            .collect::<Vec<_>>()
-            .join(",\n    ");
+            .collect();
 
-        let body = format!("[{releases}]");
-
-        self.env.insert(
-            "RV_JRUBY_LIST_URL".into(),
-            format!("{}/{}", self.server_url(), "repos/jruby/jruby/releases"),
-        );
-
-        self.mock_request("GET", "repos/jruby/jruby/releases")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(body)
-            .create()
+        self.mock_index(entries)
     }
 
-    /// Mocks the rv-ruby /releases endpoint with assets for all NON-WINDOWS platforms.
+    /// Mocks the index with rubies for all NON-WINDOWS platforms.
     ///
-    /// Windows uses a separate endpoint (RubyInstaller2), so Windows assets
-    /// should NOT appear in the rv-ruby release. Use `mock_windows_releases()`
-    /// to mock the Windows endpoint.
+    /// Windows rubies are different archives, built by RubyInstaller2.
+    /// Use `mock_windows_releases()` to list those.
     pub fn mock_releases_all_platforms(&mut self, versions: Vec<&str>) -> Mock {
-        use indoc::formatdoc;
-
-        let assets: Vec<String> = versions
+        let entries = versions
             .into_iter()
             .flat_map(|v| {
                 HostPlatform::all()
                     .iter()
                     .filter(|hp| !hp.is_windows())
-                    .map(move |hp| {
-                        let suffix = hp.archive_suffix();
-                        formatdoc!(
-                            r#"
-            {{
-                "name": "ruby-{v}{suffix}",
-                "browser_download_url": "http://..."
-            }}"#
-                        )
-                    })
+                    .map(move |hp| (v, *hp))
             })
+            .map(|(v, hp)| self.ruby_index_entry(v, hp))
             .collect();
 
-        let assets_str = assets.join(",\n    ");
-
-        let body = formatdoc!(
-            r#"
-            {{
-                "name": "latest",
-                "assets": [{assets_str}]
-            }}"#
-        );
-
-        self.mock_request("GET", "repos/spinel-coop/rv-ruby/releases/latest")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(body)
-            .create()
+        self.mock_index(entries)
     }
 
-    /// Mocks the RubyInstaller2 /releases endpoint for Windows.
-    ///
-    /// Returns an array of releases (one per version), each with a
-    /// `rubyinstaller-{v}-1-x64.7z` asset. This matches the real
-    /// RubyInstaller2 release structure.
+    /// Mocks the index with the RubyInstaller2 archives that Windows installs.
     pub fn mock_windows_releases(&mut self, versions: Vec<&str>) -> Mock {
-        use indoc::formatdoc;
-
-        let releases: Vec<String> = versions
-            .iter()
+        let entries = versions
+            .into_iter()
             .map(|v| {
-                formatdoc!(
-                    r#"
-            {{
-                "name": "RubyInstaller-{v}-1",
-                "assets": [
-                    {{
-                        "name": "rubyinstaller-{v}-1-x64.7z",
-                        "browser_download_url": "http://..."
-                    }}
-                ]
-            }}"#
+                self.index_entry(
+                    "ruby",
+                    v,
+                    vec![HostPlatform::WindowsX86_64.index_str()],
+                    &format!("rubyinstaller-{v}-1-x64.7z"),
                 )
             })
             .collect();
 
-        let body = format!("[{}]", releases.join(",\n"));
+        self.mock_index(entries)
+    }
 
-        self.mock_request("GET", "repos/oneclick/rubyinstaller2/releases")
+    fn ruby_index_entry(&self, version: &str, platform: HostPlatform) -> serde_json::Value {
+        self.index_entry(
+            "ruby",
+            version,
+            vec![platform.index_str()],
+            &format!("ruby-{version}.{}.tar.gz", platform.index_str()),
+        )
+    }
+
+    /// The entry's URL is the one `mock_ruby_download` and `mock_jruby_download` serve, so
+    /// a test doesn't have to mock a second download for a ruby that the index picked.
+    fn index_entry(
+        &self,
+        engine: &str,
+        version: &str,
+        platforms: Vec<&str>,
+        filename: &str,
+    ) -> serde_json::Value {
+        let platform = platforms.first().copied().unwrap_or_default();
+        let (url, content) = match engine {
+            "ruby" => (
+                format!("{}/ruby/{version}/{platform}", self.server_url()),
+                self.create_mock_tarball(version),
+            ),
+            _ => (
+                format!("{}/ruby/{engine}/{version}/{platform}", self.server_url()),
+                self.create_mock_jruby_tarball(version),
+            ),
+        };
+
+        serde_json::json!({
+            "engine": engine,
+            "version": version,
+            "build": MOCK_BUILD,
+            "platforms": platforms,
+            "filename": filename,
+            "url": url,
+            "size": content.len(),
+            "sha256": sha256(&content),
+        })
+    }
+
+    /// Adds `entries` to the index and mocks it again.
+    ///
+    /// mockito answers with the oldest mock that hasn't been asked yet, so each one
+    /// gets a path of its own, and `RV_LIST_URL` moves to the newest.
+    fn mock_index(&mut self, entries: Vec<serde_json::Value>) -> Mock {
+        self.index_entries.extend(entries);
+        self.index_mocks += 1;
+
+        let path = format!("ruby/v1/index.json/{}", self.index_mocks);
+        let body = serde_json::json!({
+            "schema": 1,
+            "generated_at": "2026-10-22T09:30:00Z",
+            "rubies": self.index_entries,
+        });
+
+        self.env.insert(
+            "RV_LIST_URL".into(),
+            format!("{}/{path}", self.server_url()),
+        );
+
+        self.mock_request("GET", &path)
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(body)
+            .with_body(body.to_string())
             .create()
     }
 
@@ -371,19 +376,10 @@ impl RvTest {
     }
 
     /// Mock a ruby dev tarball download for testing
-    pub fn mock_ruby_dev_download(&mut self) -> (Mock, Mock) {
-        let path = self.ruby_dev_tarball_download_path();
-        let redirect_url = self.ruby_dev_tarball_redirect_url();
-        let redirect_path = self.ruby_dev_tarball_redirect_path();
-        let redirect_mock = self
-            .mock_dev_tarball_redirect(&path, &redirect_url)
-            .create();
+    pub fn mock_ruby_dev_download(&mut self) -> Mock {
+        let path = self.ruby_tarball_download_path("dev");
         let content = self.create_mock_tarball("dev");
-        let download_mock = self
-            .mock_tarball_download(&redirect_path, &content)
-            .create();
-
-        (redirect_mock, download_mock)
+        self.mock_tarball_download(&path, &content)
     }
 
     pub fn mock_gem_download(&mut self, package: &str) -> Mock {
@@ -392,18 +388,14 @@ impl RvTest {
         self.mock_tarball_download(&path, &content)
     }
 
-    /// Mock a tarball download for testing
+    /// Mock a tarball download for testing, the way rv.dev/ruby serves a ruby's newest build
     pub fn mock_tarball_download(&mut self, path: &str, content: &[u8]) -> Mock {
         self.mock_request("GET", path)
             .with_status(200)
             .with_header("content-type", "application/gzip")
+            .with_header("x-rv-build", MOCK_BUILD)
+            .with_header("x-rv-sha256", &sha256(content))
             .with_body(content)
-    }
-
-    pub fn mock_dev_tarball_redirect(&mut self, path: &str, location: &str) -> Mock {
-        self.mock_request("GET", path)
-            .with_status(302)
-            .with_header("location", location)
     }
 
     pub fn mock_info_endpoint(&mut self, name: &str) -> Mock {
@@ -595,7 +587,7 @@ impl RvTest {
     }
 
     pub fn jruby_tarball_download_path(&self, version: &str) -> String {
-        format!("latest/download/{version}/jruby-bin-{version}.tar.gz")
+        format!("ruby/jruby/{version}/{}", self.platform_name())
     }
 
     pub fn ruby_tarball_url(&self, version: &str) -> String {
@@ -606,26 +598,18 @@ impl RvTest {
         )
     }
 
-    pub fn ruby_dev_tarball_redirect_url(&self) -> String {
-        format!(
-            "{}/{}",
-            self.server_url(),
-            self.ruby_dev_tarball_redirect_path()
-        )
-    }
-
+    /// The path of a ruby's newest build for the default test platform. Also works for `dev`.
     pub fn ruby_tarball_download_path(&self, version: &str) -> String {
-        let filename = self.make_tarball_file_name(version);
-        format!("latest/download/{filename}")
+        format!("ruby/{version}/{}", self.platform_name())
     }
 
-    pub fn ruby_dev_tarball_download_path(&self) -> String {
-        let filename = self.make_dev_tarball_file_name();
-        format!("latest/download/{filename}")
+    /// The name rv caches a downloaded ruby under: its URL and its build.
+    pub fn ruby_tarball_cache_key(&self, version: &str) -> String {
+        rv_cache::cache_digest(format!("{}{MOCK_BUILD}", self.ruby_tarball_url(version)))
     }
-    pub fn ruby_dev_tarball_redirect_path(&self) -> String {
-        let filename = self.make_dev_tarball_file_name();
-        format!("download/20260305/{filename}")
+
+    pub fn jruby_tarball_cache_key(&self, version: &str) -> String {
+        rv_cache::cache_digest(format!("{}{MOCK_BUILD}", self.jruby_tarball_url(version)))
     }
 
     pub fn gem_package_download_path(&self, package: &str) -> String {
@@ -721,26 +705,12 @@ impl RvTest {
         // Disable network requests by default
         self.env.insert(
             "RV_LIST_URL".into(),
-            format!(
-                "{}/{}",
-                self.server_url(),
-                "repos/spinel-coop/rv-ruby/releases/latest"
-            ),
+            format!("{}/{}", self.server_url(), "ruby/v1/index.json"),
         );
         self.env.insert(
             "RV_INSTALL_URL".into(),
-            format!("{}/{}", self.server_url(), "latest/download"),
+            format!("{}/{}", self.server_url(), "ruby"),
         );
-        self.env.insert(
-            "RV_WINDOWS_LIST_URL".into(),
-            format!(
-                "{}/{}",
-                self.server_url(),
-                "repos/oneclick/rubyinstaller2/releases"
-            ),
-        );
-        // `-` means "make no request"; mock_jruby_releases opts a test back in.
-        self.env.insert("RV_JRUBY_LIST_URL".into(), "-".into());
 
         // Override the rubies directory so rv looks in the test temp dir.
         // On Windows, etcetera resolves data_dir via the Win32 SHGetKnownFolderPath
@@ -848,11 +818,6 @@ impl RvTest {
         format!("ruby-{version}.{suffix}.tar.gz")
     }
 
-    fn make_dev_tarball_file_name(&self) -> String {
-        let suffix = self.make_platform_suffix();
-        format!("ruby-dev.{suffix}.tar.gz")
-    }
-
     /// Returns the ruby arch string matching the default test platform (`MacosAarch64`).
     ///
     /// Uses `HostPlatform::MacosAarch64` to match the hardcoded default in `RvTest::new()`,
@@ -861,6 +826,16 @@ impl RvTest {
     fn make_platform_suffix(&self) -> String {
         HostPlatform::MacosAarch64.ruby_arch_str().to_string()
     }
+
+    /// The name rv.dev/ruby has for the default test platform, as used in its download URLs.
+    fn platform_name(&self) -> &'static str {
+        HostPlatform::MacosAarch64.index_str()
+    }
+}
+
+pub fn sha256(content: &[u8]) -> String {
+    use sha2::Digest as _;
+    hex::encode(sha2::Sha256::digest(content))
 }
 
 #[cfg(unix)]

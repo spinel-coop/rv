@@ -98,6 +98,22 @@ impl HostPlatform {
         }
     }
 
+    /// The name of this platform in the index at rv.dev/ruby, and in its download URLs.
+    ///
+    /// For example, `https://rv.dev/ruby/3.4.5/macos-aarch64`.
+    pub fn index_str(&self) -> &'static str {
+        match self {
+            Self::MacosAarch64 => "macos-aarch64",
+            Self::MacosX86_64 => "macos-x86_64",
+            Self::LinuxX86_64 => "linux-x86_64",
+            Self::LinuxMuslX86_64 => "linux-musl-x86_64",
+            Self::LinuxAarch64 => "linux-aarch64",
+            Self::LinuxMuslAarch64 => "linux-musl-aarch64",
+            Self::WindowsX86_64 => "windows-x86_64",
+            Self::WindowsAarch64 => "windows-aarch64",
+        }
+    }
+
     /// The archive file extension for this platform's ruby downloads.
     pub fn archive_ext(&self) -> &'static str {
         match self {
@@ -245,6 +261,13 @@ mod tests {
         assert_eq!(HostPlatform::LinuxAarch64.arch(), "aarch64");
         assert_eq!(HostPlatform::WindowsX86_64.arch(), "x86_64");
         assert_eq!(HostPlatform::WindowsAarch64.arch(), "aarch64");
+    }
+
+    #[test]
+    fn test_index_str_is_the_os_and_the_arch() {
+        for hp in HostPlatform::all() {
+            assert_eq!(hp.index_str(), format!("{}-{}", hp.os(), hp.arch()));
+        }
     }
 
     #[test]

@@ -1,4 +1,4 @@
-use crate::common::RvTest;
+use crate::common::{MOCK_BUILD, RvTest, sha256};
 use std::fs;
 
 #[test]
@@ -19,7 +19,7 @@ fn test_ruby_install_no_specific_version() {
     output
         .assert_stdout_contains("Installed Ruby version 3.4.5 to /tmp/home/.local/share/rv/rubies");
 
-    let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("3.4.5"));
+    let cache_key = test.ruby_tarball_cache_key("3.4.5");
     let tarball_path = cache_dir
         .join("ruby-v0")
         .join("tarballs")
@@ -46,7 +46,7 @@ fn test_ruby_install_incomplete_request() {
     output
         .assert_stdout_contains("Installed Ruby version 4.0.0 to /tmp/home/.local/share/rv/rubies");
 
-    let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("4.0.0"));
+    let cache_key = test.ruby_tarball_cache_key("4.0.0");
     let tarball_path = cache_dir
         .join("ruby-v0")
         .join("tarballs")
@@ -71,7 +71,7 @@ fn test_ruby_install_successful_download() {
     ruby_mock.assert();
     output.assert_success();
 
-    let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("3.4.5"));
+    let cache_key = test.ruby_tarball_cache_key("3.4.5");
     let tarball_path = cache_dir
         .join("ruby-v0")
         .join("tarballs")
@@ -209,7 +209,7 @@ fn test_ruby_install_http_failure_no_empty_file() {
     ruby_mock.assert();
     output.assert_failure();
 
-    let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("3.4.5"));
+    let cache_key = test.ruby_tarball_cache_key("3.4.5");
     let tarball_path = cache_dir
         .join("ruby-v0")
         .join("tarballs")
@@ -238,6 +238,7 @@ fn test_ruby_install_interrupted_download_cleanup() {
         .mock_request("GET", download_path.as_str())
         .with_status(200)
         .with_header("content-type", "application/gzip")
+        .with_header("x-rv-build", MOCK_BUILD)
         .with_body("partial")
         .create();
 
@@ -248,7 +249,7 @@ fn test_ruby_install_interrupted_download_cleanup() {
     ruby_mock.assert();
     output.assert_failure();
 
-    let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("3.4.5"));
+    let cache_key = test.ruby_tarball_cache_key("3.4.5");
     let tarball_path = cache_dir
         .join("ruby-v0")
         .join("tarballs")
@@ -271,10 +272,71 @@ fn test_ruby_install_interrupted_download_cleanup() {
 }
 
 #[test]
+fn test_ruby_install_rejects_a_download_with_the_wrong_checksum() {
+    let mut test = RvTest::new();
+
+    let download_path = test.ruby_tarball_download_path("3.4.5");
+    let tarball_content = test.create_mock_tarball("3.4.5");
+    let ruby_mock = test
+        .mock_request("GET", download_path.as_str())
+        .with_status(200)
+        .with_header("content-type", "application/gzip")
+        .with_header("x-rv-build", MOCK_BUILD)
+        .with_header("x-rv-sha256", &sha256(b"some other archive"))
+        .with_body(&tarball_content)
+        .create();
+
+    let cache_dir = test.enable_cache();
+
+    let output = test.rv(&["ruby", "install", "3.4.5"]);
+
+    ruby_mock.assert();
+    output.assert_failure();
+    output.assert_stderr_contains("ChecksumMismatch");
+    output.assert_stderr_contains(&sha256(&tarball_content));
+
+    let cache_key = test.ruby_tarball_cache_key("3.4.5");
+    let tarballs = cache_dir.join("ruby-v0").join("tarballs");
+    assert!(
+        !tarballs.join(format!("{cache_key}.tar.gz")).exists(),
+        "A damaged tarball should not be cached"
+    );
+    assert!(
+        !tarballs.join(format!("{cache_key}.tar.gz.tmp")).exists(),
+        "No temp file should remain after a checksum mismatch"
+    );
+    assert!(
+        !test.rubies_dir().join("ruby-3.4.5").exists(),
+        "A damaged tarball should not be installed"
+    );
+}
+
+#[test]
+fn test_ruby_install_checks_a_ruby_picked_from_the_index_against_its_entry() {
+    let mut test = RvTest::new();
+
+    // The index lists the checksum of the usual mock tarball, and this isn't it.
+    let _mock = test.mock_releases(["3.4.5"].to_vec());
+    let download_path = test.ruby_tarball_download_path("3.4.5");
+    let ruby_mock = test
+        .mock_request("GET", download_path.as_str())
+        .with_status(200)
+        .with_header("content-type", "application/gzip")
+        .with_body("not the tarball in the index")
+        .create();
+
+    let output = test.rv(&["ruby", "install", "3.4"]);
+
+    ruby_mock.assert();
+    output.assert_failure();
+    output.assert_stderr_contains("ChecksumMismatch");
+}
+
+#[test]
 fn test_ruby_install_cached_file_reused() {
     let mut test = RvTest::new();
 
-    let mock = test.mock_ruby_download("3.4.5").expect(1).create();
+    let mock = test.mock_ruby_download("3.4.5").expect(2).create();
 
     let _cache_dir = test.enable_cache();
 
@@ -282,13 +344,38 @@ fn test_ruby_install_cached_file_reused() {
     let output1 = test.rv(&["ruby", "install", "3.4.5"]);
     output1.assert_success();
 
-    // This one should just reuse the cached tarball without downloading.
+    // This one asks which build is the newest, and reuses the cached tarball because
+    // that is the build it already has.
     let output2 = test.rv(&["ruby", "install", "3.4.5", "--force"]);
     output2.assert_success();
 
     output2.assert_stdout_contains("already exists, skipping download");
 
     mock.assert();
+}
+
+#[test]
+fn test_ruby_install_uses_an_index_it_already_has_for_an_exact_version() {
+    let mut test = RvTest::new();
+
+    let index_mock = test.mock_releases(["3.4.5"].to_vec());
+    let ruby_mock = test.mock_ruby_download("3.4.5").expect(1).create();
+
+    let _cache_dir = test.enable_cache();
+
+    // Listing fetches the index, which says which build of 3.4.5 is the newest.
+    test.rv(&["ruby", "list"]).assert_success();
+
+    let output1 = test.rv(&["ruby", "install", "3.4.5"]);
+    output1.assert_success();
+
+    // With the build known, the cached tarball is found without asking the server.
+    let output2 = test.rv(&["ruby", "install", "3.4.5", "--force"]);
+    output2.assert_success();
+    output2.assert_stdout_contains("already exists, skipping download");
+
+    index_mock.assert();
+    ruby_mock.assert();
 }
 
 #[test]
@@ -351,7 +438,7 @@ fn test_ruby_install_atomic_rename_behavior() {
     ruby_mock.assert();
     output.assert_success();
 
-    let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("3.4.5"));
+    let cache_key = test.ruby_tarball_cache_key("3.4.5");
     let tarball_path = cache_dir
         .join("ruby-v0")
         .join("tarballs")
@@ -385,7 +472,7 @@ fn test_ruby_install_temp_file_cleanup_on_extraction_failure() {
     ruby_mock.assert();
     output.assert_failure();
 
-    let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("3.4.5"));
+    let cache_key = test.ruby_tarball_cache_key("3.4.5");
     let temp_path = cache_dir
         .join("ruby-v0")
         .join("tarballs")
@@ -412,7 +499,7 @@ fn test_ruby_install_with_latest() {
     output
         .assert_stdout_contains("Installed Ruby version 4.0.1 to /tmp/home/.local/share/rv/rubies");
 
-    let cache_key = rv_cache::cache_digest(test.ruby_tarball_url("4.0.1"));
+    let cache_key = test.ruby_tarball_cache_key("4.0.1");
     let tarball_path = cache_dir
         .join("ruby-v0")
         .join("tarballs")
@@ -424,18 +511,17 @@ fn test_ruby_install_with_latest() {
 fn test_ruby_install_with_dev() {
     let mut test = RvTest::new();
 
-    let (redirect_mock, download_mock) = test.mock_ruby_dev_download();
+    let download_mock = test.mock_ruby_dev_download().create();
 
     let cache_dir = test.enable_cache();
 
     let output = test.rv(&["ruby", "install", "dev"]);
 
-    redirect_mock.assert();
     download_mock.assert();
     output.assert_success();
     output.assert_stdout_contains("Installed ruby-dev to /tmp/home/.local/share/rv/rubies");
 
-    let cache_key = rv_cache::cache_digest(test.ruby_dev_tarball_redirect_url());
+    let cache_key = test.ruby_tarball_cache_key("dev");
     let tarball_path = cache_dir
         .join("ruby-v0")
         .join("tarballs")
@@ -484,7 +570,7 @@ fn test_jruby_install() {
             .collect::<Vec<_>>())
     );
 
-    let cache_key = rv_cache::cache_digest(test.jruby_tarball_url("10.1.1.0"));
+    let cache_key = test.jruby_tarball_cache_key("10.1.1.0");
     let tarball_path = cache_dir
         .join("ruby-v0")
         .join("tarballs")
