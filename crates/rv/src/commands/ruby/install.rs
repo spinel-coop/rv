@@ -230,7 +230,7 @@ fn archive_ext_for(engine: &RubyEngine, host: &HostPlatform) -> &'static str {
 /// The URL that serves the newest build of a ruby for `host`, whichever build that is.
 fn alias_url(engine: &RubyEngine, version: &str, host: &HostPlatform) -> String {
     let base = std::env::var("RV_INSTALL_URL").unwrap_or_else(|_| "https://rv.dev/ruby".to_owned());
-    let platform = host.ruby_arch_str();
+    let platform = host.index_str();
 
     // CRuby sits at the root, and every other engine in a directory of its own.
     match engine {
@@ -641,7 +641,7 @@ mod tests {
         let host = HostPlatform::from_target_triple("aarch64-apple-darwin").unwrap();
         let url = alias_url(&RubyEngine::Ruby, "3.4.1", &host);
 
-        assert_eq!(url, "https://rv.dev/ruby/3.4.1/arm64_sonoma");
+        assert_eq!(url, "https://rv.dev/ruby/3.4.1/macos-aarch64");
     }
 
     #[test]
@@ -649,7 +649,7 @@ mod tests {
         let host = HostPlatform::from_target_triple("x86_64-pc-windows-msvc").unwrap();
         let url = alias_url(&RubyEngine::Ruby, "3.4.1", &host);
 
-        assert_eq!(url, "https://rv.dev/ruby/3.4.1/x64");
+        assert_eq!(url, "https://rv.dev/ruby/3.4.1/windows-x86_64");
     }
 
     #[test]
@@ -657,7 +657,7 @@ mod tests {
         let host = HostPlatform::from_target_triple("aarch64-pc-windows-msvc").unwrap();
         let url = alias_url(&RubyEngine::Ruby, "3.4.1", &host);
 
-        assert_eq!(url, "https://rv.dev/ruby/3.4.1/arm");
+        assert_eq!(url, "https://rv.dev/ruby/3.4.1/windows-aarch64");
     }
 
     #[test]
@@ -665,7 +665,7 @@ mod tests {
         let host = HostPlatform::from_target_triple("aarch64-apple-darwin").unwrap();
         let url = alias_url(&RubyEngine::Ruby, "4.1.0-preview1", &host);
 
-        assert_eq!(url, "https://rv.dev/ruby/4.1.0-preview1/arm64_sonoma");
+        assert_eq!(url, "https://rv.dev/ruby/4.1.0-preview1/macos-aarch64");
     }
 
     #[test]
@@ -673,7 +673,7 @@ mod tests {
         let host = HostPlatform::from_target_triple("x86_64-unknown-linux-musl").unwrap();
         let url = alias_url(&RubyEngine::Ruby, "dev", &host);
 
-        assert_eq!(url, "https://rv.dev/ruby/dev/x86_64_linux_musl");
+        assert_eq!(url, "https://rv.dev/ruby/dev/linux-musl-x86_64");
     }
 
     #[test]
@@ -681,7 +681,7 @@ mod tests {
         let host = HostPlatform::from_target_triple("x86_64-apple-darwin").unwrap();
         let url = alias_url(&RubyEngine::JRuby, "10.1.1.0", &host);
 
-        assert_eq!(url, "https://rv.dev/ruby/jruby/10.1.1.0/ventura");
+        assert_eq!(url, "https://rv.dev/ruby/jruby/10.1.1.0/macos-x86_64");
     }
 
     #[test]

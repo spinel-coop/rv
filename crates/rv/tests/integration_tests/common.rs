@@ -230,7 +230,7 @@ impl RvTest {
             .iter()
             .partition(|platform| platform.is_windows());
         let platforms = |platforms: &[&HostPlatform]| -> Vec<&str> {
-            platforms.iter().map(|hp| hp.ruby_arch_str()).collect()
+            platforms.iter().map(|hp| hp.index_str()).collect()
         };
 
         let entries = versions
@@ -283,7 +283,7 @@ impl RvTest {
                 self.index_entry(
                     "ruby",
                     v,
-                    vec![HostPlatform::WindowsX86_64.ruby_arch_str()],
+                    vec![HostPlatform::WindowsX86_64.index_str()],
                     &format!("rubyinstaller-{v}-1-x64.7z"),
                 )
             })
@@ -296,7 +296,7 @@ impl RvTest {
         self.index_entry(
             "ruby",
             version,
-            vec![platform.ruby_arch_str()],
+            vec![platform.index_str()],
             &format!("ruby-{version}{}", platform.archive_suffix()),
         )
     }
@@ -587,7 +587,7 @@ impl RvTest {
     }
 
     pub fn jruby_tarball_download_path(&self, version: &str) -> String {
-        format!("ruby/jruby/{version}/{}", self.make_platform_suffix())
+        format!("ruby/jruby/{version}/{}", self.platform_name())
     }
 
     pub fn ruby_tarball_url(&self, version: &str) -> String {
@@ -600,7 +600,7 @@ impl RvTest {
 
     /// The path of a ruby's newest build for the default test platform. Also works for `dev`.
     pub fn ruby_tarball_download_path(&self, version: &str) -> String {
-        format!("ruby/{version}/{}", self.make_platform_suffix())
+        format!("ruby/{version}/{}", self.platform_name())
     }
 
     /// The name rv caches a downloaded ruby under: its URL and its build.
@@ -825,6 +825,11 @@ impl RvTest {
     /// `RV_TEST_PLATFORM` set — only the subprocess does.
     fn make_platform_suffix(&self) -> String {
         HostPlatform::MacosAarch64.ruby_arch_str().to_string()
+    }
+
+    /// The name rv.dev/ruby has for the default test platform, as used in its download URLs.
+    fn platform_name(&self) -> &'static str {
+        HostPlatform::MacosAarch64.index_str()
     }
 }
 

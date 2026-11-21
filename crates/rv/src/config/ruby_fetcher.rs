@@ -245,7 +245,7 @@ fn parse_max_age(header: &str) -> Option<Duration> {
 
 /// The rubies in the index that run on `host`, oldest first.
 fn rubies_for(index: &Index, host: &HostPlatform) -> Vec<RemoteRuby> {
-    let platform = host.ruby_arch_str();
+    let platform = host.index_str();
 
     let mut rubies: Vec<RemoteRuby> = index
         .rubies
@@ -264,7 +264,7 @@ fn entry_for<'a>(
     version: &str,
     host: &HostPlatform,
 ) -> Option<&'a IndexEntry> {
-    let platform = host.ruby_arch_str();
+    let platform = host.index_str();
 
     index.rubies.iter().find(|entry| {
         entry.engine == *engine

@@ -75,7 +75,7 @@ pub struct IndexEntry {
     /// When this archive was built, like `20261014`. A ruby is rebuilt without its version changing.
     pub build: String,
 
-    /// Values of `HostPlatform::ruby_arch_str()`. A universal archive lists several.
+    /// Values of `HostPlatform::index_str()`, like `macos-aarch64`. A universal archive lists several.
     pub platforms: Vec<String>,
 
     pub filename: String,
