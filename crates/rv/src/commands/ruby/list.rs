@@ -14,6 +14,7 @@ use rv_ruby::{
 use serde::Serialize;
 use tracing::{info, warn};
 
+use crate::commands::ruby::build_marker::{self, BuildMarker};
 use crate::{GlobalArgs, config::Config, output_format::OutputFormat};
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
@@ -39,6 +40,12 @@ struct JsonRubyEntry {
     #[serde(flatten)]
     ruby: RubyEntry,
     active: bool,
+    /// The build of an installed ruby, when rv recorded it at install time
+    #[serde(skip_serializing_if = "Option::is_none")]
+    build: Option<String>,
+    /// The build that has replaced the one installed, when the index lists a newer one
+    #[serde(skip_serializing_if = "Option::is_none")]
+    newer_build: Option<String>,
     #[serde(skip)]
     color: bool,
 }
@@ -80,11 +87,15 @@ impl tabled::Tabled for JsonRubyEntry {
         let installed = match &self.ruby {
             RubyEntry::Installed(ruby) => {
                 let short_executable_path = rv_dirs::unexpand(&ruby.executable_path());
+                let newer_build = match &self.newer_build {
+                    Some(build) => format!(" (build {build} available)"),
+                    None => String::new(),
+                };
 
                 if self.color {
-                    short_executable_path.cyan().to_string().into()
+                    format!("{}{}", short_executable_path.cyan(), newer_build.yellow()).into()
                 } else {
-                    short_executable_path.into()
+                    format!("{short_executable_path}{newer_build}").into()
                 }
             }
             RubyEntry::Remote(_) => {
@@ -144,6 +155,8 @@ pub(crate) async fn list(
             0,
             JsonRubyEntry {
                 active: active(&mut active_ruby, &ruby.version, &requested),
+                build: BuildMarker::read(&ruby.path).map(|marker| marker.build),
+                newer_build: None,
                 ruby: RubyEntry::Installed(ruby),
                 color: true,
             },
@@ -168,8 +181,23 @@ pub(crate) async fn list(
                 .or_insert(vec![JsonRubyEntry {
                     active: active(&mut active_ruby, &ruby.version, &requested),
                     ruby: RubyEntry::Remote(ruby),
+                    build: None,
+                    newer_build: None,
                     color: true,
                 }]);
+        }
+
+        // Point out the installed rubies that have been rebuilt since they were installed
+        for entry in rubies_map.values_mut().flatten() {
+            if let RubyEntry::Installed(installed) = &entry.ruby
+                && let Some(build) = &entry.build
+                && let Some(remote) = remote_rubies
+                    .iter()
+                    .find(|remote| remote.version == installed.version)
+                && build_marker::replaces(&remote.build, build)
+            {
+                entry.newer_build = Some(remote.build.clone());
+            }
         }
 
         if !active_ruby {
@@ -181,6 +209,8 @@ pub(crate) async fn list(
                     .or_insert(vec![JsonRubyEntry {
                         ruby: RubyEntry::Remote(ruby.clone()),
                         active: true,
+                        build: None,
+                        newer_build: None,
                         color: true,
                     }]);
             };

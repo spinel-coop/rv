@@ -53,8 +53,13 @@ impl BuildMarker {
 
     /// Has the installed build been replaced by `build`?
     pub fn is_older_than(&self, build: &str) -> bool {
-        build_order(&self.build) < build_order(build)
+        replaces(build, &self.build)
     }
+}
+
+/// Is `build` a later build than `other`?
+pub fn replaces(build: &str, other: &str) -> bool {
+    build_order(build) > build_order(other)
 }
 
 /// Builds are dated. A later build on the same day counts up after a `-` or a `.`,
