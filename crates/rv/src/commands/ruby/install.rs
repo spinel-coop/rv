@@ -19,6 +19,7 @@ use rv_ruby::engine::RubyEngine;
 use rv_ruby::request::RubyRequest;
 use rv_ruby::{IndexEntry, RemoteRuby};
 
+use crate::commands::ruby::build_marker::BuildMarker;
 use crate::progress::WorkProgress;
 use crate::{GlobalArgs, config::Config};
 
@@ -65,6 +66,15 @@ struct Listing {
     url: String,
     build: String,
     sha256: String,
+}
+
+/// An archive in the cache, and what the download said about it.
+struct Downloaded {
+    path: Utf8PathBuf,
+    url: String,
+    /// Empty when the download didn't come from rv.dev/ruby, or from somewhere like it.
+    build: String,
+    sha256: Option<String>,
 }
 
 impl From<RemoteRuby> for Listing {
@@ -128,19 +138,45 @@ pub(crate) async fn install(
         },
     };
 
+    let ruby_dir = install_dir.join(install_dir_name(&engine, &version));
+
     if config.is_requested_ruby_installed_in_dir(&install_dir) && !force {
         println!("Version already installed. If you want to overwrite it, use '--force'.");
+
+        if let Some(marker) = BuildMarker::read(&ruby_dir)
+            && let Some(newest) = newest_build(config, &engine, &version, listing.as_ref()).await
+            && marker.is_older_than(&newest)
+        {
+            println!(
+                "Build {} is installed, and build {} is available. Use '--force' to replace it.",
+                marker.build,
+                newest.cyan()
+            );
+        }
 
         return Ok(());
     }
 
-    let archive_path = if let Some(path) = tarball_path {
-        path
-    } else {
-        download_tarball(config, &engine, &version, listing.as_ref(), &progress).await?
+    let downloaded = match &tarball_path {
+        Some(_) => None,
+        None => {
+            Some(download_tarball(config, &engine, &version, listing.as_ref(), &progress).await?)
+        }
+    };
+    let archive_path = match (&tarball_path, &downloaded) {
+        (Some(path), _) => path,
+        (None, Some(downloaded)) => &downloaded.path,
+        (None, None) => unreachable!("a ruby is either downloaded or installed from a tarball"),
     };
 
-    extract_ruby_archive(&archive_path, &install_dir, &engine, &version)?;
+    extract_ruby_archive(archive_path, &install_dir, &engine, &version)?;
+
+    // A tarball from disk, or a download that didn't say, has no build to record.
+    if let Some(downloaded) = downloaded
+        && !downloaded.build.is_empty()
+    {
+        BuildMarker::new(downloaded.build, downloaded.sha256, downloaded.url).write(&ruby_dir)?;
+    }
 
     let installed_version = if version == "dev" {
         "ruby-dev".cyan().to_string()
@@ -181,7 +217,7 @@ async fn download_tarball(
     version: &str,
     listing: Option<&Listing>,
     progress: &WorkProgress,
-) -> Result<Utf8PathBuf> {
+) -> Result<Downloaded> {
     let host = HostPlatform::current()?;
     let ext = archive_ext_for(engine, &host);
 
@@ -199,14 +235,19 @@ async fn download_tarball(
     }
 
     // An alias doesn't say which build it serves until we ask for it.
-    if let Some(build) = &build {
+    if let (Some(build), Some(listing)) = (&build, listing) {
         let archive_path = archive_cache_path(config, &url, build, ext);
         if valid_archive_exists(&archive_path) {
             println!(
                 "Archive {} already exists, skipping download.",
                 archive_path.cyan()
             );
-            return Ok(archive_path);
+            return Ok(Downloaded {
+                path: archive_path,
+                url,
+                build: build.clone(),
+                sha256: Some(listing.sha256.clone()),
+            });
         }
     }
 
@@ -332,7 +373,7 @@ async fn download_ruby_archive(
     version: &str,
     progress: &WorkProgress,
     ext: &str,
-) -> Result<Utf8PathBuf> {
+) -> Result<Downloaded> {
     debug!("Downloading archive from {url}");
     let response = reqwest::Client::new().get(url).send().await?;
 
@@ -360,12 +401,18 @@ async fn download_ruby_archive(
         ),
     };
     let archive_path = archive_cache_path(config, url, &build, ext);
+    let downloaded = Downloaded {
+        path: archive_path.clone(),
+        url: url.to_owned(),
+        build,
+        sha256: sha256.clone(),
+    };
     if valid_archive_exists(&archive_path) {
         println!(
             "Archive {} already exists, skipping download.",
             archive_path.cyan()
         );
-        return Ok(archive_path);
+        return Ok(downloaded);
     }
 
     // Get Content-Length for progress tracking
@@ -396,7 +443,34 @@ async fn download_ruby_archive(
         return Err(e);
     }
 
-    Ok(archive_path)
+    Ok(downloaded)
+}
+
+/// The newest build of a ruby, to compare with the one that is installed.
+///
+/// The index says, when we have it. Otherwise this asks for the headers of the alias,
+/// and gives up quietly if that doesn't work out: it is only used to print a hint.
+async fn newest_build(
+    config: &Config,
+    engine: &RubyEngine,
+    version: &str,
+    listing: Option<&Listing>,
+) -> Option<String> {
+    if let Some(listing) = listing {
+        return Some(listing.build.clone());
+    }
+    if config.offline {
+        return None;
+    }
+
+    let host = HostPlatform::current().ok()?;
+    let response = reqwest::Client::new()
+        .head(alias_url(engine, version, &host))
+        .send()
+        .await
+        .ok()?;
+
+    header(&response, "x-rv-build")
 }
 
 fn header(response: &reqwest::Response, name: &str) -> Option<String> {

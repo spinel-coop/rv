@@ -22,7 +22,8 @@ expression: output.normalized_stdout()
       "key": "ruby-3.4.1-macos-aarch64",
       "version": "ruby-3.4.1",
       "arch": "aarch64",
-      "os": "macos"
+      "os": "macos",
+      "build": "20261014"
     },
     "active": false
   }

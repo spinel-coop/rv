@@ -114,7 +114,6 @@ pub struct RemoteRuby {
     pub os: String,
 
     /// When the archive was built, like `20261014`
-    #[serde(skip_serializing)]
     pub build: String,
 
     /// Where to download the archive from

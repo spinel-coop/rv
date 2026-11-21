@@ -71,6 +71,7 @@ tar = "0.4.45"
 tempfile = "3.23"
 zip = "9.0.5"
 thiserror = "2.0.17"
+time = { version = "0.3.47", features = ["formatting", "parsing"] }
 tokio = "1.46.1"
 tracing = "0.1.44"
 tracing-indicatif = "0.3.14"
