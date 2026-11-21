@@ -297,7 +297,7 @@ impl RvTest {
             "ruby",
             version,
             vec![platform.index_str()],
-            &format!("ruby-{version}{}", platform.archive_suffix()),
+            &format!("ruby-{version}.{}.tar.gz", platform.index_str()),
         )
     }
 

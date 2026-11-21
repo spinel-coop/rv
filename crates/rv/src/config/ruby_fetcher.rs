@@ -339,7 +339,8 @@ mod tests {
             arch: "aarch64".to_owned(),
             os: "linux".to_owned(),
             build: "20261014-2".to_owned(),
-            url: "https://rv.dev/ruby/3.4.11/20261014-2/ruby-3.4.11.arm64_linux.tar.gz".to_owned(),
+            url: "https://rv.dev/ruby/3.4.11/20261014-2/ruby-3.4.11.linux-aarch64.tar.gz"
+                .to_owned(),
             size: 41209856,
             sha256: "0b9d7e5c3a1f9d7b5e3c1a0f8e6c4b2a9f7d5b3c1e0a8f6d4c2b0e9a7c5d3f1b".to_owned(),
         };
@@ -400,7 +401,7 @@ mod tests {
 
         assert_eq!(
             entry(RubyEngine::Ruby, "3.4.11", HostPlatform::LinuxAarch64),
-            Some("ruby-3.4.11.arm64_linux.tar.gz")
+            Some("ruby-3.4.11.linux-aarch64.tar.gz")
         );
         assert_eq!(
             entry(RubyEngine::Ruby, "3.4.11", HostPlatform::WindowsX86_64),
@@ -408,7 +409,7 @@ mod tests {
         );
         assert_eq!(
             entry(RubyEngine::Ruby, "dev", HostPlatform::MacosAarch64),
-            Some("ruby-dev.arm64_sonoma.tar.gz")
+            Some("ruby-dev.macos-aarch64.tar.gz")
         );
         assert_eq!(
             entry(RubyEngine::JRuby, "10.1.2.0", HostPlatform::WindowsAarch64),
