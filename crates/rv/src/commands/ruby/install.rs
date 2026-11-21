@@ -15,9 +15,9 @@ use tracing::{debug, info_span, warn};
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 
 use rv_platform::HostPlatform;
-use rv_ruby::RemoteRuby;
 use rv_ruby::engine::RubyEngine;
 use rv_ruby::request::RubyRequest;
+use rv_ruby::{IndexEntry, RemoteRuby};
 
 use crate::progress::WorkProgress;
 use crate::{GlobalArgs, config::Config};
@@ -60,6 +60,33 @@ pub enum Error {
 
 type Result<T> = miette::Result<T, Error>;
 
+/// What the index says about the archive to download.
+struct Listing {
+    url: String,
+    build: String,
+    sha256: String,
+}
+
+impl From<RemoteRuby> for Listing {
+    fn from(ruby: RemoteRuby) -> Self {
+        Self {
+            url: ruby.url,
+            build: ruby.build,
+            sha256: ruby.sha256,
+        }
+    }
+}
+
+impl From<IndexEntry> for Listing {
+    fn from(entry: IndexEntry) -> Self {
+        Self {
+            url: entry.url,
+            build: entry.build,
+            sha256: entry.sha256,
+        }
+    }
+}
+
 pub(crate) async fn install(
     global_args: &GlobalArgs,
     install_dir: Option<String>,
@@ -83,6 +110,14 @@ pub(crate) async fn install(
         }
     };
 
+    // An exact version wasn't looked up in the index, but a copy of the index that we
+    // already have may list it. Otherwise the alias for the version finds its newest build.
+    let listing = remote.map(Listing::from).or_else(|| {
+        config
+            .cached_index_entry(&engine, &version)
+            .map(Listing::from)
+    });
+
     warn_if_jvm_missing(&engine);
 
     let install_dir = match install_dir {
@@ -102,7 +137,7 @@ pub(crate) async fn install(
     let archive_path = if let Some(path) = tarball_path {
         path
     } else {
-        download_tarball(config, &engine, &version, remote.as_ref(), &progress).await?
+        download_tarball(config, &engine, &version, listing.as_ref(), &progress).await?
     };
 
     extract_ruby_archive(&archive_path, &install_dir, &engine, &version)?;
@@ -138,21 +173,20 @@ fn warn_if_jvm_missing(engine: &RubyEngine) {
 // downloads a remote ruby archive (tarball or zip)
 /// Downloads the archive for a ruby, unless the cache already has it, and returns its path.
 ///
-/// `remote` is what the index said about this ruby, when it had to be consulted to pick a
-/// version. Without it the version is exact, and the dateless alias for it serves the newest
-/// build in a single request.
+/// `listing` is what the index says about this ruby. Without it, the dateless alias for the
+/// version serves its newest build in a single request.
 async fn download_tarball(
     config: &Config,
     engine: &RubyEngine,
     version: &str,
-    remote: Option<&RemoteRuby>,
+    listing: Option<&Listing>,
     progress: &WorkProgress,
 ) -> Result<Utf8PathBuf> {
     let host = HostPlatform::current()?;
     let ext = archive_ext_for(engine, &host);
 
-    let (url, build) = match remote {
-        Some(remote) => (remote.url.clone(), Some(remote.build.clone())),
+    let (url, build) = match listing {
+        Some(listing) => (listing.url.clone(), Some(listing.build.clone())),
         None => (alias_url(engine, version, &host), None),
     };
 
@@ -176,7 +210,7 @@ async fn download_tarball(
         }
     }
 
-    download_ruby_archive(config, &url, remote, version, progress, ext).await
+    download_ruby_archive(config, &url, listing, version, progress, ext).await
 }
 
 /// Does a usable archive already exist at this path?
@@ -288,13 +322,13 @@ async fn write_to_filesystem(
 
 /// Downloads `url` into the archive cache and returns where it was put.
 ///
-/// The build and checksum are known when the URL came from the index, as `remote`. An alias
+/// The build and checksum are known when the URL came from the index, as `listing`. An alias
 /// names them in the `x-rv-build` and `x-rv-sha256` headers instead, and the cache may turn
 /// out to have that build already.
 async fn download_ruby_archive(
     config: &Config,
     url: &str,
-    remote: Option<&RemoteRuby>,
+    listing: Option<&Listing>,
     version: &str,
     progress: &WorkProgress,
     ext: &str,
@@ -318,8 +352,8 @@ async fn download_ruby_archive(
         });
     }
 
-    let (build, sha256) = match remote {
-        Some(remote) => (remote.build.clone(), Some(remote.sha256.clone())),
+    let (build, sha256) = match listing {
+        Some(listing) => (listing.build.clone(), Some(listing.sha256.clone())),
         None => (
             header(&response, "x-rv-build").unwrap_or_default(),
             header(&response, "x-rv-sha256"),

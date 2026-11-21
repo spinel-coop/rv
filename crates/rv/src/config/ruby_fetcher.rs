@@ -13,6 +13,7 @@ use tracing::{debug, warn};
 use rv_platform::HostPlatform;
 use rv_ruby::{
     Index, IndexEntry, RemoteRuby,
+    engine::RubyEngine,
     request::RequestError,
     version::{ParseVersionError, RubyVersion},
 };
@@ -86,6 +87,26 @@ impl Config {
         );
 
         rubies
+    }
+
+    /// What the index says about one version on this host, going by the copy on disk.
+    ///
+    /// Never makes a request. An index that is past its expiry is ignored, because the
+    /// build it lists may have been replaced since.
+    pub fn cached_index_entry(&self, engine: &RubyEngine, version: &str) -> Option<IndexEntry> {
+        let host = HostPlatform::current().ok()?;
+        let cache_entry = self.cache.entry(
+            rv_cache::CacheBucket::Ruby,
+            "releases",
+            cache_key_for(&index_url()),
+        );
+        let content = fs::read_to_string(cache_entry.path()).ok()?;
+        let cached: CachedIndex = serde_json::from_str(&content).ok()?;
+        if SystemTime::now() >= cached.expires_at {
+            return None;
+        }
+
+        entry_for(&cached.index, engine, version, &host).cloned()
     }
 }
 
@@ -236,6 +257,22 @@ fn rubies_for(index: &Index, host: &HostPlatform) -> Vec<RemoteRuby> {
     rubies
 }
 
+/// The index's entry for an exact version on `host`. `dev` counts as a version here.
+fn entry_for<'a>(
+    index: &'a Index,
+    engine: &RubyEngine,
+    version: &str,
+    host: &HostPlatform,
+) -> Option<&'a IndexEntry> {
+    let platform = host.ruby_arch_str();
+
+    index.rubies.iter().find(|entry| {
+        entry.engine == *engine
+            && entry.version == version
+            && entry.platforms.iter().any(|p| p == platform)
+    })
+}
+
 /// Creates a Rubies info struct from an index entry that runs on `host`.
 ///
 /// Fails for an entry without a version number, which is how `dev` is listed.
@@ -352,6 +389,54 @@ mod tests {
             assert_eq!(jruby.arch, host.arch());
             assert!(jruby.url.ends_with("jruby-bin-10.1.2.0.tar.gz"));
         }
+    }
+
+    #[test]
+    fn test_entry_for_finds_an_exact_version_for_the_host() {
+        let index = index();
+        let entry = |engine, version, host| {
+            entry_for(&index, &engine, version, &host).map(|entry| entry.filename.as_str())
+        };
+
+        assert_eq!(
+            entry(RubyEngine::Ruby, "3.4.11", HostPlatform::LinuxAarch64),
+            Some("ruby-3.4.11.arm64_linux.tar.gz")
+        );
+        assert_eq!(
+            entry(RubyEngine::Ruby, "3.4.11", HostPlatform::WindowsX86_64),
+            Some("rubyinstaller-3.4.11-1-x64.7z")
+        );
+        assert_eq!(
+            entry(RubyEngine::Ruby, "dev", HostPlatform::MacosAarch64),
+            Some("ruby-dev.arm64_sonoma.tar.gz")
+        );
+        assert_eq!(
+            entry(RubyEngine::JRuby, "10.1.2.0", HostPlatform::WindowsAarch64),
+            Some("jruby-bin-10.1.2.0.zip")
+        );
+    }
+
+    #[test]
+    fn test_entry_for_needs_the_engine_version_and_platform_to_match() {
+        let index = index();
+        let entry = |engine, version, host| entry_for(&index, &engine, version, &host);
+
+        assert_eq!(
+            entry(RubyEngine::Ruby, "3.4.11", HostPlatform::LinuxX86_64),
+            None
+        );
+        assert_eq!(
+            entry(RubyEngine::Ruby, "3.4", HostPlatform::MacosAarch64),
+            None
+        );
+        assert_eq!(
+            entry(RubyEngine::JRuby, "3.4.11", HostPlatform::MacosAarch64),
+            None
+        );
+        assert_eq!(
+            entry(RubyEngine::Ruby, "dev", HostPlatform::WindowsX86_64),
+            None
+        );
     }
 
     #[test]

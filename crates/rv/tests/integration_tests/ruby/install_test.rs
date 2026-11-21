@@ -355,6 +355,30 @@ fn test_ruby_install_cached_file_reused() {
 }
 
 #[test]
+fn test_ruby_install_uses_an_index_it_already_has_for_an_exact_version() {
+    let mut test = RvTest::new();
+
+    let index_mock = test.mock_releases(["3.4.5"].to_vec());
+    let ruby_mock = test.mock_ruby_download("3.4.5").expect(1).create();
+
+    let _cache_dir = test.enable_cache();
+
+    // Listing fetches the index, which says which build of 3.4.5 is the newest.
+    test.rv(&["ruby", "list"]).assert_success();
+
+    let output1 = test.rv(&["ruby", "install", "3.4.5"]);
+    output1.assert_success();
+
+    // With the build known, the cached tarball is found without asking the server.
+    let output2 = test.rv(&["ruby", "install", "3.4.5", "--force"]);
+    output2.assert_success();
+    output2.assert_stdout_contains("already exists, skipping download");
+
+    index_mock.assert();
+    ruby_mock.assert();
+}
+
+#[test]
 fn test_ruby_install_skips_existing_version_and_suggests_force_flag() {
     let mut test = RvTest::new();
 
