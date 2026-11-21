@@ -5,6 +5,9 @@ use rv_platform::HostPlatform;
 use std::{collections::HashMap, process::Command};
 use tar::Builder;
 
+/// The build that every mocked ruby claims to be.
+pub const MOCK_BUILD: &str = "20261014";
+
 #[cfg(unix)]
 pub struct Shell {
     pub name: &'static str,
@@ -298,6 +301,8 @@ impl RvTest {
         )
     }
 
+    /// The entry's URL is the one `mock_ruby_download` and `mock_jruby_download` serve, so
+    /// a test doesn't have to mock a second download for a ruby that the index picked.
     fn index_entry(
         &self,
         engine: &str,
@@ -305,13 +310,19 @@ impl RvTest {
         platforms: Vec<&str>,
         filename: &str,
     ) -> serde_json::Value {
+        let platform = platforms.first().copied().unwrap_or_default();
+        let url = match engine {
+            "ruby" => format!("{}/ruby/{version}/{platform}", self.server_url()),
+            _ => format!("{}/ruby/{engine}/{version}/{platform}", self.server_url()),
+        };
+
         serde_json::json!({
             "engine": engine,
             "version": version,
-            "build": "20261014",
+            "build": MOCK_BUILD,
             "platforms": platforms,
             "filename": filename,
-            "url": format!("{}/latest/download/{filename}", self.server_url()),
+            "url": url,
             "size": 1024,
             "sha256": "0".repeat(64),
         })
@@ -359,19 +370,10 @@ impl RvTest {
     }
 
     /// Mock a ruby dev tarball download for testing
-    pub fn mock_ruby_dev_download(&mut self) -> (Mock, Mock) {
-        let path = self.ruby_dev_tarball_download_path();
-        let redirect_url = self.ruby_dev_tarball_redirect_url();
-        let redirect_path = self.ruby_dev_tarball_redirect_path();
-        let redirect_mock = self
-            .mock_dev_tarball_redirect(&path, &redirect_url)
-            .create();
+    pub fn mock_ruby_dev_download(&mut self) -> Mock {
+        let path = self.ruby_tarball_download_path("dev");
         let content = self.create_mock_tarball("dev");
-        let download_mock = self
-            .mock_tarball_download(&redirect_path, &content)
-            .create();
-
-        (redirect_mock, download_mock)
+        self.mock_tarball_download(&path, &content)
     }
 
     pub fn mock_gem_download(&mut self, package: &str) -> Mock {
@@ -380,18 +382,13 @@ impl RvTest {
         self.mock_tarball_download(&path, &content)
     }
 
-    /// Mock a tarball download for testing
+    /// Mock a tarball download for testing, the way rv.dev/ruby serves a ruby's newest build
     pub fn mock_tarball_download(&mut self, path: &str, content: &[u8]) -> Mock {
         self.mock_request("GET", path)
             .with_status(200)
             .with_header("content-type", "application/gzip")
+            .with_header("x-rv-build", MOCK_BUILD)
             .with_body(content)
-    }
-
-    pub fn mock_dev_tarball_redirect(&mut self, path: &str, location: &str) -> Mock {
-        self.mock_request("GET", path)
-            .with_status(302)
-            .with_header("location", location)
     }
 
     pub fn mock_info_endpoint(&mut self, name: &str) -> Mock {
@@ -583,7 +580,7 @@ impl RvTest {
     }
 
     pub fn jruby_tarball_download_path(&self, version: &str) -> String {
-        format!("latest/download/{version}/jruby-bin-{version}.tar.gz")
+        format!("ruby/jruby/{version}/{}", self.make_platform_suffix())
     }
 
     pub fn ruby_tarball_url(&self, version: &str) -> String {
@@ -594,26 +591,18 @@ impl RvTest {
         )
     }
 
-    pub fn ruby_dev_tarball_redirect_url(&self) -> String {
-        format!(
-            "{}/{}",
-            self.server_url(),
-            self.ruby_dev_tarball_redirect_path()
-        )
-    }
-
+    /// The path of a ruby's newest build for the default test platform. Also works for `dev`.
     pub fn ruby_tarball_download_path(&self, version: &str) -> String {
-        let filename = self.make_tarball_file_name(version);
-        format!("latest/download/{filename}")
+        format!("ruby/{version}/{}", self.make_platform_suffix())
     }
 
-    pub fn ruby_dev_tarball_download_path(&self) -> String {
-        let filename = self.make_dev_tarball_file_name();
-        format!("latest/download/{filename}")
+    /// The name rv caches a downloaded ruby under: its URL and its build.
+    pub fn ruby_tarball_cache_key(&self, version: &str) -> String {
+        rv_cache::cache_digest(format!("{}{MOCK_BUILD}", self.ruby_tarball_url(version)))
     }
-    pub fn ruby_dev_tarball_redirect_path(&self) -> String {
-        let filename = self.make_dev_tarball_file_name();
-        format!("download/20260305/{filename}")
+
+    pub fn jruby_tarball_cache_key(&self, version: &str) -> String {
+        rv_cache::cache_digest(format!("{}{MOCK_BUILD}", self.jruby_tarball_url(version)))
     }
 
     pub fn gem_package_download_path(&self, package: &str) -> String {
@@ -713,7 +702,7 @@ impl RvTest {
         );
         self.env.insert(
             "RV_INSTALL_URL".into(),
-            format!("{}/{}", self.server_url(), "latest/download"),
+            format!("{}/{}", self.server_url(), "ruby"),
         );
 
         // Override the rubies directory so rv looks in the test temp dir.
@@ -820,11 +809,6 @@ impl RvTest {
     fn make_tarball_file_name(&self, version: &str) -> String {
         let suffix = self.make_platform_suffix();
         format!("ruby-{version}.{suffix}.tar.gz")
-    }
-
-    fn make_dev_tarball_file_name(&self) -> String {
-        let suffix = self.make_platform_suffix();
-        format!("ruby-dev.{suffix}.tar.gz")
     }
 
     /// Returns the ruby arch string matching the default test platform (`MacosAarch64`).

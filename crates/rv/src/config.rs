@@ -26,7 +26,6 @@ use crate::GlobalArgs;
 use crate::update;
 
 pub mod bundler_settings;
-pub mod github;
 mod ruby_cache;
 mod ruby_fetcher;
 pub mod rv_settings;
@@ -201,13 +200,22 @@ impl Config {
     }
 
     pub async fn find_matching_remote_ruby(&self) -> Result<RubyVersion> {
+        let (version, _) = self.find_matching_remote_ruby_with_details().await?;
+        Ok(version)
+    }
+
+    /// Like `find_matching_remote_ruby`, and also returns what the index says about the
+    /// matching ruby. A specific version isn't looked up, so there is nothing to return for it.
+    pub async fn find_matching_remote_ruby_with_details(
+        &self,
+    ) -> Result<(RubyVersion, Option<RemoteRuby>)> {
         let requested_range = self.ruby_request();
 
         if let Ok(version) = RubyVersion::try_from(requested_range.clone()) {
             debug!(
-                "Skipping the rv-ruby releases fetch because the user has given a specific ruby version {version}"
+                "Skipping the index fetch because the user has given a specific ruby version {version}"
             );
-            Ok(version)
+            Ok((version, None))
         } else {
             debug!("Fetching available rubies, because user gave an underspecified Ruby range");
             let remote_rubies = self.remote_rubies().await;
@@ -216,7 +224,7 @@ impl Config {
                 .find_match_in(&remote_rubies)
                 .ok_or(Error::NoMatchingRuby)?;
 
-            Ok(matched_ruby.version)
+            Ok((matched_ruby.version.clone(), Some(matched_ruby)))
         }
     }
 
