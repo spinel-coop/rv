@@ -8,6 +8,7 @@ use rv_ruby::request::RubyRequest;
 
 use crate::GlobalArgs;
 
+pub mod build_marker;
 pub mod dir;
 pub mod find;
 pub mod install;
