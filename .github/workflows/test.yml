@@ -125,7 +125,7 @@ jobs:
           persist-credentials: false
 
       - name: Install additional shells
-        if: startsWith(matrix.runs-on, 'linux')
+        if: startsWith(matrix.runs-on, 'namespace-profile-rv-linux')
         run: sudo apt-get update && sudo apt-get install -y zsh fish
 
       - name: Install Rust
