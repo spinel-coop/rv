@@ -126,7 +126,9 @@ jobs:
 
       - name: Install additional shells
         if: startsWith(matrix.runs-on, 'namespace-profile-rv-linux')
-        run: sudo apt-get update && sudo apt-get install -y zsh fish
+        run: |
+          sudo apt-get update && sudo apt-get install -y zsh fish
+          sudo apt-get install --reinstall -y ca-certificates && update-ca-certificates
 
       - name: Install Rust
         run: rustup show
