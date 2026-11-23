@@ -18,7 +18,7 @@ env:
 
 jobs:
   cargo-deny:
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-rv-linux-x86
     strategy:
       matrix:
         checks:
@@ -39,7 +39,7 @@ jobs:
 
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-rv-linux-x86
     steps:
       - name: Check out repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -72,9 +72,9 @@ jobs:
       matrix:
         include:
           - os: linux
-            runs-on: ubuntu-latest
+            runs-on: namespace-profile-rv-linux-x86
           - os: windows
-            runs-on: windows-latest
+            runs-on: namespace-profile-rv-windows-x86
     steps:
       - name: Check out repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -112,10 +112,10 @@ jobs:
       matrix:
         runs-on:
           - macos-15-intel # mac-x86
-          - macos-latest # mac-arm
-          - ubuntu-latest # linux-x86
-          - ubuntu-24.04-arm # linux-arm
-          - windows-latest # win-x86
+          - namespace-profile-rv-macos-arm # mac-arm
+          - namespace-profile-rv-linux-x86 # linux-x86
+          - namespace-profile-rv-linux-arm # linux-arm
+          - namespace-profile-rv-windows-x86 # win-x86
           - windows-11-arm # win-arm
 
     steps:
@@ -125,7 +125,7 @@ jobs:
           persist-credentials: false
 
       - name: Install additional shells
-        if: startsWith(matrix.runs-on, 'ubuntu')
+        if: startsWith(matrix.runs-on, 'linux')
         run: sudo apt-get update && sudo apt-get install -y zsh fish
 
       - name: Install Rust
@@ -165,7 +165,7 @@ jobs:
   smoke-test:
     name: ${{ matrix.project }}
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-rv-linux-x86
     strategy:
       fail-fast: false
       matrix:

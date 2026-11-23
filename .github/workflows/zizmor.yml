@@ -10,7 +10,7 @@ permissions: {}
 
 jobs:
   zizmor:
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-rv-linux-x86
     permissions:
       security-events: write
       contents: read
