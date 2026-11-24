@@ -20,12 +20,12 @@ anyhow = "1"
 temp-env = { version = "0.3.6", features = ["async_closure"] }
 http-body-util = "0.1"
 hyper = "1.9.0"
-hyper-util = "0.1.20"
+hyper-util = { version = "0.1.20", features = ["tokio", "server-auto"] }
 rustls = "0.23"
 futures = "0.3.32"
 tokio-rustls = "0.26.5"
 tempfile = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 url = { workspace = true }
 
 [lints]
