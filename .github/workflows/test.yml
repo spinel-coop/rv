@@ -124,11 +124,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install additional shells
+      - name: Install needed packages
         if: startsWith(matrix.runs-on, 'namespace-profile-rv-linux')
         run: |
+          # we need the shells to run the tests against those shells
           sudo apt-get update && sudo apt-get install -y zsh fish
-          sudo apt-get install --reinstall -y ca-certificates && update-ca-certificates
+          # the namespace linux runners say the package is installed, but the certs themselves are missing?
+          sudo apt-get install --reinstall -y ca-certificates
 
       - name: Install Rust
         run: rustup show
