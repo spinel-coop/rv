@@ -200,7 +200,7 @@ jobs:
 
       # the namespace linux runners say the package is installed, but the certs themselves are missing?
       - name: Force ca-certificate generation
-        run: sudo apt-get install --reinstall -y ca-certificates
+        run: sudo apt-get update && sudo apt-get install --reinstall -y ca-certificates
 
       - name: rv clean-install for ${{ matrix.project }}
         run: bin/smoke-tests/${{ matrix.project }}
