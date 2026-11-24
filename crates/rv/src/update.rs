@@ -3,6 +3,7 @@ use rv_client::http_client::rv_http_client;
 use rv_dirs::user_state_dir;
 use rv_version::Version;
 use serde::Deserialize;
+use std::error::Error as _;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -29,6 +30,9 @@ pub enum Error {
 
     #[error(transparent)]
     IoError(#[from] std::io::Error),
+
+    #[error("no usable system CA certs: {0}")]
+    NoSystemCertificates(String),
 
     #[error("brew command failed: {0}")]
     BrewFailed(String),
@@ -99,6 +103,14 @@ pub(crate) async fn run_update(update_mode: &str) -> Result<UpdateOutcome> {
             return Ok(UpdateOutcome::AlreadyUpToDate);
         }
     }
+
+    reqwest::Client::builder().build().map_err(|err| {
+        let detail = err
+            .source()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| err.to_string());
+        Error::NoSystemCertificates(detail)
+    })?;
 
     let mut updater = AxoUpdater::new_for("rv");
 

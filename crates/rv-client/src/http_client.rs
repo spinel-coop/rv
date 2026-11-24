@@ -1,7 +1,7 @@
 use crate::tls::Certificates;
 use reqwest::Client;
 
-pub fn rv_http_client(command: &'static str) -> Result<Client, reqwest::Error> {
+pub fn rv_http_client_builder(command: &'static str) -> reqwest::ClientBuilder {
     use reqwest::header;
     let mut headers = header::HeaderMap::new();
 
@@ -23,13 +23,23 @@ pub fn rv_http_client(command: &'static str) -> Result<Client, reqwest::Error> {
     //
     // `SSL_CERT_FILE` and `SSL_CERT_DIR` override the default certificate source when they
     // contain valid certificates.
-    let client_builder = if let Some(custom_certs) = custom_certs {
-        client_builder.tls_certs_only(custom_certs)
-    } else {
-        client_builder
+    let Some(custom_certs) = custom_certs else {
+        return add_webpki_root_certs(client_builder);
     };
 
-    let client = client_builder.build()?;
+    client_builder.tls_certs_only(custom_certs)
+}
 
-    Ok(client)
+pub fn rv_http_client(command: &'static str) -> Result<Client, reqwest::Error> {
+    rv_http_client_builder(command).build()
+}
+
+fn add_webpki_root_certs(mut builder: reqwest::ClientBuilder) -> reqwest::ClientBuilder {
+    for cert in webpki_root_certs::TLS_SERVER_ROOT_CERTS {
+        match reqwest::Certificate::from_der(cert) {
+            Ok(cert) => builder = builder.add_root_certificate(cert),
+            Err(err) => tracing::debug!("Failed to add bundled webpki root cert: {err}"),
+        }
+    }
+    builder
 }
