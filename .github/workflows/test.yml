@@ -50,10 +50,9 @@ jobs:
         run: rustup show
 
       - name: Cache dependencies
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: namespacelabs/nscloud-cache-action@1124a6f3ce44e5cf84cc22111530961f4d2a15f9 # v1.7.0
         with:
-          # Workaround for https://github.com/Swatinem/rust-cache/issues/341
-          cache-bin: "false"
+          cache: rust
 
       - name: Build rv
         run: bin/build
@@ -85,10 +84,9 @@ jobs:
         run: rustup show
 
       - name: Cache dependencies
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: namespacelabs/nscloud-cache-action@1124a6f3ce44e5cf84cc22111530961f4d2a15f9 # v1.7.0
         with:
-          # Workaround for https://github.com/Swatinem/rust-cache/issues/341
-          cache-bin: "false"
+          cache: rust
 
       - name: Install editorconfig-checker
         uses: editorconfig-checker/action-editorconfig-checker@51f63319f592f97930c73d9c46184d20bd206393 # v3.0.0
@@ -141,10 +139,9 @@ jobs:
           tool: cargo-nextest
 
       - name: Cache dependencies
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: namespacelabs/nscloud-cache-action@1124a6f3ce44e5cf84cc22111530961f4d2a15f9 # v1.7.0
         with:
-          # Workaround for https://github.com/Swatinem/rust-cache/issues/341
-          cache-bin: "false"
+          cache: rust
 
       - name: Build tests
         shell: bash
