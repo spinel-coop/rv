@@ -6,6 +6,8 @@
 [![Spinel Discord](https://img.shields.io/badge/Discord-%235865F2.svg?logo=discord&logoColor=white)](https://discord.gg/JVa6Ey5FmB)
 [![Bundler Slack](https://custom-icon-badges.demolab.com/badge/Slack-4A154B?logo=slack&logoColor=fff)](https://join.slack.com/t/bundler/shared_invite/zt-3kza12u0j-Fw3rwvPi6zqe6EC3RCDGMA)
 
+[![CI powered by Namespace](https://namespace.so/oss/badge.svg)](https://namespace.so/github-actions/?utm_source=oss&utm_campaign=rv)
+
 **Automatic Rubies and gems.**
 
 - Run any command or script that needs Ruby with `rv run NAME`.
