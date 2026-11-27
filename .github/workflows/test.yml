@@ -135,10 +135,17 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Cache dependencies
+      - name: Cache dependencies (namespace)
         uses: namespacelabs/nscloud-cache-action@1124a6f3ce44e5cf84cc22111530961f4d2a15f9 # v1.7.0
+        if: startsWith(matrix.runs-on, 'namespace-profile-')
         with:
-          cache: rust
+          detect: true
+      - name: Cache dependencies
+        if: ${{ ! startsWith(matrix.runs-on, 'namespace-profile-') }}
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          # Workaround for https://github.com/Swatinem/rust-cache/issues/341
+          cache-bin: "false"
 
       - name: Install needed packages
         if: startsWith(matrix.runs-on, 'namespace-profile-rv-linux')
