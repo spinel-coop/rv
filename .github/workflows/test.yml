@@ -216,6 +216,12 @@ jobs:
       - name: Add rv to PATH
         run: chmod +x ~/bin/rv && echo "$HOME/bin" >> "$GITHUB_PATH"
 
+      - name: Cache dependencies (namespace)
+        if: startsWith(matrix.runs-on, 'namespace-profile-')
+        uses: namespacelabs/nscloud-cache-action@1124a6f3ce44e5cf84cc22111530961f4d2a15f9 # v1.7.0
+        with:
+          detect: true
+
       # the namespace linux runners say the package is installed, but the certs themselves are missing?
       - name: Force ca-certificate generation
         run: sudo apt-get update && sudo apt-get install --reinstall -y ca-certificates
