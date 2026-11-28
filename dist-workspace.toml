@@ -4,22 +4,13 @@ members = ["cargo:."]
 # Config for 'dist'
 [dist]
 # The preferred dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.30.3"
+cargo-dist-version = "0.32.0"
 # CI backends to support
 ci = "github"
 # The installers to generate for each app
 installers = ["shell", "powershell"]
 # Target platforms to build apps for (Rust target-triple syntax)
-targets = [
-    "aarch64-apple-darwin",
-    "aarch64-unknown-linux-gnu",
-    "aarch64-unknown-linux-musl",
-    "x86_64-apple-darwin",
-    "x86_64-unknown-linux-gnu",
-    "x86_64-unknown-linux-musl",
-    "x86_64-pc-windows-msvc",
-    "aarch64-pc-windows-msvc",
-]
+targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "aarch64-unknown-linux-musl", "aarch64-pc-windows-msvc", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "x86_64-pc-windows-msvc"]
 # Path that installers should place binaries in
 install-path = ["$XDG_BIN_HOME/", "~/.local/bin"]
 # Whether to install an updater program
@@ -28,7 +19,7 @@ install-updater = false
 precise-builds = true
 # Whether to sign macOS executables
 macos-sign = true
-# Provide sigstore attestations from GitHub
+# Whether to enable GitHub Attestations
 github-attestations = true
 
 # Which binaries to include per target platform
@@ -38,15 +29,15 @@ x86_64-pc-windows-msvc = ["rv", "rvx", "rvw"]
 aarch64-pc-windows-msvc = ["rv", "rvx", "rvw"]
 
 [dist.github-custom-runners]
-x86_64-apple-darwin = "macos-14"
-aarch64-apple-darwin = "macos-14"
-aarch64-unknown-linux-gnu = "ubuntu-22.04-arm"
-x86_64-unknown-linux-gnu = "ubuntu-22.04"
-x86_64-pc-windows-msvc = "windows-latest"
+x86_64-apple-darwin = "namespace-profile-rv-macos-arm"
+aarch64-apple-darwin = "namespace-profile-rv-macos-arm"
+aarch64-unknown-linux-gnu = "namespace-profile-rv-linux-arm"
+x86_64-unknown-linux-gnu = "namespace-profile-rv-linux-x86"
+x86_64-pc-windows-msvc = "namespace-profile-rv-windows-x86"
 aarch64-pc-windows-msvc = "windows-11-arm"
 
 [dist.github-action-commits]
 "actions/checkout" = "de0fac2e4500dabe0009e67214ff5f5447ce83dd" # v6.0.2
 "actions/upload-artifact" = "330a01c490aca151604b8cf639adc76d48f6c5d4" # v5.0.0
 "actions/download-artifact" = "018cc2cf5baa6db3ef3c5f8a56943fffe632ef53" # v6.0.0
-"actions/attest-build-provenance" = "977bb373ede98d70efdf65b84cb5f73e068dcc2a" # v3.0.0
+"actions/attest" = "1e69f48acb82d1966a394da916b4c1698aa569d6" # v4.2.2

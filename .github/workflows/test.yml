@@ -18,7 +18,7 @@ env:
 
 jobs:
   cargo-deny:
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-rv-linux-x86
     strategy:
       matrix:
         checks:
@@ -27,8 +27,15 @@ jobs:
     # Prevent sudden announcement of a new advisory from failing ci:
     continue-on-error: ${{ matrix.checks == 'advisories' }}
     steps:
+      - name: Check out repo (namespace)
+        if: startsWith(matrix.runs-on, 'namespace-profile-')
+        uses: namespacelabs/nscloud-checkout-action@c79409f8642d7fca9c1169a97f84d7ada5de1f9e # v9.0.2
+        with:
+          persist-credentials: false
+
       - name: Check out repo
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: ${{ ! startsWith(matrix.runs-on, 'namespace-profile-') }}
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
@@ -39,10 +46,10 @@ jobs:
 
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-rv-linux-x86
     steps:
-      - name: Check out repo
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check out repo (namespace)
+        uses: namespacelabs/nscloud-checkout-action@c79409f8642d7fca9c1169a97f84d7ada5de1f9e # v9.0.2
         with:
           persist-credentials: false
 
@@ -50,10 +57,9 @@ jobs:
         run: rustup show
 
       - name: Cache dependencies
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: namespacelabs/nscloud-cache-action@1124a6f3ce44e5cf84cc22111530961f4d2a15f9 # v1.7.0
         with:
-          # Workaround for https://github.com/Swatinem/rust-cache/issues/341
-          cache-bin: "false"
+          cache: rust
 
       - name: Build rv
         run: bin/build
@@ -72,12 +78,12 @@ jobs:
       matrix:
         include:
           - os: linux
-            runs-on: ubuntu-latest
+            runs-on: namespace-profile-rv-linux-x86
           - os: windows
-            runs-on: windows-latest
+            runs-on: namespace-profile-rv-windows-x86
     steps:
-      - name: Check out repo
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check out repo (namespace)
+        uses: namespacelabs/nscloud-checkout-action@c79409f8642d7fca9c1169a97f84d7ada5de1f9e # v9.0.2
         with:
           persist-credentials: false
 
@@ -85,10 +91,9 @@ jobs:
         run: rustup show
 
       - name: Cache dependencies
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: namespacelabs/nscloud-cache-action@1124a6f3ce44e5cf84cc22111530961f4d2a15f9 # v1.7.0
         with:
-          # Workaround for https://github.com/Swatinem/rust-cache/issues/341
-          cache-bin: "false"
+          cache: rust
 
       - name: Install editorconfig-checker
         uses: editorconfig-checker/action-editorconfig-checker@51f63319f592f97930c73d9c46184d20bd206393 # v3.0.0
@@ -112,21 +117,43 @@ jobs:
       matrix:
         runs-on:
           - macos-15-intel # mac-x86
-          - macos-latest # mac-arm
-          - ubuntu-latest # linux-x86
-          - ubuntu-24.04-arm # linux-arm
-          - windows-latest # win-x86
+          - namespace-profile-rv-macos-arm # mac-arm
+          - namespace-profile-rv-linux-x86 # linux-x86
+          - namespace-profile-rv-linux-arm # linux-arm
+          - namespace-profile-rv-windows-x86 # win-x86
           - windows-11-arm # win-arm
 
     steps:
+      - name: Check out repo (namespace)
+        if: startsWith(matrix.runs-on, 'namespace-profile-')
+        uses: namespacelabs/nscloud-checkout-action@c79409f8642d7fca9c1169a97f84d7ada5de1f9e # v9.0.2
+        with:
+          persist-credentials: false
       - name: Check out repo
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: ${{ ! startsWith(matrix.runs-on, 'namespace-profile-') }}
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - name: Install additional shells
-        if: startsWith(matrix.runs-on, 'ubuntu')
-        run: sudo apt-get update && sudo apt-get install -y zsh fish
+      - name: Cache dependencies (namespace)
+        uses: namespacelabs/nscloud-cache-action@1124a6f3ce44e5cf84cc22111530961f4d2a15f9 # v1.7.0
+        if: startsWith(matrix.runs-on, 'namespace-profile-')
+        with:
+          detect: true
+      - name: Cache dependencies
+        if: ${{ ! startsWith(matrix.runs-on, 'namespace-profile-') }}
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          # Workaround for https://github.com/Swatinem/rust-cache/issues/341
+          cache-bin: "false"
+
+      - name: Install needed packages
+        if: startsWith(matrix.runs-on, 'namespace-profile-rv-linux')
+        run: |
+          # we need the shells to run the tests against those shells
+          sudo apt-get update && sudo apt-get install -y zsh fish
+          # the namespace linux runners say the package is installed, but the certs themselves are missing?
+          sudo apt-get install --reinstall -y ca-certificates
 
       - name: Install Rust
         run: rustup show
@@ -135,12 +162,6 @@ jobs:
         uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
         with:
           tool: cargo-nextest
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          # Workaround for https://github.com/Swatinem/rust-cache/issues/341
-          cache-bin: "false"
 
       - name: Build tests
         shell: bash
@@ -165,7 +186,7 @@ jobs:
   smoke-test:
     name: ${{ matrix.project }}
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-rv-linux-x86
     strategy:
       fail-fast: false
       matrix:
@@ -181,8 +202,8 @@ jobs:
           - local-gemspec
           - mastodon
     steps:
-      - name: Check out repo
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check out repo (namespace)
+        uses: namespacelabs/nscloud-checkout-action@c79409f8642d7fca9c1169a97f84d7ada5de1f9e # v9.0.2
         with:
           persist-credentials: false
 
@@ -194,6 +215,15 @@ jobs:
 
       - name: Add rv to PATH
         run: chmod +x ~/bin/rv && echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Cache dependencies (namespace)
+        uses: namespacelabs/nscloud-cache-action@1124a6f3ce44e5cf84cc22111530961f4d2a15f9 # v1.7.0
+        with:
+          detect: true
+
+      # the namespace linux runners say the package is installed, but the certs themselves are missing?
+      - name: Force ca-certificate generation
+        run: sudo apt-get update && sudo apt-get install --reinstall -y ca-certificates
 
       - name: rv clean-install for ${{ matrix.project }}
         run: bin/smoke-tests/${{ matrix.project }}

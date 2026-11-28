@@ -166,7 +166,7 @@ async fn fetch_cached_github_release(
     url: &str,
     transform: impl FnOnce(bytes::Bytes) -> Result<Release>,
 ) -> Result<Release> {
-    let client = reqwest::Client::new();
+    let client = rv_client::http_client::rv_http_client("ruby-fetcher")?;
 
     if url == "-" {
         debug!("{env_var} is '-', returning empty list without network request.");

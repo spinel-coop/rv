@@ -350,12 +350,13 @@ async fn download_ruby_archive(
 
 async fn fetch_url(url: &str, redirects: bool) -> Result<reqwest::Response> {
     // Build the request with optional GitHub authentication
+    let builder = rv_client::http_client::rv_http_client_builder("install");
     let client = if !redirects {
-        reqwest::Client::builder()
+        builder
             .redirect(reqwest::redirect::Policy::none())
             .build()?
     } else {
-        reqwest::Client::new()
+        builder.build()?
     };
 
     let mut request_builder = client.get(url);
